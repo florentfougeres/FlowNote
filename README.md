@@ -49,7 +49,7 @@ C'est le cœur du projet : **une note que FlowNote n'a pas modifiée est réécr
 
 ## Installation
 
-1. Téléchargez le fichier `FlowNote_x.y.z_aarch64.dmg` (Mac Apple Silicon) ou `FlowNote_x.y.z_x64.dmg` (Mac Intel) depuis la page [Releases](https://github.com/florentfougeres/FlowNote/releases).
+1. Téléchargez le fichier `FlowNote_x.y.z_aarch64.dmg` depuis la page [Releases](https://github.com/florentfougeres/FlowNote/releases).
 2. Ouvrez le `.dmg` et glissez FlowNote dans le dossier **Applications**.
 3. **Premier lancement** : l'application n'est pas encore signée par un certificat Apple Developer, donc macOS la bloque. Ouvrez *Réglages Système → Confidentialité et sécurité*, puis cliquez sur **Ouvrir quand même** en face de FlowNote. Si macOS indique que l'application « est endommagée », exécutez une fois :
 
@@ -57,7 +57,7 @@ C'est le cœur du projet : **une note que FlowNote n'a pas modifiée est réécr
    xattr -cr /Applications/FlowNote.app
    ```
 
-Configuration requise : macOS 11 (Big Sur) ou plus récent. Git doit être installé pour utiliser les fonctions Git (`xcode-select --install` ou Homebrew).
+Configuration requise : Mac Apple Silicon (M1 et suivants), macOS 11 (Big Sur) ou plus récent. Git doit être installé pour utiliser les fonctions Git (`xcode-select --install` ou Homebrew).
 
 ## Développement
 
@@ -87,7 +87,7 @@ npm run dev            # version navigateur (Chrome) sur http://localhost:1420
 
 1. Mettez à jour la version dans `package.json`, `src-tauri/tauri.conf.json` et `src-tauri/Cargo.toml`.
 2. Commitez, puis poussez un tag : `git tag v0.2.0 && git push origin v0.2.0`.
-3. Le workflow GitHub Actions construit les `.dmg` (Apple Silicon et Intel) et prépare une release en brouillon. Relisez-la, puis publiez-la sur GitHub.
+3. Le workflow GitHub Actions construit le `.dmg` (Apple Silicon) et prépare une release en brouillon. Relisez-la, puis publiez-la sur GitHub.
 
 ## Licence
 
