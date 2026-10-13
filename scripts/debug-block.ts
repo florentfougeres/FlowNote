@@ -1,0 +1,13 @@
+import { readFileSync } from "node:fs";
+import { loadMarkdown } from "../src/markdown/note";
+import { parseFragment } from "../src/markdown/parse";
+import { serializeBlock, VARIANTS } from "../src/markdown/serialize";
+import { normalize } from "../src/markdown/normalize";
+const f = process.argv[2]; const needle = process.argv[3];
+const { doc, layout } = loadMarkdown(readFileSync(f, "utf8"));
+const i = layout.origins.findIndex(o => o.source.includes(needle));
+const json = doc.content![i];
+const md = serializeBlock(json, VARIANTS[0]);
+const a = JSON.stringify(normalize([json]), null, 1).split("\n"), b = JSON.stringify(normalize(parseFragment(md, layout.context)), null, 1).split("\n");
+const k = a.findIndex((l, j) => l !== b[j]);
+console.log(md.slice(0, 600)); console.log("--- first diff at", k); console.log(a.slice(k - 5, k + 8).join("\n")); console.log("=== vs"); console.log(b.slice(k - 5, k + 8).join("\n"));
