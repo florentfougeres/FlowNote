@@ -93,6 +93,60 @@ pub fn vault_write(root: String, path: String, content: String, expected: Option
     })
 }
 
+fn collect_files(dir: &Path, prefix: &str, out: &mut Vec<String>) {
+    let Ok(read) = fs::read_dir(dir) else { return };
+    for entry in read.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if is_hidden(&name) {
+            continue;
+        }
+        let path = if prefix.is_empty() { name } else { format!("{prefix}/{name}") };
+        match entry.file_type() {
+            Ok(t) if t.is_dir() => collect_files(&entry.path(), &path, out),
+            Ok(t) if t.is_file() => out.push(path),
+            _ => {}
+        }
+    }
+}
+
+/// Every non-hidden file of the vault (notes and attachments), for link resolution.
+#[tauri::command]
+pub fn vault_files(root: String) -> Vec<String> {
+    let mut files = Vec::new();
+    collect_files(Path::new(&root), "", &mut files);
+    files.sort();
+    files
+}
+
+/// Raw bytes of a file (images and other attachments), sent without JSON encoding.
+#[tauri::command]
+pub fn vault_read_binary(root: String, path: String) -> Result<tauri::ipc::Response, String> {
+    let file = resolve(&root, &path)?;
+    fs::read(&file).map(tauri::ipc::Response::new).map_err(|e| format!("{path}: {e}"))
+}
+
+/// Creates a new file; never overwrites an existing one.
+#[tauri::command]
+pub fn vault_create(root: String, path: String, content: Vec<u8>) -> Result<(), String> {
+    use std::io::Write;
+    let file = resolve(&root, &path)?;
+    if let Some(parent) = file.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let mut handle = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&file)
+        .map_err(|e| format!("{path}: {e}"))?;
+    handle.write_all(&content).map_err(|e| e.to_string())
+}
+
+/// Obsidian settings (`.obsidian/app.json`), read only; "{}" when absent.
+#[tauri::command]
+pub fn vault_config(root: String) -> String {
+    fs::read_to_string(Path::new(&root).join(".obsidian").join("app.json")).unwrap_or_else(|_| "{}".into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,6 +171,20 @@ mod tests {
         assert!(err.starts_with("CONFLICT:"));
         vault_write(root.clone(), "n.md".into(), "nouveau".into(), Some("disque".into())).unwrap();
         assert_eq!(fs::read_to_string(dir.join("n.md")).unwrap(), "nouveau");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn create_never_overwrites_and_files_skip_hidden() {
+        let dir = std::env::temp_dir().join(format!("mon-notion-create-{}", std::process::id()));
+        fs::create_dir_all(dir.join(".obsidian")).unwrap();
+        fs::write(dir.join(".obsidian/app.json"), "{}").unwrap();
+        let root = dir.to_string_lossy().into_owned();
+        vault_create(root.clone(), "a/b.png".into(), vec![1, 2, 3]).unwrap();
+        assert!(vault_create(root.clone(), "a/b.png".into(), vec![9]).is_err());
+        assert_eq!(fs::read(dir.join("a/b.png")).unwrap(), vec![1, 2, 3]);
+        assert_eq!(vault_files(root.clone()), vec!["a/b.png".to_string()]);
+        assert_eq!(vault_config(root), "{}");
         fs::remove_dir_all(&dir).unwrap();
     }
 }

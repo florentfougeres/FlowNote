@@ -1,7 +1,7 @@
 import { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
-import { editorExtensions } from "./extensions";
-import { SlashMenuStore } from "./slash";
+import { defaultWiring, editorExtensions } from "./extensions";
+import type { VaultBridge } from "./bridge";
 import { loadMarkdown, NoteSession } from "../markdown/note";
 
 /** Helpers for tests that drive a real editor (jsdom environment). */
@@ -13,14 +13,15 @@ export function destroyEditors() {
 }
 
 /** Opens Markdown in a real editor; the cursor is placed at the end of the document. */
-export function openEditor(markdown = "") {
+export function openEditor(markdown = "", bridge: Partial<VaultBridge> = {}) {
   const { doc, layout } = loadMarkdown(markdown);
-  const slash = new SlashMenuStore();
-  const editor = new Editor({ extensions: editorExtensions(slash), content: doc });
+  const wiring = defaultWiring();
+  wiring.bridge.current = { ...wiring.bridge.current, ...bridge };
+  const editor = new Editor({ extensions: editorExtensions(wiring), content: doc });
   open_.push(editor);
   const session = new NoteSession(layout, editor.state.doc);
   editor.commands.focus("end");
-  return { editor, slash, save: () => session.serialize(editor.state.doc) };
+  return { editor, slash: wiring.slashStore, links: wiring.linkStore, bridge: wiring.bridge, save: () => session.serialize(editor.state.doc) };
 }
 
 /** Types text character by character, going through input rules like a keyboard would. */

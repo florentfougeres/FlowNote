@@ -2,6 +2,9 @@ import type { Editor, NodeViewRenderer } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { Plugin } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import type { BridgeRef } from "./bridge";
+import { isImage } from "./bridge";
+import { basename, dirname, noteTitle, resolveLink } from "../vault/links";
 
 /**
  * Node views for blocks that need controls outside the editable text. None of
@@ -181,12 +184,124 @@ export const rawBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   };
 };
 
-export const nodeViews: Record<string, NodeViewRenderer> = {
-  listItem: listItemView,
-  callout: calloutView,
-  codeBlock: codeBlockView,
-  rawBlock: rawBlockView,
-};
+/** `[[links]]` and `![[embeds]]`: images are displayed, notes become cards, unresolved links are dimmed. */
+function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
+  return ({ node }) => {
+    const dom = element("span");
+    dom.contentEditable = "false";
+    let rendered = "";
+
+    const render = (n: PMNode) => {
+      const { target, alias, embed } = n.attrs as { target: string; alias: string | null; embed: boolean };
+      const resolved = resolveLink(target, bridge.current.files, bridge.current.notePath);
+      const key = `${target}|${alias}|${embed}|${resolved}`;
+      if (key === rendered) return;
+      rendered = key;
+      dom.replaceChildren();
+      dom.dataset.target = target;
+      if (embed && resolved && isImage(resolved)) {
+        dom.className = "embed-image";
+        const img = element("img");
+        img.alt = basename(resolved);
+        // `![[image.png|300]]` or `|300x200` sets the displayed size.
+        const size = /^(\d+)(?:x(\d+))?$/.exec(alias ?? "");
+        if (size) {
+          img.width = Number(size[1]);
+          if (size[2]) img.height = Number(size[2]);
+        }
+        void bridge.current.loadImage(resolved).then((url) => (img.src = url));
+        dom.append(img);
+      } else if (embed) {
+        dom.className = resolved ? "embed-card" : "embed-card unresolved";
+        dom.textContent = `${resolved?.endsWith(".md") ? "📄" : "📎"} ${alias ?? (resolved ? noteTitle(resolved) : target)}`;
+      } else {
+        dom.className = resolved ? "wikilink" : "wikilink unresolved";
+        dom.textContent = alias ?? target;
+      }
+    };
+    render(node);
+    return {
+      dom,
+      update: (n) => {
+        if (n.type !== node.type) return false;
+        render(n);
+        return true;
+      },
+      ignoreMutation: () => true,
+    };
+  };
+}
+
+/** Markdown images `![alt](path)`: vault paths are relative to the note. */
+function imageView(bridge: BridgeRef): NodeViewRenderer {
+  return ({ node }) => {
+    const img = element("img");
+    const render = (n: PMNode) => {
+      const src = String(n.attrs.src);
+      img.alt = n.attrs.alt;
+      if (/^(https?:|data:|blob:)/.test(src)) {
+        img.src = src;
+        return;
+      }
+      let path = src;
+      try {
+        path = decodeURI(src);
+      } catch {
+        // keep the raw source
+      }
+      const folder = dirname(bridge.current.notePath);
+      const candidate = path.startsWith("/") ? path.slice(1) : [folder, path].filter(Boolean).join("/");
+      const normalized: string[] = [];
+      for (const part of candidate.split("/")) {
+        if (part === "..") normalized.pop();
+        else if (part !== ".") normalized.push(part);
+      }
+      const resolved = resolveLink(normalized.join("/"), bridge.current.files) ?? resolveLink(basename(path), bridge.current.files);
+      if (resolved && isImage(resolved)) void bridge.current.loadImage(resolved).then((url) => (img.src = url));
+    };
+    render(node);
+    return {
+      dom: img,
+      update: (n) => {
+        if (n.type !== node.type) return false;
+        render(n);
+        return true;
+      },
+    };
+  };
+}
+
+export function createNodeViews(bridge: BridgeRef): Record<string, NodeViewRenderer> {
+  return {
+    listItem: listItemView,
+    callout: calloutView,
+    codeBlock: codeBlockView,
+    rawBlock: rawBlockView,
+    wikilink: wikilinkView(bridge),
+    image: imageView(bridge),
+  };
+}
+
+/** Obsidian tags (`#tag`, `#nested/tag`, not only digits), highlighted in text. */
+const TAG = /(^|\s)(#[\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
+
+export function tagPlugin(): Plugin {
+  return new Plugin({
+    props: {
+      decorations(state) {
+        const decorations: Decoration[] = [];
+        state.doc.descendants((node, pos, parent) => {
+          if (!node.isText || parent?.type.spec.code || node.marks.some((m) => m.type.name === "code" || m.type.name === "link")) return;
+          for (const match of node.text!.matchAll(TAG)) {
+            const from = pos + match.index! + match[1].length;
+            decorations.push(Decoration.inline(from, from + match[2].length, { class: "tag" }));
+          }
+        });
+        return DecorationSet.create(state.doc, decorations);
+      },
+    },
+  });
+}
 
 const HEADING_PLACEHOLDERS = ["Titre 1", "Titre 2", "Titre 3", "Titre 4", "Titre 5", "Titre 6"];
 

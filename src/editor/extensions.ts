@@ -5,13 +5,16 @@ import { history, redo, undo } from "@tiptap/pm/history";
 import { documentExtensions } from "./schema";
 import { BlockKeymap } from "./keymap";
 import { MarkdownShortcuts } from "./shortcuts";
-import { nodeViews, placeholderPlugin } from "./views";
+import { createNodeViews, placeholderPlugin, tagPlugin } from "./views";
 import { SlashCommand, SlashMenuStore } from "./slash";
+import { WikilinkSuggest, type LinkItem } from "./wikilinks";
+import { MenuStore } from "./menu";
+import { NULL_BRIDGE, type BridgeRef } from "./bridge";
 
 const Editing = Extension.create({
   priority: 150,
   name: "editing",
-  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin()],
+  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin()],
   addKeyboardShortcuts() {
     return {
       "Mod-z": () => undo(this.editor.state, this.editor.view.dispatch),
@@ -27,11 +30,29 @@ const Editing = Extension.create({
   },
 });
 
+export interface EditorWiring {
+  slashStore: SlashMenuStore;
+  linkStore: MenuStore<LinkItem>;
+  bridge: BridgeRef;
+}
+
+export function defaultWiring(): EditorWiring {
+  return { slashStore: new SlashMenuStore(), linkStore: new MenuStore<LinkItem>(), bridge: { current: NULL_BRIDGE } };
+}
+
 /** Everything the note editor needs: document schema, node views and editing behaviour. */
-export function editorExtensions(slashStore = new SlashMenuStore()): AnyExtension[] {
+export function editorExtensions(wiring: EditorWiring = defaultWiring()): AnyExtension[] {
+  const views = createNodeViews(wiring.bridge);
   const withViews = documentExtensions.map((extension) => {
-    const view = nodeViews[extension.name];
+    const view = views[extension.name];
     return view ? extension.extend({ addNodeView: () => view }) : extension;
   });
-  return [...withViews, Editing, MarkdownShortcuts, BlockKeymap, SlashCommand.configure({ store: slashStore })];
+  return [
+    ...withViews,
+    Editing,
+    MarkdownShortcuts,
+    BlockKeymap,
+    SlashCommand.configure({ store: wiring.slashStore, bridge: wiring.bridge }),
+    WikilinkSuggest.configure({ store: wiring.linkStore, bridge: wiring.bridge }),
+  ];
 }

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import type { SlashMenuStore } from "./slash";
+import type { MenuItem, MenuStore } from "./menu";
 
 const MENU_MAX_HEIGHT = 340;
 
-export function SlashMenu({ store }: { store: SlashMenuStore }) {
+/** Floating menu for a suggestion store (slash commands, links). */
+export function SuggestionMenu<T extends MenuItem>({ store }: { store: MenuStore<T> }) {
   const state = useSyncExternalStore(
     (listener) => {
       const unsubscribe = store.subscribe(listener);
@@ -25,7 +26,7 @@ export function SlashMenu({ store }: { store: SlashMenuStore }) {
 
   return createPortal(
     <div className="slash-menu" style={{ ...style, maxHeight: MENU_MAX_HEIGHT }} ref={list} role="listbox">
-      <div className="slash-menu-title">Blocs</div>
+      <div className="slash-menu-title">{state.heading}</div>
       {state.items.map((item, i) => (
         <button
           key={item.key}

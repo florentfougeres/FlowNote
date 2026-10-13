@@ -2,6 +2,9 @@ import { Extension, type Editor, type Range } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";
 import { insertRawBlock, turnInto, type BlockKind } from "./blocks";
+import type { BridgeRef, VaultBridge } from "./bridge";
+import { menuRenderer, MenuStore, normalizeText, type MenuItem } from "./menu";
+import { linkTextFor, sanitizeName, subpageFolder, uniquePath } from "../vault/links";
 
 /**
  * Slash menu. The query stays in the document text (`/tit` filters on "tit")
@@ -10,13 +13,21 @@ import { insertRawBlock, turnInto, type BlockKind } from "./blocks";
  * so `1/2` and URLs do not open it — and never in code or callout titles.
  */
 
-export interface SlashItem {
-  key: string;
-  title: string;
-  description: string;
-  icon: string;
+export interface SlashItem extends MenuItem {
   keywords: string[];
-  run: (editor: Editor, range: Range) => void;
+  run: (editor: Editor, range: Range, bridge: VaultBridge) => void;
+}
+
+/** Notion-style sub-page: a new note in a folder named after this one, linked from here. */
+async function createSubpage(editor: Editor, range: Range, bridge: VaultBridge) {
+  editor.chain().focus().deleteRange(range).run();
+  const name = await bridge.askName("Nom de la sous-page", "Sans titre");
+  if (!name || !bridge.notePath) return editor.commands.focus();
+  const path = uniquePath(subpageFolder(bridge.notePath), `${sanitizeName(name) || "Sans titre"}.md`, bridge.files);
+  await bridge.createFile(path, "");
+  const link = editor.schema.nodes.wikilink.create({ target: linkTextFor(path, bridge.files), alias: null, embed: false });
+  editor.chain().focus().insertContent(link.toJSON()).run();
+  bridge.openPath(path);
 }
 
 const kind = (k: BlockKind, type?: string) => (editor: Editor, range: Range) => {
@@ -36,6 +47,7 @@ export const SLASH_ITEMS: SlashItem[] = [
   { key: "callout", title: "Callout", description: "Encadré > [!note]", icon: "ⓘ", keywords: ["callout", "encadré", "note", "info"], run: kind("callout", "note") },
   { key: "callout-tip", title: "Callout astuce", description: "Encadré > [!tip]", icon: "✦", keywords: ["callout", "astuce", "tip"], run: kind("callout", "tip") },
   { key: "callout-warning", title: "Callout attention", description: "Encadré > [!warning]", icon: "⚠", keywords: ["callout", "attention", "warning", "avertissement"], run: kind("callout", "warning") },
+  { key: "subpage", title: "Sous-page", description: "Nouvelle note liée, rangée sous celle-ci", icon: "📄", keywords: ["page", "sous-page", "note", "subpage"], run: (e, r, b) => void createSubpage(e, r, b) },
   { key: "code", title: "Code", description: "Bloc de code", icon: "</>", keywords: ["code", "snippet"], run: kind("code") },
   { key: "divider", title: "Séparateur", description: "Ligne horizontale", icon: "—", keywords: ["séparateur", "divider", "ligne", "hr"], run: kind("divider") },
   {
@@ -88,7 +100,6 @@ function frecencyScore(frecency: Frecency, key: string, now: number): number {
   return entry ? entry.count * Math.pow(0.5, (now - entry.last) / HALF_LIFE_MS) : 0;
 }
 
-const normalizeText = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 export function filterSlashItems(query: string, items: SlashItem[] = SLASH_ITEMS, frecency: Frecency = {}, now = Date.now()): SlashItem[] {
   const q = normalizeText(query.trim());
@@ -108,28 +119,8 @@ export function filterSlashItems(query: string, items: SlashItem[] = SLASH_ITEMS
   return scored.sort((a, b) => b.match - a.match || b.recent - a.recent || a.order - b.order).map((s) => s.item);
 }
 
-// ---------------------------------------------------------------------------
-// Menu state shared with the React component.
-
-export interface SlashMenuState {
-  items: SlashItem[];
-  index: number;
-  rect: DOMRect | null;
-  select: (item: SlashItem) => void;
-}
-
-export class SlashMenuStore {
-  state: SlashMenuState | null = null;
-  private listeners = new Set<() => void>();
-  set(state: SlashMenuState | null) {
-    this.state = state;
-    this.listeners.forEach((listener) => listener());
-  }
-  subscribe(listener: () => void) {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
-}
+/** The slash menu store is a generic menu store holding slash items. */
+export class SlashMenuStore extends MenuStore<SlashItem> {}
 
 /** Position of a `/` that was just typed, while it can still open the menu. */
 export const freshSlashKey = new PluginKey<number | null>("freshSlash");
@@ -167,18 +158,18 @@ export function openSlashMenu(editor: Editor) {
   editor.view.focus();
 }
 
-export const SlashCommand = Extension.create<{ store: SlashMenuStore }>({
+export const SlashCommand = Extension.create<{ store: SlashMenuStore; bridge: BridgeRef }>({
   name: "slashCommand",
   // Above the block keymap, so Enter picks a menu item instead of splitting the block.
   priority: 300,
 
   addOptions() {
-    return { store: new SlashMenuStore() };
+    return { store: new SlashMenuStore(), bridge: { current: undefined as unknown as VaultBridge } };
   },
 
   addProseMirrorPlugins() {
     const { editor } = this;
-    const store = this.options.store;
+    const { store, bridge } = this.options;
     const close = () => editor.view.dispatch(editor.state.tr.setMeta(freshSlashKey, null));
 
     return [
@@ -191,42 +182,9 @@ export const SlashCommand = Extension.create<{ store: SlashMenuStore }>({
         items: ({ query }) => filterSlashItems(query, SLASH_ITEMS, loadFrecency()),
         command: ({ editor, range, props }) => {
           recordUse(props.key);
-          props.run(editor, range);
+          props.run(editor, range, bridge.current);
         },
-        render: () => {
-          let command: ((item: SlashItem) => void) | null = null;
-          let lengthAtLastResult = 0;
-          const show = (props: { items: SlashItem[]; query: string; clientRect?: (() => DOMRect | null) | null; command: (item: SlashItem) => void }) => {
-            command = props.command;
-            if (props.items.length > 0) lengthAtLastResult = props.query.length;
-            // No result after more than 3 extra letters: the user is just typing text.
-            else if (props.query.length - lengthAtLastResult > 3) return void setTimeout(close);
-            store.set({ items: props.items, index: 0, rect: props.clientRect?.() ?? null, select: props.command });
-          };
-          return {
-            onStart: show,
-            onUpdate: show,
-            onExit: () => store.set(null),
-            onKeyDown: ({ event }) => {
-              const state = store.state;
-              if (event.key === "Escape") {
-                close();
-                return true;
-              }
-              if (!state || state.items.length === 0) return false;
-              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-                const delta = event.key === "ArrowDown" ? 1 : -1;
-                store.set({ ...state, index: (state.index + delta + state.items.length) % state.items.length });
-                return true;
-              }
-              if (event.key === "Enter" || event.key === "Tab") {
-                command?.(state.items[state.index]);
-                return true;
-              }
-              return false;
-            },
-          };
-        },
+        render: menuRenderer({ store, heading: "Blocs", close, closeAfterMisses: 3 }),
       }),
     ];
   },

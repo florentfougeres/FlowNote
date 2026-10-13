@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { ConflictError, type Vault, type VaultEntry } from "./vault";
+import { ConflictError, encodeText, type Vault, type VaultEntry } from "./vault";
 
 const LAST_VAULT_KEY = "mon-notion:last-vault";
 
@@ -22,6 +22,11 @@ export function tauriVault(root: string): Vault {
         throw new Error(message);
       }
     },
+    files: () => invoke<string[]>("vault_files", { root }),
+    readBinary: async (path) => new Uint8Array(await invoke<ArrayBuffer>("vault_read_binary", { root, path })),
+    create: (path, content) =>
+      invoke("vault_create", { root, path, content: Array.from(typeof content === "string" ? encodeText(content) : content) }),
+    obsidianConfig: () => invoke<string>("vault_config", { root }),
   };
 }
 

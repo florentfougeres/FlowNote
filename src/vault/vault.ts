@@ -22,7 +22,16 @@ export interface Vault {
    * write is refused.
    */
   write(path: string, content: string, expected: string): Promise<void>;
+  /** Every non-hidden file (notes and attachments), as vault-relative paths. */
+  files(): Promise<string[]>;
+  readBinary(path: string): Promise<Uint8Array>;
+  /** Creates a new file; fails if the path already exists. */
+  create(path: string, content: string | Uint8Array): Promise<void>;
+  /** Content of `.obsidian/app.json` (read only), "{}" when absent. */
+  obsidianConfig(): Promise<string>;
 }
+
+export const encodeText = (text: string) => new TextEncoder().encode(text);
 
 export class ConflictError extends Error {}
 
@@ -63,11 +72,21 @@ export async function openBrowserVault(): Promise<Vault> {
     return entries.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name, "fr") : a.kind === "dir" ? -1 : 1));
   }
 
-  async function fileHandle(path: string): Promise<FileSystemFileHandle> {
+  async function fileHandle(path: string, create = false): Promise<FileSystemFileHandle> {
     const parts = path.split("/");
     let dir: FileSystemDirectoryHandle = root;
-    for (const part of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(part);
-    return dir.getFileHandle(parts[parts.length - 1]);
+    for (const part of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(part, { create });
+    return dir.getFileHandle(parts[parts.length - 1], { create });
+  }
+
+  async function allFiles(dir: DirectoryHandle, prefix: string, out: string[]) {
+    for await (const handle of dir.values()) {
+      if (isHiddenName(handle.name)) continue;
+      const path = prefix ? `${prefix}/${handle.name}` : handle.name;
+      if (handle.kind === "directory") await allFiles(handle as DirectoryHandle, path, out);
+      else out.push(path);
+    }
+    return out;
   }
 
   return {
@@ -82,20 +101,80 @@ export async function openBrowserVault(): Promise<Vault> {
       await writable.write(content);
       await writable.close();
     },
+    files: async () => (await allFiles(root, "", [])).sort(),
+    readBinary: async (path) => new Uint8Array(await (await (await fileHandle(path)).getFile()).arrayBuffer()),
+    create: async (path, content) => {
+      const exists = await fileHandle(path).then(
+        () => true,
+        () => false,
+      );
+      if (exists) throw new Error(`${path} existe déjà.`);
+      const writable = await (await fileHandle(path, true)).createWritable();
+      await writable.write(typeof content === "string" ? content : new Blob([content as BlobPart]));
+      await writable.close();
+    },
+    obsidianConfig: async () => {
+      try {
+        const dir = await root.getDirectoryHandle(".obsidian");
+        return await (await (await dir.getFileHandle("app.json")).getFile()).text();
+      } catch {
+        return "{}";
+      }
+    },
   };
 }
 
 /** In-memory vault, for trying the editor without opening a folder. */
-export function createMemoryVault(name: string, files: Record<string, string>): Vault {
-  const contents = new Map(Object.entries(files));
+export function createMemoryVault(name: string, files: Record<string, string | Uint8Array>): Vault {
+  const contents = new Map<string, string | Uint8Array>(Object.entries(files));
+  const text = (path: string) => {
+    const value = contents.get(path) ?? "";
+    return typeof value === "string" ? value : new TextDecoder().decode(value);
+  };
   return {
     name,
-    tree: async () =>
-      [...contents.keys()].sort().map((path) => ({ path, name: path.replace(/\.md$/, ""), kind: "file" as const })),
-    read: async (path) => contents.get(path) ?? "",
+    tree: async () => buildTree([...contents.keys()].filter((p) => p.endsWith(".md"))),
+    read: async (path) => text(path),
     write: async (path, content, expected) => {
-      if (contents.get(path) !== expected) throw new ConflictError(`${path} a été modifié en dehors de l'application.`);
+      if (text(path) !== expected) throw new ConflictError(`${path} a été modifié en dehors de l'application.`);
       contents.set(path, content);
     },
+    files: async () => [...contents.keys()].sort(),
+    readBinary: async (path) => {
+      const value = contents.get(path);
+      return typeof value === "string" ? encodeText(value) : (value ?? new Uint8Array());
+    },
+    create: async (path, content) => {
+      if (contents.has(path)) throw new Error(`${path} existe déjà.`);
+      contents.set(path, content);
+    },
+    obsidianConfig: async () => "{}",
   };
+}
+
+/** Builds the sidebar tree from a flat list of note paths. */
+export function buildTree(paths: string[]): VaultEntry[] {
+  const root: VaultEntry[] = [];
+  for (const path of paths) {
+    const parts = path.split("/");
+    let level = root;
+    parts.forEach((part, i) => {
+      const sub = parts.slice(0, i + 1).join("/");
+      if (i === parts.length - 1) {
+        level.push({ path: sub, name: part.replace(/\.md$/, ""), kind: "file" });
+        return;
+      }
+      let dir = level.find((e) => e.kind === "dir" && e.path === sub);
+      if (!dir) {
+        dir = { path: sub, name: part, kind: "dir", children: [] };
+        level.push(dir);
+      }
+      level = dir.children!;
+    });
+  }
+  const sort = (entries: VaultEntry[]): VaultEntry[] =>
+    entries
+      .map((e) => (e.children ? { ...e, children: sort(e.children) } : e))
+      .sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name, "fr") : a.kind === "dir" ? -1 : 1));
+  return sort(root);
 }
