@@ -10,12 +10,14 @@ import { SlashCommand, SlashMenuStore } from "./slash";
 import { WikilinkSuggest, type LinkItem } from "./wikilinks";
 import { MenuStore } from "./menu";
 import { EmojiSuggest, type EmojiItem } from "./emoji";
+import { codeHighlightPlugin } from "./codeHighlight";
+import { findPlugin } from "./find";
 import { NULL_BRIDGE, type BridgeRef } from "./bridge";
 
 const Editing = Extension.create({
   priority: 150,
   name: "editing",
-  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin()],
+  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin(), codeHighlightPlugin(), findPlugin()],
   addKeyboardShortcuts() {
     return {
       "Mod-z": () => undo(this.editor.state, this.editor.view.dispatch),

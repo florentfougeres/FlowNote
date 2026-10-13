@@ -118,6 +118,46 @@ pub fn vault_files(root: String) -> Vec<String> {
     files
 }
 
+#[derive(Serialize)]
+pub struct SearchFile {
+    path: String,
+    /// Matching lines: (0-based line number, line text).
+    lines: Vec<(usize, String)>,
+}
+
+/// Lines of every note containing `query` (case-insensitive unless asked),
+/// at most `limit` lines in total. Positions within lines are computed by the frontend.
+#[tauri::command]
+pub fn vault_search(root: String, query: String, case_sensitive: bool, limit: usize) -> Vec<SearchFile> {
+    let mut files = Vec::new();
+    collect_files(Path::new(&root), "", &mut files);
+    files.sort();
+    let needle = if case_sensitive { query.clone() } else { query.to_lowercase() };
+    let mut results = Vec::new();
+    let mut total = 0;
+    if needle.is_empty() {
+        return results;
+    }
+    for path in files.into_iter().filter(|p| p.ends_with(".md")) {
+        let Ok(text) = fs::read_to_string(Path::new(&root).join(&path)) else { continue };
+        let lines: Vec<(usize, String)> = text
+            .lines()
+            .enumerate()
+            .filter(|(_, line)| if case_sensitive { line.contains(&needle) } else { line.to_lowercase().contains(&needle) })
+            .take(limit.saturating_sub(total))
+            .map(|(n, line)| (n, line.to_string()))
+            .collect();
+        total += lines.len();
+        if !lines.is_empty() {
+            results.push(SearchFile { path, lines });
+        }
+        if total >= limit {
+            break;
+        }
+    }
+    results
+}
+
 /// Raw bytes of a file (images and other attachments), sent without JSON encoding.
 #[tauri::command]
 pub fn vault_read_binary(root: String, path: String) -> Result<tauri::ipc::Response, String> {

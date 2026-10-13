@@ -179,3 +179,68 @@ describe("table navigation", () => {
     expect(save()).toBe("| A | B |\n|---|---|\n| 1 | 2! |\n| c |  |\n");
   });
 });
+
+describe("find and replace", () => {
+  it("finds matches across marks, steps through them, replaces one or all", async () => {
+    const { findState, findStep, replaceAll, replaceCurrent, setFindQuery } = await import("./find");
+    const { editor, save } = open("Un **chat** noir\n\n- le Chat dort\n\n```\nchat\n```\n");
+    setFindQuery(editor.view, "chat", false);
+    expect(findState(editor.state).matches).toHaveLength(3);
+    expect(editor.view.dom.querySelectorAll(".find-match")).toHaveLength(3);
+    setFindQuery(editor.view, "chat", true);
+    expect(findState(editor.state).matches).toHaveLength(2);
+    findStep(editor.view, 1);
+    replaceCurrent(editor.view, "loup");
+    expect(findState(editor.state).matches).toHaveLength(1);
+    expect(replaceAll(editor.view, "chien")).toBe(1);
+    expect(save()).toMatch(/^Un \*\*(chien|loup)\*\* noir\n\n- le Chat dort\n\n```\n(loup|chien)\n```\n$/);
+  });
+
+  it("replacing leaves other blocks byte-identical", async () => {
+    const { replaceAll, setFindQuery } = await import("./find");
+    const source = "* item  \n* autre\n\nTexte  avec   espaces et cible\n";
+    const { editor, save } = open(source);
+    setFindQuery(editor.view, "cible", false);
+    replaceAll(editor.view, "but");
+    expect(save()).toBe("* item  \n* autre\n\nTexte  avec   espaces et but\n");
+  });
+});
+
+describe("table handles operations", () => {
+  const TABLE = "| A | B |\n| - | :-: |\n| 1 | 2 |\n| 3 | 4 |\n";
+  const ref = async (editor: ReturnType<typeof open>["editor"]) => {
+    const { tableAt } = await import("./tableOps");
+    let pos = -1;
+    editor.state.doc.descendants((node, p) => (node.type.name === "table" && pos < 0 ? ((pos = p), false) : true));
+    return tableAt(editor, pos)!;
+  };
+
+  it("inserts and deletes rows and columns", async () => {
+    const ops = await import("./tableOps");
+    const { editor, save } = open(TABLE);
+    ops.insertRow(editor, await ref(editor), 3);
+    ops.insertColumn(editor, await ref(editor), 1);
+    expect(save()).toBe("| A |  | B |\n| --- | --- | :---: |\n| 1 |  | 2 |\n| 3 |  | 4 |\n|  |  |  |\n");
+    ops.deleteColumn(editor, await ref(editor), 1);
+    ops.deleteRow(editor, await ref(editor), 3);
+    expect(save()).toBe(TABLE); // back to the original: written verbatim
+  });
+
+  it("moving a body row above the header turns it into the header", async () => {
+    const ops = await import("./tableOps");
+    const { editor, save } = open(TABLE);
+    ops.moveRow(editor, await ref(editor), 1, 0);
+    expect(save()).toBe("| 1 | 2 |\n| - | :-: |\n| A | B |\n| 3 | 4 |\n");
+    const header = (await ref(editor)).node.child(0).child(0);
+    expect(header.type.name).toBe("tableHeader");
+  });
+
+  it("moves columns with their alignment, and aligns a column", async () => {
+    const ops = await import("./tableOps");
+    const { editor, save } = open(TABLE);
+    ops.moveColumn(editor, await ref(editor), 1, 0);
+    expect(save()).toBe("| B | A |\n| :---: | --- |\n| 2 | 1 |\n| 4 | 3 |\n");
+    ops.alignColumn(editor, await ref(editor), 1, "right");
+    expect(save()).toBe("| B | A |\n| :---: | ---: |\n| 2 | 1 |\n| 4 | 3 |\n");
+  });
+});

@@ -45,9 +45,10 @@ interface Props {
   /** Number of changed files, or null when the vault has no Git repository. */
   onDelete: (notePath: string) => void;
   onSearch: () => void;
+  onNewPageInFolder: (folder: string) => void;
 }
 
-export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDelete, onSearch }: Props) {
+export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDelete, onSearch, onNewPageInFolder }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const pages = toPages(tree);
 
@@ -90,6 +91,11 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDele
                 </span>
                 {page.name}
               </button>
+              {!page.notePath && (
+                <button className="page-add" title="Nouvelle page dans ce dossier" aria-label="Nouvelle page dans ce dossier" onClick={() => onNewPageInFolder(page.key)}>
+                  <Icon name="plus" size={14} />
+                </button>
+              )}
               {page.notePath && (
                 <>
                   <button className="page-add" title="Supprimer la page" aria-label="Supprimer la page" onClick={() => onDelete(page.notePath!)}>

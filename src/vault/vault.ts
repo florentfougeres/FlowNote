@@ -35,6 +35,8 @@ export interface Vault {
   rename(from: string, to: string): Promise<void>;
   /** Removes a note or a folder (to the system trash in the desktop app). */
   remove(path: string): Promise<void>;
+  /** Fast full-text search done by the backend; otherwise notes are read one by one. */
+  search?(query: string, caseSensitive: boolean, limit: number): Promise<{ path: string; lines: [number, string][] }[]>;
 }
 
 export const encodeText = (text: string) => new TextEncoder().encode(text);

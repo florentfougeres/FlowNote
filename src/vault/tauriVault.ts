@@ -31,6 +31,7 @@ export function tauriVault(root: string): Vault {
     obsidianConfig: () => invoke<string>("vault_config", { root }),
     rename: (from, to) => invoke("vault_rename", { root, from, to }),
     remove: (path) => invoke("vault_trash", { root, path }),
+    search: (query, caseSensitive, limit) => invoke("vault_search", { root, query, caseSensitive, limit }),
   };
 }
 

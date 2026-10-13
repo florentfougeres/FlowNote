@@ -29,6 +29,7 @@ pub fn run() {
       vault::vault_config,
       vault::vault_rename,
       vault::vault_trash,
+      vault::vault_search,
       git::git_status,
       git::git_diff,
       git::git_stage,

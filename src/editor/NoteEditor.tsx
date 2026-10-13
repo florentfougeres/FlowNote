@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
+import type { Editor } from "@tiptap/core";
 import { EditorState } from "@tiptap/pm/state";
 import { defaultWiring, editorExtensions } from "./extensions";
 import { SuggestionMenu } from "./SuggestionMenu";
 import { BlockHandle } from "./BlockHandle";
-import { TableMenu } from "./TableMenu";
+import { TableHandles } from "./TableHandles";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { insertAttachments, type VaultBridge } from "./bridge";
 import { loadMarkdown, NoteSession } from "../markdown/note";
@@ -18,6 +19,8 @@ interface Props {
   bridge: VaultBridge;
   /** False for notes that must not be edited (e.g. containing conflict markers). */
   editable?: boolean;
+  /** Receives the editor instance (outline, find bar), or null when it goes away. */
+  onEditor?: (editor: Editor | null) => void;
 }
 
 async function readFiles(list: FileList | null | undefined): Promise<{ name: string; bytes: Uint8Array }[]> {
@@ -31,7 +34,7 @@ async function readFiles(list: FileList | null | undefined): Promise<{ name: str
   );
 }
 
-export function NoteEditor({ source, onMarkdown, bridge, editable = true }: Props) {
+export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEditor }: Props) {
   const session = useRef<NoteSession | null>(null);
   const shell = useRef<HTMLDivElement>(null);
   const [wiring] = useState(defaultWiring);
@@ -95,12 +98,20 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true }: Prop
     if (editor && !editor.isDestroyed) editor.setEditable(editable, false);
   }, [editor, editable]);
 
+  const editorCallback = useRef(onEditor);
+  editorCallback.current = onEditor;
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    editorCallback.current?.(editor);
+    return () => editorCallback.current?.(null);
+  }, [editor, source]);
+
   return (
     <div className="note-editor" ref={shell}>
       <PropertiesPanel raw={frontmatter} readOnly={!editable} onChange={changeFrontmatter} />
       <EditorContent editor={editor} />
       <BlockHandle editor={editor} shell={shell} />
-      <TableMenu editor={editor} />
+      <TableHandles editor={editor} />
       <SuggestionMenu store={wiring.slashStore} />
       <SuggestionMenu store={wiring.linkStore} />
       <SuggestionMenu store={wiring.emojiStore} />

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NoteEditor } from "./editor/NoteEditor";
 import { imageMime, type VaultBridge } from "./editor/bridge";
-import { ConfirmDialog, NameDialog } from "./Dialogs";
+import { ConfirmDialog, NameDialog, type NameResult } from "./Dialogs";
 import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
@@ -10,6 +10,12 @@ import { deletePage, renamePage, subpagesOf } from "./vault/pageOps";
 import { Sidebar } from "./Sidebar";
 import { GitPanel } from "./GitPanel";
 import { ToolButton, ToolGroup, Toolbar } from "./Toolbar";
+import { Breadcrumbs } from "./Breadcrumbs";
+import { OutlinePanel } from "./OutlinePanel";
+import { RawEditor } from "./RawEditor";
+import { FindBar, type FindRequest } from "./FindBar";
+import { VaultSearch } from "./VaultSearch";
+import type { Editor } from "@tiptap/core";
 import { Icon } from "./Icon";
 import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
@@ -32,7 +38,9 @@ interface OpenNote {
 interface Dialog {
   title: string;
   initial: string;
-  resolve: (name: string | null) => void;
+  folders?: string[];
+  folder?: string;
+  resolve: (result: NameResult | null) => void;
 }
 
 interface Confirm {
@@ -59,6 +67,14 @@ export function App() {
   const [config, setConfig] = useState<ObsidianConfig>(DEFAULT_CONFIG);
   const [note, setNote] = useState<OpenNote | null>(null);
   const [showMarkdown, setShowMarkdown] = useState(false);
+  const [rawMode, setRawMode] = useState(false);
+  const rawModeRef = useRef(rawMode);
+  rawModeRef.current = rawMode;
+  /** Leaving raw mode: the rich editor reloads from the edited text. */
+  const toggleRaw = () => {
+    if (rawMode) setNote((n) => (n ? { ...n, loaded: n.markdown } : n));
+    setRawMode(!rawMode);
+  };
   const [status, setStatus] = useState("");
   const [dialog, setDialog] = useState<Dialog | null>(null);
   // The Git drawer stays mounted while it slides out, so it leaves the way it came in.
@@ -67,9 +83,39 @@ export function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [gitChanges, setGitChanges] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
-  const [modal, setModal] = useState<"switcher" | "help" | "settings" | null>(null);
+  const [modal, setModal] = useState<"switcher" | "help" | "settings" | "search" | null>(null);
+  const [findRequest, setFindRequest] = useState<FindRequest | null>(null);
+  /** Selected text (one line) used to prefill the find fields. */
+  const selectedText = () => {
+    const current = editorRef.current;
+    if (!current || current.isDestroyed) return "";
+    const { from, to } = current.state.selection;
+    const text = current.state.doc.textBetween(from, to, "\n");
+    return text.includes("\n") ? "" : text;
+  };
+  const openFind = (replace = false) =>
+    setFindRequest((previous) => ({ query: selectedText() || previous?.query || "", replace, nonce: Date.now() }));
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [pendingOpen, setPendingOpen] = useState<string | null>(null);
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const editorRef = useRef<Editor | null>(null);
+  editorRef.current = editor;
+  const [showOutline, setShowOutline] = useState(() => {
+    try {
+      return localStorage.getItem("flownote:outline") === "shown";
+    } catch {
+      return false;
+    }
+  });
+  const toggleOutline = () =>
+    setShowOutline((shown) => {
+      try {
+        localStorage.setItem("flownote:outline", shown ? "hidden" : "shown");
+      } catch {
+        // not remembered
+      }
+      return !shown;
+    });
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
       return localStorage.getItem("flownote:sidebar") !== "hidden";
@@ -249,7 +295,14 @@ export function App() {
   // Application shortcuts (editor shortcuts live in the editor extensions).
   const shortcuts = useRef<(event: KeyboardEvent) => void>(() => {});
   shortcuts.current = (event: KeyboardEvent) => {
-    if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+    if (!(event.metaKey || event.ctrlKey)) return;
+    if (event.code === "KeyF" && vault) {
+      event.preventDefault();
+      if (event.shiftKey) setModal("search");
+      else if (noteRef.current && !rawModeRef.current) openFind(event.altKey);
+      return;
+    }
+    if (event.altKey) return;
     const key = event.key.toLowerCase();
     const run = (action: () => void) => {
       event.preventDefault();
@@ -264,6 +317,7 @@ export function App() {
     else if (key === "g" && event.shiftKey) run(() => toggleGit());
     else if (key === "/") run(() => setModal("help"));
     else if (key === "\\") run(toggleSidebar);
+    else if (key === "e" && event.shiftKey && noteRef.current) run(toggleRaw);
   };
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => shortcuts.current(event);
@@ -315,7 +369,20 @@ export function App() {
     }
   };
 
-  const askName = useCallback((title: string, initial: string) => new Promise<string | null>((resolve) => setDialog({ title, initial, resolve })), []);
+  const askName = useCallback(
+    (title: string, initial: string) => new Promise<string | null>((resolve) => setDialog({ title, initial, resolve: (r) => resolve(r?.name ?? null) })),
+    [],
+  );
+
+  /** Every folder of the vault, for the "new page" dialog ("" is the root). */
+  const folderChoices = () => {
+    const folders = new Set<string>([""]);
+    for (const file of filesRef.current) {
+      const parts = file.split("/").slice(0, -1);
+      parts.forEach((_, i) => folders.add(parts.slice(0, i + 1).join("/")));
+    }
+    return [...folders].sort((a, b) => a.localeCompare(b, "fr"));
+  };
   const askConfirm = (message: string, confirmLabel: string) => new Promise<boolean>((resolve) => setConfirm({ message, confirmLabel, resolve }));
 
   /** Renames the open page from its title; links across the vault follow. */
@@ -369,12 +436,29 @@ export function App() {
     [vault, refresh],
   );
 
-  /** "+ Nouvelle page" (root) or "+" on a page (sub-page, linked from its parent). */
-  const newPage = async (parent: string | null, presetName?: string) => {
+  /**
+   * "+ Nouvelle page" (asks for a name and a folder), "+" on a page (sub-page,
+   * linked from its parent) or "+" on a folder (page inside it).
+   */
+  const newPage = async (parent: string | null, presetName?: string, inFolder?: string) => {
     if (!vault) return;
-    const name = presetName ?? (await askName(parent ? "Nom de la sous-page" : "Nom de la page", "Sans titre"));
-    if (!name) return;
-    const folder = parent ? subpageFolder(parent) : newNoteFolder("", config);
+    let name = presetName ?? null;
+    let folder = parent ? subpageFolder(parent) : (inFolder ?? newNoteFolder("", config));
+    if (!name) {
+      const chooseFolder = !parent && inFolder === undefined;
+      const result = await new Promise<NameResult | null>((resolve) =>
+        setDialog({
+          title: parent ? "Nom de la sous-page" : "Nouvelle page",
+          initial: "Sans titre",
+          folders: chooseFolder ? folderChoices() : undefined,
+          folder,
+          resolve,
+        }),
+      );
+      if (!result) return;
+      name = result.name;
+      if (chooseFolder) folder = result.folder;
+    }
     const path = uniquePath(folder, `${sanitizeName(name) || "Sans titre"}.md`, filesRef.current);
     try {
       await saveNow();
@@ -442,6 +526,7 @@ export function App() {
           selected={note?.path}
           onSelect={(path) => void select(path)}
           onNewPage={(parent) => void newPage(parent)}
+          onNewPageInFolder={(folder) => void newPage(null, undefined, folder)}
         />
       )}
       <main className="content">
@@ -460,10 +545,7 @@ export function App() {
           center={
             note ? (
               <>
-                <span className="toolbar-location" title={note.path}>
-                  {note.path.includes("/") && <span className="toolbar-folder">{note.path.slice(0, note.path.lastIndexOf("/")).split("/").join(" › ")} › </span>}
-                  {noteTitle(note.path)}
-                </span>
+                <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} />
                 <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : "Non enregistré · ⌘S") : "Enregistré"}</span>
                 {status && <span className="status warning">{status}</span>}
               </>
@@ -475,12 +557,15 @@ export function App() {
             <>
               <ToolGroup>
                 <ToolButton icon="search" label="Rechercher une page (⌘P)" onClick={() => setModal("switcher")} />
+                <ToolButton icon="replace" label="Rechercher dans le vault (⌘⇧F)" onClick={() => setModal("search")} />
                 <ToolButton icon="compose" label="Nouvelle page (⌘N)" onClick={() => void newPage(null)} />
               </ToolGroup>
               {note && (
                 <ToolGroup>
+                  <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline} />
                   {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
-                  <ToolButton icon="code" label="Voir le Markdown" onClick={() => setShowMarkdown(!showMarkdown)} active={showMarkdown} />
+                  <ToolButton icon="raw" label="Mode Markdown brut (⌘⇧E)" onClick={toggleRaw} active={rawMode} />
+                  {!rawMode && <ToolButton icon="code" label="Voir le Markdown" onClick={() => setShowMarkdown(!showMarkdown)} active={showMarkdown} />}
                 </ToolGroup>
               )}
               <ToolGroup>
@@ -493,6 +578,7 @@ export function App() {
         />
         {note ? (
           <>
+            {findRequest && !rawMode && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
             <div className="panes">
               <div className="page">
                 {hasConflictMarkers(note.disk) && (
@@ -502,9 +588,14 @@ export function App() {
                   </div>
                 )}
                 <PageTitle title={noteTitle(note.path)} onRename={renameCurrent} readOnly={hasConflictMarkers(note.disk)} />
-                <NoteEditor key={note.path} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk)} />
+                {rawMode ? (
+                  <RawEditor key={note.path} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} />
+                ) : (
+                  <NoteEditor key={note.path} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk)} onEditor={setEditor} />
+                )}
               </div>
-              {showMarkdown && <pre className="markdown-preview">{note.markdown}</pre>}
+              {showOutline && <OutlinePanel editor={editor} onClose={toggleOutline} />}
+              {showMarkdown && !rawMode && <pre className="markdown-preview">{note.markdown}</pre>}
               {showHistory && vault.git && (
                 <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
               )}
@@ -556,6 +647,17 @@ export function App() {
       {modal === "switcher" && (
         <QuickSwitcher files={files} onOpen={(path) => void select(path)} onCreate={(name) => void newPage(null, name)} onClose={() => setModal(null)} />
       )}
+      {modal === "search" && (
+        <VaultSearch
+          vault={vault}
+          initialQuery={findRequest?.query ?? selectedText()}
+          onOpen={(hit, occurrence, query) => {
+            setRawMode(false);
+            void select(hit.path).then(() => setFindRequest({ query, occurrence, nonce: Date.now() }));
+          }}
+          onClose={() => setModal(null)}
+        />
+      )}
       {modal === "help" && <ShortcutsHelp onClose={() => setModal(null)} />}
       {modal === "settings" && (
         <SettingsDialog
@@ -578,8 +680,10 @@ export function App() {
         <NameDialog
           title={dialog.title}
           initial={dialog.initial}
-          onDone={(name) => {
-            dialog.resolve(name);
+          folders={dialog.folders}
+          folder={dialog.folder}
+          onDone={(result) => {
+            dialog.resolve(result);
             setDialog(null);
           }}
         />

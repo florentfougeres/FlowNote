@@ -1,8 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 
 /** Small modal asking for a page name (the webview has no reliable `prompt()`). */
-export function NameDialog({ title, initial, onDone }: { title: string; initial: string; onDone: (name: string | null) => void }) {
+export interface NameResult {
+  name: string;
+  folder: string;
+}
+
+/**
+ * Asks for a page name and, when `folders` is given, the folder to create it
+ * in ("" is the vault root).
+ */
+export function NameDialog({
+  title,
+  initial,
+  folders,
+  folder: initialFolder = "",
+  onDone,
+}: {
+  title: string;
+  initial: string;
+  folders?: string[];
+  folder?: string;
+  onDone: (result: NameResult | null) => void;
+}) {
   const [value, setValue] = useState(initial);
+  const [folder, setFolder] = useState(initialFolder);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
     input.current?.focus();
@@ -15,11 +37,23 @@ export function NameDialog({ title, initial, onDone }: { title: string; initial:
         onMouseDown={(e) => e.stopPropagation()}
         onSubmit={(e) => {
           e.preventDefault();
-          onDone(value.trim() || null);
+          onDone(value.trim() ? { name: value.trim(), folder } : null);
         }}
       >
         <label>{title}</label>
         <input ref={input} value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === "Escape" && onDone(null)} />
+        {folders && (
+          <label className="folder-field">
+            <span>Dossier</span>
+            <select value={folder} onChange={(e) => setFolder(e.target.value)}>
+              {folders.map((f) => (
+                <option key={f} value={f}>
+                  {f === "" ? "Racine du vault" : f.split("/").join(" › ")}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="modal-actions">
           <button type="button" onClick={() => onDone(null)}>
             Annuler
