@@ -34,5 +34,6 @@ describe("performance on a large note", () => {
     console.log(`taille=${Math.round(src.length / 1024)} Ko, ouverture=${openMs.toFixed(0)} ms, frappe+sérialisation médiane=${median.toFixed(1)} ms, max=${timings.at(-1)!.toFixed(1)} ms`);
     expect(save().endsWith("abcdefghij\n")).toBe(true);
     expect(median).toBeLessThan(50);
-  });
+    // Opening ~6000 blocks in jsdom takes seconds on slow CI machines; the keystroke budget is what matters.
+  }, 60_000);
 });
