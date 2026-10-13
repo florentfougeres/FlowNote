@@ -33,7 +33,6 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
-        with:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
