@@ -1,0 +1,115 @@
+import { Extension, InputRule, markInputRule, textblockTypeInputRule, wrappingInputRule } from "@tiptap/core";
+import { TextSelection } from "@tiptap/pm/state";
+import { canJoin, findWrapping } from "@tiptap/pm/transform";
+
+/**
+ * Markdown shortcuts typed at the start of a block or around a word. Each one
+ * records the syntax that was typed (`*` or `-` bullet, `**` or `__`, ...) so
+ * the file gets exactly what the user wrote.
+ */
+export const MarkdownShortcuts = Extension.create({
+  name: "markdownShortcuts",
+
+  addInputRules() {
+    const { nodes, marks } = this.editor.schema;
+
+    const taskRule = new InputRule({
+      find: /^\[([ xX]?)\]\s$/,
+      handler: ({ state, range, match }) => {
+        const { tr } = state;
+        const checked = /x/i.test(match[1]);
+        const checkChar = checked ? match[1] : " ";
+        const $from = tr.doc.resolve(range.from);
+        const item = $from.depth >= 2 ? $from.node(-1) : null;
+        // Inside the first paragraph of a list item: turn the item into a task.
+        if (item && item.type === nodes.listItem && $from.index(-1) === 0) {
+          tr.delete(range.from, range.to);
+          tr.setNodeMarkup($from.before(-1), undefined, { ...item.attrs, checked, checkChar });
+          return;
+        }
+        tr.delete(range.from, range.to);
+        const blockRange = tr.doc.resolve(range.from).blockRange();
+        const wrapping = blockRange && findWrapping(blockRange, nodes.list, { ordered: false, bullet: "-" });
+        if (!blockRange || !wrapping) return null;
+        const itemIndex = wrapping.findIndex((w) => w.type === nodes.listItem);
+        if (itemIndex >= 0) wrapping[itemIndex] = { type: nodes.listItem, attrs: { checked, checkChar } };
+        tr.wrap(blockRange, wrapping);
+        const before = tr.doc.resolve(range.from - 1).nodeBefore;
+        if (before && before.type === nodes.list && !before.attrs.ordered && canJoin(tr.doc, range.from - 1)) {
+          tr.join(range.from - 1);
+        }
+      },
+    });
+
+    // `> [!note] ` typed at the start of a quote turns it into an Obsidian callout.
+    const calloutRule = new InputRule({
+      find: /^\[!([\w-]+)\]([+-]?)\s$/,
+      handler: ({ state, range, match }) => {
+        const { tr } = state;
+        const $from = tr.doc.resolve(range.from);
+        if ($from.depth < 2) return null;
+        const quote = $from.node(-1);
+        if (quote.type !== nodes.blockquote || $from.index(-1) !== 0) return null;
+        const quotePos = $from.before(-1);
+        tr.delete(range.from, range.to);
+        const updated = tr.doc.nodeAt(quotePos)!;
+        const children: (typeof updated)[] = [];
+        updated.forEach((child) => children.push(child));
+        const [first, ...rest] = children;
+        const title = nodes.calloutTitle.create(null, first.content);
+        const callout = nodes.callout.create({ calloutType: match[1], fold: match[2] }, [title, ...rest]);
+        tr.replaceWith(quotePos, quotePos + updated.nodeSize, callout);
+        tr.setSelection(TextSelection.create(tr.doc, quotePos + 2 + title.content.size));
+      },
+    });
+
+    // `---`, `***` or `___` typed alone in a paragraph inserts a divider.
+    const dividerRule = new InputRule({
+      find: /^(---|\*\*\*|___)$/,
+      handler: ({ state, range, match }) => {
+        const { tr } = state;
+        const $from = tr.doc.resolve(range.from);
+        if ($from.parent.type !== nodes.paragraph || range.from !== $from.start() || range.to !== $from.end()) return null;
+        const start = $from.before();
+        tr.replaceWith(start, $from.after(), [nodes.horizontalRule.create({ raw: match[1] }), nodes.paragraph.create()]);
+        tr.setSelection(TextSelection.create(tr.doc, start + 2));
+      },
+    });
+
+    const mark = (find: RegExp, type: (typeof marks)[string], marker?: string) =>
+      markInputRule({ find, type, getAttributes: marker ? { marker } : undefined });
+
+    return [
+      textblockTypeInputRule({ find: /^(#{1,6})\s$/, type: nodes.heading, getAttributes: (m) => ({ level: m[1].length }) }),
+      textblockTypeInputRule({
+        find: /^(```|~~~)([\w+#.-]*)\s$/,
+        type: nodes.codeBlock,
+        getAttributes: (m) => ({ fence: m[1], language: m[2] }),
+      }),
+      taskRule,
+      wrappingInputRule({
+        find: /^\s*([-+*])\s$/,
+        type: nodes.list,
+        getAttributes: (m) => ({ ordered: false, bullet: m[1] }),
+        joinPredicate: (m, node) => !node.attrs.ordered && node.attrs.bullet === m[1],
+      }),
+      wrappingInputRule({
+        find: /^(\d{1,9})([.)])\s$/,
+        type: nodes.list,
+        getAttributes: (m) => ({ ordered: true, start: Number(m[1]), bullet: m[2] }),
+        joinPredicate: (m, node) => node.attrs.ordered && node.attrs.bullet === m[2] && node.attrs.start + node.childCount === Number(m[1]),
+      }),
+      wrappingInputRule({ find: /^\s*>\s$/, type: nodes.blockquote }),
+      calloutRule,
+      dividerRule,
+      // Delimiters may follow punctuation (l'*italique*) but not a letter (snake_case).
+      mark(/(?<=^|[^\p{L}\p{N}*])(\*\*(?!\s)([^*]+?)\*\*)$/u, marks.bold, "**"),
+      mark(/(?<=^|[^\p{L}\p{N}_])(__(?!\s)([^_]+?)__)$/u, marks.bold, "__"),
+      mark(/(?<=^|[^\p{L}\p{N}*])(\*(?![\s*])([^*]+?)\*)$/u, marks.italic, "*"),
+      mark(/(?<=^|[^\p{L}\p{N}_])(_(?![\s_])([^_]+?)_)$/u, marks.italic, "_"),
+      mark(/(?<=^|[^\p{L}\p{N}~])(~~(?!\s)([^~]+?)~~)$/u, marks.strike),
+      mark(/(?<=^|[^\p{L}\p{N}=])(==(?!\s)([^=]+?)==)$/u, marks.highlight),
+      mark(/(?<=^|[^`])(`(?!\s)([^`]+?)`)$/u, marks.code),
+    ];
+  },
+});

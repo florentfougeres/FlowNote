@@ -107,7 +107,9 @@ export class NoteSession {
     });
     const head = frontmatter ?? "";
     if (previous === null) return this.layout.origins.length === 0 ? head + trailing : head + (head ? "\n" : "");
-    return head + leading + body + trailing;
+    // A note that had no blocks gets a final newline once it has content.
+    const tail = this.layout.origins.length === 0 && !trailing.endsWith("\n") ? `${trailing}\n` : trailing;
+    return head + leading + body + tail;
   }
 
   /**

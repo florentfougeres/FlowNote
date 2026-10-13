@@ -93,6 +93,19 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [save]);
 
+  /** Resolves a wikilink like Obsidian: exact path first, then a note with that name anywhere. */
+  const openLink = (target: string) => {
+    const name = target.split(/[#^]/)[0].trim();
+    if (!name) return;
+    const files: VaultEntry[] = [];
+    const walk = (entries: VaultEntry[]) => entries.forEach((e) => (e.kind === "dir" ? walk(e.children ?? []) : files.push(e)));
+    walk(tree);
+    const wanted = name.endsWith(".md") ? name : `${name}.md`;
+    const match = files.find((f) => f.path === wanted) ?? files.find((f) => f.path.endsWith(`/${wanted}`) || f.name === name);
+    if (match) void select(match.path);
+    else setStatus(`Note introuvable : ${name}`);
+  };
+
   const onMarkdown = useCallback((markdown: string) => setNote((current) => (current ? { ...current, markdown } : current)), []);
 
   if (!vault) {
@@ -132,7 +145,7 @@ export function App() {
               </button>
             </header>
             <div className="panes">
-              <NoteEditor key={note.path} source={note.loaded} onMarkdown={onMarkdown} />
+              <NoteEditor key={note.path} source={note.loaded} onMarkdown={onMarkdown} onOpenLink={openLink} />
               {showMarkdown && <pre className="markdown-preview">{note.markdown}</pre>}
             </div>
           </>

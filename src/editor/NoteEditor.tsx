@@ -1,42 +1,33 @@
 import { useEffect, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { Extension } from "@tiptap/core";
-import { history, redo, undo } from "@tiptap/pm/history";
 import { EditorState } from "@tiptap/pm/state";
-import { documentExtensions } from "./schema";
+import { editorExtensions } from "./extensions";
 import { loadMarkdown, NoteSession } from "../markdown/note";
-
-const Editing = Extension.create({
-  name: "editing",
-  addProseMirrorPlugins: () => [history()],
-  addKeyboardShortcuts() {
-    return {
-      "Mod-z": () => undo(this.editor.state, this.editor.view.dispatch),
-      "Mod-Shift-z": () => redo(this.editor.state, this.editor.view.dispatch),
-      "Mod-y": () => redo(this.editor.state, this.editor.view.dispatch),
-      "Mod-b": () => this.editor.commands.toggleMark("bold"),
-      "Mod-i": () => this.editor.commands.toggleMark("italic"),
-      "Mod-e": () => this.editor.commands.toggleMark("code"),
-      "Mod-Shift-s": () => this.editor.commands.toggleMark("strike"),
-      "Mod-Shift-h": () => this.editor.commands.toggleMark("highlight"),
-      "Shift-Enter": () => this.editor.commands.insertContent({ type: "softBreak" }),
-    };
-  },
-});
 
 interface Props {
   /** File content as loaded from disk; a new value reloads the editor. */
   source: string;
   onMarkdown: (markdown: string) => void;
+  /** Called with the target of a clicked [[wikilink]]. */
+  onOpenLink?: (target: string) => void;
 }
 
-export function NoteEditor({ source, onMarkdown }: Props) {
+export function NoteEditor({ source, onMarkdown, onOpenLink }: Props) {
   const session = useRef<NoteSession | null>(null);
   const timer = useRef<number | undefined>(undefined);
+  const openLink = useRef(onOpenLink);
+  openLink.current = onOpenLink;
 
   const editor = useEditor({
-    extensions: [...documentExtensions, Editing],
-    editorProps: { attributes: { class: "note", spellcheck: "true" } },
+    extensions: editorExtensions(),
+    editorProps: {
+      attributes: { class: "note", spellcheck: "true" },
+      handleClickOn: (_view, _pos, node) => {
+        if (node.type.name !== "wikilink" || node.attrs.embed) return false;
+        openLink.current?.(node.attrs.target);
+        return true;
+      },
+    },
     onUpdate: ({ editor }) => {
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(() => {
@@ -44,7 +35,6 @@ export function NoteEditor({ source, onMarkdown }: Props) {
       }, 250);
     },
   });
-
   useEffect(() => {
     if (!editor) return;
     const { doc, layout } = loadMarkdown(source);
