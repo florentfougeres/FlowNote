@@ -187,10 +187,10 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
         </div>
         <div className="git-remote">
           <button disabled={busy} onClick={() => void pull()} title="git pull (fusion)">
-            ↓ Récupérer
+            ↓ Pull
           </button>
           <button disabled={busy} onClick={() => void push()} title="git push">
-            ↑ Envoyer
+            ↑ Push
           </button>
           <button disabled={busy} onClick={() => void fetchRemote()} title="git fetch : met à jour ↑↓ sans rien modifier">
             ↻

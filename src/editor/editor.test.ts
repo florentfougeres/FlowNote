@@ -244,3 +244,14 @@ describe("table handles operations", () => {
     expect(save()).toBe("| B | A |\n| :---: | ---: |\n| 2 | 1 |\n| 4 | 3 |\n");
   });
 });
+
+describe("mermaid", () => {
+  it("the slash item writes a standard ```mermaid block", async () => {
+    const { editor, save } = open("");
+    type(editor, "/mermaid");
+    await new Promise((r) => setTimeout(r, 0));
+    press(editor, "Enter");
+    expect(save()).toBe("```mermaid\ngraph TD\n  A[Début] --> B[Fin]\n```\n");
+    expect(editor.view.dom.querySelector(".code-block.is-mermaid")).not.toBeNull();
+  });
+});

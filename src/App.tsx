@@ -107,7 +107,20 @@ export function App() {
       return false;
     }
   });
-  const toggleOutline = () =>
+  /** Outline set aside while the Git panel is open (the preference is kept). */
+  const [outlineHidden, setOutlineHidden] = useState(false);
+  useEffect(() => {
+    if (!gitOpen) setOutlineHidden(false);
+  }, [gitOpen]);
+  const toggleOutline = () => {
+    if (outlineHidden || (showOutline && gitOpen)) {
+      // Asking for the outline while Git covers it: Git closes.
+      toggleGit(false);
+      setOutlineHidden(false);
+      if (!showOutline) setShowOutline(true);
+      return;
+    }
+    if (!showOutline) toggleGit(false);
     setShowOutline((shown) => {
       try {
         localStorage.setItem("flownote:outline", shown ? "hidden" : "shown");
@@ -116,6 +129,7 @@ export function App() {
       }
       return !shown;
     });
+  };
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
       return localStorage.getItem("flownote:sidebar") !== "hidden";
@@ -139,11 +153,45 @@ export function App() {
     document.documentElement.classList.toggle("native-vibrancy", isTauri());
   }, []);
 
+  const [gitWidth, setGitWidth] = useState(() => {
+    try {
+      return Number(localStorage.getItem("flownote:git-width")) || 380;
+    } catch {
+      return 380;
+    }
+  });
+  const [resizingGit, setResizingGit] = useState(false);
+  /** Drag on the drawer's left edge; the width is remembered. */
+  const startGitResize = (event: React.PointerEvent) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = gitWidth;
+    let width = startWidth;
+    setResizingGit(true);
+    const move = (e: PointerEvent) => {
+      width = Math.round(Math.min(Math.max(startX - e.clientX + startWidth, 300), window.innerWidth * 0.7));
+      setGitWidth(width);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      setResizingGit(false);
+      try {
+        localStorage.setItem("flownote:git-width", String(width));
+      } catch {
+        // not remembered
+      }
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
   const gitOpenRef = useRef(false);
   const toggleGit = useCallback((open?: boolean) => {
     const next = open ?? !gitOpenRef.current;
     gitOpenRef.current = next;
     if (!next) return setGitOpen(false);
+    // Git and the outline share the right edge: Git takes the place.
+    setOutlineHidden(true);
     // Mount closed, then open on the next frame so the drawer slides in.
     setGitMounted(true);
     requestAnimationFrame(() => requestAnimationFrame(() => gitOpenRef.current && setGitOpen(true)));
@@ -562,7 +610,7 @@ export function App() {
               </ToolGroup>
               {note && (
                 <ToolGroup>
-                  <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline} />
+                  <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />
                   {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
                   <ToolButton icon="raw" label="Mode Markdown brut (⌘⇧E)" onClick={toggleRaw} active={rawMode} />
                   {!rawMode && <ToolButton icon="code" label="Voir le Markdown" onClick={() => setShowMarkdown(!showMarkdown)} active={showMarkdown} />}
@@ -587,14 +635,14 @@ export function App() {
                     {vault.git && <button onClick={() => toggleGit(true)}>Résoudre</button>}
                   </div>
                 )}
-                <PageTitle title={noteTitle(note.path)} onRename={renameCurrent} readOnly={hasConflictMarkers(note.disk)} />
+                {!rawMode && <PageTitle title={noteTitle(note.path)} onRename={renameCurrent} readOnly={hasConflictMarkers(note.disk)} />}
                 {rawMode ? (
                   <RawEditor key={note.path} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} />
                 ) : (
                   <NoteEditor key={note.path} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk)} onEditor={setEditor} />
                 )}
               </div>
-              {showOutline && <OutlinePanel editor={editor} onClose={toggleOutline} />}
+              {showOutline && !outlineHidden && !rawMode && <OutlinePanel editor={editor} onClose={toggleOutline} />}
               {showMarkdown && !rawMode && <pre className="markdown-preview">{note.markdown}</pre>}
               {showHistory && vault.git && (
                 <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
@@ -607,10 +655,13 @@ export function App() {
       </main>
       {gitMounted && vault.git && (
         <aside
-          className={gitOpen ? "git-drawer open" : "git-drawer"}
+          className={`git-drawer${gitOpen ? " open" : ""}${resizingGit ? " resizing" : ""}`}
+          style={{ width: gitOpen ? gitWidth : 0 }}
           aria-label="Gestionnaire Git"
           onTransitionEnd={(e) => e.target === e.currentTarget && !gitOpen && setGitMounted(false)}
         >
+          <div className="git-drawer-resize" onPointerDown={startGitResize} role="separator" aria-orientation="vertical" aria-label="Redimensionner le panneau Git" />
+          <div className="git-drawer-inner" style={{ width: gitWidth }}>
           <div className="git-drawer-header">
             <span>Git</span>
             <button onClick={() => toggleGit(false)} aria-label="Fermer le panneau Git" title="Fermer (⌘⇧G)">
@@ -631,6 +682,7 @@ export function App() {
                 void reloadFromDisk();
               }}
             />
+          </div>
           </div>
         </aside>
       )}

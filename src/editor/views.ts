@@ -102,7 +102,10 @@ export const calloutView: NodeViewRenderer = ({ node }) => {
   };
 };
 
-/** Code blocks with an editable language label. */
+/**
+ * Code blocks with an editable language label. Mermaid blocks also show their
+ * diagram; their source is shown only while the cursor is inside the block.
+ */
 export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   const dom = element("div", "code-block");
   const header = element("div", "code-header");
@@ -123,17 +126,88 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   const pre = element("pre");
   const code = element("code");
   pre.append(code);
-  dom.append(header, pre);
+  const diagram = element("div", "mermaid-preview");
+  diagram.contentEditable = "false";
+  dom.append(header, pre, diagram);
+
+  let current = node;
+  let rendered: string | null = null;
+  let timer = 0;
+  const isMermaid = () => String(current.attrs.language).trim().toLowerCase() === "mermaid";
+
+  const render = () => {
+    window.clearTimeout(timer);
+    if (!isMermaid()) {
+      rendered = null;
+      diagram.replaceChildren();
+      return;
+    }
+    const source = current.textContent;
+    if (source === rendered) return;
+    timer = window.setTimeout(() => {
+      rendered = source;
+      if (!source.trim()) {
+        diagram.replaceChildren(Object.assign(element("div", "mermaid-empty"), { textContent: "Diagramme Mermaid vide : cliquez pour l'écrire." }));
+        return;
+      }
+      import("./mermaid")
+        .then(({ renderMermaid }) => renderMermaid(source))
+        .then((svg) => {
+          if (rendered === source) diagram.innerHTML = svg;
+        })
+        .catch((error: unknown) => {
+          if (rendered !== source) return;
+          const message = element("div", "mermaid-error");
+          message.textContent = `Diagramme invalide : ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`;
+          diagram.replaceChildren(message);
+        });
+    }, rendered === null ? 0 : 300);
+  };
+
+  // Source visible while editing inside the block, diagram only otherwise.
+  const syncEditing = () => {
+    const pos = getPos();
+    if (editor.isDestroyed || pos === undefined) return;
+    const { from, to } = editor.state.selection;
+    const inside = from > pos && to < pos + current.nodeSize && editor.isFocused;
+    dom.classList.toggle("editing", inside || document.activeElement === language);
+  };
+  editor.on("selectionUpdate", syncEditing);
+  editor.on("focus", syncEditing);
+  editor.on("blur", syncEditing);
+  language.addEventListener("focus", syncEditing);
+  language.addEventListener("blur", syncEditing);
+
+  diagram.addEventListener("mousedown", (event) => {
+    const pos = getPos();
+    if (pos === undefined || !editor.isEditable) return;
+    event.preventDefault();
+    editor.chain().focus().setTextSelection(pos + current.nodeSize - 1).run();
+  });
+
+  const syncKind = () => dom.classList.toggle("is-mermaid", isMermaid());
+  syncKind();
+  render();
+
   return {
     dom,
     contentDOM: code,
     update: (n) => {
       if (n.type !== node.type) return false;
+      current = n;
       if (document.activeElement !== language) language.value = n.attrs.language;
+      syncKind();
+      render();
       return true;
     },
-    stopEvent: (event) => event.target === language,
-    ignoreMutation: (mutation) => header.contains(mutation.target as Node),
+    stopEvent: (event) => event.target === language || diagram.contains(event.target as Node),
+    ignoreMutation: (mutation) => header.contains(mutation.target as Node) || diagram.contains(mutation.target as Node),
+    destroy: () => {
+      window.clearTimeout(timer);
+      editor.off("selectionUpdate", syncEditing);
+      editor.off("focus", syncEditing);
+      editor.off("blur", syncEditing);
+    },
   };
 };
 

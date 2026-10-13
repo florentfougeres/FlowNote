@@ -49,6 +49,18 @@ export const SLASH_ITEMS: SlashItem[] = [
   { key: "callout-warning", title: "Callout attention", description: "Encadré > [!warning]", icon: "⚠", keywords: ["callout", "attention", "warning", "avertissement"], run: kind("callout", "warning") },
   { key: "subpage", title: "Sous-page", description: "Nouvelle note liée, rangée sous celle-ci", icon: "📄", keywords: ["page", "sous-page", "note", "subpage"], run: (e, r, b) => void createSubpage(e, r, b) },
   { key: "code", title: "Code", description: "Bloc de code", icon: "</>", keywords: ["code", "snippet"], run: kind("code") },
+  {
+    key: "mermaid",
+    title: "Diagramme Mermaid",
+    description: "Schéma rendu aussi par Obsidian",
+    icon: "◇",
+    keywords: ["mermaid", "diagramme", "schéma", "graphe", "flowchart"],
+    run: (editor, range) => {
+      turnInto(editor, "code", range);
+      editor.commands.updateAttributes("codeBlock", { language: "mermaid" });
+      editor.commands.insertContent("graph TD\n  A[Début] --> B[Fin]");
+    },
+  },
   { key: "divider", title: "Séparateur", description: "Ligne horizontale", icon: "—", keywords: ["séparateur", "divider", "ligne", "hr"], run: kind("divider") },
   {
     key: "table",

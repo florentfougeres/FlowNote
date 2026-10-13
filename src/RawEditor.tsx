@@ -31,16 +31,27 @@ export function RawEditor({ value, onChange, readOnly }: { value: string; onChan
     }
   };
 
+  // Line numbers: an invisible copy of the text, wrapped like the textarea,
+  // sits underneath so each number lines up with its line even when it wraps.
+  const lines = value.split("\n");
   return (
-    <textarea
-      ref={ref}
-      className="raw-editor"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      onKeyDown={onKeyDown}
-      readOnly={readOnly}
-      spellCheck={false}
-      aria-label="Markdown de la note"
-    />
+    <div className="raw-editor">
+      <div className="raw-lines" aria-hidden="true">
+        {lines.map((line, i) => (
+          <div key={i} data-line={i + 1}>
+            {line || "\u200b"}
+          </div>
+        ))}
+      </div>
+      <textarea
+        ref={ref}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={onKeyDown}
+        readOnly={readOnly}
+        spellCheck={false}
+        aria-label="Markdown de la note"
+      />
+    </div>
   );
 }
