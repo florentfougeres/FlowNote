@@ -37,6 +37,8 @@ jobs:
         with:
           workspaces: src-tauri
       - uses: astral-sh/setup-uv@v6 # builds the Grammalecte companion (scripts/build-grammar.sh)
+        with:
+          version: "0.13.0" # pinned: looking up "latest" can fail on a GitHub API hiccup
       - run: npm ci
       - uses: tauri-apps/tauri-action@v0
         env:
