@@ -4,6 +4,7 @@ import { ConflictError, encodeText, type Vault, type VaultEntry } from "./vault"
 import { tauriGit } from "./git";
 
 const LAST_VAULT_KEY = "flownote:last-vault";
+const RECENT_VAULTS_KEY = "flownote:recent-vaults";
 
 export function isTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -39,8 +40,40 @@ export function tauriVault(root: string): Vault {
 export async function pickTauriVault(): Promise<Vault | null> {
   const root = await open({ directory: true, multiple: false, title: "Choisir un vault Obsidian" });
   if (typeof root !== "string") return null;
-  localStorage.setItem(LAST_VAULT_KEY, root);
+  return openTauriVault(root);
+}
+
+/** Opens a vault folder and remembers it (last opened, recent list). */
+export function openTauriVault(root: string): Vault {
+  try {
+    localStorage.setItem(LAST_VAULT_KEY, root);
+    localStorage.setItem(RECENT_VAULTS_KEY, JSON.stringify([root, ...recentTauriVaults().filter((r) => r !== root)].slice(0, 6)));
+  } catch {
+    // not remembered
+  }
   return tauriVault(root);
+}
+
+/** Folders of the vaults opened recently, most recent first. */
+export function recentTauriVaults(): string[] {
+  try {
+    const list = JSON.parse(localStorage.getItem(RECENT_VAULTS_KEY) ?? "[]") as unknown;
+    const recent = Array.isArray(list) ? list.filter((r): r is string => typeof r === "string") : [];
+    // Vaults opened before the recent list existed.
+    const last = localStorage.getItem(LAST_VAULT_KEY);
+    return last && !recent.includes(last) ? [last, ...recent] : recent;
+  } catch {
+    return [];
+  }
+}
+
+export function forgetTauriVault(root: string) {
+  try {
+    localStorage.setItem(RECENT_VAULTS_KEY, JSON.stringify(recentTauriVaults().filter((r) => r !== root)));
+    if (localStorage.getItem(LAST_VAULT_KEY) === root) localStorage.removeItem(LAST_VAULT_KEY);
+  } catch {
+    // nothing remembered
+  }
 }
 
 export function lastTauriVault(): Vault | null {

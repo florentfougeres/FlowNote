@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { DiffView } from "./DiffView";
 import { ConflictResolver } from "./ConflictResolver";
-import { isConflicted, isStaged, isUnstaged, MergeConflictError, statusLabel, type GitApi, type GitFile, type GitStatus } from "./vault/git";
+import { explainGitError, fetchResult, pullResult, pushResult, syncSummary } from "./vault/gitMessages";
+import { autoCommitMessage, isConflicted, isUntracked, isStaged, isUnstaged, MergeConflictError, statusLabel, type GitApi, type GitFile, type GitStatus } from "./vault/git";
 import { basename, dirname } from "./vault/links";
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
   onChanged: () => void;
   /** Called after a pull, which may have changed notes on disk. */
   onPulled: () => void;
+  /** Files whose changes were discarded: the open note must show the disk version. */
+  onDiscarded: (paths: string[]) => void;
 }
 
 interface Selection {
@@ -22,20 +25,25 @@ interface Selection {
   conflict?: boolean;
 }
 
-export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }: Props) {
+export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, onDiscarded }: Props) {
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [diff, setDiff] = useState("");
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState<{ error: boolean; text: string } | null>(null);
+  /** The operation running, shown on its button; every other action waits. */
+  const [running, setRunning] = useState<Operation | null>(null);
+  const busy = running !== null;
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [confirmAbort, setConfirmAbort] = useState(false);
+  /** Files whose discard waits for confirmation (one row, or the whole section). */
+  const [confirmDiscard, setConfirmDiscard] = useState<{ paths: string[]; all: boolean } | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       setStatus(await git.status());
     } catch (error) {
-      setFeedback({ error: true, text: String(error) });
+      const raw = String(error).replace(/^Error: /, "");
+      setFeedback({ kind: "error", text: explainGitError(raw), details: raw });
     }
   }, [git]);
 
@@ -69,58 +77,106 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
     };
   }, [git, selection, status]);
 
-  const act = async (action: () => Promise<unknown>) => {
-    setBusy(true);
+  // A success message goes away by itself; an error stays until the next action.
+  useEffect(() => {
+    if (feedback?.kind !== "success") return;
+    const timer = window.setTimeout(() => setFeedback(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [feedback]);
+
+  const act = async (operation: Operation, action: () => Promise<unknown>) => {
+    if (running) return; // a second click while it runs does nothing
+    setRunning(operation);
     setFeedback(null);
     try {
       await action();
     } catch (error) {
-      setFeedback({ error: true, text: String(error) });
+      const raw = String(error).replace(/^Error: /, "");
+      setFeedback({ kind: "error", text: explainGitError(raw), details: raw });
     } finally {
-      setBusy(false);
+      setRunning(null);
       await refresh();
       onChanged();
     }
   };
 
   const pull = () =>
-    act(async () => {
+    act("pull", async () => {
       await beforeCommit();
+      const behind = status?.behind ?? 0;
       try {
-        setFeedback({ error: false, text: (await git.pull()) || "Déjà à jour." });
+        await git.pull();
+        setFeedback({ kind: "success", text: pullResult(behind, status?.upstream) });
       } catch (error) {
         if (!(error instanceof MergeConflictError)) throw error;
-        setFeedback({ error: true, text: "La fusion s'est arrêtée sur des conflits : les fichiers concernés sont marqués U." });
+        setFeedback({ kind: "error", text: "La fusion s'est arrêtée sur des conflits : résolvez les fichiers marqués U, puis terminez la fusion." });
       } finally {
         onPulled();
       }
     });
 
-  const push = () => act(async () => setFeedback({ error: false, text: (await git.push()) || "Envoyé." }));
+  const push = () =>
+    act("push", async () => {
+      const ahead = status?.ahead ?? 0;
+      const upstream = status?.upstream;
+      await git.push();
+      setFeedback({ kind: "success", text: pushResult(ahead, upstream) });
+    });
 
-  const fetchRemote = () => act(() => git.fetch());
+  const fetchRemote = () =>
+    act("fetch", async () => {
+      await git.fetch();
+      const fresh = await git.status();
+      setFeedback({ kind: "success", text: fetchResult(fresh.behind, fresh.upstream) });
+    });
 
   const finishMerge = () =>
-    act(async () => {
-      setFeedback({ error: false, text: await git.continueMerge() });
+    act("merge", async () => {
+      await git.continueMerge();
+      setFeedback({ kind: "success", text: "Fusion terminée et commitée." });
       onPulled();
     });
 
   const abortMerge = () =>
-    act(async () => {
+    act("merge", async () => {
       setConfirmAbort(false);
       setSelection(null);
       await git.abortMerge();
-      setFeedback({ error: false, text: "Fusion annulée : les fichiers sont revenus à leur état d'avant." });
+      setFeedback({ kind: "success", text: "Fusion annulée : les fichiers sont revenus à leur état d'avant." });
       onPulled();
     });
 
-  const commit = () =>
-    act(async () => {
+  /** Back to the last indexed version (new files go to the trash). The open note is saved first, then reloaded. */
+  const discard = (files: GitFile[]) =>
+    act("discard", async () => {
+      setConfirmDiscard(null);
       await beforeCommit();
-      const summary = await git.commit(message);
+      await git.discard(files.map((f) => f.path));
+      const created = files.filter(isUntracked).length;
+      const one = files.length === 1 ? basename(files[0].path) : null;
+      setFeedback({
+        kind: "success",
+        text: one
+          ? created
+            ? `${one} a été mis à la corbeille.`
+            : `Les modifications de ${one} ont été annulées.`
+          : `Modifications de ${files.length} fichiers annulées${created ? ` (${created} nouveau${created > 1 ? "x" : ""} à la corbeille)` : ""}.`,
+      });
+      onDiscarded(files.map((f) => f.path));
+    });
+
+  // An empty message gets an automatic one (date, notes, "made with FlowNote").
+  const commit = () =>
+    act("commit", async () => {
+      await beforeCommit();
+      const files = (status?.files ?? []).filter(isStaged).map((f) => f.path);
+      const used = message.trim() ? message : autoCommitMessage(files);
+      await git.commit(used);
       setMessage("");
-      setFeedback({ error: false, text: summary });
+      setFeedback({
+        kind: "success",
+        text: `Commit créé : « ${used.split("\n")[0]} ».${status?.upstream ? " Faites un Push pour l'envoyer." : ""}`,
+      });
     });
 
   if (!status) return <div className="git-panel empty">Lecture du dépôt…</div>;
@@ -137,11 +193,25 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
           {title} <span className="git-count">{files.length}</span>
         </span>
         {files.length > 0 && (
-          <button disabled={busy} onClick={() => void act(() => (stagedSection ? git.unstage(files.map((f) => f.path)) : git.stage(files.map((f) => f.path))))}>
-            {stagedSection ? "Tout retirer" : "Tout indexer"}
-          </button>
+          <span className="git-section-actions">
+            {!stagedSection && (
+              <button disabled={busy} title="Annuler toutes les modifications non indexées" onClick={() => setConfirmDiscard({ paths: files.map((f) => f.path), all: true })}>
+                Tout annuler
+              </button>
+            )}
+            <button disabled={busy} onClick={() => void act("stage", () => (stagedSection ? git.unstage(files.map((f) => f.path)) : git.stage(files.map((f) => f.path))))}>
+              {stagedSection ? "Tout retirer" : "Tout indexer"}
+            </button>
+          </span>
         )}
       </header>
+      {!stagedSection && confirmDiscard?.all && (
+        <DiscardConfirm
+          text={`Annuler les modifications de ${files.length} fichier${files.length > 1 ? "s" : ""} ? Cette action est définitive${files.some(isUntracked) ? " (les nouveaux fichiers vont à la corbeille)" : ""}.`}
+          onConfirm={() => void discard(files)}
+          onCancel={() => setConfirmDiscard(null)}
+        />
+      )}
       {files.length === 0 && <p className="git-none">{stagedSection ? "Rien d'indexé." : "Aucune modification."}</p>}
       <ul>
         {files.map((file) => {
@@ -156,19 +226,49 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
                 {basename(file.path)}
                 <span className="git-folder">{file.origPath ? `← ${file.origPath}` : dirname(file.path)}</span>
               </span>
+              {!stagedSection && (
+                <button
+                  className="git-action git-discard"
+                  disabled={busy}
+                  title={isUntracked(file) ? "Supprimer ce nouveau fichier (corbeille)" : "Annuler les modifications de ce fichier"}
+                  aria-label="Annuler les modifications"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setConfirmDiscard({ paths: [file.path], all: false });
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M5.5 3.5 2.5 6.5l3 3 M2.5 6.5h7a3.5 3.5 0 0 1 0 7H7" />
+                  </svg>
+                </button>
+              )}
               <button
                 className="git-action"
                 disabled={busy}
                 title={stagedSection ? "Retirer de l'index" : "Indexer"}
                 onClick={(event) => {
                   event.stopPropagation();
-                  void act(() => (stagedSection ? git.unstage([file.path]) : git.stage([file.path])));
+                  void act("stage", () => (stagedSection ? git.unstage([file.path]) : git.stage([file.path])));
                 }}
               >
                 {stagedSection ? "−" : "+"}
               </button>
             </li>
           );
+          // Confirmation right under the row being discarded.
+        }).flatMap((row, i) => {
+          const file = files[i];
+          if (stagedSection || confirmDiscard?.all || confirmDiscard?.paths[0] !== file.path) return [row];
+          return [
+            row,
+            <li key={`${file.path}-confirm`} className="git-confirm-row">
+              <DiscardConfirm
+                text={isUntracked(file) ? `Mettre le nouveau fichier ${basename(file.path)} à la corbeille ?` : `Annuler les modifications de ${basename(file.path)} ? Cette action est définitive.`}
+                onConfirm={() => void discard([file])}
+                onCancel={() => setConfirmDiscard(null)}
+              />
+            </li>,
+          ];
         })}
       </ul>
     </section>
@@ -179,23 +279,44 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
       <div className="git-sidebar">
         <div className="git-branch">
           <span>⎇ {status.branch ?? "HEAD détachée"}</span>
-          {status.upstream && (
-            <span className="git-sync" title={`Par rapport à ${status.upstream}`}>
-              ↑{status.ahead} ↓{status.behind}
-            </span>
-          )}
         </div>
+        <p className={status.ahead > 0 || status.behind > 0 ? "git-sync-summary pending" : "git-sync-summary"}>{syncSummary(status.upstream, status.ahead, status.behind)}</p>
         <div className="git-remote">
-          <button disabled={busy} onClick={() => void pull()} title="git pull (fusion)">
-            ↓ Pull
-          </button>
-          <button disabled={busy} onClick={() => void push()} title="git push">
-            ↑ Push
-          </button>
-          <button disabled={busy} onClick={() => void fetchRemote()} title="git fetch : met à jour ↑↓ sans rien modifier">
-            ↻
-          </button>
+          <RemoteButton
+            label="Pull"
+            runningLabel="Récupération…"
+            arrow="↓"
+            count={status.behind}
+            running={running === "pull"}
+            disabled={busy}
+            highlight={status.behind > 0}
+            title="Récupérer les commits du dépôt distant et les fusionner (git pull)"
+            onClick={() => void pull()}
+          />
+          <RemoteButton
+            label="Push"
+            runningLabel="Envoi…"
+            arrow="↑"
+            count={status.ahead}
+            running={running === "push"}
+            disabled={busy || (Boolean(status.upstream) && status.ahead === 0)}
+            highlight={status.ahead > 0}
+            title={status.upstream && status.ahead === 0 ? "Rien à envoyer : commitez d'abord vos modifications" : "Envoyer vos commits vers le dépôt distant (git push)"}
+            onClick={() => void push()}
+          />
+          <RemoteButton
+            label="Vérifier"
+            runningLabel="Vérification…"
+            arrow="↻"
+            count={0}
+            running={running === "fetch"}
+            disabled={busy}
+            highlight={false}
+            title="Regarder s'il y a du nouveau sur le dépôt distant, sans rien modifier (git fetch)"
+            onClick={() => void fetchRemote()}
+          />
         </div>
+        {feedback && <FeedbackBanner feedback={feedback} onClose={() => setFeedback(null)} />}
         {(status.merging || conflicted.length > 0) && (
           <div className="merge-banner">
             <strong>Fusion en cours</strong>
@@ -252,20 +373,25 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
         {!status.merging && (
         <div className="git-commit">
           <textarea
-            placeholder="Message de commit"
+            placeholder="Message de commit (facultatif : sinon date, heure et notes modifiées)"
             value={message}
             rows={3}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && message.trim() && staged.length > 0) void commit();
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && staged.length > 0) void commit();
             }}
           />
-          <button className="primary" disabled={busy || !message.trim() || staged.length === 0} onClick={() => void commit()}>
-            Commiter {staged.length > 0 ? `(${staged.length})` : ""}
+          <button className="primary" disabled={busy || staged.length === 0} onClick={() => void commit()}>
+            {running === "commit" ? (
+              <>
+                <span className="spinner" aria-hidden="true" /> Commit…
+              </>
+            ) : (
+              <>Commiter {staged.length > 0 ? `(${staged.length})` : ""}</>
+            )}
           </button>
         </div>
         )}
-        {feedback && <p className={feedback.error ? "git-feedback error" : "git-feedback"}>{feedback.text}</p>}
         {section("Indexé", staged, true)}
         {section("Modifications", unstaged, false)}
       </div>
@@ -277,7 +403,7 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
             path={selection.file.path}
             onResolved={() => {
               setSelection(null);
-              setFeedback({ error: false, text: `${selection.file.path} est résolu.` });
+              setFeedback({ kind: "success", text: `${selection.file.path} est résolu.` });
               void refresh();
               onChanged();
             }}
@@ -296,6 +422,73 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
           <p className="git-none">Sélectionnez un fichier pour voir ses modifications.</p>
         )}
       </div>
+    </div>
+  );
+}
+
+type Operation = "pull" | "push" | "fetch" | "commit" | "merge" | "stage" | "discard";
+
+interface Feedback {
+  kind: "success" | "error";
+  text: string;
+  /** Raw Git output, shown on demand. */
+  details?: string;
+}
+
+function RemoteButton(props: {
+  label: string;
+  runningLabel: string;
+  arrow: string;
+  count: number;
+  running: boolean;
+  disabled: boolean;
+  highlight: boolean;
+  title: string;
+  onClick: () => void;
+}) {
+  return (
+    <button className={props.highlight ? "git-remote-button highlight" : "git-remote-button"} disabled={props.disabled} onClick={props.onClick} title={props.title} aria-busy={props.running}>
+      {props.running ? <span className="spinner" aria-hidden="true" /> : <span aria-hidden="true">{props.arrow}</span>}
+      {props.running ? props.runningLabel : props.label}
+      {!props.running && props.count > 0 && <span className="git-count">{props.count}</span>}
+    </button>
+  );
+}
+
+function FeedbackBanner({ feedback, onClose }: { feedback: Feedback; onClose: () => void }) {
+  return (
+    <div className={`git-feedback ${feedback.kind}`} role={feedback.kind === "error" ? "alert" : "status"}>
+      <span className="git-feedback-icon" aria-hidden="true">
+        {feedback.kind === "success" ? "✓" : "!"}
+      </span>
+      <div className="git-feedback-body">
+        <span>{feedback.text}</span>
+        {feedback.details && (
+          <details>
+            <summary>Détails</summary>
+            <pre>{feedback.details}</pre>
+          </details>
+        )}
+      </div>
+      <button className="git-feedback-close" onClick={onClose} aria-label="Fermer">
+        ×
+      </button>
+    </div>
+  );
+}
+
+function DiscardConfirm({ text, onConfirm, onCancel }: { text: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="git-discard-confirm" role="alertdialog" onClick={(e) => e.stopPropagation()}>
+      <span>{text}</span>
+      <span className="git-discard-buttons">
+        <button onClick={onCancel} autoFocus>
+          Garder
+        </button>
+        <button className="danger" onClick={onConfirm}>
+          Annuler les modifications
+        </button>
+      </span>
     </div>
   );
 }

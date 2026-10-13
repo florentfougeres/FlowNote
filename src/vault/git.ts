@@ -49,6 +49,11 @@ export interface GitApi {
   diff(file: GitFile, staged: boolean): Promise<string>;
   stage(paths: string[]): Promise<void>;
   unstage(paths: string[]): Promise<void>;
+  /**
+   * Discards the unstaged changes of files: back to their indexed version;
+   * new untracked files are removed (to the system trash in the desktop app).
+   */
+  discard(paths: string[]): Promise<void>;
   /** Returns git's one-line summary of the new commit. */
   commit(message: string): Promise<string>;
   fetch(): Promise<void>;
@@ -77,12 +82,27 @@ export const isUnstaged = (f: GitFile) => f.worktree !== " " && !isConflicted(f)
 const LABELS: Record<string, string> = { M: "Modifié", A: "Ajouté", D: "Supprimé", R: "Renommé", C: "Copié", U: "Conflit", "?": "Nouveau" };
 export const statusLabel = (letter: string) => LABELS[letter] ?? letter;
 
+/**
+ * Message used when the commit message is left empty: date and time, the
+ * committed notes, and a mention that the commit was made with FlowNote.
+ */
+export function autoCommitMessage(paths: string[], date = new Date()): string {
+  const day = date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const time = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const names = paths.map((p) => p.split("/").pop()!.replace(/\.md$/, ""));
+  const subject = `Notes du ${day} à ${time}`;
+  const listed = names.slice(0, 15).map((n) => `- ${n}`);
+  if (names.length > 15) listed.push(`- … et ${names.length - 15} autre${names.length - 15 > 1 ? "s" : ""}`);
+  return `${subject}\n\n${listed.join("\n")}\n\nCommit créé avec FlowNote.`;
+}
+
 export function tauriGit(root: string): GitApi {
   return {
     status: () => invoke<GitStatus>("git_status", { root }),
     diff: (file, staged) => invoke<string>("git_diff", { root, path: file.path, staged, untracked: isUntracked(file) }),
     stage: (paths) => invoke("git_stage", { root, paths }),
     unstage: (paths) => invoke("git_unstage", { root, paths }),
+    discard: (paths) => invoke("git_discard", { root, paths }),
     commit: (message) => invoke<string>("git_commit", { root, message }),
     fetch: () => invoke("git_fetch", { root }),
     pull: async () => {
@@ -258,6 +278,13 @@ export function memoryGit(contents: Map<string, string | Uint8Array>, remote: Re
         const value = head.get(path);
         if (value === undefined) index.delete(path);
         else index.set(path, value);
+      }
+    },
+    discard: async (paths) => {
+      for (const path of paths) {
+        const indexed = index.get(path);
+        if (indexed === undefined) contents.delete(path);
+        else contents.set(path, indexed);
       }
     },
     commit: async (message) => {

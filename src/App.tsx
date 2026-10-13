@@ -23,11 +23,17 @@ import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVau
 import { DEFAULT_CONFIG, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
 import { FULL_NOTE } from "./markdown/fixtures";
 import { hasConflictMarkers } from "./vault/conflicts";
-import { isTauri, lastTauriVault, pickTauriVault } from "./vault/tauriVault";
+import { forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
+import { Welcome } from "./Welcome";
 import { invoke } from "@tauri-apps/api/core";
+
+/** Narrowest Git panel, also its default width. */
+const GIT_MIN_WIDTH = 300;
 
 interface OpenNote {
   path: string;
+  /** Bumped when the note is reloaded from disk, so the editor starts over even if the text equals `loaded`. */
+  reloads?: number;
   /** Content the editor was loaded from (unchanged by saves, so the editor is not reloaded). */
   loaded: string;
   /** Content on disk when the note was loaded or last saved. */
@@ -67,7 +73,6 @@ export function App() {
   const [files, setFiles] = useState<string[]>([]);
   const [config, setConfig] = useState<ObsidianConfig>(DEFAULT_CONFIG);
   const [note, setNote] = useState<OpenNote | null>(null);
-  const [showMarkdown, setShowMarkdown] = useState(false);
   const [rawMode, setRawMode] = useState(false);
   const rawModeRef = useRef(rawMode);
   rawModeRef.current = rawMode;
@@ -162,9 +167,9 @@ export function App() {
 
   const [gitWidth, setGitWidth] = useState(() => {
     try {
-      return Number(localStorage.getItem("flownote:git-width")) || 380;
+      return Number(localStorage.getItem("flownote:git-width")) || GIT_MIN_WIDTH;
     } catch {
-      return 380;
+      return GIT_MIN_WIDTH;
     }
   });
   const [resizingGit, setResizingGit] = useState(false);
@@ -176,7 +181,7 @@ export function App() {
     let width = startWidth;
     setResizingGit(true);
     const move = (e: PointerEvent) => {
-      width = Math.round(Math.min(Math.max(startX - e.clientX + startWidth, 300), window.innerWidth * 0.7));
+      width = Math.round(Math.min(Math.max(startX - e.clientX + startWidth, GIT_MIN_WIDTH), window.innerWidth * 0.7));
       setGitWidth(width);
     };
     const up = () => {
@@ -384,7 +389,7 @@ export function App() {
    * Re-reads the open note after a change on disk (pull, restore, Obsidian).
    * Unsaved edits are never overwritten: the difference is reported instead.
    */
-  const reloadFromDisk = useCallback(async () => {
+  const reloadFromDisk = useCallback(async (force = false) => {
     const current = noteRef.current;
     if (!vault || !current) return;
     let disk: string;
@@ -393,9 +398,10 @@ export function App() {
     } catch {
       return setStatus(`${current.path} n'existe plus sur le disque.`);
     }
-    if (disk === current.disk) return;
-    if (current.markdown !== current.disk) return setStatus("La note a changé sur le disque pendant que vous l'éditiez.");
-    const reloaded = { path: current.path, loaded: disk, disk, markdown: disk };
+    // `force`: the user asked for the disk version (changes discarded in the Git panel).
+    if (disk === current.disk && (!force || disk === current.markdown)) return;
+    if (!force && current.markdown !== current.disk) return setStatus("La note a changé sur le disque pendant que vous l'éditiez.");
+    const reloaded = { path: current.path, loaded: disk, disk, markdown: disk, reloads: (current.reloads ?? 0) + 1 };
     noteRef.current = reloaded;
     setNote(reloaded);
   }, [vault]);
@@ -553,26 +559,21 @@ export function App() {
 
   if (!vault) {
     return (
-      <main className="welcome">
-        <img className="welcome-icon" src="/icon.png" alt="" width={96} height={96} />
-        <h1>FlowNote</h1>
-        <p>Éditeur de blocs pour un vault Obsidian. Les fichiers Markdown restent la seule source de vérité.</p>
-        {isTauri() ? (
-          <button onClick={() => void open(pickTauriVault())}>Ouvrir un vault…</button>
-        ) : browserVaultSupported() ? (
-          <button onClick={() => void open(openBrowserVault())}>Ouvrir un vault…</button>
-        ) : (
-          <p className="warning">Ce navigateur ne permet pas d'ouvrir un dossier : utilisez Chrome, ou l'app Tauri.</p>
-        )}{" "}
-        <button onClick={() => void open(createMemoryVault("Démo", DEMO_FILES, DEMO_REMOTE))}>Essayer avec une note d'exemple</button>
-        {status && <p className="warning">{status}</p>}
-      </main>
+      <Welcome
+        recent={isTauri() ? recentTauriVaults() : []}
+        onOpenVault={isTauri() ? () => void open(pickTauriVault()) : browserVaultSupported() ? () => void open(openBrowserVault()) : null}
+        onOpenRecent={(root) => void open(openTauriVault(root))}
+        onForgetRecent={forgetTauriVault}
+        onTryDemo={() => void open(createMemoryVault("Démo", DEMO_FILES, DEMO_REMOTE))}
+        status={status}
+      />
     );
   }
 
   return (
     <div className={sidebarOpen ? "layout" : "layout no-sidebar"}>
       {sidebarOpen && (
+        <div className="sidebar-dock" data-tauri-drag-region>
         <Sidebar
           onDelete={(path) => void removePage(path)}
           onSearch={() => setModal("switcher")}
@@ -583,6 +584,7 @@ export function App() {
           onNewPage={(parent) => void newPage(parent)}
           onNewPageInFolder={(folder) => void newPage(null, undefined, folder)}
         />
+        </div>
       )}
       <main className="content">
         <Toolbar
@@ -620,7 +622,6 @@ export function App() {
                   <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />
                   {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
                   <ToolButton icon="raw" label="Mode Markdown brut (⌘⇧E)" onClick={toggleRaw} active={rawMode} />
-                  {!rawMode && <ToolButton icon="code" label="Voir le Markdown" onClick={() => setShowMarkdown(!showMarkdown)} active={showMarkdown} />}
                 </ToolGroup>
               )}
               <ToolGroup>
@@ -644,13 +645,12 @@ export function App() {
                 )}
                 {!rawMode && <PageTitle title={noteTitle(note.path)} onRename={renameCurrent} readOnly={hasConflictMarkers(note.disk)} />}
                 {rawMode ? (
-                  <RawEditor key={note.path} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} />
+                  <RawEditor key={`${note.path}#${note.reloads ?? 0}`} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} />
                 ) : (
-                  <NoteEditor key={note.path} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk)} onEditor={setEditor} />
+                  <NoteEditor key={`${note.path}#${note.reloads ?? 0}`} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk)} onEditor={setEditor} />
                 )}
               </div>
               {showOutline && !outlineHidden && !rawMode && <OutlinePanel editor={editor} onClose={toggleOutline} />}
-              {showMarkdown && !rawMode && <pre className="markdown-preview">{note.markdown}</pre>}
               {showHistory && vault.git && (
                 <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
               )}
@@ -687,6 +687,16 @@ export function App() {
               onPulled={() => {
                 void refresh(vault);
                 void reloadFromDisk();
+              }}
+              onDiscarded={(paths) => {
+                void refresh(vault);
+                const current = noteRef.current;
+                if (!current || !paths.includes(current.path)) return;
+                // A new note sent to the trash is closed; a modified one shows its restored version.
+                void vault.read(current.path).then(
+                  () => reloadFromDisk(true),
+                  () => setNote(null),
+                );
               }}
             />
           </div>
@@ -731,7 +741,12 @@ export function App() {
             setModal(null);
             void saveNow()
               .catch(() => {})
-              .then(() => (isTauri() ? open(pickTauriVault()) : (setVault(null), setNote(null))));
+              // Back to the welcome screen: recent vaults, or another folder.
+              .then(() => {
+                setVault(null);
+                setNote(null);
+                setStatus("");
+              });
           }}
           onClose={() => setModal(null)}
         />

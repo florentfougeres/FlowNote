@@ -188,6 +188,34 @@ pub fn git_unstage(root: String, paths: Vec<String>) -> Result<(), String> {
     run(cmd, None, &[]).map(|_| ())
 }
 
+/// Discards the working-tree changes of files (the "Modifications" section):
+/// tracked files go back to their indexed version, new untracked files go to
+/// the system trash (recoverable) rather than being deleted.
+#[tauri::command]
+pub fn git_discard(root: String, paths: Vec<String>) -> Result<(), String> {
+    paths.iter().try_for_each(|p| check_path(p))?;
+    // .obsidian and other hidden folders are never touched.
+    if let Some(hidden) = paths.iter().find(|p| p.split('/').any(|part| part.starts_with('.'))) {
+        return Err(format!("Chemin refusé : {hidden}"));
+    }
+    let status = git_status(root.clone())?;
+    let (untracked, tracked): (Vec<&String>, Vec<&String>) = paths.iter().partition(|p| {
+        status.files.iter().any(|f| &f.path == *p && f.index == "?")
+    });
+    if !tracked.is_empty() {
+        let mut cmd = git(&root);
+        cmd.args(["restore", "--worktree", "--"]).args(&tracked);
+        run(cmd, None, &[])?;
+    }
+    for path in untracked {
+        let target = Path::new(&root).join(path);
+        if target.exists() {
+            trash::delete(&target).map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
 /// Commits the staged changes; the message is passed on stdin, untouched.
 #[tauri::command]
 pub fn git_commit(root: String, message: String) -> Result<String, String> {
@@ -470,6 +498,21 @@ mod tests {
         assert!(git_commit(root.clone(), "  ".into()).is_err());
         assert!(git_stage(root.clone(), vec!["../hors".into()]).is_err());
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn discard_restores_tracked_files_and_trashes_new_ones() {
+        let (dir, root) = repo("discard");
+        fs::write(dir.join("note.md"), "Original\n").unwrap();
+        commit_all(&root, "init");
+        fs::write(dir.join("note.md"), "Modifié\n").unwrap();
+        fs::write(dir.join("nouvelle.md"), "Brouillon\n").unwrap();
+        git_discard(root.clone(), vec!["note.md".into()]).unwrap();
+        assert_eq!(fs::read_to_string(dir.join("note.md")).unwrap(), "Original\n");
+        assert!(dir.join("nouvelle.md").exists(), "only the listed files are discarded");
+        assert!(git_discard(root.clone(), vec![".obsidian/app.json".into()]).is_err());
+        assert!(git_discard(root.clone(), vec!["../dehors.md".into()]).is_err());
+        let _ = fs::remove_dir_all(dir);
     }
 
     fn commit_all(root: &str, message: &str) {

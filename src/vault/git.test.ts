@@ -150,3 +150,34 @@ describe("merge conflicts (memoryGit)", () => {
     expect((await git.status()).merging).toBe(false);
   });
 });
+
+describe("automatic commit message", () => {
+  it("gives date, time, the notes and FlowNote", async () => {
+    const { autoCommitMessage } = await import("./git");
+    const message = autoCommitMessage(["Projets/Idées.md", "Journal.md"], new Date(2026, 9, 13, 22, 49));
+    expect(message).toBe("Notes du 13/10/2026 à 22:49\n\n- Idées\n- Journal\n\nCommit créé avec FlowNote.");
+    const many = autoCommitMessage(Array.from({ length: 17 }, (_, i) => `n${i}.md`), new Date(2026, 0, 2, 8, 5));
+    expect(many.split("\n")[0]).toBe("Notes du 02/01/2026 à 08:05");
+    expect(many).toContain("- … et 2 autres");
+  });
+});
+
+describe("Git panel wording", () => {
+  it("summarises the sync state and results in plain French", async () => {
+    const m = await import("./gitMessages");
+    expect(m.syncSummary("origin/main", 0, 0)).toBe("À jour avec origin/main");
+    expect(m.syncSummary("origin/main", 2, 1)).toBe("2 commits à envoyer · 1 commit à récupérer");
+    expect(m.pushResult(1, "origin/main")).toBe("1 commit envoyé vers origin/main.");
+    expect(m.pushResult(0, "origin/main")).toBe("Rien à envoyer : tout est déjà sur origin/main.");
+    expect(m.pullResult(3, "origin/main")).toBe("3 commits récupérés depuis origin/main.");
+    expect(m.fetchResult(2, "origin/main")).toContain("faites un Pull pour les récupérer");
+  });
+
+  it("explains common errors", async () => {
+    const { explainGitError } = await import("./gitMessages");
+    expect(explainGitError("! [rejected] main -> main (fetch first)")).toMatch(/faites d'abord un Pull/);
+    expect(explainGitError("fatal: Authentication failed for 'https://…'")).toMatch(/Accès refusé/);
+    expect(explainGitError("fatal: unable to access: Could not resolve host: github.com")).toMatch(/connexion/);
+    expect(explainGitError("something odd")).toBe("L'opération Git a échoué.");
+  });
+});
