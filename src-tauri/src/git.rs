@@ -407,7 +407,7 @@ mod tests {
     use std::fs;
 
     fn repo(name: &str) -> (std::path::PathBuf, String) {
-        let dir = std::env::temp_dir().join(format!("mon-notion-git-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("flownote-git-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let root = dir.to_string_lossy().into_owned();
@@ -505,7 +505,7 @@ mod tests {
         let (remote_dir, remote) = repo("remote");
         fs::write(remote_dir.join("a.md"), "base\n").unwrap();
         commit_all(&remote, "Base");
-        let clone_dir = std::env::temp_dir().join(format!("mon-notion-git-clone-{}", std::process::id()));
+        let clone_dir = std::env::temp_dir().join(format!("flownote-git-clone-{}", std::process::id()));
         let _ = fs::remove_dir_all(&clone_dir);
         let mut cmd = Command::new(git_binary());
         cmd.args(["clone", "-q", &remote, clone_dir.to_str().unwrap()]);
@@ -610,7 +610,7 @@ mod tests {
 
     #[test]
     fn not_a_repository() {
-        let dir = std::env::temp_dir().join(format!("mon-notion-nogit-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("flownote-nogit-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         // GIT_CEILING_DIRECTORIES stops git from finding a parent repository of the temp dir.
         unsafe { std::env::set_var("GIT_CEILING_DIRECTORIES", std::env::temp_dir()) };

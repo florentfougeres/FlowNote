@@ -3,7 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { ConflictError, encodeText, type Vault, type VaultEntry } from "./vault";
 import { tauriGit } from "./git";
 
-const LAST_VAULT_KEY = "mon-notion:last-vault";
+const LAST_VAULT_KEY = "flownote:last-vault";
 
 export function isTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;

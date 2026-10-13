@@ -5,8 +5,8 @@ export interface Settings {
   theme: Theme;
 }
 
-const AUTOSAVE_KEY = "mon-notion:autosave";
-const THEME_KEY = "mon-notion:theme";
+const AUTOSAVE_KEY = "flownote:autosave";
+const THEME_KEY = "flownote:theme";
 
 export function loadSettings(): Settings {
   try {

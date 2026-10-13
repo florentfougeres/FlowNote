@@ -7,7 +7,7 @@ import { isConflicted, isStaged, isUnstaged, memoryGit, MergeConflictError, pars
 
 /** Hunks of `git diff --no-index` for two texts (the reference implementation). */
 function gitDiff(before: string, after: string): string {
-  const dir = mkdtempSync(join(tmpdir(), "mon-notion-diff-"));
+  const dir = mkdtempSync(join(tmpdir(), "flownote-diff-"));
   try {
     writeFileSync(join(dir, "a"), before);
     writeFileSync(join(dir, "b"), after);

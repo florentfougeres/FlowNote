@@ -85,7 +85,7 @@ pub fn vault_write(root: String, path: String, content: String, expected: Option
     let parent = file.parent().ok_or_else(|| format!("Chemin invalide : {path}"))?;
     fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     let name = file.file_name().unwrap_or_default().to_string_lossy();
-    let temporary = parent.join(format!(".{name}.mon-notion-tmp"));
+    let temporary = parent.join(format!(".{name}.flownote-tmp"));
     fs::write(&temporary, content.as_bytes()).map_err(|e| e.to_string())?;
     fs::rename(&temporary, &file).map_err(|e| {
         let _ = fs::remove_file(&temporary);
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn write_refuses_when_file_changed() {
-        let dir = std::env::temp_dir().join(format!("mon-notion-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("flownote-test-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         let root = dir.to_string_lossy().into_owned();
         fs::write(dir.join("n.md"), "disque").unwrap();
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn rename_refuses_to_overwrite() {
-        let dir = std::env::temp_dir().join(format!("mon-notion-rename-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("flownote-rename-{}", std::process::id()));
         fs::create_dir_all(dir.join("A")).unwrap();
         fs::write(dir.join("A.md"), "a").unwrap();
         fs::write(dir.join("A/sous.md"), "s").unwrap();
@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn create_never_overwrites_and_files_skip_hidden() {
-        let dir = std::env::temp_dir().join(format!("mon-notion-create-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("flownote-create-{}", std::process::id()));
         fs::create_dir_all(dir.join(".obsidian")).unwrap();
         fs::write(dir.join(".obsidian/app.json"), "{}").unwrap();
         let root = dir.to_string_lossy().into_owned();

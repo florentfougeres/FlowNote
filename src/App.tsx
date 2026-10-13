@@ -72,7 +72,7 @@ export function App() {
   const [pendingOpen, setPendingOpen] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
-      return localStorage.getItem("mon-notion:sidebar") !== "hidden";
+      return localStorage.getItem("flownote:sidebar") !== "hidden";
     } catch {
       return true;
     }
@@ -80,7 +80,7 @@ export function App() {
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((open) => {
       try {
-        localStorage.setItem("mon-notion:sidebar", open ? "hidden" : "shown");
+        localStorage.setItem("flownote:sidebar", open ? "hidden" : "shown");
       } catch {
         // not remembered
       }
@@ -135,7 +135,7 @@ export function App() {
       setNote(null);
       // Reopen the last note of this vault (or FLOWNOTE_OPEN in the desktop app, for debugging).
       const forced = isTauri() ? await invoke<string | null>("startup_note").catch(() => null) : null;
-      const last = forced ?? localStorage.getItem(`mon-notion:last-note:${opened.name}`);
+      const last = forced ?? localStorage.getItem(`flownote:last-note:${opened.name}`);
       if (last) setPendingOpen(last);
     } catch (error) {
       setStatus(`Impossible d'ouvrir le vault : ${String(error)}`);
@@ -218,7 +218,7 @@ export function App() {
       setNote({ path, loaded: disk, disk, markdown: disk });
       setStatus("");
       try {
-        localStorage.setItem(`mon-notion:last-note:${vault.name}`, path);
+        localStorage.setItem(`flownote:last-note:${vault.name}`, path);
       } catch {
         // not remembered
       }
@@ -415,7 +415,8 @@ export function App() {
   if (!vault) {
     return (
       <main className="welcome">
-        <h1>Mon Notion</h1>
+        <img className="welcome-icon" src="/icon.png" alt="" width={96} height={96} />
+        <h1>FlowNote</h1>
         <p>Éditeur de blocs pour un vault Obsidian. Les fichiers Markdown restent la seule source de vérité.</p>
         {isTauri() ? (
           <button onClick={() => void open(pickTauriVault())}>Ouvrir un vault…</button>

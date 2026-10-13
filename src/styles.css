@@ -2255,3 +2255,14 @@ label.setting {
   background: var(--bg);
   color: var(--text);
 }
+
+.welcome-icon {
+  display: block;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.15));
+}
+
+.welcome h1 {
+  letter-spacing: -0.022em;
+  margin: 0 0 6px;
+}

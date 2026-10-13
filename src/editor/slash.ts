@@ -71,7 +71,7 @@ export const SLASH_ITEMS: SlashItem[] = [
 // ---------------------------------------------------------------------------
 // Ranking: matches first, then frecency (frequency weighted by recency).
 
-const FRECENCY_KEY = "mon-notion:slash-frecency";
+const FRECENCY_KEY = "flownote:slash-frecency";
 type Frecency = Record<string, { count: number; last: number }>;
 
 export function loadFrecency(): Frecency {
