@@ -3,6 +3,7 @@ import { NoteEditor } from "./editor/NoteEditor";
 import { imageMime, type VaultBridge } from "./editor/bridge";
 import { NameDialog } from "./NameDialog";
 import { Sidebar } from "./Sidebar";
+import { GitPanel } from "./GitPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
 import { DEFAULT_CONFIG, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
 import { FULL_NOTE } from "./markdown/fixtures";
@@ -41,6 +42,8 @@ export function App() {
   const [showMarkdown, setShowMarkdown] = useState(false);
   const [status, setStatus] = useState("");
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  const [view, setView] = useState<"note" | "git">("note");
+  const [gitChanges, setGitChanges] = useState<number | null>(null);
 
   // Latest values for async callbacks.
   const noteRef = useRef(note);
@@ -80,6 +83,27 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const refreshGit = useCallback(async () => {
+    if (!vault?.git) return setGitChanges(null);
+    try {
+      const status = await vault.git.status();
+      setGitChanges(status.isRepo ? status.files.length : null);
+    } catch {
+      setGitChanges(null);
+    }
+  }, [vault]);
+
+  // The change counter follows edits made here and elsewhere (Obsidian, terminal).
+  useEffect(() => {
+    void refreshGit();
+    const timer = window.setInterval(() => void refreshGit(), 10000);
+    window.addEventListener("focus", refreshGit);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshGit);
+    };
+  }, [refreshGit]);
+
   /** Writes the open note if it changed. Saves are serialized. */
   const saveNow = useCallback(async () => {
     const run = async () => {
@@ -90,6 +114,7 @@ export function App() {
         setNote((n) => (n && n.path === current.path ? { ...n, disk: current.markdown } : n));
         noteRef.current = { ...current, disk: current.markdown };
         setStatus("");
+        void refreshGit();
       } catch (error) {
         setStatus(error instanceof ConflictError ? `Conflit : ${error.message} Rechargez la note.` : String(error));
         throw error;
@@ -97,7 +122,7 @@ export function App() {
     };
     saving.current = saving.current.then(run, run);
     return saving.current;
-  }, [vault]);
+  }, [vault, refreshGit]);
 
   // Autosave, like Notion and Obsidian.
   useEffect(() => {
@@ -117,6 +142,7 @@ export function App() {
       const disk = await vault.read(path);
       setNote({ path, loaded: disk, disk, markdown: disk });
       setStatus("");
+      setView("note");
     },
     [vault, saveNow],
   );
@@ -207,9 +233,28 @@ export function App() {
 
   return (
     <div className="layout">
-      <Sidebar vaultName={vault.name} tree={tree} selected={note?.path} onSelect={(path) => void select(path)} onNewPage={(parent) => void newPage(parent)} />
+      <Sidebar
+        vaultName={vault.name}
+        tree={tree}
+        selected={view === "note" ? note?.path : undefined}
+        onSelect={(path) => void select(path)}
+        onNewPage={(parent) => void newPage(parent)}
+        gitChanges={gitChanges}
+        gitActive={view === "git"}
+        onToggleGit={() => setView(view === "git" ? "note" : "git")}
+      />
       <main className="content">
-        {note ? (
+        {view === "git" && vault.git ? (
+          <GitPanel
+            git={vault.git}
+            beforeCommit={saveNow}
+            onOpenNote={(path) => void select(path)}
+            onChanged={() => {
+              void refreshGit();
+              void refresh(vault);
+            }}
+          />
+        ) : note ? (
           <>
             <header className="toolbar">
               <span className="path">{note.path}</span>

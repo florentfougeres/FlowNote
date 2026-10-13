@@ -1,3 +1,4 @@
+mod git;
 mod vault;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -11,7 +12,12 @@ pub fn run() {
       vault::vault_files,
       vault::vault_read_binary,
       vault::vault_create,
-      vault::vault_config
+      vault::vault_config,
+      git::git_status,
+      git::git_diff,
+      git::git_stage,
+      git::git_unstage,
+      git::git_commit
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

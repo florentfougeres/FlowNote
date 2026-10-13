@@ -14,6 +14,8 @@ export interface VaultEntry {
 
 export interface Vault {
   name: string;
+  /** Present when the vault is a Git repository manageable by the app. */
+  git?: GitApi;
   tree(): Promise<VaultEntry[]>;
   read(path: string): Promise<string>;
   /**
@@ -34,6 +36,8 @@ export interface Vault {
 export const encodeText = (text: string) => new TextEncoder().encode(text);
 
 export class ConflictError extends Error {}
+
+import { memoryGit, type GitApi } from "./git";
 
 /** Folders never shown nor touched: Obsidian config, Git data, trash. */
 export function isHiddenName(name: string): boolean {
@@ -133,6 +137,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
   };
   return {
     name,
+    git: memoryGit(contents),
     tree: async () => buildTree([...contents.keys()].filter((p) => p.endsWith(".md"))),
     read: async (path) => text(path),
     write: async (path, content, expected) => {

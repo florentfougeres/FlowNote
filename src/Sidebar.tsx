@@ -41,9 +41,13 @@ interface Props {
   selected?: string;
   onSelect: (path: string) => void;
   onNewPage: (parentNote: string | null) => void;
+  /** Number of changed files, or null when the vault has no Git repository. */
+  gitChanges: number | null;
+  gitActive: boolean;
+  onToggleGit: () => void;
 }
 
-export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage }: Props) {
+export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, gitChanges, gitActive, onToggleGit }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const pages = toPages(tree);
 
@@ -104,6 +108,12 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage }: Prop
       <button className="new-page" onClick={() => onNewPage(null)}>
         + Nouvelle page
       </button>
+      {gitChanges !== null && (
+        <button className={gitActive ? "git-button active" : "git-button"} onClick={onToggleGit}>
+          <span>⎇ Git</span>
+          {gitChanges > 0 && <span className="git-badge">{gitChanges}</span>}
+        </button>
+      )}
     </aside>
   );
 }

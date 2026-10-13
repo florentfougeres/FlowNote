@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ConflictError, encodeText, type Vault, type VaultEntry } from "./vault";
+import { tauriGit } from "./git";
 
 const LAST_VAULT_KEY = "mon-notion:last-vault";
 
@@ -11,6 +12,7 @@ export function isTauri(): boolean {
 export function tauriVault(root: string): Vault {
   return {
     name: root.split("/").filter(Boolean).pop() ?? root,
+    git: tauriGit(root),
     tree: () => invoke<VaultEntry[]>("vault_tree", { root }),
     read: (path) => invoke<string>("vault_read", { root, path }),
     write: async (path, content, expected) => {
