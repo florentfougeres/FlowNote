@@ -3,7 +3,7 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import remarkFrontmatter from "remark-frontmatter";
-import type { List, ListItem, Nodes, PhrasingContent, Root, RootContent } from "mdast";
+import type { List, ListItem, Nodes, PhrasingContent, Root, RootContent, Table } from "mdast";
 import type { PMJSON, PMMark } from "./types";
 import { equivalent } from "./normalize";
 
@@ -123,6 +123,8 @@ function convertBlock(n: RootContent, src: string, ctx: ParseContext): PMJSON {
       return convertQuote(raw, ctx);
     case "list":
       return convertList(n, src, ctx);
+    case "table":
+      return convertTable(n, src, raw);
     default:
       // Tables, HTML, math blocks, footnote and link definitions: kept verbatim.
       return node("rawBlock", { source: raw, kind: n.type });
@@ -139,6 +141,31 @@ function escapedChars(raw: string): string {
   const chars = new Set<string>();
   for (const match of raw.replace(/`+[^`]*`+/g, "").matchAll(/\\([!-/:-@[-`{-~])/g)) chars.add(match[1]);
   return [...chars].sort().join("");
+}
+
+function convertTable(table: Table, src: string, raw: string): PMJSON {
+  const lines = raw.split("\n").filter((line) => line.trim() !== "");
+  // Layout: outer pipes, columns padded to the same width, original delimiter row.
+  const pipes = lines.every((line) => line.trim().startsWith("|"));
+  // Columns are "padded" when cells carry extra spaces so that every row has the same column widths.
+  const cellsOf = (line: string) => line.trim().replace(/^\|/, "").replace(/(?<!\\)\|$/, "").split(/(?<!\\)\|/);
+  const contentRows = lines.filter((_line, i) => i !== 1).map(cellsOf);
+  const sameWidths = contentRows.every((row) => row.length === contentRows[0].length && row.every((cell, c) => cell.length === contentRows[0][c].length));
+  const hasPadding = contentRows.some((row) => row.some((cell) => cell.trim().length + 2 < cell.length));
+  const padded = contentRows.length > 1 && sameWidths && hasPadding;
+  const align = table.align ?? [];
+  const rows = table.children.map((row, r) =>
+    node(
+      "tableRow",
+      undefined,
+      row.children.map((cell, c) =>
+        node(r === 0 ? "tableHeader" : "tableCell", { colspan: 1, rowspan: 1, colwidth: null, align: align[c] ?? null }, [
+          node("paragraph", undefined, convertInline(cell.children, src)),
+        ]),
+      ),
+    ),
+  );
+  return node("table", { padded, pipes, delimiter: lines[1]?.trim() ?? null }, rows);
 }
 
 const QUOTE_PREFIX = /^[ \t]{0,3}>[ \t]?/;

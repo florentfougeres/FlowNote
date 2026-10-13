@@ -3,6 +3,7 @@ import { exitCode, lift, setBlockType } from "@tiptap/pm/commands";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { liftListItem, sinkListItem, splitListItem } from "@tiptap/pm/schema-list";
 import { TextSelection } from "@tiptap/pm/state";
+import { isInTable, TableMap } from "@tiptap/pm/tables";
 import { blockAt, duplicateBlock, moveBlockByOne } from "./blocks";
 
 /**
@@ -36,9 +37,61 @@ export const BlockKeymap = Extension.create({
         ? setBlockType(types().paragraph)(editor.state, dispatch)
         : setBlockType(types().heading, { level })(editor.state, dispatch);
 
+    /** The table and cell around the cursor. */
+    const currentCell = () => {
+      const { $from } = editor.state.selection;
+      let depth = $from.depth;
+      while (depth > 0 && !["cell", "header_cell"].includes($from.node(depth).type.spec.tableRole)) depth--;
+      if (depth < 2) return null;
+      const tableDepth = depth - 2;
+      const table = $from.node(tableDepth);
+      const tableStart = $from.start(tableDepth);
+      const map = TableMap.get(table);
+      return { map, tableStart, rect: map.findCell($from.before(depth) - tableStart) };
+    };
+
+    /** Puts the cursor at the end of the cell starting at `cellOffset` (relative to the table start). */
+    const cursorInCell = (tableStart: number, cellOffset: number) => {
+      const cell = editor.state.doc.nodeAt(tableStart + cellOffset);
+      if (!cell) return false;
+      const end = tableStart + cellOffset + cell.nodeSize - 2;
+      dispatch(editor.state.tr.setSelection(TextSelection.near(editor.state.doc.resolve(end), -1)));
+      return true;
+    };
+
+    /** Tab / Shift-Tab: next or previous cell, cursor at the end of its text; a row is added after the last cell. */
+    const siblingCell = (direction: 1 | -1): boolean => {
+      const found = currentCell();
+      if (!found) return false;
+      const { map, tableStart, rect } = found;
+      const index = rect.top * map.width + rect.left + direction;
+      if (index < 0) return true;
+      if (index >= map.map.length) {
+        if (!editor.commands.addRowAfter()) return false;
+        const again = currentCell()!;
+        return cursorInCell(again.tableStart, again.map.map[(again.rect.top + 1) * again.map.width]);
+      }
+      return cursorInCell(tableStart, map.map[index]);
+    };
+
+    /** Enter in a table cell moves to the cell below, adding a row at the bottom. */
+    const cellBelow = (): boolean => {
+      const found = currentCell();
+      if (!found) return false;
+      const { map, tableStart, rect } = found;
+      if (rect.bottom >= map.height) {
+        if (!editor.commands.addRowAfter()) return false;
+        return cellBelow();
+      }
+      const below = map.map[rect.bottom * map.width + rect.left];
+      dispatch(editor.state.tr.setSelection(TextSelection.near(editor.state.doc.resolve(tableStart + below + 1))));
+      return true;
+    };
+
     return {
       Enter: () => {
         const { state } = editor;
+        if (isInTable(state)) return cellBelow();
         const { $from, empty } = state.selection;
         const parent = $from.parent;
         const container = $from.depth >= 2 ? $from.node(-1) : null;
@@ -115,6 +168,7 @@ export const BlockKeymap = Extension.create({
       },
 
       Tab: () => {
+        if (isInTable(editor.state)) return siblingCell(1);
         const { $from } = editor.state.selection;
         if ($from.parent.type === types().codeBlock) {
           dispatch(editor.state.tr.insertText("\t"));
@@ -124,6 +178,7 @@ export const BlockKeymap = Extension.create({
         return true; // keep the focus in the editor
       },
       "Shift-Tab": () => {
+        if (isInTable(editor.state)) return siblingCell(-1);
         liftListItem(types().listItem)(editor.state, dispatch);
         return true;
       },

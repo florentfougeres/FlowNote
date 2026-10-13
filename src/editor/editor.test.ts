@@ -125,3 +125,57 @@ describe("block keyboard behaviour", () => {
     expect(save()).toBe("# Titre   \n\n* liste  à  espaces\n*   bizarre\n\nTexte ajouté\n");
   });
 });
+
+describe("tables", () => {
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it("typing in a cell, Tab to the next cell", () => {
+    const { editor, save } = open("| A | B |\n|---|---|\n| 1 | 2 |\n");
+    cursorAtStartOf(editor, "1");
+    type(editor, "x");
+    press(editor, "Tab");
+    type(editor, "y");
+    // Tab puts the cursor at the end of the next cell.
+    expect(save()).toBe("| A | B |\n|---|---|\n| x1 | 2y |\n");
+  });
+
+  it("Enter at the last row adds a row below", () => {
+    const { editor, save } = open("| A | B |\n|---|---|\n| 1 | 2 |\n");
+    cursorAtStartOf(editor, "1");
+    press(editor, "Enter");
+    type(editor, "nouveau");
+    expect(save()).toBe("| A | B |\n|---|---|\n| 1 | 2 |\n| nouveau |  |\n");
+  });
+
+  it("the slash menu inserts a real table", async () => {
+    const { editor, save } = open();
+    type(editor, "/tableau");
+    await tick();
+    press(editor, "Enter");
+    type(editor, "Nom");
+    press(editor, "Tab");
+    type(editor, "Rôle");
+    expect(save()).toBe("| Nom | Rôle |  |\n| --- | --- | --- |\n|  |  |  |\n|  |  |  |\n");
+  });
+
+  it("columns can be added and aligned", () => {
+    const { editor, save } = open("| A | B |\n|---|---|\n| 1 | 2 |\n");
+    cursorAtStartOf(editor, "B");
+    editor.commands.addColumnAfter();
+    cursorAtStartOf(editor, "A");
+    editor.commands.setCellAttribute("align", "center");
+    expect(save()).toBe("| A | B |  |\n| :---: | --- | --- |\n| 1 | 2 |  |\n");
+  });
+});
+
+describe("table navigation", () => {
+  it("Tab after the last cell adds a row; Shift-Tab goes back", () => {
+    const { editor, save } = open("| A | B |\n|---|---|\n| 1 | 2 |\n");
+    cursorAtStartOf(editor, "2");
+    press(editor, "Tab");
+    type(editor, "c");
+    press(editor, "Tab", { shiftKey: true });
+    type(editor, "!");
+    expect(save()).toBe("| A | B |\n|---|---|\n| 1 | 2! |\n| c |  |\n");
+  });
+});

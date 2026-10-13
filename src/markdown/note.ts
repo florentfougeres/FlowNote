@@ -77,11 +77,20 @@ export class NoteSession {
 
   /** `doc` must be the document built from `loadMarkdown(...).doc`, before any edit. */
   constructor(
-    readonly layout: NoteLayout,
+    public layout: NoteLayout,
     doc: PMNode,
   ) {
     if (doc.childCount !== layout.origins.length) return;
     doc.forEach((child, _offset, index) => this.origins.set(child, layout.origins[index]));
+  }
+
+  /** Replaces the frontmatter (null removes it); the blank line after it is kept consistent. */
+  setFrontmatter(raw: string | null) {
+    const had = this.layout.frontmatter !== null;
+    let leading = this.layout.leading;
+    if (raw !== null && !had) leading = `\n${leading}`;
+    if (raw === null && had) leading = leading.replace(/^\n/, "");
+    this.layout = { ...this.layout, frontmatter: raw, leading };
   }
 
   isOriginal(node: PMNode): boolean {
@@ -112,7 +121,10 @@ export class NoteSession {
       previous = current;
     });
     const head = frontmatter ?? "";
-    if (previous === null) return this.layout.origins.length === 0 ? head + trailing : head + (head ? "\n" : "");
+    if (previous === null) {
+      if (this.layout.origins.length > 0) return head + (head ? "\n" : "");
+      return head && !trailing.startsWith("\n") ? `${head}\n${trailing}` : head + trailing;
+    }
     // A note that had no blocks gets a final newline once it has content.
     const tail = this.layout.origins.length === 0 && !trailing.endsWith("\n") ? `${trailing}\n` : trailing;
     return head + leading + body + tail;

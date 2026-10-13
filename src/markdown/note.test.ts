@@ -172,3 +172,59 @@ describe("edits only touch the edited block", () => {
     expect(session.serialize(tr.doc)).toBe("Premier\n\nNouveau \\*texte\\*\n");
   });
 });
+
+describe("tables", () => {
+  it("are parsed into rows and cells with alignment", () => {
+    const [table] = parseFragment("| Nom | Âge |\n| :-- | --: |\n| **Ana** | 3 |\n| [[Bob]] | 4 |");
+    expect(table.type).toBe("table");
+    const [header, first] = table.content!;
+    expect(header.content!.map((c) => [c.type, c.attrs?.align])).toEqual([
+      ["tableHeader", "left"],
+      ["tableHeader", "right"],
+    ]);
+    expect(first.content![0].content![0].content![0].marks?.[0].type).toBe("bold");
+  });
+
+  for (const source of [
+    "| A | B |\n|---|---|\n| 1 | 2 |",
+    "| Colonne | Valeur |\n| ------- | ------ |\n| a       | 1      |\n| bbbb    | 22     |",
+    "| Centré | Droite |\n| :----: | -----: |\n| x | y |",
+    "a | b\n--- | ---\nc | d",
+    "| Code | Pipe |\n| --- | --- |\n| `a \\| b` | x \\| y |",
+  ]) {
+    it(`re-serialize exactly: ${JSON.stringify(source.slice(0, 30))}`, () => {
+      const [table] = parseFragment(source);
+      const report = serializeTopLevelBlockWithReport(table);
+      expect(report.exact).toBe(true);
+      expect(report.markdown).toBe(source);
+    });
+  }
+
+  it("an edited cell keeps the table style (padded columns are realigned)", () => {
+    const src = "| Colonne | Valeur |\n| ------- | ------ |\n| alpha   | 1      |\n";
+    const { state, session } = open(src);
+    const tr = state.tr.insertText(" plus long", positionAfter(state.doc, "alpha"));
+    expect(session.serialize(tr.doc)).toBe("| Colonne         | Valeur |\n| --------------- | ------ |\n| alpha plus long | 1      |\n");
+  });
+
+  it("an edited cell in a compact table stays compact", () => {
+    const src = "| A | B |\n|---|---|\n| un | deux |\n";
+    const { state, session } = open(src);
+    const tr = state.tr.insertText(" | trois", positionAfter(state.doc, "deux"));
+    expect(session.serialize(tr.doc)).toBe("| A | B |\n|---|---|\n| un | deux \\| trois |\n");
+  });
+});
+
+describe("frontmatter edits", () => {
+  it("only the frontmatter changes; adding and removing it keeps the body", () => {
+    const src = "---\ntitle: A\n---\n\n# Titre\n\nTexte\n";
+    const { state, session } = open(src);
+    session.setFrontmatter("---\ntitle: B\n---");
+    expect(session.serialize(state.doc)).toBe("---\ntitle: B\n---\n\n# Titre\n\nTexte\n");
+    session.setFrontmatter(null);
+    expect(session.serialize(state.doc)).toBe("\n# Titre\n\nTexte\n");
+    const plain = open("# Titre\n");
+    plain.session.setFrontmatter("---\ntags:\n  - idée\n---");
+    expect(plain.session.serialize(plain.state.doc)).toBe("---\ntags:\n  - idée\n---\n# Titre\n");
+  });
+});

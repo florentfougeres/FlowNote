@@ -16,6 +16,8 @@ const SIGNIFICANT_ATTRS: Record<string, string[]> = {
   image: ["src", "alt", "title"],
   inlineRaw: ["source"],
   rawBlock: ["source"],
+  tableHeader: ["align"],
+  tableCell: ["align"],
 };
 
 const UNMARKED = new Set(["softBreak", "hardBreak"]);
@@ -46,7 +48,13 @@ export function normalize(nodes: PMJSON[]): Normal[] {
     const attrs: Record<string, unknown> = {};
     for (const name of SIGNIFICANT_ATTRS[n.type] ?? []) attrs[name] = n.attrs?.[name] ?? null;
     if (n.type === "list" && n.attrs?.ordered) attrs.start = n.attrs.start ?? 1;
-    out.push({ type: n.type, attrs, marks: marksKey(n), content: normalize(n.content ?? []) });
+    let children = n.content ?? [];
+    // A missing cell at the end of a table row renders like an empty one.
+    if (n.type === "tableRow") {
+      children = [...children];
+      while (children.length > 0 && !children[children.length - 1].content?.[0]?.content?.length) children.pop();
+    }
+    out.push({ type: n.type, attrs, marks: marksKey(n), content: normalize(children) });
   }
   return out;
 }

@@ -56,7 +56,7 @@ export const SLASH_ITEMS: SlashItem[] = [
     description: "Tableau Markdown",
     icon: "▦",
     keywords: ["tableau", "table"],
-    run: (editor, range) => insertRawBlock(editor, "| Colonne 1 | Colonne 2 |\n| --- | --- |\n|  |  |", "table", range),
+    run: (editor, range) => editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
   },
   {
     key: "math",
@@ -143,7 +143,8 @@ function freshSlashPlugin(): Plugin<number | null> {
       handleTextInput(view, from, to, text) {
         if (text !== "/") return false;
         const $from = view.state.doc.resolve(from);
-        if ($from.parent.type.spec.code || $from.parent.type.name === "calloutTitle") return false;
+        const inCell = $from.depth > 0 && ["cell", "header_cell"].includes($from.node(-1).type.spec.tableRole);
+        if ($from.parent.type.spec.code || $from.parent.type.name === "calloutTitle" || inCell) return false;
         view.dispatch(view.state.tr.insertText("/", from, to).setMeta(freshSlashKey, from));
         return true;
       },

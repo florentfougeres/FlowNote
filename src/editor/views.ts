@@ -367,7 +367,8 @@ export function placeholderPlugin(): Plugin {
         const decorations: Decoration[] = [];
         const { $from, empty } = state.selection;
         const parent = $from.parent;
-        if (empty && parent.isTextblock && parent.content.size === 0) {
+        const inCell = $from.depth > 0 && ["cell", "header_cell"].includes($from.node(-1).type.spec.tableRole);
+        if (empty && parent.isTextblock && parent.content.size === 0 && !inCell) {
           let text: string | null = null;
           if (parent.type.name === "paragraph") text = "Écrivez, ou tapez # - [] > ``` pour formater…";
           else if (parent.type.name === "heading") text = HEADING_PLACEHOLDERS[parent.attrs.level - 1];

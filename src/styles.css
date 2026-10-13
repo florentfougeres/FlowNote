@@ -2056,3 +2056,202 @@ label.setting {
 .native-vibrancy .sidebar {
   padding-top: 52px;
 }
+
+/* ---- Tables ---- */
+
+.note table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  min-width: 50%;
+  font-size: 0.95em;
+}
+
+.note th,
+.note td {
+  border: 0.5px solid color-mix(in srgb, var(--text) 18%, transparent);
+  padding: 6px 10px;
+  vertical-align: top;
+  min-width: 60px;
+  position: relative;
+}
+
+.note th {
+  background: var(--sidebar);
+  font-weight: 600;
+  text-align: left;
+}
+
+.note th > p,
+.note td > p {
+  padding: 0;
+}
+
+.note .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--accent-soft);
+  pointer-events: none;
+}
+
+.table-menu {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  gap: 6px;
+  animation: materialize 160ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+/* ---- Properties (YAML frontmatter) ---- */
+
+.properties {
+  box-sizing: content-box;
+  width: calc(100% - 64px);
+  max-width: 720px;
+  margin: 14px auto 0;
+  padding: 0 32px;
+  font-size: 13px;
+}
+
+/* Divider kept inside the text column. */
+.properties:not(.properties-empty)::after {
+  content: "";
+  display: block;
+  margin-top: 10px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.properties-empty {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.property {
+  display: grid;
+  grid-template-columns: 20px 140px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  border-radius: 6px;
+}
+
+.property:hover {
+  background: var(--hover);
+}
+
+.property-icon {
+  display: inline-flex;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.property-key,
+.property-value,
+.chip-input {
+  font: inherit;
+  color: var(--text);
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+  min-width: 0;
+}
+
+.property-key {
+  color: var(--muted);
+}
+
+.property-key:focus,
+.property-value:focus {
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 1px var(--accent-line);
+}
+
+.property-value.readonly {
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.property-checkbox {
+  margin-left: 6px;
+  accent-color: var(--accent);
+}
+
+.property-remove,
+.property-add {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+}
+
+.property-remove {
+  visibility: hidden;
+}
+
+.property:hover .property-remove {
+  visibility: visible;
+}
+
+.property-add:hover,
+.property-remove:hover {
+  background: var(--hover);
+}
+
+.property-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px 1px 8px;
+  border-radius: 999px;
+  background: var(--selected);
+}
+
+.chip.tag-chip {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.chip button {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  padding: 2px;
+  display: inline-flex;
+  opacity: 0.6;
+}
+
+.chip button:hover {
+  opacity: 1;
+  background: transparent;
+}
+
+.chip-input {
+  flex: 1;
+  min-width: 80px;
+}
+
+.properties-raw {
+  width: 100%;
+  box-sizing: border-box;
+  font: 12px/1.5 var(--font-mono);
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}

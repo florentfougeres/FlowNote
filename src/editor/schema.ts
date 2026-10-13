@@ -1,4 +1,8 @@
 import { getSchema, Mark, Node, type AnyExtension } from "@tiptap/core";
+import { Table as TiptapTable } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell as TiptapTableCell } from "@tiptap/extension-table-cell";
+import { TableHeader as TiptapTableHeader } from "@tiptap/extension-table-header";
 
 /**
  * Document schema. It mirrors the Markdown subset handled by `src/markdown`:
@@ -119,6 +123,45 @@ const RawBlock = Node.create({
   renderHTML: ({ node }) => ["pre", { class: "raw-block", "data-kind": node.attrs.kind }, node.attrs.source],
 });
 
+/**
+ * GFM tables. A Markdown cell holds one line of inline content, so cells
+ * contain exactly one paragraph. Column alignment lives on the cells; the
+ * table remembers its original layout (padded columns, outer pipes,
+ * delimiter row) to write edited tables in the same style.
+ */
+const Table = TiptapTable.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      padded: { default: false, rendered: false },
+      pipes: { default: true, rendered: false },
+      delimiter: { default: null, rendered: false },
+    };
+  },
+}).configure({ resizable: false });
+
+const cellAttributes = {
+  align: {
+    default: null,
+    parseHTML: (element: HTMLElement) => element.style.textAlign || null,
+    renderHTML: (attributes: Record<string, unknown>) => (attributes.align ? { style: `text-align: ${attributes.align}` } : {}),
+  },
+};
+
+const TableCell = TiptapTableCell.extend({
+  content: "paragraph",
+  addAttributes() {
+    return { ...this.parent?.(), ...cellAttributes };
+  },
+});
+
+const TableHeader = TiptapTableHeader.extend({
+  content: "paragraph",
+  addAttributes() {
+    return { ...this.parent?.(), ...cellAttributes };
+  },
+});
+
 const Wikilink = Node.create({
   name: "wikilink",
   group: "inline",
@@ -222,6 +265,10 @@ export const documentExtensions: AnyExtension[] = [
   List,
   ListItem,
   RawBlock,
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
   Wikilink,
   InlineRaw,
   Image,

@@ -4,6 +4,8 @@ import { EditorState } from "@tiptap/pm/state";
 import { defaultWiring, editorExtensions } from "./extensions";
 import { SuggestionMenu } from "./SuggestionMenu";
 import { BlockHandle } from "./BlockHandle";
+import { TableMenu } from "./TableMenu";
+import { PropertiesPanel } from "./PropertiesPanel";
 import { insertAttachments, type VaultBridge } from "./bridge";
 import { loadMarkdown, NoteSession } from "../markdown/note";
 import { pastedImageName, resolveLink } from "../vault/links";
@@ -36,6 +38,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true }: Prop
   wiring.bridge.current = bridge;
   const markdownCallback = useRef(onMarkdown);
   markdownCallback.current = onMarkdown;
+  const [frontmatter, setFrontmatter] = useState<string | null>(null);
 
   const editor = useEditor({
     extensions: editorExtensions(wiring),
@@ -78,7 +81,15 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true }: Prop
     const node = editor.schema.nodeFromJSON(doc);
     editor.view.updateState(EditorState.create({ doc: node, plugins: editor.state.plugins }));
     session.current = new NoteSession(layout, node);
+    setFrontmatter(layout.frontmatter);
   }, [editor, source]);
+
+  const changeFrontmatter = (raw: string | null) => {
+    if (!session.current || !editor) return;
+    session.current.setFrontmatter(raw);
+    setFrontmatter(raw);
+    markdownCallback.current(session.current.serialize(editor.state.doc));
+  };
 
   useEffect(() => {
     if (editor && !editor.isDestroyed) editor.setEditable(editable, false);
@@ -86,8 +97,10 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true }: Prop
 
   return (
     <div className="note-editor" ref={shell}>
+      <PropertiesPanel raw={frontmatter} readOnly={!editable} onChange={changeFrontmatter} />
       <EditorContent editor={editor} />
       <BlockHandle editor={editor} shell={shell} />
+      <TableMenu editor={editor} />
       <SuggestionMenu store={wiring.slashStore} />
       <SuggestionMenu store={wiring.linkStore} />
       <SuggestionMenu store={wiring.emojiStore} />

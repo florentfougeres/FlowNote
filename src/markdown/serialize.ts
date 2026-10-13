@@ -58,6 +58,8 @@ export function serializeBlock(n: PMJSON, v: Variant): string {
       return serializeList(n, v);
     case "rawBlock":
       return attr(n, "source", "");
+    case "table":
+      return serializeTable(n, v);
     default:
       throw new Error(`Cannot serialize block of type ${n.type}`);
   }
@@ -145,6 +147,61 @@ function serializeList(n: PMJSON, v: Variant): string {
     out += [head, ...lines.slice(1).map((line) => (line === "" ? "" : indent + line))].join("\n");
   });
   return out;
+}
+
+type Align = "left" | "center" | "right" | null;
+
+function delimiterCell(align: Align, width: number): string {
+  const dashes = "-".repeat(Math.max(3, width - (align === "center" ? 2 : align ? 1 : 0)));
+  if (align === "center") return `:${dashes}:`;
+  if (align === "left") return `:${dashes}`;
+  if (align === "right") return `${dashes}:`;
+  return dashes;
+}
+
+function parseDelimiter(row: string): Align[] {
+  return row
+    .trim()
+    .replace(/^\||\|$/g, "")
+    .split("|")
+    .map((cell) => {
+      const c = cell.trim();
+      if (c.startsWith(":") && c.endsWith(":")) return "center";
+      if (c.endsWith(":")) return "right";
+      if (c.startsWith(":")) return "left";
+      return null;
+    });
+}
+
+/** GFM table, in the original style: outer pipes or not, padded columns or compact. */
+function serializeTable(n: PMJSON, v: Variant): string {
+  const rows = (n.content ?? []).map((row) =>
+    (row.content ?? []).map((cell) =>
+      serializeInline(cell.content?.[0]?.content ?? [], v)
+        .replace(/[ \t]*\n[ \t]*/g, " ")
+        .replace(/(^|[^\\])\|/g, "$1\\|"),
+    ),
+  );
+  if (rows.length === 0) return "";
+  const columns = Math.max(...rows.map((r) => r.length));
+  for (const row of rows) while (row.length < columns) row.push("");
+  const aligns: Align[] = (n.content?.[0]?.content ?? []).map((cell) => attr<Align>(cell, "align", null));
+  while (aligns.length < columns) aligns.push(null);
+  const padded = attr(n, "padded", false);
+  const pipes = attr(n, "pipes", true);
+  const widths = Array.from({ length: columns }, (_, c) => Math.max(3, ...rows.map((r) => r[c].length)));
+  const line = (cells: string[]) => {
+    const body = cells.map((cell, c) => (padded ? cell.padEnd(widths[c]) : cell)).join(" | ");
+    return pipes ? `| ${body} |` : body;
+  };
+  // Compact tables reuse the original delimiter row while columns and alignment are unchanged;
+  // padded tables redraw it at the new column widths.
+  const original = attr<string | null>(n, "delimiter", null);
+  const delimiter =
+    !padded && original && parseDelimiter(original).length === columns && parseDelimiter(original).every((a, i) => a === aligns[i])
+      ? original
+      : line(aligns.map((a, c) => delimiterCell(a, padded ? widths[c] : 3)));
+  return [line(rows[0]), delimiter, ...rows.slice(1).map(line)].join("\n");
 }
 
 // ---------------------------------------------------------------------------
