@@ -15,6 +15,7 @@ import { OutlinePanel } from "./OutlinePanel";
 import { RawEditor } from "./RawEditor";
 import { FindBar, type FindRequest } from "./FindBar";
 import { VaultSearch } from "./VaultSearch";
+import { setGrammarChecker, setSystemSpellcheck, type ParagraphResult } from "./editor/grammar";
 import type { Editor } from "@tiptap/core";
 import { Icon } from "./Icon";
 import { HistoryPanel } from "./HistoryPanel";
@@ -96,6 +97,12 @@ export function App() {
   const openFind = (replace = false) =>
     setFindRequest((previous) => ({ query: selectedText() || previous?.query || "", replace, nonce: Date.now() }));
   const [settings, setSettings] = useState<Settings>(loadSettings);
+  useEffect(() => {
+    const grammalecte = isTauri() && settings.spellChecker === "grammalecte";
+    setGrammarChecker(grammalecte ? (paragraphs) => invoke<ParagraphResult[]>("grammar_check", { paragraphs }) : null);
+    // Outside the desktop app, the Grammalecte choice falls back to the system checker.
+    setSystemSpellcheck(settings.spellChecker === "system" || (settings.spellChecker === "grammalecte" && !isTauri()));
+  }, [settings.spellChecker]);
   const [pendingOpen, setPendingOpen] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const editorRef = useRef<Editor | null>(null);
@@ -715,6 +722,7 @@ export function App() {
         <SettingsDialog
           settings={settings}
           vaultName={vault.name}
+          grammarAvailable={isTauri()}
           onChange={(next) => {
             setSettings(next);
             saveSettings(next);

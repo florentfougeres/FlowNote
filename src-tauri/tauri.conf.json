@@ -1,13 +1,13 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "FlowNote",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "dev.flownote.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeDevCommand": "./scripts/build-grammar.sh && npm run dev",
+    "beforeBuildCommand": "./scripts/build-grammar.sh && npm run build"
   },
   "app": {
     "windows": [
@@ -57,7 +57,11 @@
     "copyright": "© 2026 Florent Fougères",
     "macOS": {
       "signingIdentity": "-",
-      "minimumSystemVersion": "11.0"
-    }
+      "minimumSystemVersion": "11.0",
+      "hardenedRuntime": false
+    },
+    "externalBin": [
+      "binaries/flownote-grammar"
+    ]
   }
 }

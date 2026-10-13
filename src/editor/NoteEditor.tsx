@@ -7,6 +7,7 @@ import { SuggestionMenu } from "./SuggestionMenu";
 import { BlockHandle } from "./BlockHandle";
 import { TableHandles } from "./TableHandles";
 import { CalloutPicker } from "./CalloutPicker";
+import { GrammarPopover } from "./GrammarPopover";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { insertAttachments, type VaultBridge } from "./bridge";
 import { loadMarkdown, NoteSession } from "../markdown/note";
@@ -114,6 +115,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
       <BlockHandle editor={editor} shell={shell} />
       <TableHandles editor={editor} />
       <CalloutPicker />
+      <GrammarPopover />
       <SuggestionMenu store={wiring.slashStore} />
       <SuggestionMenu store={wiring.linkStore} />
       <SuggestionMenu store={wiring.emojiStore} />

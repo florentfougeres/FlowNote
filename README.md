@@ -27,6 +27,10 @@ Un gestionnaire Git intégré permet de versionner le vault : statut, diff, comm
 - Propriétés YAML (frontmatter) éditables, tags, `[[wikilinks]]` et `![[embeds]]` avec autocomplétion
 - Sous-pages et arborescence dans la barre latérale
 
+**Correction**
+- Grammaire et orthographe en français avec [Grammalecte](https://grammalecte.net), entièrement sur votre Mac, sans service en ligne
+- Clic sur un mot souligné pour voir les suggestions, l'ignorer ou l'ajouter à votre dictionnaire
+
 **Navigation**
 - Recherche de page (`⌘P`), recherche et remplacement dans la note (`⌘F` / `⌘⌥F`), recherche dans tout le vault (`⌘⇧F`)
 - Fil d'Ariane cliquable, plan de la note, historique précédent/suivant
@@ -61,7 +65,9 @@ Configuration requise : Mac Apple Silicon (M1 et suivants), macOS 11 (Big Sur) o
 
 ## Développement
 
-Prérequis : [Node.js](https://nodejs.org) 20+, [Rust](https://rustup.rs) et les outils en ligne de commande Xcode.
+Prérequis : [Node.js](https://nodejs.org) 20+, [Rust](https://rustup.rs), [uv](https://docs.astral.sh/uv/) et les outils en ligne de commande Xcode.
+
+Au premier lancement, `scripts/build-grammar.sh` télécharge Grammalecte (version fixée, empreinte vérifiée) et le compile en un exécutable embarqué dans l'app (`src-tauri/binaries/`).
 
 ```sh
 npm install
@@ -82,6 +88,7 @@ npm run dev            # version navigateur (Chrome) sur http://localhost:1420
 - **`src/markdown/`** : moteur de fidélité Markdown. Il parse avec remark/mdast, conserve la source de chaque bloc et ne re-sérialise que les blocs modifiés, en vérifiant l'équivalence.
 - **`src/editor/`** : éditeur basé sur Tiptap/ProseMirror. Il contient le schéma, les vues de blocs, le menu `/`, le glisser-déposer, les poignées de tableau et la recherche.
 - **`src/vault/`** : accès au vault, résolution des liens façon Obsidian, opérations sur les pages et client Git.
+- **`grammar/`** : petit programme compagnon qui fait tourner Grammalecte. FlowNote lui envoie les paragraphes par l'entrée standard.
 
 ### Publier une version
 
@@ -92,3 +99,5 @@ npm run dev            # version navigateur (Chrome) sur http://localhost:1420
 ## Licence
 
 [MIT](LICENSE) © 2026 Florent Fougères
+
+Le correcteur livré avec l'application est un programme séparé, sous licence GPL v3 : [Grammalecte](https://grammalecte.net) d'Olivier R., et son lanceur `grammar/flownote_grammar.py`. Son code source est disponible sur le site de Grammalecte et dans le dossier `grammar/`.

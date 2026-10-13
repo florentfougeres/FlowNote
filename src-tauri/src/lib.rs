@@ -1,4 +1,5 @@
 mod git;
+mod grammar;
 mod vault;
 
 /// Errors raised in the webview, printed in the terminal running the app.
@@ -30,6 +31,7 @@ pub fn run() {
       vault::vault_rename,
       vault::vault_trash,
       vault::vault_search,
+      grammar::grammar_check,
       git::git_status,
       git::git_diff,
       git::git_stage,
@@ -55,6 +57,11 @@ pub fn run() {
       }
       Ok(())
     })
-    .run(tauri::generate_context!())
-    .expect("error while building tauri application");
+    .build(tauri::generate_context!())
+    .expect("error while building tauri application")
+    .run(|_app, event| {
+      if let tauri::RunEvent::Exit = event {
+        grammar::shutdown();
+      }
+    });
 }

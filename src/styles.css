@@ -2990,3 +2990,64 @@ button.crumb:hover {
   color: var(--callout);
   opacity: 0.75;
 }
+
+/* ---- Grammar and spelling (Grammalecte) ---- */
+
+.note .gc-error {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+  cursor: pointer;
+}
+
+.note .gc-spelling {
+  text-decoration-color: var(--danger);
+}
+
+.note .gc-grammar {
+  text-decoration-color: var(--accent);
+}
+
+.grammar-popover {
+  width: 280px;
+  min-width: 0;
+}
+
+.grammar-message {
+  padding: 4px 8px 8px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.grammar-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 8px 8px;
+}
+
+.grammar-popover .grammar-suggestion {
+  width: auto;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.grammar-popover .grammar-suggestion:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* A setting whose control sits under its label, with an explanation below. */
+.setting.setting-column {
+  flex-wrap: wrap;
+}
+
+.setting.setting-column > small {
+  flex-basis: 100%;
+  margin-top: -2px;
+}

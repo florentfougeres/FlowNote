@@ -3,3 +3,5 @@ dist/
 src-tauri/target/
 .DS_Store
 .remember/
+grammar/.vendor/
+src-tauri/binaries/
