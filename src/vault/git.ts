@@ -12,6 +12,8 @@ export interface GitFile {
 
 export interface GitStatus {
   isRepo: boolean;
+  /** A merge is in progress. */
+  merging: boolean;
   branch: string | null;
   upstream: string | null;
   ahead: number;
@@ -28,6 +30,15 @@ export interface GitCommit {
   subject: string;
   /** Path of the note in that commit (it may have been renamed since). */
   path: string;
+}
+
+export interface ConflictVersions {
+  /** Common ancestor, mine and theirs; null when that side deleted the file. */
+  base: string | null;
+  ours: string | null;
+  theirs: string | null;
+  /** Working file with conflict markers. */
+  working: string | null;
 }
 
 /** Error raised by `pull` when the merge stopped on conflicts. */
@@ -48,11 +59,20 @@ export interface GitApi {
   log(path: string): Promise<GitCommit[]>;
   /** Content of a file at a commit. */
   show(hash: string, path: string): Promise<string>;
+  conflict(path: string): Promise<ConflictVersions>;
+  /** Writes the resolution of a conflicted file (null deletes it) and marks it resolved. */
+  resolve(path: string, content: string | null): Promise<void>;
+  /** Commits the merge once every conflict is resolved. */
+  continueMerge(): Promise<string>;
+  abortMerge(): Promise<void>;
 }
 
+export const isConflicted = (f: GitFile) =>
+  f.index === "U" || f.worktree === "U" || (f.index === "A" && f.worktree === "A") || (f.index === "D" && f.worktree === "D");
+
 export const isUntracked = (f: GitFile) => f.index === "?";
-export const isStaged = (f: GitFile) => f.index !== " " && f.index !== "?";
-export const isUnstaged = (f: GitFile) => f.worktree !== " ";
+export const isStaged = (f: GitFile) => f.index !== " " && f.index !== "?" && !isConflicted(f);
+export const isUnstaged = (f: GitFile) => f.worktree !== " " && !isConflicted(f);
 
 const LABELS: Record<string, string> = { M: "Modifié", A: "Ajouté", D: "Supprimé", R: "Renommé", C: "Copié", U: "Conflit", "?": "Nouveau" };
 export const statusLabel = (letter: string) => LABELS[letter] ?? letter;
@@ -77,6 +97,10 @@ export function tauriGit(root: string): GitApi {
     push: () => invoke<string>("git_push", { root }),
     log: (path) => invoke<GitCommit[]>("git_log", { root, path, limit: 200 }),
     show: (hash, path) => invoke<string>("git_show", { root, hash, path }),
+    conflict: (path) => invoke<ConflictVersions>("git_conflict", { root, path }),
+    resolve: (path, content) => invoke("git_resolve", { root, path, content }),
+    continueMerge: () => invoke<string>("git_merge_continue", { root }),
+    abortMerge: () => invoke("git_merge_abort", { root }),
   };
 }
 
@@ -177,12 +201,15 @@ export function unifiedDiff(before: string, after: string, path: string, context
  * In-memory git over a map of files, for the demo vault: HEAD and index are
  * snapshots of the contents.
  */
-export function memoryGit(contents: Map<string, string | Uint8Array>): GitApi {
+export function memoryGit(contents: Map<string, string | Uint8Array>, remote: Record<string, string> = {}): GitApi {
   const text = (v: string | Uint8Array | undefined) => (v === undefined ? undefined : typeof v === "string" ? v : new TextDecoder().decode(v));
   const snapshot = () => new Map([...contents].map(([k, v]) => [k, text(v)!]));
   let head = snapshot();
   let index = snapshot();
   let commits = 0;
+  let merging = false;
+  const conflicts = new Map<string, ConflictVersions>();
+  let pending = { ...remote };
   const history: { commit: GitCommit; files: Map<string, string> }[] = [
     { commit: { hash: "0".repeat(40), short: "0000000", author: "Démo", date: new Date(Date.now() - 86400000).toISOString(), subject: "Version initiale", path: "" }, files: head },
   ];
@@ -200,6 +227,10 @@ export function memoryGit(contents: Map<string, string | Uint8Array>): GitApi {
       const paths = [...new Set([...head.keys(), ...index.keys(), ...work.keys()])].sort();
       const files: GitFile[] = [];
       for (const path of paths) {
+        if (conflicts.has(path)) {
+          files.push({ path, index: "U", worktree: "U" });
+          continue;
+        }
         if (!head.has(path) && !index.has(path)) {
           files.push({ path, index: "?", worktree: "?" });
           continue;
@@ -208,7 +239,7 @@ export function memoryGit(contents: Map<string, string | Uint8Array>): GitApi {
         const y = letter(index, work, path);
         if (x !== " " || y !== " ") files.push({ path, index: x, worktree: y });
       }
-      return { isRepo: true, branch: "main", upstream: "origin/main", ahead: commits, behind: 0, files };
+      return { isRepo: true, merging, branch: "main", upstream: "origin/main", ahead: commits, behind: Object.keys(pending).length > 0 ? 1 : 0, files };
     },
     diff: async (file, staged) => {
       const work = text(contents.get(file.path)) ?? "";
@@ -238,7 +269,29 @@ export function memoryGit(contents: Map<string, string | Uint8Array>): GitApi {
       return `[main ${short}] ${message.split("\n")[0]}`;
     },
     fetch: async () => {},
-    pull: async () => "Déjà à jour.",
+    // Simplified three-way merge of the simulated remote: whole-file conflicts.
+    pull: async () => {
+      const changes = Object.entries(pending);
+      if (changes.length === 0) return "Déjà à jour.";
+      pending = {};
+      for (const [path, theirs] of changes) {
+        const ours = head.get(path);
+        const base = history[history.length - 1].files.get(path);
+        if (ours === base || ours === undefined) {
+          head.set(path, theirs);
+          index.set(path, theirs);
+          contents.set(path, theirs);
+        } else if (theirs !== base && theirs !== ours) {
+          conflicts.set(path, { base: base ?? null, ours, theirs, working: null });
+          contents.set(path, `<<<<<<< HEAD\n${ours}=======\n${theirs}>>>>>>> origin/main\n`);
+        }
+      }
+      if (conflicts.size > 0) {
+        merging = true;
+        throw new MergeConflictError("CONFLICT (contenu) : conflit de fusion");
+      }
+      return "Fusion réussie.";
+    },
     push: async () => {
       commits = 0;
       return "Envoyé vers origin/main.";
@@ -250,5 +303,39 @@ export function memoryGit(contents: Map<string, string | Uint8Array>): GitApi {
         .map((entry) => ({ ...entry.commit, path }));
     },
     show: async (hash, path) => history.find((entry) => entry.commit.hash === hash)?.files.get(path) ?? "",
+    conflict: async (path) => {
+      const versions = conflicts.get(path);
+      if (!versions) throw new Error(`${path} n'est pas en conflit.`);
+      return { ...versions, working: text(contents.get(path)) ?? null };
+    },
+    resolve: async (path, content) => {
+      if (!conflicts.has(path)) throw new Error(`${path} n'est pas en conflit.`);
+      conflicts.delete(path);
+      if (content === null) {
+        contents.delete(path);
+        index.delete(path);
+      } else {
+        contents.set(path, content);
+        index.set(path, content);
+      }
+    },
+    continueMerge: async () => {
+      if (!merging) throw new Error("Aucune fusion en cours.");
+      if (conflicts.size > 0) throw new Error(`Il reste ${conflicts.size} fichier(s) en conflit.`);
+      merging = false;
+      head = new Map(index);
+      commits++;
+      const short = String(commits).padStart(7, "0");
+      history.unshift({ commit: { hash: short.padEnd(40, "0"), short, author: "Vous", date: new Date().toISOString(), subject: "Merge branch 'main' of origin", path: "" }, files: head });
+      return `[main ${short}] Merge branch 'main' of origin`;
+    },
+    abortMerge: async () => {
+      for (const [path, versions] of conflicts) {
+        if (versions.ours === null) contents.delete(path);
+        else contents.set(path, versions.ours);
+      }
+      conflicts.clear();
+      merging = false;
+    },
   };
 }

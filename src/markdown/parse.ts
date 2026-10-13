@@ -223,7 +223,11 @@ function convertListItem(item: ListItem, src: string, ctx: ParseContext): PMJSON
 
   const continuation = lines.slice(1);
   const parseBody = (indent: number) => parseFragment([first, ...continuation.map((line) => dedent(line, indent))].join("\n"), ctx);
-  let children = parseBody(contentColumn);
+  // Fast path: a one-line item holding a single paragraph is converted from the
+  // already parsed node (its source positions are exact); anything else is
+  // re-parsed on its own so that nested containers keep exact source slices.
+  const single = continuation.length === 0 && item.children.length === 1 && item.children[0].type === "paragraph";
+  let children = single ? [convertBlock(item.children[0], src, ctx)] : parseBody(contentColumn);
 
   // Layout details reused when the item is re-serialized: indentation before the
   // marker, spaces after it, and extra indentation of continuation lines (e.g.
@@ -293,6 +297,11 @@ function withMarks(segment: Segment, marks: PMMark[] | undefined): Segment {
   return marks && marks.length > 0 ? { ...segment, marks } : segment;
 }
 
+/** Adds a mark; the same mark nested in itself (`_a _b_ c_`) renders once, as ProseMirror stores it. */
+function addMark(marks: PMMark[], mark: PMMark): PMMark[] {
+  return marks.some((m) => m.type === mark.type) ? marks : [...marks, mark];
+}
+
 function collectInline(nodes: PhrasingContent[], src: string, marks: PMMark[]): Segment[] {
   const out: Segment[] = [];
   for (const n of nodes) {
@@ -303,13 +312,13 @@ function collectInline(nodes: PhrasingContent[], src: string, marks: PMMark[]): 
         if (n.value) out.push(withMarks({ type: "text", text: n.value, raw }, marks));
         break;
       case "emphasis":
-        out.push(...collectInline(n.children, src, [...marks, { type: "italic", attrs: { marker: raw[0] } }]));
+        out.push(...collectInline(n.children, src, addMark(marks, { type: "italic", attrs: { marker: raw[0] } })));
         break;
       case "strong":
-        out.push(...collectInline(n.children, src, [...marks, { type: "bold", attrs: { marker: raw.slice(0, 2) } }]));
+        out.push(...collectInline(n.children, src, addMark(marks, { type: "bold", attrs: { marker: raw.slice(0, 2) } })));
         break;
       case "delete":
-        out.push(...collectInline(n.children, src, [...marks, { type: "strike" }]));
+        out.push(...collectInline(n.children, src, addMark(marks, { type: "strike" })));
         break;
       case "inlineCode": {
         if (!n.value) {
@@ -328,7 +337,7 @@ function collectInline(nodes: PhrasingContent[], src: string, marks: PMMark[]): 
         }
         const kind = raw.startsWith("<") ? "autolink" : raw.startsWith("[") ? "inline" : "literal";
         const link = { type: "link", attrs: { href: n.url, title: n.title ?? null, kind } };
-        out.push(...collectInline(n.children, src, [...marks, link]));
+        out.push(...collectInline(n.children, src, addMark(marks, link)));
         break;
       }
       case "image":

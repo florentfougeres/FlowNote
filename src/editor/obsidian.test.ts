@@ -119,6 +119,17 @@ describe("attachments", () => {
 });
 
 describe("tags", () => {
+  it("are updated while typing", () => {
+    const { editor } = openEditor("Texte #ancien\n\nAutre bloc #fixe\n");
+    const tags = () => [...editor.view.dom.querySelectorAll(".tag")].map((el) => el.textContent);
+    editor.commands.setTextSelection(editor.state.doc.child(0).nodeSize - 1);
+    type(editor, " #neuf");
+    expect(tags()).toEqual(["#ancien", "#neuf", "#fixe"]);
+    const { from } = editor.state.selection;
+    editor.view.dispatch(editor.state.tr.delete(from - 5, from));
+    expect(tags()).toEqual(["#ancien", "#fixe"]);
+  });
+
   it("highlights #tags but not headings, numbers or code", () => {
     const { editor } = openEditor("Un #projet/notion et #42 et `#code`\n");
     const tags = [...editor.view.dom.querySelectorAll(".tag")].map((el) => el.textContent);

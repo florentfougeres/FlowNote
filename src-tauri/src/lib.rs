@@ -13,6 +13,8 @@ pub fn run() {
       vault::vault_read_binary,
       vault::vault_create,
       vault::vault_config,
+      vault::vault_rename,
+      vault::vault_trash,
       git::git_status,
       git::git_diff,
       git::git_stage,
@@ -22,7 +24,11 @@ pub fn run() {
       git::git_show,
       git::git_fetch,
       git::git_pull,
-      git::git_push
+      git::git_push,
+      git::git_conflict,
+      git::git_resolve,
+      git::git_merge_continue,
+      git::git_merge_abort
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

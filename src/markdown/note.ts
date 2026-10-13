@@ -30,6 +30,8 @@ export interface NoteLayout {
   context: ParseContext;
   /** Files written with CRLF everywhere are parsed as LF and written back as CRLF. */
   eol: "\n" | "\r\n";
+  /** Byte order mark at the start of the file (Windows editors), restored on save. */
+  bom: string;
 }
 
 export interface LoadedNote {
@@ -37,14 +39,17 @@ export interface LoadedNote {
   layout: NoteLayout;
 }
 
-export const EMPTY_LAYOUT: NoteLayout = { frontmatter: null, leading: "", trailing: "\n", origins: [], context: NO_CONTEXT, eol: "\n" };
+export const EMPTY_LAYOUT: NoteLayout = { frontmatter: null, leading: "", trailing: "\n", origins: [], context: NO_CONTEXT, eol: "\n", bom: "" };
 
 function detectEol(text: string): "\n" | "\r\n" {
   const crlf = text.split("\r\n").length - 1;
   return crlf > 0 && crlf === text.split("\n").length - 1 ? "\r\n" : "\n";
 }
 
-export function loadMarkdown(file: string): LoadedNote {
+export function loadMarkdown(raw: string): LoadedNote {
+  // The parser drops a BOM, which would shift every source offset: keep it aside.
+  const bom = raw.startsWith("\uFEFF") ? "\uFEFF" : "";
+  const file = raw.slice(bom.length);
   const eol = detectEol(file);
   const src = eol === "\r\n" ? file.replace(/\r\n/g, "\n") : file;
   const { frontmatterEnd, blocks, context } = parseDocument(src);
@@ -61,6 +66,7 @@ export function loadMarkdown(file: string): LoadedNote {
     origins,
     context,
     eol,
+    bom,
   };
   const content = blocks.length > 0 ? blocks.map((b) => b.json) : [{ type: "paragraph" }];
   return { doc: { type: "doc", content }, layout };
@@ -84,7 +90,7 @@ export class NoteSession {
 
   serialize(doc: PMNode): string {
     const text = this.serializeLF(doc);
-    return this.layout.eol === "\r\n" ? text.replace(/\n/g, "\r\n") : text;
+    return this.layout.bom + (this.layout.eol === "\r\n" ? text.replace(/\n/g, "\r\n") : text);
   }
 
   private serializeLF(doc: PMNode): string {

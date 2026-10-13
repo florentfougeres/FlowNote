@@ -22,6 +22,8 @@ pub struct GitFile {
 #[serde(rename_all = "camelCase")]
 pub struct GitStatus {
     pub is_repo: bool,
+    /// A merge is in progress (MERGE_HEAD exists).
+    pub merging: bool,
     pub branch: Option<String>,
     pub upstream: Option<String>,
     pub ahead: u32,
@@ -139,7 +141,11 @@ pub fn git_status(root: String) -> Result<GitStatus, String> {
     let mut cmd = git(&root);
     cmd.args(["status", "--porcelain=v2", "--branch", "-z", "--untracked-files=all"]);
     let output = run(cmd, None, &[])?;
-    Ok(parse_status(&String::from_utf8_lossy(&output.stdout), &prefix))
+    let mut status = parse_status(&String::from_utf8_lossy(&output.stdout), &prefix);
+    let mut merge_head = git(&root);
+    merge_head.args(["rev-parse", "-q", "--verify", "MERGE_HEAD"]);
+    status.merging = run(merge_head, None, &[]).is_ok();
+    Ok(status)
 }
 
 /// Unified diff of one file: staged changes, working tree changes, or the whole
@@ -283,7 +289,7 @@ pub fn git_pull(root: String) -> Result<String, String> {
         Ok(output) => Ok(combined_output(&output)),
         Err(message) => {
             let status = git_status(root)?;
-            if status.files.iter().any(|f| f.index == "U" || f.worktree == "U" || (f.index == "A" && f.worktree == "A") || (f.index == "D" && f.worktree == "D")) {
+            if status.files.iter().any(is_conflicted) {
                 Err(format!("CONFLICT:{message}"))
             } else {
                 Err(message)
@@ -304,6 +310,95 @@ pub fn git_push(root: String) -> Result<String, String> {
         cmd.args(["push", "--set-upstream", "origin", &branch]);
     }
     run(cmd, None, &[]).map(|output| combined_output(&output))
+}
+
+/// Unmerged entries: both modified (UU), added (AA), deleted (DD) or one side deleted (AU, UA, DU, UD).
+pub fn is_conflicted(file: &GitFile) -> bool {
+    file.index == "U" || file.worktree == "U" || (file.index == "A" && file.worktree == "A") || (file.index == "D" && file.worktree == "D")
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+pub struct ConflictVersions {
+    /// Common ancestor, "mine" (current branch) and "theirs" (merged branch); None when a side deleted the file.
+    pub base: Option<String>,
+    pub ours: Option<String>,
+    pub theirs: Option<String>,
+    /// Working file, with conflict markers.
+    pub working: Option<String>,
+}
+
+fn stage_content(root: &str, stage: u8, path: &str) -> Option<String> {
+    let mut cmd = git(root);
+    cmd.arg("show").arg(format!(":{stage}:./{path}"));
+    run(cmd, None, &[]).ok().map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+}
+
+fn ensure_conflicted(root: &str, path: &str) -> Result<(), String> {
+    check_path(path)?;
+    let status = git_status(root.to_string())?;
+    if status.files.iter().any(|f| f.path == path && is_conflicted(f)) {
+        Ok(())
+    } else {
+        Err(format!("{path} n'est pas en conflit."))
+    }
+}
+
+#[tauri::command]
+pub fn git_conflict(root: String, path: String) -> Result<ConflictVersions, String> {
+    ensure_conflicted(&root, &path)?;
+    Ok(ConflictVersions {
+        base: stage_content(&root, 1, &path),
+        ours: stage_content(&root, 2, &path),
+        theirs: stage_content(&root, 3, &path),
+        working: std::fs::read_to_string(Path::new(&root).join(&path)).ok(),
+    })
+}
+
+/// Writes the resolved content of a conflicted file (None deletes it) and marks it resolved.
+/// Only conflicted files can be written this way.
+#[tauri::command]
+pub fn git_resolve(root: String, path: String, content: Option<String>) -> Result<(), String> {
+    ensure_conflicted(&root, &path)?;
+    let file = Path::new(&root).join(&path);
+    let mut cmd = git(&root);
+    match content {
+        Some(text) => {
+            if let Some(parent) = file.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            std::fs::write(&file, text).map_err(|e| e.to_string())?;
+            cmd.args(["add", "--", &path]);
+        }
+        None => {
+            cmd.args(["rm", "-q", "--ignore-unmatch", "--", &path]);
+        }
+    }
+    run(cmd, None, &[]).map(|_| ())
+}
+
+/// Concludes the merge with git's prepared message, once no conflict remains.
+#[tauri::command]
+pub fn git_merge_continue(root: String) -> Result<String, String> {
+    let status = git_status(root.clone())?;
+    if !status.merging {
+        return Err("Aucune fusion en cours.".into());
+    }
+    let remaining = status.files.iter().filter(|f| is_conflicted(f)).count();
+    if remaining > 0 {
+        return Err(format!("Il reste {remaining} fichier(s) en conflit."));
+    }
+    let mut cmd = git(&root);
+    cmd.args(["commit", "--no-edit"]);
+    let output = run(cmd, None, &[])?;
+    Ok(String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").to_string())
+}
+
+/// Abandons the merge and restores the state before it.
+#[tauri::command]
+pub fn git_merge_abort(root: String) -> Result<(), String> {
+    let mut cmd = git(&root);
+    cmd.args(["merge", "--abort"]);
+    run(cmd, None, &[]).map(|_| ())
 }
 
 #[cfg(test)]
@@ -331,6 +426,7 @@ mod tests {
 2 R. N... 100644 100644 100644 a b R100 Nouveau nom.md\0Ancien nom.md\0\
 ? Brouillon.md\0? ../hors.md\0";
         let status = parse_status(raw, "");
+        assert!(!status.merging);
         assert_eq!(status.branch.as_deref(), Some("main"));
         assert_eq!(status.upstream.as_deref(), Some("origin/main"));
         assert_eq!((status.ahead, status.behind), (2, 1));
@@ -447,10 +543,69 @@ mod tests {
         commit_all(&clone, "Modif locale");
         let err = git_pull(clone.clone()).unwrap_err();
         assert!(err.starts_with("CONFLICT:"), "{err}");
-        assert!(git_status(clone.clone()).unwrap().files.iter().any(|f| f.index == "U"));
+        assert!(git_status(clone.clone()).unwrap().files.iter().any(is_conflicted));
 
         fs::remove_dir_all(&remote_dir).unwrap();
         fs::remove_dir_all(&clone_dir).unwrap();
+    }
+
+    /// Two branches changing the same line, merged into main: a conflict on "note.md".
+    fn conflicted_repo(name: &str) -> (std::path::PathBuf, String) {
+        let (dir, root) = repo(name);
+        fs::write(dir.join("note.md"), "titre\nligne commune\nfin\n").unwrap();
+        fs::write(dir.join("autre.md"), "x\n").unwrap();
+        commit_all(&root, "Base");
+        for args in [vec!["checkout", "-q", "-b", "eux"]] {
+            let mut cmd = git(&root);
+            cmd.args(args);
+            run(cmd, None, &[]).unwrap();
+        }
+        fs::write(dir.join("note.md"), "titre\nleur ligne\nfin\n").unwrap();
+        commit_all(&root, "Eux");
+        let mut cmd = git(&root);
+        cmd.args(["checkout", "-q", "main"]);
+        run(cmd, None, &[]).unwrap();
+        fs::write(dir.join("note.md"), "titre\nma ligne\nfin\n").unwrap();
+        commit_all(&root, "Moi");
+        let mut cmd = git(&root);
+        cmd.args(["merge", "eux"]);
+        assert!(run(cmd, None, &[]).is_err());
+        (dir, root)
+    }
+
+    #[test]
+    fn resolve_conflicts_and_finish_the_merge() {
+        let (dir, root) = conflicted_repo("resolve");
+        let status = git_status(root.clone()).unwrap();
+        assert!(status.merging);
+        assert!(status.files.iter().any(|f| f.path == "note.md" && is_conflicted(f)));
+
+        let versions = git_conflict(root.clone(), "note.md".into()).unwrap();
+        assert_eq!(versions.base.as_deref(), Some("titre\nligne commune\nfin\n"));
+        assert_eq!(versions.ours.as_deref(), Some("titre\nma ligne\nfin\n"));
+        assert_eq!(versions.theirs.as_deref(), Some("titre\nleur ligne\nfin\n"));
+        assert!(versions.working.unwrap().contains("<<<<<<<"));
+
+        // Files that are not in conflict cannot be written through this command.
+        assert!(git_resolve(root.clone(), "autre.md".into(), Some("pirate".into())).is_err());
+        assert!(git_merge_continue(root.clone()).is_err());
+
+        git_resolve(root.clone(), "note.md".into(), Some("titre\nma ligne\nleur ligne\nfin\n".into())).unwrap();
+        assert!(git_merge_continue(root.clone()).unwrap().contains("main"));
+        let status = git_status(root.clone()).unwrap();
+        assert!(!status.merging && status.files.is_empty());
+        assert_eq!(fs::read_to_string(dir.join("note.md")).unwrap(), "titre\nma ligne\nleur ligne\nfin\n");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn abort_a_merge() {
+        let (dir, root) = conflicted_repo("abort");
+        git_merge_abort(root.clone()).unwrap();
+        let status = git_status(root.clone()).unwrap();
+        assert!(!status.merging && status.files.is_empty());
+        assert_eq!(fs::read_to_string(dir.join("note.md")).unwrap(), "titre\nma ligne\nfin\n");
+        fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

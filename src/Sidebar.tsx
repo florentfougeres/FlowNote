@@ -45,9 +45,13 @@ interface Props {
   gitChanges: number | null;
   gitActive: boolean;
   onToggleGit: () => void;
+  onDelete: (notePath: string) => void;
+  onSearch: () => void;
+  onSettings: () => void;
+  onHelp: () => void;
 }
 
-export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, gitChanges, gitActive, onToggleGit }: Props) {
+export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, gitChanges, gitActive, onToggleGit, onDelete, onSearch, onSettings, onHelp }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const pages = toPages(tree);
 
@@ -89,9 +93,14 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, gitCha
                 {page.name}
               </button>
               {page.notePath && (
-                <button className="page-add" title="Ajouter une sous-page" onClick={() => onNewPage(page.notePath)}>
-                  +
-                </button>
+                <>
+                  <button className="page-add" title="Supprimer la page" onClick={() => onDelete(page.notePath!)}>
+                    🗑
+                  </button>
+                  <button className="page-add" title="Ajouter une sous-page" onClick={() => onNewPage(page.notePath)}>
+                    +
+                  </button>
+                </>
               )}
             </div>
             {open && page.children.length > 0 && render(page.children, depth + 1)}
@@ -103,17 +112,31 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, gitCha
 
   return (
     <aside className="sidebar">
-      <div className="vault-name">{vaultName}</div>
+      <div className="sidebar-header">
+        <span className="vault-name">{vaultName}</span>
+        <button title="Réglages" onClick={onSettings}>
+          ⚙
+        </button>
+      </div>
+      <button className="sidebar-search" onClick={onSearch}>
+        <span>🔍 Rechercher</span>
+        <kbd>⌘P</kbd>
+      </button>
       {render(pages, 0)}
       <button className="new-page" onClick={() => onNewPage(null)}>
         + Nouvelle page
       </button>
-      {gitChanges !== null && (
-        <button className={gitActive ? "git-button active" : "git-button"} onClick={onToggleGit}>
-          <span>⎇ Git</span>
-          {gitChanges > 0 && <span className="git-badge">{gitChanges}</span>}
+      <div className="sidebar-footer">
+        {gitChanges !== null && (
+          <button className={gitActive ? "git-button active" : "git-button"} onClick={onToggleGit}>
+            <span>⎇ Git</span>
+            {gitChanges > 0 && <span className="git-badge">{gitChanges}</span>}
+          </button>
+        )}
+        <button className="help-button" title="Raccourcis clavier (⌘/)" onClick={onHelp}>
+          ?
         </button>
-      )}
+      </div>
     </aside>
   );
 }

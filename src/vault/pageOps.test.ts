@@ -1,0 +1,48 @@
+import { describe, expect, it } from "vitest";
+import { createMemoryVault } from "./vault";
+import { deletePage, renamePage, subpagesOf } from "./pageOps";
+
+function vault() {
+  return createMemoryVault("Test", {
+    "Index.md": "Voir [[Mon Notion]] et [[Mon Notion/Stack|la stack]].\n",
+    "Projets/Mon Notion.md": "Sous-page : [[Stack]]\n",
+    "Projets/Mon Notion/Stack.md": "Retour : [parent](../Mon%20Notion.md)\n",
+    "Projets/Mon Notion/schema.png": new Uint8Array([1]),
+  });
+}
+
+describe("renamePage", () => {
+  it("moves the note and its sub-pages and updates links everywhere", async () => {
+    const v = vault();
+    const result = await renamePage(v, "Projets/Mon Notion.md", "FlowNote");
+    expect(result.path).toBe("Projets/FlowNote.md");
+    expect((await v.files()).sort()).toEqual(["Index.md", "Projets/FlowNote.md", "Projets/FlowNote/Stack.md", "Projets/FlowNote/schema.png"]);
+    // "Stack" is unique: Obsidian's shortest form drops the folders.
+    expect(await v.read("Index.md")).toBe("Voir [[FlowNote]] et [[Stack|la stack]].\n");
+    expect(await v.read("Projets/FlowNote/Stack.md")).toBe("Retour : [parent](../FlowNote.md)\n");
+    expect(await v.read("Projets/FlowNote.md")).toBe("Sous-page : [[Stack]]\n");
+    expect(result.updatedNotes.sort()).toEqual(["Index.md", "Projets/FlowNote/Stack.md"]);
+  });
+
+  it("refuses an existing name and keeps everything as it was", async () => {
+    const w = vault();
+    await w.create("Projets/Pris.md", "");
+    await expect(renamePage(w, "Projets/Mon Notion.md", "Pris")).rejects.toThrow();
+    expect(await w.read("Index.md")).toContain("[[Mon Notion]]");
+  });
+
+  it("an unchanged title does nothing", async () => {
+    const v = vault();
+    expect(await renamePage(v, "Index.md", "Index")).toEqual({ path: "Index.md", updatedNotes: [] });
+  });
+});
+
+describe("deletePage", () => {
+  it("removes the page with its sub-pages", async () => {
+    const v = vault();
+    const files = await v.files();
+    expect(subpagesOf("Projets/Mon Notion.md", files)).toEqual(["Projets/Mon Notion/Stack.md"]);
+    await deletePage(v, "Projets/Mon Notion.md", files);
+    expect(await v.files()).toEqual(["Index.md"]);
+  });
+});

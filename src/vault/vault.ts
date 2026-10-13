@@ -31,6 +31,10 @@ export interface Vault {
   create(path: string, content: string | Uint8Array): Promise<void>;
   /** Content of `.obsidian/app.json` (read only), "{}" when absent. */
   obsidianConfig(): Promise<string>;
+  /** Renames a note or a folder; fails if the target exists. */
+  rename(from: string, to: string): Promise<void>;
+  /** Removes a note or a folder (to the system trash in the desktop app). */
+  remove(path: string): Promise<void>;
 }
 
 export const encodeText = (text: string) => new TextEncoder().encode(text);
@@ -83,6 +87,13 @@ export async function openBrowserVault(): Promise<Vault> {
     return dir.getFileHandle(parts[parts.length - 1], { create });
   }
 
+  async function removeEntry(path: string) {
+    const parts = path.split("/");
+    let dir: FileSystemDirectoryHandle = root;
+    for (const part of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(part);
+    await dir.removeEntry(parts[parts.length - 1], { recursive: true });
+  }
+
   async function allFiles(dir: DirectoryHandle, prefix: string, out: string[]) {
     for await (const handle of dir.values()) {
       if (isHiddenName(handle.name)) continue;
@@ -117,6 +128,17 @@ export async function openBrowserVault(): Promise<Vault> {
       await writable.write(typeof content === "string" ? content : new Blob([content as BlobPart]));
       await writable.close();
     },
+    rename: async (from, to) => {
+      const source = await fileHandle(from).catch(() => null);
+      if (!source) throw new Error("Le renommage de dossiers n'est disponible que dans l'application de bureau.");
+      if (await fileHandle(to).then(() => true, () => false)) throw new Error(`${to} existe déjà.`);
+      const bytes = new Uint8Array(await (await source.getFile()).arrayBuffer());
+      const writable = await (await fileHandle(to, true)).createWritable();
+      await writable.write(new Blob([bytes as BlobPart]));
+      await writable.close();
+      await removeEntry(from);
+    },
+    remove: (path) => removeEntry(path),
     obsidianConfig: async () => {
       try {
         const dir = await root.getDirectoryHandle(".obsidian");
@@ -129,7 +151,8 @@ export async function openBrowserVault(): Promise<Vault> {
 }
 
 /** In-memory vault, for trying the editor without opening a folder. */
-export function createMemoryVault(name: string, files: Record<string, string | Uint8Array>): Vault {
+/** `remote`: content of the simulated remote branch, merged by "pull" (demo of conflicts). */
+export function createMemoryVault(name: string, files: Record<string, string | Uint8Array>, remote: Record<string, string> = {}): Vault {
   const contents = new Map<string, string | Uint8Array>(Object.entries(files));
   const text = (path: string) => {
     const value = contents.get(path) ?? "";
@@ -137,7 +160,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
   };
   return {
     name,
-    git: memoryGit(contents),
+    git: memoryGit(contents, remote),
     tree: async () => buildTree([...contents.keys()].filter((p) => p.endsWith(".md"))),
     read: async (path) => text(path),
     write: async (path, content, expected) => {
@@ -154,6 +177,18 @@ export function createMemoryVault(name: string, files: Record<string, string | U
       contents.set(path, content);
     },
     obsidianConfig: async () => "{}",
+    rename: async (from, to) => {
+      const moved = [...contents.keys()].filter((k) => k === from || k.startsWith(`${from}/`));
+      if (moved.length === 0) throw new Error(`${from} n'existe pas.`);
+      if (contents.has(to)) throw new Error(`${to} existe déjà.`);
+      for (const key of moved) {
+        contents.set(to + key.slice(from.length), contents.get(key)!);
+        contents.delete(key);
+      }
+    },
+    remove: async (path) => {
+      for (const key of [...contents.keys()]) if (key === path || key.startsWith(`${path}/`)) contents.delete(key);
+    },
   };
 }
 

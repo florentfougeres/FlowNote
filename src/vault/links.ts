@@ -146,3 +146,97 @@ export function relativePath(fromPath: string, toPath: string): string {
   while (common < from.length && common < to.length - 1 && from[common] === to[common]) common++;
   return [...from.slice(common).map(() => ".."), ...to.slice(common)].join("/");
 }
+
+const WIKILINK = /(!?)\[\[([^[\]\n|#^]*)([#^][^[\]\n|]*)?(\|[^[\]\n]*)?\]\]/g;
+const MARKDOWN_LINK = /(!?\[[^\]\n]*\]\()([^)\s]+)((?:\s+"[^"\n]*")?\))/g;
+
+function decode(href: string): string {
+  try {
+    return decodeURI(href);
+  } catch {
+    return href;
+  }
+}
+
+/** Joins a note folder and a relative path, resolving "." and "..". */
+function resolveRelative(folder: string, href: string): string {
+  const parts: string[] = [];
+  for (const part of `${folder}/${href}`.split("/")) {
+    if (part === "" || part === ".") continue;
+    if (part === "..") parts.pop();
+    else parts.push(part);
+  }
+  return parts.join("/");
+}
+
+export interface LinkRewrite {
+  /** Path of the note before and after the rename (it moves when its folder is renamed). */
+  oldNotePath: string;
+  newNotePath: string;
+  filesBefore: string[];
+  filesAfter: string[];
+  /** Old path -> new path, for every moved file. */
+  renames: Map<string, string>;
+}
+
+/**
+ * Updates the links of one note after files were renamed, like Obsidian's
+ * "Automatically update internal links". Wikilinks keep their #section and
+ * |alias; relative Markdown links are recomputed. Code blocks and code spans
+ * are left alone. Returns null when nothing changed.
+ */
+export function rewriteLinks(content: string, change: LinkRewrite): string | null {
+  const { oldNotePath, newNotePath, filesBefore, filesAfter, renames } = change;
+  let inFence: string | null = null;
+  let changed = false;
+
+  const rewriteLine = (line: string) => {
+    // Keep code spans intact by splitting them out.
+    return line
+      .split(/(`+[^`]*`+)/)
+      .map((piece, i) => {
+        if (i % 2 === 1) return piece;
+        let out = piece.replace(WIKILINK, (whole, bang: string, target: string, section = "", alias = "") => {
+          const resolved = resolveLink(target, filesBefore, oldNotePath);
+          const moved = resolved && renames.get(resolved);
+          if (!moved) return whole;
+          const next = `${bang}[[${linkTextFor(moved, filesAfter)}${section}${alias}]]`;
+          if (next !== whole) changed = true;
+          return next;
+        });
+        out = out.replace(MARKDOWN_LINK, (whole, open: string, href: string, close: string) => {
+          if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith("#")) return whole;
+          const [pathPart, fragment = ""] = href.split(/(?=#)/);
+          const before = resolveRelative(dirname(oldNotePath), decode(pathPart));
+          const target = renames.get(before) ?? (filesBefore.includes(before) ? before : null);
+          if (!target || (target === before && oldNotePath === newNotePath)) return whole;
+          const next = encodeURI(relativePath(newNotePath, target)) + fragment;
+          if (next === href) return whole;
+          changed = true;
+          return `${open}${next}${close}`;
+        });
+        return out;
+      })
+      .join("");
+  };
+
+  const lines = content.split(/(?<=\n)/).map((line) => {
+    const fence = /^[ \t]{0,3}(`{3,}|~{3,})/.exec(line);
+    if (fence) {
+      if (inFence === null) inFence = fence[1][0];
+      else if (fence[1][0] === inFence) inFence = null;
+      return line;
+    }
+    return inFence ? line : rewriteLine(line);
+  });
+  return changed ? lines.join("") : null;
+}
+
+/** Files moved by renaming a note: the note itself and its sub-pages folder. */
+export function renamePlan(oldPath: string, newPath: string, files: string[]): Map<string, string> {
+  const renames = new Map([[oldPath, newPath]]);
+  const oldFolder = `${subpageFolder(oldPath)}/`;
+  const newFolder = `${subpageFolder(newPath)}/`;
+  for (const file of files) if (file.startsWith(oldFolder)) renames.set(file, newFolder + file.slice(oldFolder.length));
+  return renames;
+}

@@ -147,6 +147,34 @@ pub fn vault_config(root: String) -> String {
     fs::read_to_string(Path::new(&root).join(".obsidian").join("app.json")).unwrap_or_else(|_| "{}".into())
 }
 
+/// Renames a note or a folder; never overwrites an existing path.
+#[tauri::command]
+pub fn vault_rename(root: String, from: String, to: String) -> Result<(), String> {
+    let source = resolve(&root, &from)?;
+    let target = resolve(&root, &to)?;
+    if !source.exists() {
+        return Err(format!("{from} n'existe pas."));
+    }
+    // Case-only renames are allowed on case-insensitive file systems.
+    if target.exists() && from.to_lowercase() != to.to_lowercase() {
+        return Err(format!("{to} existe déjà."));
+    }
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::rename(&source, &target).map_err(|e| e.to_string())
+}
+
+/// Moves a note or folder to the system trash (recoverable).
+#[tauri::command]
+pub fn vault_trash(root: String, path: String) -> Result<(), String> {
+    let target = resolve(&root, &path)?;
+    if !target.exists() {
+        return Err(format!("{path} n'existe pas."));
+    }
+    trash::delete(&target).map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -171,6 +199,22 @@ mod tests {
         assert!(err.starts_with("CONFLICT:"));
         vault_write(root.clone(), "n.md".into(), "nouveau".into(), Some("disque".into())).unwrap();
         assert_eq!(fs::read_to_string(dir.join("n.md")).unwrap(), "nouveau");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn rename_refuses_to_overwrite() {
+        let dir = std::env::temp_dir().join(format!("mon-notion-rename-{}", std::process::id()));
+        fs::create_dir_all(dir.join("A")).unwrap();
+        fs::write(dir.join("A.md"), "a").unwrap();
+        fs::write(dir.join("A/sous.md"), "s").unwrap();
+        fs::write(dir.join("B.md"), "b").unwrap();
+        let root = dir.to_string_lossy().into_owned();
+        assert!(vault_rename(root.clone(), "A.md".into(), "B.md".into()).is_err());
+        vault_rename(root.clone(), "A.md".into(), "C.md".into()).unwrap();
+        vault_rename(root.clone(), "A".into(), "C".into()).unwrap();
+        assert_eq!(fs::read_to_string(dir.join("C/sous.md")).unwrap(), "s");
+        assert!(vault_rename(root.clone(), "C.md".into(), ".obsidian/x.md".into()).is_err());
         fs::remove_dir_all(&dir).unwrap();
     }
 

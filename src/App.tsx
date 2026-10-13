@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NoteEditor } from "./editor/NoteEditor";
 import { imageMime, type VaultBridge } from "./editor/bridge";
-import { NameDialog } from "./NameDialog";
+import { ConfirmDialog, NameDialog } from "./Dialogs";
+import { PageTitle } from "./PageTitle";
+import { QuickSwitcher } from "./QuickSwitcher";
+import { ShortcutsHelp } from "./ShortcutsHelp";
+import { loadSettings, saveSettings, SettingsDialog, type Settings } from "./SettingsDialog";
+import { deletePage, renamePage, subpagesOf } from "./vault/pageOps";
 import { Sidebar } from "./Sidebar";
 import { GitPanel } from "./GitPanel";
 import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
 import { DEFAULT_CONFIG, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
 import { FULL_NOTE } from "./markdown/fixtures";
+import { hasConflictMarkers } from "./vault/conflicts";
 import { isTauri, lastTauriVault, pickTauriVault } from "./vault/tauriVault";
 
 interface OpenNote {
@@ -26,7 +32,16 @@ interface Dialog {
   resolve: (name: string | null) => void;
 }
 
+interface Confirm {
+  message: string;
+  confirmLabel: string;
+  resolve: (confirmed: boolean) => void;
+}
+
 const AUTOSAVE_DELAY_MS = 700;
+
+/** The simulated remote changed the same line of "Projets.md": edit it locally, commit, then pull to see a conflict. */
+const DEMO_REMOTE = { "Projets.md": "# Projets\n\n[[Mon Notion]] — modifié sur un autre ordinateur\n" };
 
 const DEMO_FILES = {
   "Exemple.md": FULL_NOTE,
@@ -46,6 +61,12 @@ export function App() {
   const [view, setView] = useState<"note" | "git">("note");
   const [showHistory, setShowHistory] = useState(false);
   const [gitChanges, setGitChanges] = useState<number | null>(null);
+  const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const [modal, setModal] = useState<"switcher" | "help" | "settings" | null>(null);
+  const [settings, setSettings] = useState<Settings>(loadSettings);
+  // Visited pages, for back/forward navigation.
+  const back = useRef<string[]>([]);
+  const forward = useRef<string[]>([]);
 
   // Latest values for async callbacks.
   const noteRef = useRef(note);
@@ -126,22 +147,32 @@ export function App() {
     return saving.current;
   }, [vault, refreshGit]);
 
-  // Autosave, like Notion and Obsidian.
+  // Autosave, like Notion and Obsidian (can be turned off in the settings).
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty || !settings.autosave) return;
     const timer = window.setTimeout(() => void saveNow().catch(() => {}), AUTOSAVE_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [note?.markdown, dirty, saveNow]);
+  }, [note?.markdown, dirty, saveNow, settings.autosave]);
 
   const select = useCallback(
-    async (path: string) => {
+    async (path: string, navigation: "push" | "history" = "push") => {
       if (!vault) return;
       try {
         await saveNow();
       } catch {
         return; // keep the note open so the conflict can be resolved
       }
-      const disk = await vault.read(path);
+      let disk: string;
+      try {
+        disk = await vault.read(path);
+      } catch (error) {
+        return setStatus(`Impossible d'ouvrir ${path} : ${String(error)}`);
+      }
+      const previous = noteRef.current?.path;
+      if (navigation === "push" && previous && previous !== path) {
+        back.current.push(previous);
+        forward.current = [];
+      }
       setNote({ path, loaded: disk, disk, markdown: disk });
       setStatus("");
       setView("note");
@@ -149,16 +180,43 @@ export function App() {
     [vault, saveNow],
   );
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "s") {
-        event.preventDefault();
-        void saveNow().catch(() => {});
-      }
+  const goBack = useCallback(() => {
+    const path = back.current.pop();
+    if (!path) return;
+    if (noteRef.current) forward.current.push(noteRef.current.path);
+    void select(path, "history");
+  }, [select]);
+
+  const goForward = useCallback(() => {
+    const path = forward.current.pop();
+    if (!path) return;
+    if (noteRef.current) back.current.push(noteRef.current.path);
+    void select(path, "history");
+  }, [select]);
+
+  // Application shortcuts (editor shortcuts live in the editor extensions).
+  const shortcuts = useRef<(event: KeyboardEvent) => void>(() => {});
+  shortcuts.current = (event: KeyboardEvent) => {
+    if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+    const key = event.key.toLowerCase();
+    const run = (action: () => void) => {
+      event.preventDefault();
+      action();
     };
+    if (key === "s") run(() => void saveNow().catch(() => {}));
+    else if (!vault) return;
+    else if (key === "p" || key === "k" || key === "o") run(() => setModal("switcher"));
+    else if (key === "n" && !event.shiftKey) run(() => void newPage(null));
+    else if (key === "[") run(goBack);
+    else if (key === "]") run(goForward);
+    else if (key === "g" && event.shiftKey) run(() => setView((v) => (v === "git" ? "note" : "git")));
+    else if (key === "/") run(() => setModal("help"));
+  };
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => shortcuts.current(event);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [saveNow]);
+  }, []);
 
   /**
    * Re-reads the open note after a change on disk (pull, restore, Obsidian).
@@ -180,11 +238,15 @@ export function App() {
     setNote(reloaded);
   }, [vault]);
 
+  // Back to the window: pick up changes made in Obsidian or by git (note content and page tree).
   useEffect(() => {
-    const onFocus = () => void reloadFromDisk();
+    const onFocus = () => {
+      void reloadFromDisk();
+      if (vault) void refresh(vault);
+    };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [reloadFromDisk]);
+  }, [reloadFromDisk, vault, refresh]);
 
   const restoreVersion = async (content: string) => {
     const current = noteRef.current;
@@ -201,6 +263,48 @@ export function App() {
   };
 
   const askName = useCallback((title: string, initial: string) => new Promise<string | null>((resolve) => setDialog({ title, initial, resolve })), []);
+  const askConfirm = (message: string, confirmLabel: string) => new Promise<boolean>((resolve) => setConfirm({ message, confirmLabel, resolve }));
+
+  /** Renames the open page from its title; links across the vault follow. */
+  const renameCurrent = async (title: string): Promise<boolean> => {
+    const current = noteRef.current;
+    if (!vault || !current) return false;
+    try {
+      await saveNow();
+      const result = await renamePage(vault, current.path, title);
+      await refresh(vault);
+      const disk = await vault.read(result.path);
+      back.current = back.current.map((p) => (p === current.path ? result.path : p));
+      setNote({ path: result.path, loaded: disk, disk, markdown: disk });
+      const others = result.updatedNotes.filter((p) => p !== result.path).length;
+      setStatus(others > 0 ? `Page renommée ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}.` : "Page renommée.");
+      void refreshGit();
+      return true;
+    } catch (error) {
+      setStatus(String(error));
+      return false;
+    }
+  };
+
+  const removePage = async (path: string) => {
+    if (!vault) return;
+    const children = subpagesOf(path, filesRef.current).length;
+    const where = isTauri() ? "Elle ira dans la corbeille." : "Cette suppression est définitive.";
+    const withChildren = children === 0 ? "" : children === 1 ? " et sa sous-page" : ` et ses ${children} sous-pages`;
+    const message = `Supprimer « ${noteTitle(path)} »${withChildren} ? ${where}`;
+    if (!(await askConfirm(message, "Supprimer"))) return;
+    try {
+      if (noteRef.current?.path === path) await saveNow();
+      await deletePage(vault, path, filesRef.current);
+      await refresh(vault);
+      back.current = back.current.filter((p) => p !== path);
+      forward.current = forward.current.filter((p) => p !== path);
+      if (noteRef.current && (noteRef.current.path === path || noteRef.current.path.startsWith(`${subpageFolder(path)}/`))) setNote(null);
+      void refreshGit();
+    } catch (error) {
+      setStatus(String(error));
+    }
+  };
 
   const createFile = useCallback(
     async (path: string, content: string | Uint8Array) => {
@@ -213,9 +317,9 @@ export function App() {
   );
 
   /** "+ Nouvelle page" (root) or "+" on a page (sub-page, linked from its parent). */
-  const newPage = async (parent: string | null) => {
+  const newPage = async (parent: string | null, presetName?: string) => {
     if (!vault) return;
-    const name = await askName(parent ? "Nom de la sous-page" : "Nom de la page", "Sans titre");
+    const name = presetName ?? (await askName(parent ? "Nom de la sous-page" : "Nom de la page", "Sans titre"));
     if (!name) return;
     const folder = parent ? subpageFolder(parent) : newNoteFolder("", config);
     const path = uniquePath(folder, `${sanitizeName(name) || "Sans titre"}.md`, filesRef.current);
@@ -267,7 +371,7 @@ export function App() {
         ) : (
           <p className="warning">Ce navigateur ne permet pas d'ouvrir un dossier : utilisez Chrome, ou l'app Tauri.</p>
         )}{" "}
-        <button onClick={() => void open(createMemoryVault("Démo", DEMO_FILES))}>Essayer avec une note d'exemple</button>
+        <button onClick={() => void open(createMemoryVault("Démo", DEMO_FILES, DEMO_REMOTE))}>Essayer avec une note d'exemple</button>
         {status && <p className="warning">{status}</p>}
       </main>
     );
@@ -276,6 +380,10 @@ export function App() {
   return (
     <div className="layout">
       <Sidebar
+        onDelete={(path) => void removePage(path)}
+        onSearch={() => setModal("switcher")}
+        onSettings={() => setModal("settings")}
+        onHelp={() => setModal("help")}
         vaultName={vault.name}
         tree={tree}
         selected={view === "note" ? note?.path : undefined}
@@ -303,16 +411,28 @@ export function App() {
         ) : note ? (
           <>
             <header className="toolbar">
+              <button className="nav" onClick={goBack} disabled={back.current.length === 0} title="Page précédente (⌘[)">
+                ‹
+              </button>
+              <button className="nav" onClick={goForward} disabled={forward.current.length === 0} title="Page suivante (⌘])">
+                ›
+              </button>
               <span className="path">{note.path}</span>
-              <span className={dirty ? "badge dirty" : "badge"}>{dirty ? "Enregistrement…" : "Enregistré"}</span>
+              <span className={dirty ? "badge dirty" : "badge"}>{dirty ? (settings.autosave ? "Enregistrement…" : "Non enregistré (⌘S)") : "Enregistré"}</span>
               {status && <span className="status warning">{status}</span>}
               {vault.git && gitChanges !== null && <button onClick={() => setShowHistory(!showHistory)}>Historique</button>}
               <button onClick={() => setShowMarkdown(!showMarkdown)}>{showMarkdown ? "Masquer" : "Voir"} le Markdown</button>
             </header>
             <div className="panes">
               <div className="page">
-                <h1 className="page-title">{noteTitle(note.path)}</h1>
-                <NoteEditor key={note.path} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} />
+                {hasConflictMarkers(note.disk) && (
+                  <div className="conflict-note-banner">
+                    <span>Cette note contient un conflit de fusion : elle est en lecture seule jusqu'à sa résolution.</span>
+                    {vault.git && <button onClick={() => setView("git")}>Résoudre</button>}
+                  </div>
+                )}
+                <PageTitle title={noteTitle(note.path)} onRename={renameCurrent} readOnly={hasConflictMarkers(note.disk)} />
+                <NoteEditor key={note.path} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk)} />
               </div>
               {showMarkdown && <pre className="markdown-preview">{note.markdown}</pre>}
               {showHistory && vault.git && (
@@ -324,6 +444,37 @@ export function App() {
           <p className="empty">Choisissez une page dans la barre latérale.</p>
         )}
       </main>
+      {confirm && (
+        <ConfirmDialog
+          message={confirm.message}
+          confirmLabel={confirm.confirmLabel}
+          onDone={(ok) => {
+            confirm.resolve(ok);
+            setConfirm(null);
+          }}
+        />
+      )}
+      {modal === "switcher" && (
+        <QuickSwitcher files={files} onOpen={(path) => void select(path)} onCreate={(name) => void newPage(null, name)} onClose={() => setModal(null)} />
+      )}
+      {modal === "help" && <ShortcutsHelp onClose={() => setModal(null)} />}
+      {modal === "settings" && (
+        <SettingsDialog
+          settings={settings}
+          vaultName={vault.name}
+          onChange={(next) => {
+            setSettings(next);
+            saveSettings(next);
+          }}
+          onChangeVault={() => {
+            setModal(null);
+            void saveNow()
+              .catch(() => {})
+              .then(() => (isTauri() ? open(pickTauriVault()) : (setVault(null), setNote(null))));
+          }}
+          onClose={() => setModal(null)}
+        />
+      )}
       {dialog && (
         <NameDialog
           title={dialog.title}

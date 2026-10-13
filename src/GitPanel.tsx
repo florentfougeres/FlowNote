@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { DiffView } from "./DiffView";
-import { isStaged, isUnstaged, MergeConflictError, statusLabel, type GitApi, type GitFile, type GitStatus } from "./vault/git";
+import { ConflictResolver } from "./ConflictResolver";
+import { isConflicted, isStaged, isUnstaged, MergeConflictError, statusLabel, type GitApi, type GitFile, type GitStatus } from "./vault/git";
 import { basename, dirname } from "./vault/links";
 
 interface Props {
@@ -17,6 +18,8 @@ interface Props {
 interface Selection {
   file: GitFile;
   staged: boolean;
+  /** The file is in conflict: the resolver is shown instead of a diff. */
+  conflict?: boolean;
 }
 
 export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }: Props) {
@@ -26,6 +29,7 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ error: boolean; text: string } | null>(null);
+  const [confirmAbort, setConfirmAbort] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -48,7 +52,7 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
 
   // Keep the selected diff current (the file may have changed or moved between sections).
   useEffect(() => {
-    if (!selection || !status) return;
+    if (!selection || !status || selection.conflict) return;
     const file = status.files.find((f) => f.path === selection.file.path);
     if (!file || (selection.staged ? !isStaged(file) : !isUnstaged(file))) {
       setSelection(null);
@@ -96,6 +100,21 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
 
   const fetchRemote = () => act(() => git.fetch());
 
+  const finishMerge = () =>
+    act(async () => {
+      setFeedback({ error: false, text: await git.continueMerge() });
+      onPulled();
+    });
+
+  const abortMerge = () =>
+    act(async () => {
+      setConfirmAbort(false);
+      setSelection(null);
+      await git.abortMerge();
+      setFeedback({ error: false, text: "Fusion annulée : les fichiers sont revenus à leur état d'avant." });
+      onPulled();
+    });
+
   const commit = () =>
     act(async () => {
       await beforeCommit();
@@ -107,6 +126,7 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
   if (!status) return <div className="git-panel empty">Lecture du dépôt…</div>;
   if (!status.isRepo) return <div className="git-panel empty">Ce vault n'est pas un dépôt Git.</div>;
 
+  const conflicted = status.files.filter(isConflicted);
   const staged = status.files.filter(isStaged);
   const unstaged = status.files.filter(isUnstaged);
 
@@ -176,6 +196,60 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
             ↻
           </button>
         </div>
+        {(status.merging || conflicted.length > 0) && (
+          <div className="merge-banner">
+            <strong>Fusion en cours</strong>
+            <span>
+              {conflicted.length > 0
+                ? `${conflicted.length} fichier${conflicted.length > 1 ? "s" : ""} en conflit à résoudre.`
+                : "Tous les conflits sont résolus."}
+            </span>
+            <div className="merge-actions">
+              <button className="primary" disabled={busy || conflicted.length > 0} onClick={() => void finishMerge()}>
+                Terminer la fusion
+              </button>
+              {confirmAbort ? (
+                <>
+                  <button disabled={busy} onClick={() => void abortMerge()}>
+                    Confirmer l'annulation
+                  </button>
+                  <button onClick={() => setConfirmAbort(false)}>Garder</button>
+                </>
+              ) : (
+                <button disabled={busy} onClick={() => setConfirmAbort(true)} title="git merge --abort : revient à l'état d'avant la fusion">
+                  Annuler la fusion
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        {conflicted.length > 0 && (
+          <section className="git-section">
+            <header>
+              <span>
+                Conflits <span className="git-count">{conflicted.length}</span>
+              </span>
+            </header>
+            <ul>
+              {conflicted.map((file) => (
+                <li
+                  key={file.path}
+                  className={selection?.conflict && selection.file.path === file.path ? "git-file selected" : "git-file"}
+                  onClick={() => setSelection({ file, staged: false, conflict: true })}
+                >
+                  <span className="git-letter git-D" title="Conflit">
+                    U
+                  </span>
+                  <span className="git-name" title={file.path}>
+                    {basename(file.path)}
+                    <span className="git-folder">{dirname(file.path)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {!status.merging && (
         <div className="git-commit">
           <textarea
             placeholder="Message de commit"
@@ -189,13 +263,26 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }:
           <button className="primary" disabled={busy || !message.trim() || staged.length === 0} onClick={() => void commit()}>
             Commiter {staged.length > 0 ? `(${staged.length})` : ""}
           </button>
-          {feedback && <p className={feedback.error ? "git-feedback error" : "git-feedback"}>{feedback.text}</p>}
         </div>
+        )}
+        {feedback && <p className={feedback.error ? "git-feedback error" : "git-feedback"}>{feedback.text}</p>}
         {section("Indexé", staged, true)}
         {section("Modifications", unstaged, false)}
       </div>
       <div className="git-diff">
-        {selection ? (
+        {selection?.conflict ? (
+          <ConflictResolver
+            key={selection.file.path}
+            git={git}
+            path={selection.file.path}
+            onResolved={() => {
+              setSelection(null);
+              setFeedback({ error: false, text: `${selection.file.path} est résolu.` });
+              void refresh();
+              onChanged();
+            }}
+          />
+        ) : selection ? (
           <>
             <header>
               <span className="git-diff-path">

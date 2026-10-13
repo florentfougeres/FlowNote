@@ -7,6 +7,8 @@ import {
   parseObsidianConfig,
   pastedImageName,
   relativePath,
+  renamePlan,
+  rewriteLinks,
   resolveLink,
   sanitizeName,
   subpageFolder,
@@ -80,5 +82,41 @@ describe("locations", () => {
     expect(parseObsidianConfig("{}")).toEqual(DEFAULT_CONFIG);
     expect(parseObsidianConfig('{"attachmentFolderPath":"./","newFileLocation":"current"}').attachmentFolderPath).toBe("./");
     expect(parseObsidianConfig("pas du json")).toEqual(DEFAULT_CONFIG);
+  });
+});
+
+describe("updating links after a rename", () => {
+  const before = ["Index.md", "Projets/Mon Notion.md", "Projets/Mon Notion/Stack.md", "Archive/Stack.md", "img/a.png"];
+  const renames = renamePlan("Projets/Mon Notion.md", "Projets/FlowNote.md", before);
+  const after = before.map((f) => renames.get(f) ?? f);
+  const change = (oldNotePath: string, newNotePath = oldNotePath) => ({ oldNotePath, newNotePath, filesBefore: before, filesAfter: after, renames });
+
+  it("plans the note and its sub-pages folder", () => {
+    expect([...renames]).toEqual([
+      ["Projets/Mon Notion.md", "Projets/FlowNote.md"],
+      ["Projets/Mon Notion/Stack.md", "Projets/FlowNote/Stack.md"],
+    ]);
+  });
+
+  it("rewrites wikilinks, keeping sections and aliases, and nothing else", () => {
+    const src = "Voir [[Mon Notion]], [[Mon Notion#Plan|le plan]] et ![[Mon Notion]].\nAutre : [[Index]] et [[Archive/Stack]].\n";
+    expect(rewriteLinks(src, change("Index.md"))).toBe("Voir [[FlowNote]], [[FlowNote#Plan|le plan]] et ![[FlowNote]].\nAutre : [[Index]] et [[Archive/Stack]].\n");
+    expect(rewriteLinks("[[Index]] seulement\n", change("Index.md"))).toBeNull();
+  });
+
+  it("path links to moved sub-pages are updated", () => {
+    expect(rewriteLinks("[[Projets/Mon Notion/Stack]]\n", change("Index.md"))).toBe("[[Projets/FlowNote/Stack]]\n");
+  });
+
+  it("relative Markdown links, including those of notes that moved", () => {
+    expect(rewriteLinks("[Projet](Projets/Mon%20Notion.md#plan)\n", change("Index.md"))).toBe("[Projet](Projets/FlowNote.md#plan)\n");
+    // The sub-page moved: its link to an unchanged file is recomputed.
+    expect(rewriteLinks("![](../../img/a.png) et [web](https://x.y)\n", change("Projets/Mon Notion/Stack.md", "Projets/FlowNote/Stack.md"))).toBeNull();
+    expect(rewriteLinks("[parent](../Mon%20Notion.md)\n", change("Projets/Mon Notion/Stack.md", "Projets/FlowNote/Stack.md"))).toBe("[parent](../FlowNote.md)\n");
+  });
+
+  it("leaves code alone", () => {
+    const src = "```\n[[Mon Notion]]\n```\n`[[Mon Notion]]` mais [[Mon Notion]]\n";
+    expect(rewriteLinks(src, change("Index.md"))).toBe("```\n[[Mon Notion]]\n```\n`[[Mon Notion]]` mais [[FlowNote]]\n");
   });
 });

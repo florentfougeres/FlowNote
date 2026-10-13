@@ -41,6 +41,24 @@ describe("unchanged notes are written back byte for byte", () => {
   }
 });
 
+describe("byte order mark", () => {
+  it("is kept, and does not shift source positions", () => {
+    const src = "\uFEFF# Titre\n\n- un\n- deux\n";
+    const { state, session } = open(src);
+    expect(session.serialize(state.doc)).toBe(src);
+    const tr = state.tr.insertText("!", positionAfter(state.doc, "deux"));
+    expect(session.serialize(tr.doc)).toBe("\uFEFF# Titre\n\n- un\n- deux!\n");
+  });
+});
+
+describe("nested identical marks", () => {
+  it("_a _b_ c_ is one italic run", () => {
+    const [paragraph] = parseFragment("_Note : _objet_ non ordonné_");
+    expect(paragraph.content).toEqual([{ type: "text", text: "Note : objet non ordonné", marks: [{ type: "italic", attrs: { marker: "_" } }] }]);
+    expect(serializeTopLevelBlockWithReport(paragraph).exact).toBe(true);
+  });
+});
+
 describe("line endings", () => {
   it("CRLF files stay CRLF, including edited blocks", () => {
     const src = "# Titre\r\n\r\nPremier\r\n- a\r\n- b\r\n";

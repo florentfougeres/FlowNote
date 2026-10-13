@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { isStaged, isUnstaged, memoryGit, parseDiff, unifiedDiff } from "./git";
+import { isConflicted, isStaged, isUnstaged, memoryGit, MergeConflictError, parseDiff, unifiedDiff } from "./git";
 
 /** Hunks of `git diff --no-index` for two texts (the reference implementation). */
 function gitDiff(before: string, after: string): string {
@@ -114,5 +114,39 @@ describe("history", () => {
     expect(performance.now() - started).toBeLessThan(200);
     expect(diff).toContain("@@ -14998,7 +14998,7 @@");
     expect(hunksOnly(diff)).toBe(hunksOnly(gitDiff(lines.join("\n") + "\n", changed.join("\n") + "\n")));
+  });
+});
+
+describe("merge conflicts (memoryGit)", () => {
+  it("pull stops on a conflict, the file is resolved, then the merge is finished", async () => {
+    const files = new Map<string, string | Uint8Array>([["p.md", "base\n"]]);
+    const git = memoryGit(files, { "p.md": "distant\n" });
+    files.set("p.md", "local\n");
+    await git.stage(["p.md"]);
+    await git.commit("Local");
+    await expect(git.pull()).rejects.toBeInstanceOf(MergeConflictError);
+    let status = await git.status();
+    expect(status.merging).toBe(true);
+    expect(status.files.filter(isConflicted).map((f) => f.path)).toEqual(["p.md"]);
+    const versions = await git.conflict("p.md");
+    expect([versions.base, versions.ours, versions.theirs]).toEqual(["base\n", "local\n", "distant\n"]);
+    await expect(git.continueMerge()).rejects.toThrow();
+    await git.resolve("p.md", "local\ndistant\n");
+    expect(await git.continueMerge()).toContain("Merge");
+    status = await git.status();
+    expect(status.merging).toBe(false);
+    expect(files.get("p.md")).toBe("local\ndistant\n");
+  });
+
+  it("aborting restores my version", async () => {
+    const files = new Map<string, string | Uint8Array>([["p.md", "base\n"]]);
+    const git = memoryGit(files, { "p.md": "distant\n" });
+    files.set("p.md", "local\n");
+    await git.stage(["p.md"]);
+    await git.commit("Local");
+    await git.pull().catch(() => {});
+    await git.abortMerge();
+    expect(files.get("p.md")).toBe("local\n");
+    expect((await git.status()).merging).toBe(false);
   });
 });

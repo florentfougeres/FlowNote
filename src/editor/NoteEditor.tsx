@@ -14,6 +14,8 @@ interface Props {
   /** Called with the new file content after every change. */
   onMarkdown: (markdown: string) => void;
   bridge: VaultBridge;
+  /** False for notes that must not be edited (e.g. containing conflict markers). */
+  editable?: boolean;
 }
 
 async function readFiles(list: FileList | null | undefined): Promise<{ name: string; bytes: Uint8Array }[]> {
@@ -27,7 +29,7 @@ async function readFiles(list: FileList | null | undefined): Promise<{ name: str
   );
 }
 
-export function NoteEditor({ source, onMarkdown, bridge }: Props) {
+export function NoteEditor({ source, onMarkdown, bridge, editable = true }: Props) {
   const session = useRef<NoteSession | null>(null);
   const shell = useRef<HTMLDivElement>(null);
   const [wiring] = useState(defaultWiring);
@@ -76,6 +78,10 @@ export function NoteEditor({ source, onMarkdown, bridge }: Props) {
     editor.view.updateState(EditorState.create({ doc: node, plugins: editor.state.plugins }));
     session.current = new NoteSession(layout, node);
   }, [editor, source]);
+
+  useEffect(() => {
+    editor?.setEditable(editable, false);
+  }, [editor, editable]);
 
   return (
     <div className="note-editor" ref={shell}>

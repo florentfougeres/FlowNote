@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "tiptap-editor": {
+      "source": "xiaolai/vmark",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/tiptap-editor/SKILL.md",
+      "computedHash": "6143592f0d3e729145873ca48a6ff02a472a6b8f10fbdaf533f2d00ed4992728"
+    }
+  }
+}
