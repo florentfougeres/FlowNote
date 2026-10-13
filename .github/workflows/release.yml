@@ -1,0 +1,60 @@
+# Builds the macOS .dmg files and prepares a draft GitHub release when a
+# version tag is pushed (git tag v0.1.0 && git push origin v0.1.0).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin # Apple Silicon
+          - target: x86_64-apple-darwin # Intel
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: FlowNote ${{ github.ref_name }}
+          releaseBody: |
+            Téléchargez le `.dmg` correspondant à votre Mac : `aarch64` pour Apple Silicon (M1 et suivants), `x64` pour Intel.
+
+            Premier lancement : l'application n'est pas signée par Apple. Ouvrez *Réglages Système → Confidentialité et sécurité* puis **Ouvrir quand même**, ou lancez `xattr -cr /Applications/FlowNote.app`.
+          releaseDraft: true
+          prerelease: false
+          args: --target ${{ matrix.target }} --bundles dmg

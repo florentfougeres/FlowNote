@@ -37,7 +37,10 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "app",
+      "dmg"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -47,6 +50,14 @@
     ],
     "android": {
       "debugApplicationIdSuffix": ".debug"
+    },
+    "category": "Productivity",
+    "shortDescription": "Éditeur de blocs pour vault Obsidian",
+    "longDescription": "Éditeur de notes façon Notion qui travaille directement sur les fichiers Markdown d'un vault Obsidian, avec gestionnaire Git intégré.",
+    "copyright": "© 2026 Florent Fougères",
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "11.0"
     }
   }
 }
