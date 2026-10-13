@@ -4,6 +4,7 @@ import type { Editor } from "@tiptap/core";
 import { Selection, TextSelection } from "@tiptap/pm/state";
 import { blockAt, deleteBlock, duplicateBlock, moveBlock, moveBlockByOne, movableBlocks, turnInto, type BlockKind, type BlockRef, type DropSide } from "./blocks";
 import { openSlashMenu } from "./slash";
+import { DragVisual } from "./dragMotion";
 
 /**
  * Notion-style gutter controls shown next to the hovered block: "+" inserts a
@@ -29,8 +30,7 @@ interface DropTarget {
 
 interface Drag {
   source: BlockRef;
-  sourceDom: HTMLElement;
-  ghost: HTMLElement;
+  visual: DragVisual;
   target: DropTarget | null;
 }
 
@@ -91,15 +91,14 @@ function findDropTarget(editor: Editor, source: BlockRef, x: number, y: number):
 export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: RefObject<HTMLDivElement | null> }) {
   const [hover, setHover] = useState<Hover | null>(null);
   const [menu, setMenu] = useState<{ block: BlockRef; x: number; y: number } | null>(null);
-  const [dropLine, setDropLine] = useState<DropTarget["line"] | null>(null);
   const drag = useRef<Drag | null>(null);
 
   // Hover tracking on the editor shell.
   useEffect(() => {
     const el = shell.current;
-    if (!editor || !el) return;
+    if (!editor || editor.isDestroyed || !el) return;
     const onMove = (event: MouseEvent) => {
-      if (drag.current || menu) return;
+      if (drag.current || menu || editor.isDestroyed) return;
       const note = editor.view.dom;
       const noteRect = note.getBoundingClientRect();
       const contentLeft = noteRect.left + parseFloat(getComputedStyle(note).paddingLeft);
@@ -153,16 +152,20 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
     (drop: boolean) => {
       const current = drag.current;
       if (!current || !editor) return;
-      current.ghost.remove();
-      current.sourceDom.classList.remove("dragging-source");
       document.body.classList.remove("is-dragging-block");
       drag.current = null;
-      setDropLine(null);
       if (drop && current.target) {
         const tr = moveBlock(editor.state, current.source, current.target.block, current.target.side);
-        if (tr) editor.view.dispatch(tr);
-        editor.view.focus();
+        if (tr) {
+          editor.view.dispatch(tr);
+          editor.view.focus();
+          // The ghost flies into the block's new place.
+          const moved = blockAt(editor.state.doc, editor.state.selection.from);
+          void current.visual.land(moved && blockDom(editor, moved));
+          return;
+        }
       }
+      void current.visual.cancel();
     },
     [editor],
   );
@@ -182,17 +185,12 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
         const sourceDom = blockDom(editor, source);
         if (!sourceDom) return;
         started = true;
-        const ghost = sourceDom.cloneNode(true) as HTMLElement;
-        ghost.classList.add("drag-ghost");
-        ghost.style.width = `${sourceDom.getBoundingClientRect().width}px`;
-        document.body.append(ghost);
-        sourceDom.classList.add("dragging-source");
         document.body.classList.add("is-dragging-block");
-        drag.current = { source, sourceDom, ghost, target: null };
+        drag.current = { source, visual: new DragVisual(sourceDom, start), target: null };
         setHover(null);
       }
       const current = drag.current!;
-      current.ghost.style.transform = `translate(${e.clientX + 12}px, ${e.clientY - 12}px)`;
+      current.visual.move({ x: e.clientX, y: e.clientY });
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         // Scroll when the pointer approaches the top or bottom of the note.
@@ -202,7 +200,7 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
           else if (e.clientY > box.bottom - 50) scroller.scrollBy(0, 12);
         }
         current.target = findDropTarget(editor, source, e.clientX, e.clientY);
-        setDropLine(current.target?.line ?? null);
+        current.visual.showTarget(current.target?.line ?? null);
       });
     };
     const onUp = () => {
@@ -237,8 +235,6 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
           </button>
         </div>
       )}
-      {dropLine &&
-        createPortal(<div className="drop-indicator" style={{ top: dropLine.top - 2, left: dropLine.left, width: dropLine.width }} />, document.body)}
       {menu && editor && <BlockMenu editor={editor} block={menu.block} x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
     </>
   );

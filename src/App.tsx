@@ -5,16 +5,19 @@ import { ConfirmDialog, NameDialog } from "./Dialogs";
 import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
-import { loadSettings, saveSettings, SettingsDialog, type Settings } from "./SettingsDialog";
+import { applyTheme, loadSettings, saveSettings, SettingsDialog, type Settings } from "./SettingsDialog";
 import { deletePage, renamePage, subpagesOf } from "./vault/pageOps";
 import { Sidebar } from "./Sidebar";
 import { GitPanel } from "./GitPanel";
+import { ToolButton, ToolGroup, Toolbar } from "./Toolbar";
+import { Icon } from "./Icon";
 import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
 import { DEFAULT_CONFIG, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
 import { FULL_NOTE } from "./markdown/fixtures";
 import { hasConflictMarkers } from "./vault/conflicts";
 import { isTauri, lastTauriVault, pickTauriVault } from "./vault/tauriVault";
+import { invoke } from "@tauri-apps/api/core";
 
 interface OpenNote {
   path: string;
@@ -58,12 +61,47 @@ export function App() {
   const [showMarkdown, setShowMarkdown] = useState(false);
   const [status, setStatus] = useState("");
   const [dialog, setDialog] = useState<Dialog | null>(null);
-  const [view, setView] = useState<"note" | "git">("note");
+  // The Git drawer stays mounted while it slides out, so it leaves the way it came in.
+  const [gitOpen, setGitOpen] = useState(false);
+  const [gitMounted, setGitMounted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [gitChanges, setGitChanges] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [modal, setModal] = useState<"switcher" | "help" | "settings" | null>(null);
   const [settings, setSettings] = useState<Settings>(loadSettings);
+  const [pendingOpen, setPendingOpen] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try {
+      return localStorage.getItem("mon-notion:sidebar") !== "hidden";
+    } catch {
+      return true;
+    }
+  });
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((open) => {
+      try {
+        localStorage.setItem("mon-notion:sidebar", open ? "hidden" : "shown");
+      } catch {
+        // not remembered
+      }
+      return !open;
+    });
+  }, []);
+  useEffect(() => applyTheme(settings.theme), [settings.theme]);
+  // The desktop window is transparent so the sidebar can show the native macOS material.
+  useEffect(() => {
+    document.documentElement.classList.toggle("native-vibrancy", isTauri());
+  }, []);
+
+  const gitOpenRef = useRef(false);
+  const toggleGit = useCallback((open?: boolean) => {
+    const next = open ?? !gitOpenRef.current;
+    gitOpenRef.current = next;
+    if (!next) return setGitOpen(false);
+    // Mount closed, then open on the next frame so the drawer slides in.
+    setGitMounted(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => gitOpenRef.current && setGitOpen(true)));
+  }, []);
   // Visited pages, for back/forward navigation.
   const back = useRef<string[]>([]);
   const forward = useRef<string[]>([]);
@@ -95,6 +133,10 @@ export function App() {
       images.current.clear();
       setVault(opened);
       setNote(null);
+      // Reopen the last note of this vault (or FLOWNOTE_OPEN in the desktop app, for debugging).
+      const forced = isTauri() ? await invoke<string | null>("startup_note").catch(() => null) : null;
+      const last = forced ?? localStorage.getItem(`mon-notion:last-note:${opened.name}`);
+      if (last) setPendingOpen(last);
     } catch (error) {
       setStatus(`Impossible d'ouvrir le vault : ${String(error)}`);
     }
@@ -175,10 +217,20 @@ export function App() {
       }
       setNote({ path, loaded: disk, disk, markdown: disk });
       setStatus("");
-      setView("note");
+      try {
+        localStorage.setItem(`mon-notion:last-note:${vault.name}`, path);
+      } catch {
+        // not remembered
+      }
     },
     [vault, saveNow],
   );
+
+  useEffect(() => {
+    if (!pendingOpen || !vault) return;
+    setPendingOpen(null);
+    void select(pendingOpen, "history");
+  }, [pendingOpen, vault, select]);
 
   const goBack = useCallback(() => {
     const path = back.current.pop();
@@ -209,8 +261,9 @@ export function App() {
     else if (key === "n" && !event.shiftKey) run(() => void newPage(null));
     else if (key === "[") run(goBack);
     else if (key === "]") run(goForward);
-    else if (key === "g" && event.shiftKey) run(() => setView((v) => (v === "git" ? "note" : "git")));
+    else if (key === "g" && event.shiftKey) run(() => toggleGit());
     else if (key === "/") run(() => setModal("help"));
+    else if (key === "\\") run(toggleSidebar);
   };
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => shortcuts.current(event);
@@ -378,57 +431,73 @@ export function App() {
   }
 
   return (
-    <div className="layout">
-      <Sidebar
-        onDelete={(path) => void removePage(path)}
-        onSearch={() => setModal("switcher")}
-        onSettings={() => setModal("settings")}
-        onHelp={() => setModal("help")}
-        vaultName={vault.name}
-        tree={tree}
-        selected={view === "note" ? note?.path : undefined}
-        onSelect={(path) => void select(path)}
-        onNewPage={(parent) => void newPage(parent)}
-        gitChanges={gitChanges}
-        gitActive={view === "git"}
-        onToggleGit={() => setView(view === "git" ? "note" : "git")}
-      />
+    <div className={sidebarOpen ? "layout" : "layout no-sidebar"}>
+      {sidebarOpen && (
+        <Sidebar
+          onDelete={(path) => void removePage(path)}
+          onSearch={() => setModal("switcher")}
+          vaultName={vault.name}
+          tree={tree}
+          selected={note?.path}
+          onSelect={(path) => void select(path)}
+          onNewPage={(parent) => void newPage(parent)}
+        />
+      )}
       <main className="content">
-        {view === "git" && vault.git ? (
-          <GitPanel
-            git={vault.git}
-            beforeCommit={saveNow}
-            onOpenNote={(path) => void select(path)}
-            onChanged={() => {
-              void refreshGit();
-              void refresh(vault);
-            }}
-            onPulled={() => {
-              void refresh(vault);
-              void reloadFromDisk();
-            }}
-          />
-        ) : note ? (
+        <Toolbar
+          left={
+            <>
+              <ToolGroup>
+                <ToolButton icon="sidebar" label="Afficher ou masquer la barre latérale (⌘\)" onClick={toggleSidebar} active={sidebarOpen} />
+              </ToolGroup>
+              <ToolGroup>
+                <ToolButton icon="chevronLeft" label="Page précédente (⌘[)" onClick={goBack} disabled={back.current.length === 0} />
+                <ToolButton icon="chevronRight" label="Page suivante (⌘])" onClick={goForward} disabled={forward.current.length === 0} />
+              </ToolGroup>
+            </>
+          }
+          center={
+            note ? (
+              <>
+                <span className="toolbar-location" title={note.path}>
+                  {note.path.includes("/") && <span className="toolbar-folder">{note.path.slice(0, note.path.lastIndexOf("/")).split("/").join(" › ")} › </span>}
+                  {noteTitle(note.path)}
+                </span>
+                <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : "Non enregistré · ⌘S") : "Enregistré"}</span>
+                {status && <span className="status warning">{status}</span>}
+              </>
+            ) : (
+              <span className="toolbar-location">{vault.name}</span>
+            )
+          }
+          right={
+            <>
+              <ToolGroup>
+                <ToolButton icon="search" label="Rechercher une page (⌘P)" onClick={() => setModal("switcher")} />
+                <ToolButton icon="compose" label="Nouvelle page (⌘N)" onClick={() => void newPage(null)} />
+              </ToolGroup>
+              {note && (
+                <ToolGroup>
+                  {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
+                  <ToolButton icon="code" label="Voir le Markdown" onClick={() => setShowMarkdown(!showMarkdown)} active={showMarkdown} />
+                </ToolGroup>
+              )}
+              <ToolGroup>
+                {vault.git && gitChanges !== null && <ToolButton icon="branch" label="Git (⌘⇧G)" onClick={() => toggleGit()} active={gitOpen} badge={gitChanges} />}
+                <ToolButton icon="sliders" label="Réglages" onClick={() => setModal("settings")} />
+                <ToolButton icon="question" label="Raccourcis (⌘/)" onClick={() => setModal("help")} />
+              </ToolGroup>
+            </>
+          }
+        />
+        {note ? (
           <>
-            <header className="toolbar">
-              <button className="nav" onClick={goBack} disabled={back.current.length === 0} title="Page précédente (⌘[)">
-                ‹
-              </button>
-              <button className="nav" onClick={goForward} disabled={forward.current.length === 0} title="Page suivante (⌘])">
-                ›
-              </button>
-              <span className="path">{note.path}</span>
-              <span className={dirty ? "badge dirty" : "badge"}>{dirty ? (settings.autosave ? "Enregistrement…" : "Non enregistré (⌘S)") : "Enregistré"}</span>
-              {status && <span className="status warning">{status}</span>}
-              {vault.git && gitChanges !== null && <button onClick={() => setShowHistory(!showHistory)}>Historique</button>}
-              <button onClick={() => setShowMarkdown(!showMarkdown)}>{showMarkdown ? "Masquer" : "Voir"} le Markdown</button>
-            </header>
             <div className="panes">
               <div className="page">
                 {hasConflictMarkers(note.disk) && (
                   <div className="conflict-note-banner">
                     <span>Cette note contient un conflit de fusion : elle est en lecture seule jusqu'à sa résolution.</span>
-                    {vault.git && <button onClick={() => setView("git")}>Résoudre</button>}
+                    {vault.git && <button onClick={() => toggleGit(true)}>Résoudre</button>}
                   </div>
                 )}
                 <PageTitle title={noteTitle(note.path)} onRename={renameCurrent} readOnly={hasConflictMarkers(note.disk)} />
@@ -444,6 +513,35 @@ export function App() {
           <p className="empty">Choisissez une page dans la barre latérale.</p>
         )}
       </main>
+      {gitMounted && vault.git && (
+        <aside
+          className={gitOpen ? "git-drawer open" : "git-drawer"}
+          aria-label="Gestionnaire Git"
+          onTransitionEnd={(e) => e.target === e.currentTarget && !gitOpen && setGitMounted(false)}
+        >
+          <div className="git-drawer-header">
+            <span>Git</span>
+            <button onClick={() => toggleGit(false)} aria-label="Fermer le panneau Git" title="Fermer (⌘⇧G)">
+              <Icon name="close" size={14} />
+            </button>
+          </div>
+          <div className="git-drawer-body">
+            <GitPanel
+              git={vault.git}
+              beforeCommit={saveNow}
+              onOpenNote={(path) => void select(path)}
+              onChanged={() => {
+                void refreshGit();
+                void refresh(vault);
+              }}
+              onPulled={() => {
+                void refresh(vault);
+                void reloadFromDisk();
+              }}
+            />
+          </div>
+        </aside>
+      )}
       {confirm && (
         <ConfirmDialog
           message={confirm.message}

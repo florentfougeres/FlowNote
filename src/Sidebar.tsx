@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { VaultEntry } from "./vault/vault";
+import { Icon } from "./Icon";
 
 /**
  * Page tree. A note and the folder of the same name next to it ("Projet.md" +
@@ -42,16 +43,11 @@ interface Props {
   onSelect: (path: string) => void;
   onNewPage: (parentNote: string | null) => void;
   /** Number of changed files, or null when the vault has no Git repository. */
-  gitChanges: number | null;
-  gitActive: boolean;
-  onToggleGit: () => void;
   onDelete: (notePath: string) => void;
   onSearch: () => void;
-  onSettings: () => void;
-  onHelp: () => void;
 }
 
-export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, gitChanges, gitActive, onToggleGit, onDelete, onSearch, onSettings, onHelp }: Props) {
+export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDelete, onSearch }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const pages = toPages(tree);
 
@@ -86,19 +82,21 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, gitCha
           <li key={page.key}>
             <div className={page.notePath === selected ? "page-row selected" : "page-row"} style={{ paddingLeft: depth * 14 + 4 }}>
               <button className="page-toggle" onClick={() => toggle(page.key)} aria-label={open ? "Replier" : "Déplier"} disabled={page.children.length === 0}>
-                {page.children.length === 0 ? "" : open ? "▾" : "▸"}
+                {page.children.length > 0 && <Icon name={open ? "chevronDown" : "chevronRight"} size={12} />}
               </button>
               <button className="page-name" onClick={() => (page.notePath ? onSelect(page.notePath) : toggle(page.key))}>
-                <span className="page-icon">{page.notePath ? "📄" : "📁"}</span>
+                <span className="page-icon">
+                  <Icon name={page.notePath ? "doc" : "folder"} />
+                </span>
                 {page.name}
               </button>
               {page.notePath && (
                 <>
-                  <button className="page-add" title="Supprimer la page" onClick={() => onDelete(page.notePath!)}>
-                    🗑
+                  <button className="page-add" title="Supprimer la page" aria-label="Supprimer la page" onClick={() => onDelete(page.notePath!)}>
+                    <Icon name="trash" size={14} />
                   </button>
-                  <button className="page-add" title="Ajouter une sous-page" onClick={() => onNewPage(page.notePath)}>
-                    +
+                  <button className="page-add" title="Ajouter une sous-page" aria-label="Ajouter une sous-page" onClick={() => onNewPage(page.notePath)}>
+                    <Icon name="plus" size={14} />
                   </button>
                 </>
               )}
@@ -112,31 +110,19 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, gitCha
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-header">
+      <div className="sidebar-header" data-tauri-drag-region>
         <span className="vault-name">{vaultName}</span>
-        <button title="Réglages" onClick={onSettings}>
-          ⚙
-        </button>
       </div>
       <button className="sidebar-search" onClick={onSearch}>
-        <span>🔍 Rechercher</span>
+        <span>
+          <Icon name="search" size={14} /> Rechercher
+        </span>
         <kbd>⌘P</kbd>
       </button>
       {render(pages, 0)}
       <button className="new-page" onClick={() => onNewPage(null)}>
-        + Nouvelle page
+        <Icon name="plus" size={14} /> Nouvelle page
       </button>
-      <div className="sidebar-footer">
-        {gitChanges !== null && (
-          <button className={gitActive ? "git-button active" : "git-button"} onClick={onToggleGit}>
-            <span>⎇ Git</span>
-            {gitChanges > 0 && <span className="git-badge">{gitChanges}</span>}
-          </button>
-        )}
-        <button className="help-button" title="Raccourcis clavier (⌘/)" onClick={onHelp}>
-          ?
-        </button>
-      </div>
     </aside>
   );
 }

@@ -136,3 +136,34 @@ describe("tags", () => {
     expect(tags).toEqual(["#projet/notion"]);
   });
 });
+
+describe("emoji", () => {
+  it("finds emoji by shortcode and by French name", async () => {
+    const { loadEmojis, searchEmojis } = await import("./emoji");
+    const entries = await loadEmojis();
+    expect(searchEmojis("calendar", entries)[0].emoji).toBe("📆");
+    expect(searchEmojis("calendrier", entries).map((e) => e.emoji)).toContain("📅");
+    expect(searchEmojis("fus", entries).map((e) => e.emoji)).toContain("🚀");
+  });
+
+  it(":cal opens the menu and inserts the Unicode emoji", async () => {
+    const { loadEmojis } = await import("./emoji");
+    await loadEmojis();
+    const { editor, emojis, save } = openEditor();
+    type(editor, "Réunion :calend");
+    await tick();
+    expect(emojis.state?.items[0].emoji).toBe("📆");
+    press(editor, "Enter");
+    expect(save()).toBe("Réunion 📆\n");
+  });
+
+  it(":shortcode: typed in full is converted; colons in prose are not", async () => {
+    const { loadEmojis } = await import("./emoji");
+    await loadEmojis();
+    const { editor, emojis, save } = openEditor();
+    type(editor, "Note : à 12:30 :tada: fin");
+    await tick();
+    expect(emojis.state === null || emojis.state.items.length === 0).toBe(true);
+    expect(save()).toBe("Note : à 12:30 🎉 fin\n");
+  });
+});

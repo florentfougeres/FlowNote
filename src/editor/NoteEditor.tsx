@@ -71,7 +71,8 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true }: Prop
   editorRef.current = editor;
 
   useEffect(() => {
-    if (!editor) return;
+    // In development React mounts effects twice; the first editor may already be destroyed.
+    if (!editor || editor.isDestroyed) return;
     const { doc, layout } = loadMarkdown(source);
     // A fresh state: loading must not be an undo step nor trigger onUpdate.
     const node = editor.schema.nodeFromJSON(doc);
@@ -80,7 +81,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true }: Prop
   }, [editor, source]);
 
   useEffect(() => {
-    editor?.setEditable(editable, false);
+    if (editor && !editor.isDestroyed) editor.setEditable(editable, false);
   }, [editor, editable]);
 
   return (
@@ -89,6 +90,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true }: Prop
       <BlockHandle editor={editor} shell={shell} />
       <SuggestionMenu store={wiring.slashStore} />
       <SuggestionMenu store={wiring.linkStore} />
+      <SuggestionMenu store={wiring.emojiStore} />
     </div>
   );
 }

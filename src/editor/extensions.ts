@@ -9,6 +9,7 @@ import { createNodeViews, placeholderPlugin, tagPlugin } from "./views";
 import { SlashCommand, SlashMenuStore } from "./slash";
 import { WikilinkSuggest, type LinkItem } from "./wikilinks";
 import { MenuStore } from "./menu";
+import { EmojiSuggest, type EmojiItem } from "./emoji";
 import { NULL_BRIDGE, type BridgeRef } from "./bridge";
 
 const Editing = Extension.create({
@@ -33,11 +34,12 @@ const Editing = Extension.create({
 export interface EditorWiring {
   slashStore: SlashMenuStore;
   linkStore: MenuStore<LinkItem>;
+  emojiStore: MenuStore<EmojiItem>;
   bridge: BridgeRef;
 }
 
 export function defaultWiring(): EditorWiring {
-  return { slashStore: new SlashMenuStore(), linkStore: new MenuStore<LinkItem>(), bridge: { current: NULL_BRIDGE } };
+  return { slashStore: new SlashMenuStore(), linkStore: new MenuStore<LinkItem>(), emojiStore: new MenuStore<EmojiItem>(), bridge: { current: NULL_BRIDGE } };
 }
 
 /** Everything the note editor needs: document schema, node views and editing behaviour. */
@@ -54,5 +56,6 @@ export function editorExtensions(wiring: EditorWiring = defaultWiring()): AnyExt
     BlockKeymap,
     SlashCommand.configure({ store: wiring.slashStore, bridge: wiring.bridge }),
     WikilinkSuggest.configure({ store: wiring.linkStore, bridge: wiring.bridge }),
+    EmojiSuggest.configure({ store: wiring.emojiStore }),
   ];
 }

@@ -1,11 +1,25 @@
 mod git;
 mod vault;
 
+/// Errors raised in the webview, printed in the terminal running the app.
+#[tauri::command]
+fn log_frontend(message: String) {
+  eprintln!("[webview] {message}");
+}
+
+/// Note to open at launch (FLOWNOTE_OPEN, vault-relative path), for debugging.
+#[tauri::command]
+fn startup_note() -> Option<String> {
+  std::env::var("FLOWNOTE_OPEN").ok()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
     .invoke_handler(tauri::generate_handler![
+      log_frontend,
+      startup_note,
       vault::vault_tree,
       vault::vault_read,
       vault::vault_write,

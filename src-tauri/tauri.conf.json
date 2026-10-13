@@ -18,12 +18,22 @@
         "resizable": true,
         "fullscreen": false,
         "minWidth": 720,
-        "minHeight": 480
+        "minHeight": 480,
+        "transparent": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "windowEffects": {
+          "effects": [
+            "sidebar"
+          ],
+          "state": "followsWindowActiveState"
+        }
       }
     ],
     "security": {
       "csp": null
-    }
+    },
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,
