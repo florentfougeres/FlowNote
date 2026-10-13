@@ -4,6 +4,7 @@ import { imageMime, type VaultBridge } from "./editor/bridge";
 import { NameDialog } from "./NameDialog";
 import { Sidebar } from "./Sidebar";
 import { GitPanel } from "./GitPanel";
+import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
 import { DEFAULT_CONFIG, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
 import { FULL_NOTE } from "./markdown/fixtures";
@@ -43,6 +44,7 @@ export function App() {
   const [status, setStatus] = useState("");
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [view, setView] = useState<"note" | "git">("note");
+  const [showHistory, setShowHistory] = useState(false);
   const [gitChanges, setGitChanges] = useState<number | null>(null);
 
   // Latest values for async callbacks.
@@ -158,6 +160,46 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [saveNow]);
 
+  /**
+   * Re-reads the open note after a change on disk (pull, restore, Obsidian).
+   * Unsaved edits are never overwritten: the difference is reported instead.
+   */
+  const reloadFromDisk = useCallback(async () => {
+    const current = noteRef.current;
+    if (!vault || !current) return;
+    let disk: string;
+    try {
+      disk = await vault.read(current.path);
+    } catch {
+      return setStatus(`${current.path} n'existe plus sur le disque.`);
+    }
+    if (disk === current.disk) return;
+    if (current.markdown !== current.disk) return setStatus("La note a changé sur le disque pendant que vous l'éditiez.");
+    const reloaded = { path: current.path, loaded: disk, disk, markdown: disk };
+    noteRef.current = reloaded;
+    setNote(reloaded);
+  }, [vault]);
+
+  useEffect(() => {
+    const onFocus = () => void reloadFromDisk();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [reloadFromDisk]);
+
+  const restoreVersion = async (content: string) => {
+    const current = noteRef.current;
+    if (!vault || !current) return;
+    try {
+      await saveNow();
+      await vault.write(current.path, content, noteRef.current?.disk ?? current.disk);
+      await reloadFromDisk();
+      void refreshGit();
+      setStatus("Version restaurée : elle apparaît comme une modification à commiter.");
+    } catch (error) {
+      setStatus(String(error));
+    }
+  };
+
   const askName = useCallback((title: string, initial: string) => new Promise<string | null>((resolve) => setDialog({ title, initial, resolve })), []);
 
   const createFile = useCallback(
@@ -253,6 +295,10 @@ export function App() {
               void refreshGit();
               void refresh(vault);
             }}
+            onPulled={() => {
+              void refresh(vault);
+              void reloadFromDisk();
+            }}
           />
         ) : note ? (
           <>
@@ -260,6 +306,7 @@ export function App() {
               <span className="path">{note.path}</span>
               <span className={dirty ? "badge dirty" : "badge"}>{dirty ? "Enregistrement…" : "Enregistré"}</span>
               {status && <span className="status warning">{status}</span>}
+              {vault.git && gitChanges !== null && <button onClick={() => setShowHistory(!showHistory)}>Historique</button>}
               <button onClick={() => setShowMarkdown(!showMarkdown)}>{showMarkdown ? "Masquer" : "Voir"} le Markdown</button>
             </header>
             <div className="panes">
@@ -268,6 +315,9 @@ export function App() {
                 <NoteEditor key={note.path} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} />
               </div>
               {showMarkdown && <pre className="markdown-preview">{note.markdown}</pre>}
+              {showHistory && vault.git && (
+                <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
+              )}
             </div>
           </>
         ) : (

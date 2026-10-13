@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { isStaged, isUnstaged, parseDiff, statusLabel, type DiffLine, type GitApi, type GitFile, type GitStatus } from "./vault/git";
+import { useCallback, useEffect, useState } from "react";
+import { DiffView } from "./DiffView";
+import { isStaged, isUnstaged, MergeConflictError, statusLabel, type GitApi, type GitFile, type GitStatus } from "./vault/git";
 import { basename, dirname } from "./vault/links";
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
   onOpenNote: (path: string) => void;
   /** Called after every action that may change the status. */
   onChanged: () => void;
+  /** Called after a pull, which may have changed notes on disk. */
+  onPulled: () => void;
 }
 
 interface Selection {
@@ -16,71 +19,7 @@ interface Selection {
   staged: boolean;
 }
 
-/** Splits a changed line pair into common prefix, changed middle and common suffix (on word boundaries). */
-function changedSpan(before: string, after: string): [number, number, number, number] {
-  let start = 0;
-  while (start < before.length && start < after.length && before[start] === after[start]) start++;
-  while (start > 0 && /\w/u.test(before[start - 1] ?? "")) start--;
-  let end = 0;
-  while (end < before.length - start && end < after.length - start && before[before.length - 1 - end] === after[after.length - 1 - end]) end++;
-  while (end > 0 && /\w/u.test(before[before.length - end] ?? "")) end--;
-  return [start, before.length - end, start, after.length - end];
-}
-
-function highlight(text: string, from: number, to: number): ReactNode {
-  if (from >= to) return text;
-  return (
-    <>
-      {text.slice(0, from)}
-      <mark>{text.slice(from, to)}</mark>
-      {text.slice(to)}
-    </>
-  );
-}
-
-/** Renders hunk lines, highlighting the changed words of paired deletions/additions. */
-function renderLines(lines: DiffLine[]): ReactNode[] {
-  const rows: ReactNode[] = [];
-  let i = 0;
-  while (i < lines.length) {
-    if (lines[i].kind === "del") {
-      let dels = i;
-      while (dels < lines.length && lines[dels].kind === "del") dels++;
-      let adds = dels;
-      while (adds < lines.length && lines[adds].kind === "add") adds++;
-      const removed = lines.slice(i, dels);
-      const added = lines.slice(dels, adds);
-      const paired = removed.length === added.length;
-      removed.forEach((line, k) => {
-        const span = paired ? changedSpan(line.text, added[k].text) : null;
-        rows.push(row(line, `${i + k}`, span ? highlight(line.text, span[0], span[1]) : line.text));
-      });
-      added.forEach((line, k) => {
-        const span = paired ? changedSpan(removed[k].text, line.text) : null;
-        rows.push(row(line, `${dels + k}`, span ? highlight(line.text, span[2], span[3]) : line.text));
-      });
-      i = adds;
-    } else {
-      rows.push(row(lines[i], `${i}`, lines[i].text));
-      i++;
-    }
-  }
-  return rows;
-}
-
-function row(line: DiffLine, key: string, content: ReactNode) {
-  const sign = line.kind === "add" ? "+" : line.kind === "del" ? "−" : line.kind === "note" ? "\\" : " ";
-  return (
-    <tr key={key} className={`diff-${line.kind}`}>
-      <td className="diff-number">{line.oldNumber ?? ""}</td>
-      <td className="diff-number">{line.newNumber ?? ""}</td>
-      <td className="diff-sign">{sign}</td>
-      <td className="diff-text">{content}</td>
-    </tr>
-  );
-}
-
-export function GitPanel({ git, beforeCommit, onOpenNote, onChanged }: Props) {
+export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled }: Props) {
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [diff, setDiff] = useState("");
@@ -140,6 +79,23 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged }: Props) {
     }
   };
 
+  const pull = () =>
+    act(async () => {
+      await beforeCommit();
+      try {
+        setFeedback({ error: false, text: (await git.pull()) || "Déjà à jour." });
+      } catch (error) {
+        if (!(error instanceof MergeConflictError)) throw error;
+        setFeedback({ error: true, text: "La fusion s'est arrêtée sur des conflits : les fichiers concernés sont marqués U." });
+      } finally {
+        onPulled();
+      }
+    });
+
+  const push = () => act(async () => setFeedback({ error: false, text: (await git.push()) || "Envoyé." }));
+
+  const fetchRemote = () => act(() => git.fetch());
+
   const commit = () =>
     act(async () => {
       await beforeCommit();
@@ -198,8 +154,6 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged }: Props) {
     </section>
   );
 
-  const hunks = parseDiff(diff);
-
   return (
     <div className="git-panel">
       <div className="git-sidebar">
@@ -210,6 +164,17 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged }: Props) {
               ↑{status.ahead} ↓{status.behind}
             </span>
           )}
+        </div>
+        <div className="git-remote">
+          <button disabled={busy} onClick={() => void pull()} title="git pull (fusion)">
+            ↓ Récupérer
+          </button>
+          <button disabled={busy} onClick={() => void push()} title="git push">
+            ↑ Envoyer
+          </button>
+          <button disabled={busy} onClick={() => void fetchRemote()} title="git fetch : met à jour ↑↓ sans rien modifier">
+            ↻
+          </button>
         </div>
         <div className="git-commit">
           <textarea
@@ -238,22 +203,7 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged }: Props) {
               </span>
               {selection.file.path.endsWith(".md") && selection.file.worktree !== "D" && <button onClick={() => onOpenNote(selection.file.path)}>Ouvrir la note</button>}
             </header>
-            {hunks.length === 0 ? (
-              <p className="git-none">{diff.includes("Binary") ? "Fichier binaire modifié." : "Pas de différence à afficher."}</p>
-            ) : (
-              <div className="diff-scroll">
-                <table className="diff">
-                  {hunks.map((hunk, h) => (
-                    <tbody key={h}>
-                      <tr className="diff-hunk">
-                        <td colSpan={4}>{hunk.header}</td>
-                      </tr>
-                      {renderLines(hunk.lines)}
-                    </tbody>
-                  ))}
-                </table>
-              </div>
-            )}
+            <DiffView diff={diff} />
           </>
         ) : (
           <p className="git-none">Sélectionnez un fichier pour voir ses modifications.</p>

@@ -19,6 +19,20 @@ export interface GitStatus {
   files: GitFile[];
 }
 
+export interface GitCommit {
+  hash: string;
+  short: string;
+  author: string;
+  /** ISO 8601. */
+  date: string;
+  subject: string;
+  /** Path of the note in that commit (it may have been renamed since). */
+  path: string;
+}
+
+/** Error raised by `pull` when the merge stopped on conflicts. */
+export class MergeConflictError extends Error {}
+
 export interface GitApi {
   status(): Promise<GitStatus>;
   diff(file: GitFile, staged: boolean): Promise<string>;
@@ -26,6 +40,14 @@ export interface GitApi {
   unstage(paths: string[]): Promise<void>;
   /** Returns git's one-line summary of the new commit. */
   commit(message: string): Promise<string>;
+  fetch(): Promise<void>;
+  /** Merges the upstream branch (no rebase). Throws MergeConflictError on conflicts. */
+  pull(): Promise<string>;
+  push(): Promise<string>;
+  /** History of a note, newest first, following renames. */
+  log(path: string): Promise<GitCommit[]>;
+  /** Content of a file at a commit. */
+  show(hash: string, path: string): Promise<string>;
 }
 
 export const isUntracked = (f: GitFile) => f.index === "?";
@@ -42,6 +64,19 @@ export function tauriGit(root: string): GitApi {
     stage: (paths) => invoke("git_stage", { root, paths }),
     unstage: (paths) => invoke("git_unstage", { root, paths }),
     commit: (message) => invoke<string>("git_commit", { root, message }),
+    fetch: () => invoke("git_fetch", { root }),
+    pull: async () => {
+      try {
+        return await invoke<string>("git_pull", { root });
+      } catch (error) {
+        const message = String(error);
+        if (message.startsWith("CONFLICT:")) throw new MergeConflictError(message.slice("CONFLICT:".length));
+        throw new Error(message);
+      }
+    },
+    push: () => invoke<string>("git_push", { root }),
+    log: (path) => invoke<GitCommit[]>("git_log", { root, path, limit: 200 }),
+    show: (hash, path) => invoke<string>("git_show", { root, hash, path }),
   };
 }
 
@@ -86,8 +121,17 @@ export function parseDiff(diff: string): Hunk[] {
 
 /** Minimal line diff (LCS) producing unified-diff text, used by the in-memory git. */
 export function unifiedDiff(before: string, after: string, path: string, context = 3): string {
-  const a = before === "" ? [] : before.replace(/\n$/, "").split("\n");
-  const b = after === "" ? [] : after.replace(/\n$/, "").split("\n");
+  const allA = before === "" ? [] : before.replace(/\n$/, "").split("\n");
+  const allB = after === "" ? [] : after.replace(/\n$/, "").split("\n");
+  // Only the differing middle needs the quadratic LCS table; common lines around it are kept as context.
+  let head = 0;
+  while (head < allA.length && head < allB.length && allA[head] === allB[head]) head++;
+  let tail = 0;
+  while (tail < allA.length - head && tail < allB.length - head && allA[allA.length - 1 - tail] === allB[allB.length - 1 - tail]) tail++;
+  const keepHead = Math.max(0, head - context);
+  const keepTail = Math.max(0, tail - context);
+  const a = allA.slice(keepHead, allA.length - keepTail);
+  const b = allB.slice(keepHead, allB.length - keepTail);
   const lcs: number[][] = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0));
   for (let i = a.length - 1; i >= 0; i--) for (let j = b.length - 1; j >= 0; j--) lcs[i][j] = a[i] === b[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
   // Each operation remembers how many old/new lines precede it.
@@ -120,8 +164,8 @@ export function unifiedDiff(before: string, after: string, path: string, context
     const oldCount = slice.filter((op) => op.kind !== "+").length;
     const newCount = slice.filter((op) => op.kind !== "-").length;
     // An empty side is numbered after the line preceding the hunk.
-    const oldStart = slice[0].oldBefore + (oldCount ? 1 : 0);
-    const newStart = slice[0].newBefore + (newCount ? 1 : 0);
+    const oldStart = keepHead + slice[0].oldBefore + (oldCount ? 1 : 0);
+    const newStart = keepHead + slice[0].newBefore + (newCount ? 1 : 0);
     out += `@@ -${oldStart},${oldCount} +${newStart},${newCount} @@\n`;
     for (const op of slice) out += `${op.kind}${op.text}\n`;
     start = end + 1;
@@ -139,6 +183,9 @@ export function memoryGit(contents: Map<string, string | Uint8Array>): GitApi {
   let head = snapshot();
   let index = snapshot();
   let commits = 0;
+  const history: { commit: GitCommit; files: Map<string, string> }[] = [
+    { commit: { hash: "0".repeat(40), short: "0000000", author: "Démo", date: new Date(Date.now() - 86400000).toISOString(), subject: "Version initiale", path: "" }, files: head },
+  ];
   const letter = (from: Map<string, string>, to: Map<string, string | undefined>, path: string) => {
     const before = from.get(path);
     const after = to.get(path);
@@ -186,7 +233,22 @@ export function memoryGit(contents: Map<string, string | Uint8Array>): GitApi {
       if (!message.trim()) throw new Error("Le message de commit est vide.");
       head = new Map(index);
       commits++;
-      return `[main ${String(commits).padStart(7, "0")}] ${message.split("\n")[0]}`;
+      const short = String(commits).padStart(7, "0");
+      history.unshift({ commit: { hash: short.padEnd(40, "0"), short, author: "Vous", date: new Date().toISOString(), subject: message.split("\n")[0], path: "" }, files: head });
+      return `[main ${short}] ${message.split("\n")[0]}`;
     },
+    fetch: async () => {},
+    pull: async () => "Déjà à jour.",
+    push: async () => {
+      commits = 0;
+      return "Envoyé vers origin/main.";
+    },
+    log: async (path) => {
+      // Commits where the note changed compared with the previous one.
+      return history
+        .filter((entry, i) => entry.files.has(path) && entry.files.get(path) !== history[i + 1]?.files.get(path))
+        .map((entry) => ({ ...entry.commit, path }));
+    },
+    show: async (hash, path) => history.find((entry) => entry.commit.hash === hash)?.files.get(path) ?? "",
   };
 }

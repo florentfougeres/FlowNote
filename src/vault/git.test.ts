@@ -89,3 +89,30 @@ describe("memoryGit", () => {
     expect(status.ahead).toBe(1);
   });
 });
+
+describe("history", () => {
+  it("memoryGit lists the commits that changed a note and shows old versions", async () => {
+    const files = new Map<string, string | Uint8Array>([["a.md", "v1\n"], ["b.md", "x\n"]]);
+    const git = memoryGit(files);
+    files.set("a.md", "v2\n");
+    await git.stage(["a.md"]);
+    await git.commit("Deuxième version");
+    files.set("b.md", "y\n");
+    await git.stage(["b.md"]);
+    await git.commit("Autre note");
+    const log = await git.log("a.md");
+    expect(log.map((c) => c.subject)).toEqual(["Deuxième version", "Version initiale"]);
+    expect(await git.show(log[1].hash, "a.md")).toBe("v1\n");
+  });
+
+  it("diffs long notes quickly and numbers hunks correctly", () => {
+    const lines = Array.from({ length: 20000 }, (_, i) => `ligne ${i}`);
+    const changed = [...lines];
+    changed[15000] = "modifiée";
+    const started = performance.now();
+    const diff = unifiedDiff(lines.join("\n") + "\n", changed.join("\n") + "\n", "x");
+    expect(performance.now() - started).toBeLessThan(200);
+    expect(diff).toContain("@@ -14998,7 +14998,7 @@");
+    expect(hunksOnly(diff)).toBe(hunksOnly(gitDiff(lines.join("\n") + "\n", changed.join("\n") + "\n")));
+  });
+});

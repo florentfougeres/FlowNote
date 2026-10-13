@@ -17,7 +17,12 @@ pub fn run() {
       git::git_diff,
       git::git_stage,
       git::git_unstage,
-      git::git_commit
+      git::git_commit,
+      git::git_log,
+      git::git_show,
+      git::git_fetch,
+      git::git_pull,
+      git::git_push
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

@@ -194,6 +194,118 @@ pub fn git_commit(root: String, message: String) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").to_string())
 }
 
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GitCommit {
+    pub hash: String,
+    pub short: String,
+    pub author: String,
+    /// ISO 8601 author date.
+    pub date: String,
+    pub subject: String,
+    /// Path of the file in that commit (it may have been renamed since).
+    pub path: String,
+}
+
+const FIELD: char = '\u{1f}';
+const RECORD: char = '\u{1e}';
+
+/// Parses `git log --name-status --format=<RS>%H<US>%h<US>%an<US>%aI<US>%s`.
+pub fn parse_log(raw: &str, prefix: &str) -> Vec<GitCommit> {
+    raw.split(RECORD)
+        .filter(|r| !r.trim().is_empty())
+        .filter_map(|record| {
+            let mut lines = record.lines();
+            let fields: Vec<&str> = lines.next()?.split(FIELD).collect();
+            if fields.len() < 5 {
+                return None;
+            }
+            // The last name-status line names the file in this commit ("R100\told\tnew" -> new).
+            let path = lines.filter(|l| !l.trim().is_empty()).last()?.split('\t').last()?;
+            Some(GitCommit {
+                hash: fields[0].into(),
+                short: fields[1].into(),
+                author: fields[2].into(),
+                date: fields[3].into(),
+                subject: fields[4].into(),
+                path: path.strip_prefix(prefix).unwrap_or(path).into(),
+            })
+        })
+        .collect()
+}
+
+/// History of one note, following renames.
+#[tauri::command]
+pub fn git_log(root: String, path: String, limit: Option<u32>) -> Result<Vec<GitCommit>, String> {
+    check_path(&path)?;
+    let prefix = prefix(&root)?;
+    let mut cmd = git(&root);
+    cmd.args(["-c", "core.quotePath=false", "log", "--follow", "--name-status", "--no-color"])
+        .arg(format!("-n{}", limit.unwrap_or(200)))
+        .arg(format!("--format={RECORD}%H{FIELD}%h{FIELD}%an{FIELD}%aI{FIELD}%s"))
+        .args(["--", &path]);
+    let output = run(cmd, None, &[])?;
+    Ok(parse_log(&String::from_utf8_lossy(&output.stdout), &prefix))
+}
+
+/// Content of a file at a given commit (`path` relative to the vault).
+#[tauri::command]
+pub fn git_show(root: String, hash: String, path: String) -> Result<String, String> {
+    check_path(&path)?;
+    if !hash.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err("Identifiant de commit invalide.".into());
+    }
+    let mut cmd = git(&root);
+    cmd.arg("show").arg(format!("{hash}:./{path}"));
+    Ok(String::from_utf8_lossy(&run(cmd, None, &[])?.stdout).into_owned())
+}
+
+fn combined_output(output: &Output) -> String {
+    let text = format!("{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+    text.trim().to_string()
+}
+
+/// Updates the remote-tracking branches (for the behind counter).
+#[tauri::command]
+pub fn git_fetch(root: String) -> Result<(), String> {
+    let mut cmd = git(&root);
+    cmd.args(["fetch", "--quiet"]);
+    run(cmd, None, &[]).map(|_| ())
+}
+
+/// Pulls with a merge (never a rebase). A conflict is reported as an error
+/// starting with "CONFLICT:" and leaves the merge in progress.
+#[tauri::command]
+pub fn git_pull(root: String) -> Result<String, String> {
+    let mut cmd = git(&root);
+    cmd.args(["pull", "--no-rebase", "--no-edit"]);
+    match run(cmd, None, &[]) {
+        Ok(output) => Ok(combined_output(&output)),
+        Err(message) => {
+            let status = git_status(root)?;
+            if status.files.iter().any(|f| f.index == "U" || f.worktree == "U" || (f.index == "A" && f.worktree == "A") || (f.index == "D" && f.worktree == "D")) {
+                Err(format!("CONFLICT:{message}"))
+            } else {
+                Err(message)
+            }
+        }
+    }
+}
+
+/// Pushes the current branch; sets the upstream on "origin" the first time.
+#[tauri::command]
+pub fn git_push(root: String) -> Result<String, String> {
+    let status = git_status(root.clone())?;
+    let mut cmd = git(&root);
+    if status.upstream.is_some() {
+        cmd.arg("push");
+    } else {
+        let branch = status.branch.ok_or("Aucune branche à envoyer (HEAD détachée).")?;
+        cmd.args(["push", "--set-upstream", "origin", &branch]);
+    }
+    run(cmd, None, &[]).map(|output| combined_output(&output))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -262,6 +374,83 @@ mod tests {
         assert!(git_commit(root.clone(), "  ".into()).is_err());
         assert!(git_stage(root.clone(), vec!["../hors".into()]).is_err());
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    fn commit_all(root: &str, message: &str) {
+        let mut cmd = git(root);
+        cmd.args(["add", "-A"]);
+        run(cmd, None, &[]).unwrap();
+        git_commit(root.into(), message.into()).unwrap();
+    }
+
+    #[test]
+    fn history_follows_renames_and_shows_old_versions() {
+        let (dir, root) = repo("history");
+        fs::write(dir.join("Brouillon.md"), "v1\n").unwrap();
+        commit_all(&root, "Création");
+        fs::write(dir.join("Brouillon.md"), "v2\n").unwrap();
+        commit_all(&root, "Deuxième version");
+        let mut cmd = git(&root);
+        cmd.args(["mv", "Brouillon.md", "Idées é.md"]);
+        run(cmd, None, &[]).unwrap();
+        git_commit(root.clone(), "Renommage".into()).unwrap();
+
+        let log = git_log(root.clone(), "Idées é.md".into(), None).unwrap();
+        assert_eq!(log.iter().map(|c| c.subject.as_str()).collect::<Vec<_>>(), ["Renommage", "Deuxième version", "Création"]);
+        assert_eq!(log[0].path, "Idées é.md");
+        assert_eq!(log[2].path, "Brouillon.md");
+        assert_eq!(git_show(root.clone(), log[2].hash.clone(), log[2].path.clone()).unwrap(), "v1\n");
+        assert!(git_show(root.clone(), "HEAD;rm".into(), "x.md".into()).is_err());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn pull_and_push_with_a_local_remote() {
+        let (remote_dir, remote) = repo("remote");
+        fs::write(remote_dir.join("a.md"), "base\n").unwrap();
+        commit_all(&remote, "Base");
+        let clone_dir = std::env::temp_dir().join(format!("mon-notion-git-clone-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&clone_dir);
+        let mut cmd = Command::new(git_binary());
+        cmd.args(["clone", "-q", &remote, clone_dir.to_str().unwrap()]);
+        run(cmd, None, &[]).unwrap();
+        let clone = clone_dir.to_string_lossy().into_owned();
+        for args in [["config", "user.email", "test@example.com"], ["config", "user.name", "Test"]] {
+            let mut cmd = git(&clone);
+            cmd.args(args);
+            run(cmd, None, &[]).unwrap();
+        }
+        // Accept pushes to the checked-out branch of the non-bare test remote.
+        let mut cmd = git(&remote);
+        cmd.args(["config", "receive.denyCurrentBranch", "updateInstead"]);
+        run(cmd, None, &[]).unwrap();
+
+        // Remote moves ahead; pull merges it.
+        fs::write(remote_dir.join("b.md"), "distant\n").unwrap();
+        commit_all(&remote, "Ajout distant");
+        git_fetch(clone.clone()).unwrap();
+        assert_eq!(git_status(clone.clone()).unwrap().behind, 1);
+        git_pull(clone.clone()).unwrap();
+        assert_eq!(fs::read_to_string(clone_dir.join("b.md")).unwrap(), "distant\n");
+
+        // Local commit pushed.
+        fs::write(clone_dir.join("c.md"), "local\n").unwrap();
+        commit_all(&clone, "Ajout local");
+        assert_eq!(git_status(clone.clone()).unwrap().ahead, 1);
+        git_push(clone.clone()).unwrap();
+        assert_eq!(git_status(clone.clone()).unwrap().ahead, 0);
+
+        // Both sides change the same line: the pull reports a conflict.
+        fs::write(remote_dir.join("a.md"), "distant\n").unwrap();
+        commit_all(&remote, "Modif distante");
+        fs::write(clone_dir.join("a.md"), "local\n").unwrap();
+        commit_all(&clone, "Modif locale");
+        let err = git_pull(clone.clone()).unwrap_err();
+        assert!(err.starts_with("CONFLICT:"), "{err}");
+        assert!(git_status(clone.clone()).unwrap().files.iter().any(|f| f.index == "U"));
+
+        fs::remove_dir_all(&remote_dir).unwrap();
+        fs::remove_dir_all(&clone_dir).unwrap();
     }
 
     #[test]
