@@ -255,3 +255,36 @@ describe("mermaid", () => {
     expect(editor.view.dom.querySelector(".code-block.is-mermaid")).not.toBeNull();
   });
 });
+
+describe("callout types", () => {
+  it("every Obsidian type and alias gets its icon and color; unknown types look like notes", async () => {
+    const { calloutInfo } = await import("./callouts");
+    const { editor } = open("> [!faq] Une question\n> Texte\n\n> [!perso]\n> Autre\n");
+    const callouts = [...editor.view.dom.querySelectorAll<HTMLElement>(".callout")];
+    expect(callouts.map((c) => c.style.getPropertyValue("--callout"))).toEqual([`rgb(${calloutInfo("question").color})`, `rgb(${calloutInfo("note").color})`]);
+    expect(callouts.every((c) => c.querySelector(".callout-icon svg"))).toBe(true);
+    expect(calloutInfo("TLDR").type).toBe("abstract");
+  });
+
+  it("the slash menu's other callouts open the picker; picking writes the type", async () => {
+    const { calloutPicker } = await import("./callouts");
+    const { editor, save } = open("");
+    type(editor, "/autres");
+    await new Promise((r) => setTimeout(r, 0));
+    press(editor, "Enter");
+    expect(calloutPicker.state).not.toBeNull();
+    calloutPicker.state!.onPick("bug");
+    calloutPicker.open(null);
+    type(editor, "Plantage");
+    expect(save()).toBe("> [!bug]\n> Plantage\n");
+  });
+
+  it("changing the type of an existing callout keeps the rest verbatim", async () => {
+    const { calloutPicker } = await import("./callouts");
+    const { editor, save } = open("Avant  \n\n> [!note]- Titre\n> Corps\n");
+    editor.view.dom.querySelector(".callout-icon")!.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    calloutPicker.state!.onPick("example");
+    calloutPicker.open(null);
+    expect(save()).toBe("Avant  \n\n> [!example]- Titre\n> Corps\n");
+  });
+});

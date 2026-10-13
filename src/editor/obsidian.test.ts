@@ -146,24 +146,41 @@ describe("emoji", () => {
     expect(searchEmojis("fus", entries).map((e) => e.emoji)).toContain("🚀");
   });
 
-  it(":cal opens the menu and inserts the Unicode emoji", async () => {
+  it(":cal opens the menu and writes the shortcode, displayed as the emoji", async () => {
     const { loadEmojis } = await import("./emoji");
     await loadEmojis();
     const { editor, emojis, save } = openEditor();
     type(editor, "Réunion :calend");
     await tick();
-    expect(emojis.state?.items[0].emoji).toBe("📆");
+    expect(emojis.state?.items[0].icon).toBe("📆");
     press(editor, "Enter");
-    expect(save()).toBe("Réunion 📆\n");
+    expect(save()).toBe("Réunion :calendar:\n");
+    type(editor, " demain");
+    expect(editor.view.dom.querySelector(".emoji-shortcode")?.textContent).toBe("📆");
   });
 
-  it(":shortcode: typed in full is converted; colons in prose are not", async () => {
-    const { loadEmojis } = await import("./emoji");
+  it("shortcodes stay text in the note; colons in prose and code are left alone", async () => {
+    const { loadEmojis, findShortcodes } = await import("./emoji");
     await loadEmojis();
     const { editor, emojis, save } = openEditor();
     type(editor, "Note : à 12:30 :tada: fin");
     await tick();
     expect(emojis.state === null || emojis.state.items.length === 0).toBe(true);
-    expect(save()).toBe("Note : à 12:30 🎉 fin\n");
+    expect(save()).toBe("Note : à 12:30 :tada: fin\n");
+    const { editor: other } = openEditor("Attention :warning: et `:warning:` et 10:100:5 et :inconnu:\n");
+    expect(findShortcodes(other.state.doc).map((s) => s.emoji)).toEqual(["⚠️"]);
+  });
+
+  it("existing shortcodes are displayed as emoji, and revealed under the cursor", async () => {
+    const { loadEmojis } = await import("./emoji");
+    await loadEmojis();
+    const { editor, save } = openEditor("Danger :warning: ici\n\nAutre ligne\n");
+    const shown = () => [...editor.view.dom.querySelectorAll(".emoji-shortcode")].map((e) => e.textContent);
+    expect(shown()).toEqual(["⚠️"]);
+    editor.commands.setTextSelection(10); // inside ":warning:"
+    expect(shown()).toEqual([]);
+    editor.commands.setTextSelection(3);
+    expect(shown()).toEqual(["⚠️"]);
+    expect(save()).toBe("Danger :warning: ici\n\nAutre ligne\n");
   });
 });

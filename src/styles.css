@@ -699,22 +699,31 @@ button:disabled {
   border-left: 3px solid var(--callout);
 }
 
-.note .callout[data-callout="warning"],
-.note .callout[data-callout="caution"],
-.note .callout[data-callout="attention"] {
-  --callout: var(--callout-warning);
+/* The color of each type is set by the node view (Obsidian's palette). */
+.note .callout {
+  padding-left: 42px;
 }
 
-.note .callout[data-callout="tip"],
-.note .callout[data-callout="success"],
-.note .callout[data-callout="check"] {
-  --callout: var(--callout-tip);
+.note .callout-icon {
+  position: absolute;
+  left: 14px;
+  top: 13px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  border-radius: 5px;
+  color: var(--callout);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
-.note .callout[data-callout="danger"],
-.note .callout[data-callout="error"],
-.note .callout[data-callout="bug"] {
-  --callout: var(--callout-danger);
+.note .callout-icon:hover {
+  background: color-mix(in srgb, var(--callout) 16%, transparent);
 }
 
 .note .callout-title {
@@ -2906,4 +2915,78 @@ button.crumb:hover {
 
 .mermaid-error {
   color: var(--danger);
+}
+
+/* ---- Emoji shortcodes (:warning:) shown as emoji ---- */
+
+.emoji-shortcode-source {
+  display: none;
+}
+
+.emoji-shortcode {
+  font-style: normal;
+}
+
+/* ---- Callout type picker ---- */
+
+.callout-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.callout-picker {
+  width: 300px;
+  max-height: 360px;
+  display: flex;
+  flex-direction: column;
+}
+
+.callout-picker input {
+  font-size: 13px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  outline: none;
+}
+
+.callout-picker-list {
+  overflow-y: auto;
+}
+
+.callout-picker-list button {
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start !important;
+}
+
+.callout-picker-list button.active {
+  background: var(--hover);
+}
+
+.callout-picker-list kbd {
+  margin-left: auto;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.callout-picker-icon {
+  display: flex;
+  flex: none;
+}
+
+.callout-picker-empty {
+  padding: 6px 8px;
+  color: var(--muted);
+}
+
+/* Default callout title (the type, as Obsidian shows it), in the callout's color. */
+.note .callout-title.is-empty::before {
+  color: var(--callout);
+  opacity: 0.75;
 }

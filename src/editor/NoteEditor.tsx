@@ -6,6 +6,7 @@ import { defaultWiring, editorExtensions } from "./extensions";
 import { SuggestionMenu } from "./SuggestionMenu";
 import { BlockHandle } from "./BlockHandle";
 import { TableHandles } from "./TableHandles";
+import { CalloutPicker } from "./CalloutPicker";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { insertAttachments, type VaultBridge } from "./bridge";
 import { loadMarkdown, NoteSession } from "../markdown/note";
@@ -112,6 +113,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
       <EditorContent editor={editor} />
       <BlockHandle editor={editor} shell={shell} />
       <TableHandles editor={editor} />
+      <CalloutPicker />
       <SuggestionMenu store={wiring.slashStore} />
       <SuggestionMenu store={wiring.linkStore} />
       <SuggestionMenu store={wiring.emojiStore} />

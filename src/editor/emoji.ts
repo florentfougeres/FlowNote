@@ -1,12 +1,15 @@
-import { Extension, InputRule } from "@tiptap/core";
-import { PluginKey } from "@tiptap/pm/state";
+import { Extension } from "@tiptap/core";
+import { Plugin, PluginKey, type EditorState } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import type { Node as PMNode } from "@tiptap/pm/model";
 import Suggestion from "@tiptap/suggestion";
 import { dismissPlugin, isDismissed, menuRenderer, MenuStore, normalizeText, type MenuItem } from "./menu";
 
 /**
- * Emoji, as in Notion: typing `:cal` suggests 📆, `:calendar:` is converted
- * directly. The note stores the Unicode character, which Obsidian displays
- * without any plugin. Names are searched in English (shortcodes) and French.
+ * Emoji, as in Notion: typing `:cal` suggests 📆. The note keeps the
+ * shortcode (`:calendar:`), and the editor displays every known shortcode as
+ * its emoji, revealing the code while the cursor is on it. Names are searched
+ * in English (shortcodes) and French.
  */
 
 export interface EmojiEntry {
@@ -88,25 +91,11 @@ export const EmojiSuggest = Extension.create<{ store: MenuStore<EmojiItem> }>({
     void loadEmojis();
   },
 
-  // `:calendar:` typed in full becomes the emoji.
-  addInputRules() {
-    return [
-      new InputRule({
-        find: /(?:^|[\s(]):([a-z0-9_+-]{2,}):$/,
-        handler: ({ state, range, match }) => {
-          const emoji = emojiForCode(match[1]);
-          if (!emoji) return null;
-          const from = range.to - match[1].length - 2 + 1;
-          state.tr.insertText(emoji, Math.max(range.from, from), range.to);
-        },
-      }),
-    ];
-  },
-
   addProseMirrorPlugins() {
     const { editor } = this;
     const { store } = this.options;
     return [
+      shortcodePlugin(),
       dismissPlugin(dismissedKey),
       Suggestion<EmojiItem, EmojiItem>({
         editor,
@@ -118,7 +107,11 @@ export const EmojiSuggest = Extension.create<{ store: MenuStore<EmojiItem> }>({
         items: async ({ query }) => {
           if (query.length < 2 || query.includes(":")) return [];
           const found = searchEmojis(query, await loadEmojis());
-          return found.map((e) => ({ key: e.emoji, emoji: e.emoji, icon: e.emoji, title: e.codes[0] ? `:${e.codes[0]}:` : e.label, description: e.label }));
+          return found.map((e) => {
+            const code = e.codes.find((c) => emojiForCode(c) === e.emoji);
+            // The shortcode goes in the note; the character only when there is none.
+            return { key: e.emoji, emoji: code ? `:${code}:` : e.emoji, icon: e.emoji, title: code ? `:${code}:` : e.label, description: e.label };
+          });
         },
         command: ({ editor: e, range, props }) => {
           e.chain().focus().insertContentAt(range, props.emoji).run();
@@ -132,3 +125,85 @@ export const EmojiSuggest = Extension.create<{ store: MenuStore<EmojiItem> }>({
     ];
   },
 });
+
+/* ---- Shortcodes displayed as emoji ---- */
+
+const SHORTCODE = /(?<![\w:]):([a-z0-9_+-]{2,}):(?!:)/gi;
+
+interface Shortcode {
+  from: number;
+  to: number;
+  emoji: string;
+}
+
+const shortcodeCache = new WeakMap<PMNode, { from: number; to: number; emoji: string }[]>();
+
+/** Known shortcodes of one text block (code excluded), relative to the block's content. */
+function blockShortcodes(block: PMNode): { from: number; to: number; emoji: string }[] {
+  let found = shortcodeCache.get(block);
+  if (found) return found;
+  found = [];
+  let offset = 0;
+  block.forEach((child) => {
+    if (child.isText && !child.marks.some((m) => m.type.name === "code" || m.type.spec.code)) {
+      for (const match of child.text!.matchAll(SHORTCODE)) {
+        const emoji = emojiForCode(match[1]);
+        if (emoji) found!.push({ from: offset + match.index, to: offset + match.index + match[0].length, emoji });
+      }
+    }
+    offset += child.nodeSize;
+  });
+  shortcodeCache.set(block, found);
+  return found;
+}
+
+export function findShortcodes(doc: PMNode): Shortcode[] {
+  const all: Shortcode[] = [];
+  doc.descendants((node, pos) => {
+    if (!node.isTextblock) return true;
+    if (!node.type.spec.code) for (const s of blockShortcodes(node)) all.push({ from: pos + 1 + s.from, to: pos + 1 + s.to, emoji: s.emoji });
+    return false;
+  });
+  return all;
+}
+
+const shortcodeKey = new PluginKey<Shortcode[]>("emojiShortcodes");
+
+function emojiWidget(emoji: string) {
+  return () => {
+    const span = document.createElement("span");
+    span.className = "emoji-shortcode";
+    span.textContent = emoji;
+    return span;
+  };
+}
+
+function shortcodePlugin(): Plugin {
+  return new Plugin<Shortcode[]>({
+    key: shortcodeKey,
+    state: {
+      init: (_config, state) => (index ? findShortcodes(state.doc) : []),
+      apply: (tr, value, _old, state) => (tr.docChanged || tr.getMeta(shortcodeKey) ? (index ? findShortcodes(state.doc) : []) : value),
+    },
+    view(view) {
+      // The emoji data loads lazily: display the shortcodes once it is there.
+      if (!index) void loadEmojis().then(() => !view.isDestroyed && view.dispatch(view.state.tr.setMeta(shortcodeKey, true).setMeta("addToHistory", false)));
+      return {};
+    },
+    props: {
+      decorations(state: EditorState) {
+        const codes = shortcodeKey.getState(state) ?? [];
+        if (codes.length === 0) return null;
+        const { from, to } = state.selection;
+        const decorations: Decoration[] = [];
+        for (const code of codes) {
+          // The code being edited stays visible as text.
+          if (from <= code.to && to >= code.from) continue;
+          decorations.push(Decoration.widget(code.from, emojiWidget(code.emoji), { side: -1, key: `emoji-${code.emoji}`, ignoreSelection: true }));
+          decorations.push(Decoration.inline(code.from, code.to, { class: "emoji-shortcode-source" }));
+        }
+        return DecorationSet.create(state.doc, decorations);
+      },
+    },
+  });
+}

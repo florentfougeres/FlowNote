@@ -1,3 +1,4 @@
+import { CALLOUT_TYPES, calloutPicker } from "./callouts";
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";
@@ -47,6 +48,18 @@ export const SLASH_ITEMS: SlashItem[] = [
   { key: "callout", title: "Callout", description: "Encadré > [!note]", icon: "ⓘ", keywords: ["callout", "encadré", "note", "info"], run: kind("callout", "note") },
   { key: "callout-tip", title: "Callout astuce", description: "Encadré > [!tip]", icon: "✦", keywords: ["callout", "astuce", "tip"], run: kind("callout", "tip") },
   { key: "callout-warning", title: "Callout attention", description: "Encadré > [!warning]", icon: "⚠", keywords: ["callout", "attention", "warning", "avertissement"], run: kind("callout", "warning") },
+  {
+    key: "callout-other",
+    title: "Autres callouts…",
+    description: "Résumé, info, question, bug, exemple…",
+    icon: "⋯",
+    keywords: ["callout", "encadré", ...CALLOUT_TYPES.flatMap((c) => [c.type, c.label.toLowerCase(), ...c.aliases])],
+    run: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      const coords = editor.view.coordsAtPos(editor.state.selection.from);
+      calloutPicker.open({ x: coords.left, y: coords.bottom + 6, onPick: (type) => turnInto(editor, "callout", undefined, type) });
+    },
+  },
   { key: "subpage", title: "Sous-page", description: "Nouvelle note liée, rangée sous celle-ci", icon: "📄", keywords: ["page", "sous-page", "note", "subpage"], run: (e, r, b) => void createSubpage(e, r, b) },
   { key: "code", title: "Code", description: "Bloc de code", icon: "</>", keywords: ["code", "snippet"], run: kind("code") },
   {
