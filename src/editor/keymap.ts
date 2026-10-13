@@ -3,6 +3,7 @@ import { exitCode, lift, setBlockType } from "@tiptap/pm/commands";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { liftListItem, sinkListItem, splitListItem } from "@tiptap/pm/schema-list";
 import { TextSelection } from "@tiptap/pm/state";
+import { blockAt, duplicateBlock, moveBlockByOne } from "./blocks";
 
 /**
  * Block-level keyboard behaviour modelled on Notion: Enter and Backspace
@@ -129,6 +130,21 @@ export const BlockKeymap = Extension.create({
       "Mod-Enter": () => {
         if (editor.state.selection.$from.parent.type === types().codeBlock) return exitCode(editor.state, dispatch);
         return toggleTask();
+      },
+      "Mod-Shift-ArrowUp": () => {
+        const tr = moveBlockByOne(editor.state, -1);
+        if (tr) dispatch(tr);
+        return true;
+      },
+      "Mod-Shift-ArrowDown": () => {
+        const tr = moveBlockByOne(editor.state, 1);
+        if (tr) dispatch(tr);
+        return true;
+      },
+      "Mod-d": () => {
+        const block = blockAt(editor.state.doc, editor.state.selection.from);
+        if (block) dispatch(duplicateBlock(editor.state, block));
+        return true;
       },
       "Mod-Alt-0": setHeading(0),
       "Mod-Alt-1": setHeading(1),

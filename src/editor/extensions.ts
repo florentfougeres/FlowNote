@@ -6,8 +6,10 @@ import { documentExtensions } from "./schema";
 import { BlockKeymap } from "./keymap";
 import { MarkdownShortcuts } from "./shortcuts";
 import { nodeViews, placeholderPlugin } from "./views";
+import { SlashCommand, SlashMenuStore } from "./slash";
 
 const Editing = Extension.create({
+  priority: 150,
   name: "editing",
   addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin()],
   addKeyboardShortcuts() {
@@ -26,10 +28,10 @@ const Editing = Extension.create({
 });
 
 /** Everything the note editor needs: document schema, node views and editing behaviour. */
-export function editorExtensions(): AnyExtension[] {
+export function editorExtensions(slashStore = new SlashMenuStore()): AnyExtension[] {
   const withViews = documentExtensions.map((extension) => {
     const view = nodeViews[extension.name];
     return view ? extension.extend({ addNodeView: () => view }) : extension;
   });
-  return [...withViews, Editing, MarkdownShortcuts, BlockKeymap];
+  return [...withViews, Editing, MarkdownShortcuts, BlockKeymap, SlashCommand.configure({ store: slashStore })];
 }

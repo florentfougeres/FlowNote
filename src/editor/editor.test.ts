@@ -1,50 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import { Editor } from "@tiptap/core";
-import { TextSelection } from "@tiptap/pm/state";
-import { editorExtensions } from "./extensions";
-import { loadMarkdown, NoteSession } from "../markdown/note";
+import { cursorAtStartOf, destroyEditors, openEditor as open, press, type } from "./testUtils";
 
-let editors: Editor[] = [];
-afterEach(() => {
-  editors.forEach((e) => e.destroy());
-  editors = [];
-});
-
-/** Opens Markdown in a real editor; the cursor is placed at the end of the document. */
-function open(markdown = "") {
-  const { doc, layout } = loadMarkdown(markdown);
-  const editor = new Editor({ extensions: editorExtensions(), content: doc });
-  editors.push(editor);
-  const session = new NoteSession(layout, editor.state.doc);
-  editor.commands.focus("end");
-  return { editor, save: () => session.serialize(editor.state.doc) };
-}
-
-/** Types text character by character, going through input rules like a keyboard would. */
-function type(editor: Editor, text: string) {
-  for (const char of text) {
-    const { from, to } = editor.state.selection;
-    const insert = () => editor.state.tr.insertText(char, from, to);
-    const handled = editor.view.someProp("handleTextInput", (f) => f(editor.view, from, to, char, insert));
-    if (!handled) editor.view.dispatch(editor.state.tr.insertText(char, from, to));
-  }
-}
-
-function press(editor: Editor, key: string, modifiers: KeyboardEventInit = {}) {
-  const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...modifiers });
-  const handled = editor.view.someProp("handleKeyDown", (f) => f(editor.view, event));
-  if (!handled) throw new Error(`key not handled: ${key}`);
-}
-
-function cursorAtStartOf(editor: Editor, text: string) {
-  let pos = -1;
-  editor.state.doc.descendants((node, p) => {
-    if (pos < 0 && node.isText && node.text!.startsWith(text)) pos = p;
-    return pos < 0;
-  });
-  editor.view.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, pos)));
-}
+afterEach(destroyEditors);
 
 describe("Markdown shortcuts", () => {
   it("headings", () => {

@@ -1,7 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { EditorState } from "@tiptap/pm/state";
 import { editorExtensions } from "./extensions";
+import { SlashMenuStore } from "./slash";
+import { SlashMenu } from "./SlashMenu";
+import { BlockHandle } from "./BlockHandle";
 import { loadMarkdown, NoteSession } from "../markdown/note";
 
 interface Props {
@@ -17,9 +20,11 @@ export function NoteEditor({ source, onMarkdown, onOpenLink }: Props) {
   const timer = useRef<number | undefined>(undefined);
   const openLink = useRef(onOpenLink);
   openLink.current = onOpenLink;
+  const shell = useRef<HTMLDivElement>(null);
+  const [slashStore] = useState(() => new SlashMenuStore());
 
   const editor = useEditor({
-    extensions: editorExtensions(),
+    extensions: editorExtensions(slashStore),
     editorProps: {
       attributes: { class: "note", spellcheck: "true" },
       handleClickOn: (_view, _pos, node) => {
@@ -45,5 +50,11 @@ export function NoteEditor({ source, onMarkdown, onOpenLink }: Props) {
     return () => window.clearTimeout(timer.current);
   }, [editor, source]);
 
-  return <EditorContent editor={editor} className="note-editor" />;
+  return (
+    <div className="note-editor" ref={shell}>
+      <EditorContent editor={editor} />
+      <BlockHandle editor={editor} shell={shell} />
+      <SlashMenu store={slashStore} />
+    </div>
+  );
 }
