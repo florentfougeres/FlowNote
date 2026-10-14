@@ -32,6 +32,14 @@ Un gestionnaire Git intégré permet de versionner le vault : statut, diff, comm
 - Les outils de dessin prennent place dans la barre d'outils de FlowNote
 - Format du plugin Obsidian « Excalidraw » (`Nom.excalidraw.md`) : avec ce plugin, les dessins s'ouvrent aussi dans Obsidian ; sans lui, on voit le JSON du dessin
 
+**Notebooks**
+- Une page peut être un **notebook** : du texte Markdown et des cellules **Python** et **SQL** exécutables, comme dans Jupyter
+- Format Markdown de [marimo](https://marimo.io) : le même fichier s'ouvre avec `marimo edit` (bouton « Ouvrir dans marimo »), et reste lisible dans Obsidian
+- Sorties sous les cellules (console, erreurs, tableaux paginés, graphiques matplotlib, HTML/plotly), jamais écrites dans le fichier
+- SQL avec DuckDB : les requêtes lisent les DataFrames Python et les fichiers (CSV, Parquet…) ; le résultat devient un DataFrame polars
+- « Figer » écrit un tableau de résultats en Markdown sous la cellule, visible dans Obsidian
+- Python et les paquets sont gérés par [uv](https://docs.astral.sh/uv/), livré avec l'app : `pyproject.toml` à la racine du vault, et dépendances propres à chaque notebook
+
 **Correction**
 - Grammaire et orthographe en français avec [Grammalecte](https://grammalecte.net), entièrement sur votre Mac, sans service en ligne
 - Clic sur un mot souligné pour voir les suggestions, l'ignorer ou l'ajouter à votre dictionnaire
@@ -95,6 +103,7 @@ npm run dev            # version navigateur (Chrome) sur http://localhost:1420
 - **`src/editor/`** : éditeur basé sur Tiptap/ProseMirror. Il contient le schéma, les vues de blocs, le menu `/`, le glisser-déposer, les poignées de tableau et la recherche.
 - **`src/vault/`** : accès au vault, résolution des liens façon Obsidian, opérations sur les pages et client Git.
 - **`grammar/`** : petit programme compagnon qui fait tourner Grammalecte. FlowNote lui envoie les paragraphes par l'entrée standard.
+- **`src/notebook/`** et **`src-tauri/resources/kernel/`** : notebooks. Un kernel Python par notebook ouvert, lancé avec `uv run` dans l'environnement du vault ; il échange des messages JSON avec l'app par l'entrée et la sortie standard.
 
 ### Publier une version
 
@@ -105,5 +114,7 @@ npm run dev            # version navigateur (Chrome) sur http://localhost:1420
 ## Licence
 
 [MIT](LICENSE) © 2026 Florent Fougères
+
+Les notebooks suivent le format Markdown de [marimo](https://github.com/marimo-team/marimo) (licence Apache 2.0), qui a servi de référence fonctionnelle ; aucun code de marimo n'est repris. [uv](https://github.com/astral-sh/uv) (licences MIT et Apache 2.0) est livré avec l'application.
 
 Le correcteur livré avec l'application est un programme séparé, sous licence GPL v3 : [Grammalecte](https://grammalecte.net) d'Olivier R., et son lanceur `grammar/flownote_grammar.py`. Son code source est disponible sur le site de Grammalecte et dans le dossier `grammar/`.
