@@ -7,6 +7,7 @@ import { Icon } from "../Icon";
 import { setProperty } from "../markdown/frontmatter";
 import { commentDate, isoMinute, joinTicket, serializeComments, splitTicket, ticketTitle, type TicketComment } from "./format";
 import { dueLabel, ticketInfo, urgency } from "./agenda";
+import type { TicketColumn } from "./board";
 
 /**
  * A ticket page, like a GitHub / GitLab issue: header (number, title, state,
@@ -14,7 +15,7 @@ import { dueLabel, ticketInfo, urgency } from "./agenda";
  */
 
 /** Front matter keys shown in the header instead of the properties panel. */
-const MANAGED = ["type", "id", "status", "tags", "due", "created", "closed"];
+const MANAGED = ["type", "id", "status", "tags", "due", "created", "closed", "order"];
 
 const displayDate = (iso: string | null) => (iso ? new Date(iso.length <= 10 ? `${iso}T12:00:00` : iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "");
 
@@ -210,6 +211,7 @@ export function TicketView({
   bridge,
   editable,
   onEditor,
+  columns,
 }: {
   path: string;
   /** Text the page was loaded from. */
@@ -220,6 +222,8 @@ export function TicketView({
   bridge: VaultBridge;
   editable: boolean;
   onEditor: (editor: Editor | null) => void;
+  /** Kanban columns, to name the state of a ticket in a middle column. */
+  columns?: TicketColumn[];
 }) {
   const initial = useMemo(() => splitTicket(source), [source]);
   const head = useRef(initial.head);
@@ -245,13 +249,16 @@ export function TicketView({
     const c = control.current;
     if (c) c.set(setProperty(c.get(), key, value));
   };
-  const setStatus = (closed: boolean) => {
+  const setStatus = (closed: boolean) => setColumn(closed ? "closed" : "open");
+  /** Moves the ticket to a board column; the last one closes it (with its date). */
+  const setColumn = (status: string) => {
     const c = control.current;
-    if (!c) return;
-    let raw = setProperty(c.get(), "status", closed ? "closed" : "open");
-    raw = setProperty(raw, "closed", closed ? isoMinute() : undefined);
+    if (!c || status === info.column) return;
+    let raw = setProperty(c.get(), "status", status);
+    raw = setProperty(raw, "closed", status === "closed" ? (info.status === "closed" ? info.closed ?? isoMinute() : isoMinute()) : undefined);
     c.set(raw);
   };
+  const [stateMenu, setStateMenu] = useState(false);
   const addTag = (tag: string) => {
     const clean = tag.trim().replace(/^#/, "").replace(/\s+/g, "-");
     if (clean && !info.tags.includes(clean)) setField("tags", [...info.tags, clean]);
@@ -267,8 +274,35 @@ export function TicketView({
           {title} {info.id !== null && <span className="ticket-number">#{info.id}</span>}
         </h1>
         <div className="ticket-meta">
-          <span className={`ticket-state ${closed ? "closed" : "open"}`}>
-            <Icon name={closed ? "ticketClosed" : "ticket"} size={14} /> {closed ? "Fermé" : "Ouvert"}
+          <span className="ticket-state-wrap">
+            <button
+              className={`ticket-state ${closed ? "closed" : "open"}`}
+              disabled={!editable || !columns}
+              aria-haspopup="menu"
+              title={columns ? "Changer de colonne" : undefined}
+              onClick={() => setStateMenu(!stateMenu)}
+            >
+              <Icon name={closed ? "ticketClosed" : "ticket"} size={14} /> {closed ? "Fermé" : info.column !== "open" ? (columns?.find((c) => c.status === info.column)?.label ?? "Ouvert") : "Ouvert"}
+              {columns && editable && <Icon name="chevronDown" size={11} />}
+            </button>
+            {stateMenu && columns && (
+              <span className="ticket-state-menu" role="menu" onMouseLeave={() => setStateMenu(false)}>
+                {columns.map((c) => (
+                  <button
+                    key={c.status}
+                    role="menuitemradio"
+                    aria-checked={c.status === (closed ? "closed" : info.column)}
+                    className={c.status === (closed ? "closed" : info.column) ? "selected" : undefined}
+                    onClick={() => {
+                      setStateMenu(false);
+                      setColumn(c.status);
+                    }}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </span>
+            )}
           </span>
           <span className="ticket-meta-text">
             {closed && info.closed ? `fermé le ${displayDate(info.closed)}` : info.created ? `ouvert le ${displayDate(info.created)}` : ""}

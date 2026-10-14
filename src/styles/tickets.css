@@ -84,6 +84,58 @@
   background: #8250df;
 }
 
+button.ticket-state {
+  border: none;
+  box-shadow: none;
+  font: inherit;
+  font-weight: 600;
+}
+
+button.ticket-state:disabled {
+  opacity: 1;
+}
+
+.ticket-state-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Board columns, to move the ticket from its page. */
+.ticket-state-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--menu-material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow: var(--shadow-menu);
+}
+
+.ticket-state-menu button {
+  padding: 5px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.ticket-state-menu button:hover {
+  background: var(--hover);
+}
+
+.ticket-state-menu button.selected {
+  font-weight: 600;
+}
+
 .ticket-meta-text {
   color: var(--muted);
 }
@@ -424,12 +476,12 @@ button.ticket-tag.selected {
 .tickets-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 18px;
 }
 
 .tickets-header h1 {
-  margin: 0;
+  margin: 0 auto 0 0;
   font-size: 30px;
   letter-spacing: -0.026em;
 }
@@ -593,4 +645,221 @@ button.ticket-tag.selected {
 .setting-text {
   width: 160px;
   padding: 4px 8px;
+}
+
+/* ---- Tickets board (kanban) ---- */
+
+.tickets-view.board-mode {
+  max-width: none;
+}
+
+.board {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+
+.board-column {
+  flex: 0 0 272px;
+  box-sizing: border-box;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  padding: 8px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  transition: background-color 120ms ease-out;
+}
+
+.board-column.drop {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.board-column-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 10px;
+  font-size: 13px;
+}
+
+.board-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f5a623;
+}
+
+.board-dot.open {
+  background: var(--muted);
+}
+
+.board-dot.closed {
+  background: var(--success, #34c759);
+}
+
+.board-count {
+  color: var(--muted);
+}
+
+.board-cards {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.board-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.board-card:hover {
+  border-color: color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+.board-card.dragging {
+  opacity: 0.35;
+}
+
+.board.dragging,
+.board.dragging .board-card {
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* The card under the pointer while it is dragged, tilted like in Notion. */
+.board-ghost {
+  position: fixed;
+  z-index: 400;
+  pointer-events: none;
+  transform: rotate(2deg);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.board-card-title {
+  overflow-wrap: anywhere;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.board-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.board-card-tags .ticket-tag.small {
+  margin-left: 0;
+}
+
+.board-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.board-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.board-insert {
+  height: 2px;
+  margin: -4px 4px 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+.board-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: left;
+}
+
+.board-new:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+/* ---- Board columns in the settings ---- */
+
+.columns-setting {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.columns-setting li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.columns-setting input {
+  flex: 1;
+  min-width: 0;
+}
+
+.columns-setting code {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.columns-setting button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.columns-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.columns-add input {
+  flex: 1;
+  min-width: 0;
 }

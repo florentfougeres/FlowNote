@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { DEFAULT_COLUMNS, normalizeColumns, statusFor, type TicketColumn } from "./ticket/board";
+import { Icon } from "./Icon";
 import { keys } from "./keys";
 
 export type Theme = "system" | "light" | "dark";
@@ -10,12 +13,25 @@ export interface Settings {
   spellChecker: SpellChecker;
   /** Folder of the tickets, relative to the vault. */
   ticketsFolder: string;
+  /** Columns of the tickets board (values of `status`). */
+  ticketColumns: TicketColumn[];
 }
 
 const AUTOSAVE_KEY = "flownote:autosave";
 const THEME_KEY = "flownote:theme";
 const SPELL_KEY = "flownote:spellchecker";
 const TICKETS_KEY = "flownote:tickets-folder";
+const COLUMNS_KEY = "flownote:ticket-columns";
+
+function readColumns(): TicketColumn[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(COLUMNS_KEY) ?? "null");
+    if (Array.isArray(parsed)) return normalizeColumns(parsed.filter((c): c is TicketColumn => typeof c?.status === "string" && typeof c?.label === "string"));
+  } catch {
+    // default columns
+  }
+  return DEFAULT_COLUMNS;
+}
 /** Former on/off setting of Grammalecte, read once to keep the user's choice. */
 const LEGACY_GRAMMAR_KEY = "flownote:grammar";
 
@@ -33,9 +49,10 @@ export function loadSettings(): Settings {
       theme: theme === "light" || theme === "dark" ? theme : "system",
       spellChecker: readSpellChecker(),
       ticketsFolder: localStorage.getItem(TICKETS_KEY) ?? "Tickets",
+      ticketColumns: readColumns(),
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets" };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS };
   }
 }
 
@@ -45,6 +62,7 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(THEME_KEY, settings.theme);
     localStorage.setItem(SPELL_KEY, settings.spellChecker);
     localStorage.setItem(TICKETS_KEY, settings.ticketsFolder);
+    localStorage.setItem(COLUMNS_KEY, JSON.stringify(settings.ticketColumns));
   } catch {
     // Settings simply won't persist.
   }
@@ -130,6 +148,7 @@ export function SettingsDialog({
             onChange={(e) => onChange({ ...settings, ticketsFolder: e.target.value.trim().replace(/^\/+|\/+$/g, "") })}
           />
         </label>
+        <ColumnsSetting columns={settings.ticketColumns} onChange={(ticketColumns) => onChange({ ...settings, ticketColumns })} />
         <div className="setting">
           <span>Apparence</span>
           <div className="segmented" role="radiogroup" aria-label="Apparence">
@@ -146,6 +165,63 @@ export function SettingsDialog({
           </span>
           <button onClick={onChangeVault}>Changer de vault…</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Columns of the tickets board. The first and last ones are the open and
+ * closed states (only their titles change); the ones between can be added,
+ * renamed, moved and removed. Renaming keeps the `status` value already
+ * written in the tickets.
+ */
+function ColumnsSetting({ columns, onChange }: { columns: TicketColumn[]; onChange: (columns: TicketColumn[]) => void }) {
+  const [draft, setDraft] = useState("");
+  const update = (next: TicketColumn[]) => onChange(normalizeColumns(next));
+  const rename = (i: number, label: string) => onChange(columns.map((c, j) => (j === i ? { ...c, label } : c)));
+  const move = (i: number, step: number) => {
+    const next = [...columns];
+    [next[i], next[i + step]] = [next[i + step], next[i]];
+    update(next);
+  };
+  const add = () => {
+    const label = draft.trim();
+    if (!label) return;
+    update([...columns.slice(0, -1), { status: statusFor(label, columns), label }, columns[columns.length - 1]]);
+    setDraft("");
+  };
+  return (
+    <div className="setting setting-column">
+      <span>
+        Colonnes du tableau des tickets
+        <small>La première ouvre le ticket, la dernière le ferme. La valeur entre crochets est écrite dans « status » du ticket.</small>
+      </span>
+      <ol className="columns-setting">
+        {columns.map((c, i) => {
+          const fixed = i === 0 || i === columns.length - 1;
+          return (
+            <li key={c.status}>
+              <input value={c.label} aria-label={`Titre de la colonne ${c.status}`} onChange={(e) => rename(i, e.target.value)} onBlur={() => update(columns)} />
+              <code>[{c.status}]</code>
+              <button disabled={fixed || i === 1} onClick={() => move(i, -1)} aria-label="Monter" title="Monter">
+                <Icon name="chevronUp" size={12} />
+              </button>
+              <button disabled={fixed || i === columns.length - 2} onClick={() => move(i, 1)} aria-label="Descendre" title="Descendre">
+                <Icon name="chevronDown" size={12} />
+              </button>
+              <button disabled={fixed} onClick={() => update(columns.filter((_, j) => j !== i))} aria-label="Supprimer la colonne" title="Supprimer (ses tickets iront dans la première colonne)">
+                <Icon name="trash" size={12} />
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="columns-add">
+        <input value={draft} placeholder="Nouvelle colonne (ex. En revue)" onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
+        <button onClick={add} disabled={!draft.trim()}>
+          Ajouter
+        </button>
       </div>
     </div>
   );

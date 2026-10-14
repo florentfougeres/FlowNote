@@ -48,6 +48,9 @@
 }
 
 .segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: none;
   box-shadow: none;
   background: transparent;

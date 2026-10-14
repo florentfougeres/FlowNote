@@ -23,6 +23,10 @@ export interface TicketInfo {
   id: number | null;
   title: string;
   status: "open" | "closed";
+  /** Raw `status` value: the kanban column ("open" when missing). */
+  column: string;
+  /** Manual position in its kanban column (`order` property), null when never moved. */
+  order: number | null;
   tags: string[];
   due: string | null;
   created: string | null;
@@ -60,6 +64,8 @@ export function ticketInfo(path: string, text: string): TicketInfo {
     id: Number(field(yaml, "id")) || id,
     title,
     status: field(yaml, "status") === "closed" ? "closed" : "open",
+    column: field(yaml, "status") ?? "open",
+    order: field(yaml, "order") !== null && Number.isFinite(Number(field(yaml, "order"))) ? Number(field(yaml, "order")) : null,
     tags: tagsOf(yaml),
     due: field(yaml, "due"),
     created: field(yaml, "created"),

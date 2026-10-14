@@ -913,6 +913,7 @@ export function App() {
                       bridge={bridge}
                       editable={!hasConflictMarkers(note.disk)}
                       onEditor={setEditor}
+                      columns={settings.ticketColumns}
                     />
                   ) : rawMode ? (
                     <RawEditor key={`${note.path}#${note.reloads ?? 0}`} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} />
@@ -944,6 +945,11 @@ export function App() {
                 key={activeTab}
                 vault={vault}
                 files={files}
+                columns={settings.ticketColumns}
+                onChanged={() => {
+                  void refreshGit();
+                  void refresh(vault);
+                }}
                 onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
                 onCreate={() => void newPage(null, undefined, undefined, "ticket")}
               />
