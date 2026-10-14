@@ -12,25 +12,32 @@ function dataUrl(bytes: Uint8Array, path: string): string {
 
 /**
  * Exports a presentation as one standalone HTML file (images embedded).
- * Desktop: asks where to save it, then opens it in the browser. Browser: a
- * download. Returns where it went, or null when cancelled.
  */
 export async function exportPresentation(markdown: string, title: string, notePath: string, files: string[], readBinary: (path: string) => Promise<Uint8Array>): Promise<string | null> {
   const rendered = renderSlides(markdown);
   const slides = await Promise.all(rendered.slides.map((html) => withLocalImages(html, notePath, files, async (path) => dataUrl(await readBinary(path), path))));
   const html = standaloneHtml(title, { ...rendered, slides });
+  return saveExport(new Blob([html], { type: "text/html" }), `${title}.html`, "Page web", "html");
+}
+
+/**
+ * Saves an exported file (HTML presentation, PNG mind map). Desktop: asks
+ * where, writes it, opens it. Browser: a download. Returns where it went, or
+ * null when cancelled.
+ */
+export async function saveExport(blob: Blob, fileName: string, kind: string, extension: "html" | "png"): Promise<string | null> {
   if (isTauri()) {
-    const path = await save({ defaultPath: `${title}.html`, filters: [{ name: "Page web", extensions: ["html"] }] });
+    const path = await save({ defaultPath: fileName, filters: [{ name: kind, extensions: [extension] }] });
     if (!path) return null;
-    await invoke("save_export", { path, content: html });
+    await invoke("save_export", { path, content: Array.from(new Uint8Array(await blob.arrayBuffer())) });
     void invoke("open_export", { path }).catch(() => {});
     return path;
   }
-  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${title}.html`;
+  link.download = fileName;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
-  return `${title}.html`;
+  return fileName;
 }

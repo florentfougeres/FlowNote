@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
 
 /** Small modal asking for a page name (the webview has no reliable `prompt()`). */
-export type PageKind = "note" | "drawing" | "ticket" | "presentation";
+export type PageKind = "note" | "drawing" | "mindmap" | "ticket" | "presentation";
 
 export interface NameResult {
   name: string;
@@ -43,7 +43,7 @@ export function NameDialog({
   return (
     <div className="modal-backdrop" onMouseDown={() => onDone(null)}>
       <form
-        className="modal"
+        className={kinds ? "modal name-dialog with-kinds" : "modal name-dialog"}
         onMouseDown={(e) => e.stopPropagation()}
         onSubmit={(e) => {
           e.preventDefault();
@@ -57,6 +57,7 @@ export function NameDialog({
               [
                 ["note", "Note", "doc"],
                 ["drawing", "Dessin", "drawing"],
+                ["mindmap", "Mind map", "mindmap"],
                 ["ticket", "Ticket", "ticket"],
                 ["presentation", "Présentation", "slides"],
               ] as const

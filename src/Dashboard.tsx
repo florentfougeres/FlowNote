@@ -19,7 +19,7 @@ import { agenda, dueLabel, ticketsOf, urgency, type AgendaItem, type TicketInfo 
  * commit activity, vault statistics and health, Obsidian bookmarks.
  */
 
-export type CreateKind = "note" | "drawing" | "ticket" | "presentation";
+export type CreateKind = "note" | "drawing" | "mindmap" | "ticket" | "presentation";
 
 const folderOf = (path: string) => (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
@@ -193,6 +193,15 @@ export function Dashboard({
           <span>
             <strong>Nouveau dessin</strong>
             <small>Schémas à main levée (Excalidraw)</small>
+          </span>
+        </button>
+        <button onClick={() => onCreate("mindmap")}>
+          <span className="dash-create-icon mindmap">
+            <Icon name="mindmap" size={20} />
+          </span>
+          <span>
+            <strong>Nouvelle mind map</strong>
+            <small>Idées en branches, à la souris et au clavier</small>
           </span>
         </button>
         <button onClick={() => onCreate("ticket")}>

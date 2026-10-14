@@ -1,0 +1,109 @@
+/* ---- Mind maps (Mind Elixir) ---- */
+
+.mindmap-page {
+  position: absolute;
+  inset: 0;
+}
+
+.mindmap-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Mind Elixir's own canvas fills the page; its toolbars keep their place. */
+.mindmap-canvas .map-container {
+  outline: none;
+}
+
+.dash-create-icon.mindmap {
+  color: #16a085;
+  background: color-mix(in srgb, #16a085 14%, transparent);
+}
+
+.tab[data-kind="mindmap"] .tab-icon {
+  color: #16a085;
+}
+
+/*
+ * Mind Elixir's context menu and toolbars, in the app's style (same material,
+ * radius and shadow as FlowNote's menus; follows light and dark). Mind
+ * Elixir's own rules use ".map-container …" and load after ours: these are
+ * one class more precise.
+ */
+.mindmap-page .map-container .context-menu .menu-list {
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--menu-material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow: var(--shadow-menu);
+  color: var(--text);
+  font: 13px var(--font-ui);
+  animation: materialize 140ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.mindmap-page .map-container .context-menu .menu-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 210px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+}
+
+.mindmap-page .map-container .context-menu .menu-list li:hover {
+  filter: none;
+  background: var(--hover);
+}
+
+.mindmap-page .map-container .context-menu .menu-list li span {
+  float: none;
+  line-height: 18px;
+}
+
+.mindmap-page .map-container .context-menu .key {
+  padding: 0;
+  background: none;
+  color: var(--muted);
+  font: 12px var(--font-ui);
+}
+
+.mindmap-page .map-container .mind-elixir-toolbar {
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--menu-material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow: var(--shadow-menu);
+  color: var(--text);
+}
+
+.mindmap-page .map-container .mind-elixir-toolbar span {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.mindmap-page .map-container .mind-elixir-toolbar span:hover {
+  background: var(--hover);
+}
+
+.mindmap-page .map-container .mind-elixir-toolbar.lt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mindmap-page .map-container .mind-elixir-toolbar.rb {
+  display: flex;
+  gap: 2px;
+}
+
+.mindmap-page .map-container .mind-elixir-toolbar.rb span + span {
+  margin-left: 0;
+}

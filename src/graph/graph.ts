@@ -1,5 +1,6 @@
 import { noteLinkTargets } from "../dashboard/stats";
 import { isDrawingPath } from "../drawing/format";
+import { isMindmapPath } from "../mindmap/format";
 import { isTicketMarkdown } from "../ticket/format";
 import { isPresentationMarkdown } from "../presentation/format";
 import { noteIcon } from "../vault/icon";
@@ -12,7 +13,7 @@ import { extension, linkPath, noteTitle, resolveLink } from "../vault/links";
  * computed from the notes' text.
  */
 
-export type GraphNodeKind = "note" | "ticket" | "drawing" | "presentation" | "missing";
+export type GraphNodeKind = "note" | "ticket" | "drawing" | "mindmap" | "presentation" | "missing";
 
 export interface GraphNode {
   /** Note path, or "missing:<name>" for a link to a note that does not exist. */
@@ -37,12 +38,12 @@ export interface VaultGraph {
 export function buildGraph(notes: [string, string][], files: string[]): VaultGraph {
   const nodes = new Map<string, GraphNode>();
   for (const [path, text] of notes) {
-    const kind: GraphNodeKind = isDrawingPath(path) ? "drawing" : isTicketMarkdown(text) ? "ticket" : isPresentationMarkdown(text) ? "presentation" : "note";
-    nodes.set(path, { id: path, title: noteTitle(path), kind, icon: kind === "drawing" ? null : noteIcon(text), degree: 0 });
+    const kind: GraphNodeKind = isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isTicketMarkdown(text) ? "ticket" : isPresentationMarkdown(text) ? "presentation" : "note";
+    nodes.set(path, { id: path, title: noteTitle(path), kind, icon: kind === "drawing" || kind === "mindmap" ? null : noteIcon(text), degree: 0 });
   }
   const edges = new Map<string, GraphEdge>();
   for (const [path, text] of notes) {
-    if (isDrawingPath(path)) continue; // drawing data is JSON, not prose
+    if (isDrawingPath(path) || isMindmapPath(path)) continue; // drawing and mind map data is JSON, not prose
     for (const target of noteLinkTargets(text)) {
       const resolved = resolveLink(target, files, path);
       let to: string;

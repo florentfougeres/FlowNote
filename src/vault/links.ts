@@ -54,9 +54,9 @@ export function dirname(path: string): string {
 /** File name without ".md": what links and sub-page folders are named after ("Schéma.excalidraw" for a drawing). */
 const fileStem = (path: string) => basename(path).replace(/\.md$/i, "");
 
-/** Title shown for a page: file name without ".md" (drawings: without ".excalidraw.md"). */
+/** Title shown for a page: file name without ".md" (drawings and mind maps: without ".excalidraw.md", ".mindmap.md"). */
 export function noteTitle(path: string): string {
-  return basename(path).replace(/\.excalidraw\.md$/i, "").replace(/\.md$/i, "");
+  return basename(path).replace(/\.(?:excalidraw|mindmap)\.md$/i, "").replace(/\.md$/i, "");
 }
 
 function join(folder: string, name: string): string {

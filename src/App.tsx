@@ -6,6 +6,8 @@ import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dia
 import { DRAWING_SUFFIX, isDrawingPath, newDrawingFile } from "./drawing/format";
 import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
 import { DRAWING_TOOLS } from "./drawing/tools";
+import { isMindmapPath, MINDMAP_SUFFIX, newMindmapFile } from "./mindmap/format";
+import { MindmapEditor, type MindmapControls } from "./mindmap/MindmapEditor";
 import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
@@ -140,6 +142,7 @@ export function App() {
   const [editor, setEditor] = useState<Editor | null>(null);
   const [drawingControls, setDrawingControls] = useState<DrawingControls | null>(null);
   const [drawingTool, setDrawingTool] = useState("selection");
+  const [mindmapControls, setMindmapControls] = useState<MindmapControls | null>(null);
   /** Light or dark, as displayed (the "system" setting follows macOS). */
   const systemDark = useSystemDark();
   const editorRef = useRef<Editor | null>(null);
@@ -669,10 +672,10 @@ export function App() {
     const path =
       kind === "ticket"
         ? uniquePath(settings.ticketsFolder, `${ticketId} - ${title}.md`, filesRef.current)
-        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : ".md"}`, filesRef.current);
+        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : ".md"}`, filesRef.current);
     try {
       await saveNow();
-      await createFile(path, kind === "drawing" ? newDrawingFile() : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : "");
+      await createFile(path, kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : "");
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";
@@ -714,9 +717,11 @@ export function App() {
   /** The open page is a drawing (Name.excalidraw.md). */
   const drawing = note !== null && isDrawingPath(note.path);
   /** The open page is a ticket (front matter type: ticket), read from the loaded text. */
-  const ticketPage = note !== null && !drawing && isTicketMarkdown(note.loaded);
+  /** The open page is a mind map (Name.mindmap.md). */
+  const mindmap = note !== null && isMindmapPath(note.path);
+  const ticketPage = note !== null && !drawing && !mindmap && isTicketMarkdown(note.loaded);
   /** The open page is a presentation (`marp: true`), read from the current text so a conversion shows at once. */
-  const presentationPage = note !== null && !drawing && !ticketPage && isPresentationMarkdown(note.markdown);
+  const presentationPage = note !== null && !drawing && !mindmap && !ticketPage && isPresentationMarkdown(note.markdown);
   const slides = useSlides(presentationPage ? note.markdown : "", note?.path ?? "", files, loadImage, presentationPage);
   const activePath = tabs.find((t) => t.id === activeTab)?.path ?? null;
   const ticketPaths = useMemo(() => {
@@ -805,6 +810,20 @@ export function App() {
   const convertToPresentation = () => {
     const control = frontmatter.current;
     if (control) control.set(setProperty(control.get(), "marp", true));
+  };
+  /** "Exporter en image": the whole map as a PNG. */
+  const exportMindmap = async () => {
+    const current = noteRef.current;
+    if (!mindmapControls || !current) return;
+    try {
+      const blob = await mindmapControls.exportPng();
+      if (!blob) return setStatus("Export impossible : image vide.");
+      const { saveExport } = await import("./presentation/exportHtml");
+      const where = await saveExport(blob, `${noteTitle(current.path)}.png`, "Image PNG", "png");
+      if (where) setStatus(`Mind map exportée : ${where}`);
+    } catch (error) {
+      setStatus(`Export impossible : ${String(error)}`);
+    }
   };
   const exportCurrent = async () => {
     const current = noteRef.current;
@@ -941,8 +960,14 @@ export function App() {
             right={
               note && (
                 <div className="page-actions">
-                  {!drawing && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
-                  {!drawing && settings.spellChecker !== "off" && (
+                  {mindmap && !rawMode && (
+                    <>
+                      <ToolButton icon="center" label="Ajuster la carte à la fenêtre" onClick={() => mindmapControls?.fit()} disabled={!mindmapControls} />
+                      <ToolButton icon="export" label="Exporter en image (PNG)" onClick={() => void exportMindmap()} disabled={!mindmapControls} />
+                    </>
+                  )}
+                  {!drawing && !mindmap && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
+                  {!drawing && !mindmap && settings.spellChecker !== "off" && (
                     <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={toggleSpelling} active={spellingOn} />
                   )}
                   {presentationPage && (
@@ -952,16 +977,16 @@ export function App() {
                     <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportCurrent()} />
                   </>
                 )}
-                {!drawing && !ticketPage && !presentationPage && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
+                {!drawing && !mindmap && !ticketPage && !presentationPage && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
                 {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
-                  <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
+                  <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : mindmap ? "Voir le fichier brut de la mind map (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
                 </div>
               )
             }
           />
           {note ? (
             <>
-              {findRequest && !rawMode && !drawing && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
+              {findRequest && !rawMode && !drawing && !mindmap && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
               <div className="panes">
                 {drawing && !rawMode ? (
                   <div className="drawing-pane">
@@ -974,6 +999,18 @@ export function App() {
                       editable={!hasConflictMarkers(note.disk)}
                       onControls={setDrawingControls}
                       onToolChange={setDrawingTool}
+                    />
+                  </div>
+                ) : mindmap && !rawMode ? (
+                  <div className="drawing-pane">
+                    <MindmapEditor
+                      key={`${note.path}#${note.reloads ?? 0}`}
+                      source={note.loaded}
+                      onMarkdown={onMarkdown}
+                      title={noteTitle(note.path)}
+                      theme={settings.theme === "dark" || (settings.theme === "system" && systemDark) ? "dark" : "light"}
+                      editable={!hasConflictMarkers(note.disk)}
+                      onControls={setMindmapControls}
                     />
                   </div>
                 ) : (
@@ -1021,7 +1058,7 @@ export function App() {
                   )}
                 </div>
                 )}
-                {showOutline && !outlineHidden && !rawMode && !drawing && <OutlinePanel editor={editor} onClose={toggleOutline} />}
+                {showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && <OutlinePanel editor={editor} onClose={toggleOutline} />}
               {presentationPage && showSlides && !rawMode && <SlidesPanel editor={editor} rendered={slides} onPresent={(index) => setPresenting(index)} onClose={() => setShowSlides(false)} />}
                 {showHistory && vault.git && (
                   <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
