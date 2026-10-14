@@ -13,7 +13,7 @@
 
 FlowNote est une application de bureau macOS qui ouvre un dossier de notes Obsidian et permet de les éditer comme dans Notion : blocs, menu `/`, glisser-déposer, tableaux, callouts… Il n'y a ni base de données ni format caché : chaque note reste un fichier `.md` que vous pouvez continuer à ouvrir dans Obsidian, sans plugin.
 
-Autour de l'éditeur : des dessins Excalidraw, des tickets façon GitHub avec un tableau kanban, une liste de lectures, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. Tout reste du texte, lisible dans Obsidian et propre dans Git.
+Autour de l'éditeur : des dessins Excalidraw, des mind maps, des tickets façon GitHub avec un tableau kanban, une liste de lectures, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. Tout reste du texte, lisible dans Obsidian et propre dans Git.
 
 Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 
@@ -51,6 +51,10 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 **Présentations**
 - Une note avec `marp: true` devient une présentation [Marp](https://marp.app) : diapos séparées par `---`, notes de l'orateur en commentaires
 - Miniatures à jour pendant l'écriture, mode Présenter (`⌘⇧P`) avec vue présentateur, export en HTML autonome
+
+**Mind maps**
+- Des cartes mentales éditées à la souris et au clavier ([Mind Elixir](https://mind-elixir.com)) : Tab pour un enfant, Entrée pour un frère, glisser pour réorganiser, export PNG
+- Stockées dans une note `Nom.mindmap.md`, avec un plan lisible pour Obsidian
 
 **Graphe**
 - Le graphe des liens entre les notes, comme dans Obsidian : aperçu sur l'accueil et vue complète (zoom, survol, filtres)
@@ -121,14 +125,14 @@ npm run dev            # version navigateur (Chrome) sur http://localhost:1420
 - **`src/markdown/`** : moteur de fidélité Markdown. Il parse avec remark/mdast, conserve la source de chaque bloc et ne re-sérialise que les blocs modifiés, en vérifiant l'équivalence.
 - **`src/editor/`** : éditeur basé sur Tiptap/ProseMirror. Il contient le schéma, les vues de blocs, le menu `/`, le glisser-déposer, les poignées de tableau et la recherche.
 - **`src/vault/`** : accès au vault, résolution des liens façon Obsidian, opérations sur les pages et client Git.
-- **`src/ticket/`**, **`src/reading/`**, **`src/presentation/`**, **`src/graph/`**, **`src/drawing/`** : tickets et kanban, liste de lectures, présentations Marp, graphe des liens, dessins Excalidraw.
+- **`src/ticket/`**, **`src/reading/`**, **`src/presentation/`**, **`src/mindmap/`**, **`src/graph/`**, **`src/drawing/`** : tickets et kanban, liste de lectures, présentations Marp, mind maps, graphe des liens, dessins Excalidraw.
 - **`grammar/`** : petit programme compagnon qui fait tourner Grammalecte. FlowNote lui envoie les paragraphes par l'entrée standard.
 
 ### Publier une version
 
 1. Ajoutez la version et ses changements en tête de `CHANGELOG.md`.
 2. Mettez à jour la version dans `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `src-tauri/Cargo.lock`.
-3. Commitez, puis poussez un tag : `git tag v0.7.2 && git push origin v0.7.2`.
+3. Commitez, puis poussez un tag : `git tag v0.8.0 && git push origin v0.8.0`.
 4. Le workflow GitHub Actions lance les tests, construit le `.dmg` (Apple Silicon) et prépare une release en brouillon. Relisez-la, puis publiez-la sur GitHub.
 
 ## Licence

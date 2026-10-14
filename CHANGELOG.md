@@ -2,6 +2,18 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.8.0] - 2026-10-14
+
+### Ajouté
+- **Mind maps** : un nouveau type de page (`Nom.mindmap.md`), éditée à la souris et au clavier avec [Mind Elixir](https://mind-elixir.com).
+  - Tab ajoute un enfant, Entrée un frère ; double-clic pour renommer ; glisser pour déplacer une branche ; clic droit pour le reste (parent, résumé, liens entre nœuds…).
+  - Stockée au format de Mind Elixir (JSON) dans la note, précédée d'un plan lisible régénéré : dans Obsidian, on lit le plan, le JSON est masqué.
+  - Ajuster la carte à la fenêtre, export en image PNG, thème clair ou sombre de l'app.
+
+### Corrigé
+- Barre latérale : tout tient dans la fenêtre ; seul l'arbre des pages défile, Git, Réglages et Aide restent en bas.
+- Fenêtre « Nouvelle page » élargie : les types de page ne dépassent plus.
+
 ## [0.7.2] - 2026-10-14
 
 ### Corrigé
@@ -120,6 +132,7 @@ Note : le fichier de cette release s'appelle `FlowNote_0.7.0_aarch64.dmg` (numé
 - Recherche, plan de la note, mode Markdown brut.
 - Gestionnaire Git : statut, diff, commit, pull/push, historique d'une note, résolution des conflits.
 
+[0.8.0]: https://github.com/florentfougeres/FlowNote/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/florentfougeres/FlowNote/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/florentfougeres/FlowNote/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/florentfougeres/FlowNote/compare/v0.6.0...v0.7.0
