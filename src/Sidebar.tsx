@@ -16,6 +16,7 @@ interface Page {
   /** Note opened by clicking the row; null for a plain folder. */
   notePath: string | null;
   children: Page[];
+  ticket?: boolean;
 }
 
 export function toPages(entries: VaultEntry[]): Page[] {
@@ -26,7 +27,7 @@ export function toPages(entries: VaultEntry[]): Page[] {
     if (entry.kind !== "file") continue;
     const folder = dirs.get(entry.name);
     if (folder) usedDirs.add(folder.name);
-    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children: folder ? toPages(folder.children ?? []) : [] });
+    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children: folder ? toPages(folder.children ?? []) : [], ticket: entry.ticket });
   }
   const folders = entries
     .filter((e) => e.kind === "dir" && !usedDirs.has(e.name))
@@ -42,6 +43,9 @@ interface Props {
   vaultName: string;
   tree: VaultEntry[];
   selected?: string;
+  /** Opens the tickets list. */
+  onTickets: (newTab: boolean) => void;
+  ticketsActive: boolean;
   /** Opens a page; `newTab` with ⌘-click. */
   onSelect: (path: string, newTab: boolean) => void;
   onNewPage: (parentNote: string | null) => void;
@@ -51,7 +55,7 @@ interface Props {
   onNewPageInFolder: (folder: string) => void;
 }
 
-export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDelete, onSearch, onNewPageInFolder }: Props) {
+export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDelete, onSearch, onNewPageInFolder, onTickets, ticketsActive }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const pages = toPages(tree);
 
@@ -91,7 +95,7 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDele
               <button className="page-name" onClick={(event) => (page.notePath ? onSelect(page.notePath, event.metaKey || event.ctrlKey) : toggle(page.key))}
                 onAuxClick={(event) => event.button === 1 && page.notePath && onSelect(page.notePath, true)}>
                 <span className="page-icon">
-                  <Icon name={page.notePath ? (isDrawingPath(page.notePath) ? "drawing" : "doc") : "folder"} />
+                  <Icon name={page.notePath ? (isDrawingPath(page.notePath) ? "drawing" : page.ticket ? "ticket" : "doc") : "folder"} />
                 </span>
                 {page.notePath ? noteTitle(page.notePath) : page.name}
               </button>
@@ -128,6 +132,9 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDele
           <Icon name="search" size={14} /> Rechercher
         </span>
         <kbd>⌘P</kbd>
+      </button>
+      <button className={ticketsActive ? "sidebar-search sidebar-tickets active" : "sidebar-search sidebar-tickets"} onClick={(e) => onTickets(e.metaKey || e.ctrlKey)}>
+        <Icon name="ticket" size={14} /> Tickets
       </button>
       {render(pages, 0)}
       <button className="new-page" onClick={() => onNewPage(null)}>

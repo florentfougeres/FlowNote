@@ -13,12 +13,13 @@ import { EmojiSuggest, type EmojiItem } from "./emoji";
 import { codeHighlightPlugin } from "./codeHighlight";
 import { findPlugin } from "./find";
 import { grammarPlugin } from "./grammar";
+import { dueDatePlugin } from "../ticket/dueDates";
 import { NULL_BRIDGE, type BridgeRef } from "./bridge";
 
 const Editing = Extension.create({
   priority: 150,
   name: "editing",
-  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin(), codeHighlightPlugin(), findPlugin(), grammarPlugin()],
+  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin(), codeHighlightPlugin(), findPlugin(), grammarPlugin(), dueDatePlugin()],
   addKeyboardShortcuts() {
     return {
       "Mod-z": () => undo(this.editor.state, this.editor.view.dispatch),

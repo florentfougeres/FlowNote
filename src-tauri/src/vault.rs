@@ -13,6 +13,30 @@ pub struct VaultEntry {
     kind: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     children: Option<Vec<VaultEntry>>,
+    /// The note is a ticket (front matter with `type: ticket`).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    ticket: bool,
+}
+
+/// Front matter of a note, read from the beginning of the file only.
+fn front_matter(path: &Path) -> Option<String> {
+    use std::io::Read;
+    let mut head = vec![0u8; 4096];
+    let mut file = fs::File::open(path).ok()?;
+    let read = file.read(&mut head).ok()?;
+    let text = String::from_utf8_lossy(&head[..read]).into_owned();
+    let rest = text.trim_start_matches('\u{feff}').strip_prefix("---")?.to_string();
+    let end = rest.find("\n---")?;
+    Some(rest[..end].to_string())
+}
+
+fn is_ticket_file(path: &Path) -> bool {
+    front_matter(path).is_some_and(|yaml| {
+        yaml.lines().any(|line| {
+            let line = line.trim_end_matches('\r');
+            line.strip_prefix("type").map(|r| r.trim_start()).and_then(|r| r.strip_prefix(':')).is_some_and(|v| v.trim().trim_matches(|c| c == '"' || c == '\'') == "ticket")
+        })
+    })
 }
 
 fn is_hidden(name: &str) -> bool {
@@ -45,10 +69,11 @@ fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
         if file_type.is_dir() {
             let children = list(&entry.path(), &path)?;
             if !children.is_empty() {
-                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children) });
+                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children), ticket: false });
             }
         } else if let Some(stem) = name.strip_suffix(".md") {
-            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None });
+            let ticket = is_ticket_file(&entry.path());
+            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket });
         }
     }
     entries.sort_by(|a, b| {
@@ -244,6 +269,21 @@ pub fn vault_trash(root: String, path: String) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tickets_are_recognised_by_their_front_matter() {
+        let dir = std::env::temp_dir().join(format!("flownote-tk-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let write = |name: &str, text: &str| {
+            fs::write(dir.join(name), text).unwrap();
+            is_ticket_file(&dir.join(name))
+        };
+        assert!(write("a.md", "---\ntype: ticket\nstatus: open\n---\nTexte\n"));
+        assert!(write("b.md", "---\r\ntype: \"ticket\"\r\n---\r\n"));
+        assert!(!write("c.md", "---\ntype: note\n---\n"));
+        assert!(!write("d.md", "type: ticket\n"));
+        let _ = fs::remove_dir_all(dir);
+    }
 
     #[test]
     fn hidden_and_escaping_paths_are_refused() {

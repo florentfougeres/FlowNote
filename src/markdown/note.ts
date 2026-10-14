@@ -125,9 +125,14 @@ export class NoteSession {
       if (this.layout.origins.length > 0) return head + (head ? "\n" : "");
       return head && !trailing.startsWith("\n") ? `${head}\n${trailing}` : head + trailing;
     }
-    // A note that had no blocks gets a final newline once it has content.
-    const tail = this.layout.origins.length === 0 && !trailing.endsWith("\n") ? `${trailing}\n` : trailing;
-    return head + leading + body + tail;
+    if (this.layout.origins.length === 0) {
+      // The note had no blocks: the blank lines that followed its front matter now
+      // separate it from the new content (the first line must not stick to "---"),
+      // and the note ends with a newline.
+      if (head) return head + (trailing.startsWith("\n") ? trailing : `\n${trailing}`) + body + "\n";
+      return leading + body + (trailing.endsWith("\n") ? trailing : `${trailing}\n`);
+    }
+    return head + leading + body + trailing;
   }
 
   /**

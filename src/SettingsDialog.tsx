@@ -6,11 +6,14 @@ export interface Settings {
   autosave: boolean;
   theme: Theme;
   spellChecker: SpellChecker;
+  /** Folder of the tickets, relative to the vault. */
+  ticketsFolder: string;
 }
 
 const AUTOSAVE_KEY = "flownote:autosave";
 const THEME_KEY = "flownote:theme";
 const SPELL_KEY = "flownote:spellchecker";
+const TICKETS_KEY = "flownote:tickets-folder";
 /** Former on/off setting of Grammalecte, read once to keep the user's choice. */
 const LEGACY_GRAMMAR_KEY = "flownote:grammar";
 
@@ -27,9 +30,10 @@ export function loadSettings(): Settings {
       autosave: localStorage.getItem(AUTOSAVE_KEY) !== "false",
       theme: theme === "light" || theme === "dark" ? theme : "system",
       spellChecker: readSpellChecker(),
+      ticketsFolder: localStorage.getItem(TICKETS_KEY) ?? "Tickets",
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte" };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets" };
   }
 }
 
@@ -38,6 +42,7 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(AUTOSAVE_KEY, String(settings.autosave));
     localStorage.setItem(THEME_KEY, settings.theme);
     localStorage.setItem(SPELL_KEY, settings.spellChecker);
+    localStorage.setItem(TICKETS_KEY, settings.ticketsFolder);
   } catch {
     // Settings simply won't persist.
   }
@@ -111,6 +116,18 @@ export function SettingsDialog({
           </div>
           <small>{SPELL_HELP[current]}</small>
         </div>
+        <label className="setting">
+          <span>
+            Dossier des tickets
+            <small>Les nouveaux tickets y sont créés et numérotés (« 12 - Titre.md »).</small>
+          </span>
+          <input
+            className="setting-text"
+            value={settings.ticketsFolder}
+            placeholder="Racine du vault"
+            onChange={(e) => onChange({ ...settings, ticketsFolder: e.target.value.trim().replace(/^\/+|\/+$/g, "") })}
+          />
+        </label>
         <div className="setting">
           <span>Apparence</span>
           <div className="segmented" role="radiogroup" aria-label="Apparence">

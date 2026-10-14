@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
 
 /** Small modal asking for a page name (the webview has no reliable `prompt()`). */
-export type PageKind = "note" | "drawing";
+export type PageKind = "note" | "drawing" | "ticket";
 
 export interface NameResult {
   name: string;
@@ -57,6 +57,7 @@ export function NameDialog({
               [
                 ["note", "Note", "doc"],
                 ["drawing", "Dessin", "drawing"],
+                ["ticket", "Ticket", "ticket"],
               ] as const
             ).map(([value, label, icon]) => (
               <button key={value} type="button" role="radio" aria-checked={kind === value} className={kind === value ? "selected" : ""} onClick={() => setKind(value)}>
@@ -66,7 +67,7 @@ export function NameDialog({
           </div>
         )}
         <input ref={input} value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === "Escape" && onDone(null)} />
-        {folders && (
+        {folders && kind !== "ticket" && (
           <label className="folder-field">
             <span>Dossier</span>
             <select value={folder} onChange={(e) => setFolder(e.target.value)}>

@@ -17,6 +17,8 @@ interface Props {
   raw: string | null;
   readOnly?: boolean;
   onChange: (raw: string | null) => void;
+  /** Keys not listed (managed by the app). */
+  hidden?: string[];
 }
 
 /** Text field committing on Enter or when leaving it. */
@@ -99,10 +101,12 @@ function ValueEditor({ property, onChange }: { property: Property; onChange: (v:
 }
 
 /** Obsidian-style properties of the note (YAML frontmatter), editable in place. */
-export function PropertiesPanel({ raw, readOnly, onChange }: Props) {
+export function PropertiesPanel({ raw, readOnly, onChange, hidden = [] }: Props) {
   const [error, setError] = useState("");
   const [rawDraft, setRawDraft] = useState<string | null>(null);
-  const parsed = readProperties(raw);
+  const all = readProperties(raw);
+  // Keys managed elsewhere (a notebook's marimo-version and pyproject) are not listed.
+  const parsed = { ...all, properties: all.properties.filter((p) => !hidden.includes(p.key)) };
 
   const apply = (update: () => string | null) => {
     try {
@@ -135,7 +139,8 @@ export function PropertiesPanel({ raw, readOnly, onChange }: Props) {
   }
 
   if (parsed.properties.length === 0) {
-    if (readOnly) return null;
+    // A page whose front matter the app manages (ticket, notebook) has no empty panel.
+    if (readOnly || hidden.length > 0) return null;
     return (
       <div className="properties properties-empty">
         <button className="property-add" onClick={() => apply(() => addProperty(raw, "tags").raw)}>

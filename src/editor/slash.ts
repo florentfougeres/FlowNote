@@ -1,4 +1,5 @@
 import { CALLOUT_TYPES, calloutPicker } from "./callouts";
+import { isoDay } from "../ticket/agenda";
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";
@@ -72,6 +73,16 @@ export const SLASH_ITEMS: SlashItem[] = [
       turnInto(editor, "code", range);
       editor.commands.updateAttributes("codeBlock", { language: "mermaid" });
       editor.commands.insertContent("graph TD\n  A[Début] --> B[Fin]");
+    },
+  },
+  {
+    key: "due",
+    title: "Échéance",
+    description: "📅 date d'une tâche (plugin Obsidian Tasks)",
+    icon: "📅",
+    keywords: ["échéance", "date", "due", "deadline", "tâche"],
+    run: (editor, range) => {
+      editor.chain().focus().deleteRange(range).insertContent(`📅 ${isoDay()}`).run();
     },
   },
   { key: "divider", title: "Séparateur", description: "Ligne horizontale", icon: "—", keywords: ["séparateur", "divider", "ligne", "hr"], run: kind("divider") },

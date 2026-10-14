@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NoteEditor } from "./editor/NoteEditor";
 import { imageMime, type VaultBridge } from "./editor/bridge";
 import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
@@ -30,6 +30,9 @@ import { forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVau
 import { Welcome } from "./Welcome";
 import { TabBar, type Tab } from "./TabBar";
 import { Dashboard } from "./Dashboard";
+import { TicketView } from "./ticket/TicketView";
+import { TicketsView } from "./ticket/TicketsView";
+import { isTicketMarkdown, newTicketFile, nextTicketId } from "./ticket/format";
 import { moveRecentPage, recordRecentPage } from "./dashboard/recents";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -47,6 +50,9 @@ interface OpenNote {
   /** Current serialization of the editor content. */
   markdown: string;
 }
+
+/** Pseudo-path of the tickets list (a tab can show it like a page). */
+const TICKETS_VIEW = "flownote:tickets";
 
 let tabCounter = 0;
 const newTabId = () => `tab-${Date.now().toString(36)}-${(tabCounter++).toString(36)}`;
@@ -92,6 +98,7 @@ const DEMO_FILES = {
   "Projets.md": "# Projets\n\n[[Mon Notion]]\n",
   "Projets/Mon Notion.md": "Une sous-page de [[Projets]].\n",
   "Croquis.excalidraw.md": demoDrawing(),
+  "Tickets/1 - Exporter en PDF.md": `---\ntype: ticket\nid: 1\nstatus: open\ntags: [idée, export]\ndue: ${new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10)}\ncreated: 2026-10-14T09:00\n---\n\nPouvoir exporter une note en PDF depuis la barre d'outils.\n\n- [x] Regarder les options d'impression\n- [ ] Choisir une mise en page 📅 ${new Date().toISOString().slice(0, 10)}\n\n## Commentaires\n\n> [!comment] 14/10/2026 09:12\n> Bonne idée, à prévoir pour la prochaine version.\n>\n> > [!comment] 14/10/2026 10:30\n> > Il faudra garder les callouts en couleur.\n`,
 };
 
 export function App() {
@@ -129,12 +136,30 @@ export function App() {
   const openFind = (replace = false) =>
     setFindRequest((previous) => ({ query: selectedText() || previous?.query || "", replace, nonce: Date.now() }));
   const [settings, setSettings] = useState<Settings>(loadSettings);
+  /** Toolbar switch: pauses the checker chosen in the settings without changing it. */
+  const [spellingOn, setSpellingOn] = useState(() => {
+    try {
+      return localStorage.getItem("flownote:spelling") !== "off";
+    } catch {
+      return true;
+    }
+  });
+  const toggleSpelling = () =>
+    setSpellingOn((on) => {
+      try {
+        localStorage.setItem("flownote:spelling", on ? "off" : "on");
+      } catch {
+        // The choice simply won't persist.
+      }
+      return !on;
+    });
   useEffect(() => {
-    const grammalecte = isTauri() && settings.spellChecker === "grammalecte";
+    const spellChecker = spellingOn ? settings.spellChecker : "off";
+    const grammalecte = isTauri() && spellChecker === "grammalecte";
     setGrammarChecker(grammalecte ? (paragraphs) => invoke<ParagraphResult[]>("grammar_check", { paragraphs }) : null);
     // Outside the desktop app, the Grammalecte choice falls back to the system checker.
-    setSystemSpellcheck(settings.spellChecker === "system" || (settings.spellChecker === "grammalecte" && !isTauri()));
-  }, [settings.spellChecker]);
+    setSystemSpellcheck(spellChecker === "system" || (spellChecker === "grammalecte" && !isTauri()));
+  }, [settings.spellChecker, spellingOn]);
   const [pendingOpen, setPendingOpen] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [drawingControls, setDrawingControls] = useState<DrawingControls | null>(null);
@@ -360,9 +385,10 @@ export function App() {
   const load = useCallback(
     async (path: string | null): Promise<boolean> => {
       if (!vault) return false;
-      if (path === null) {
+      if (path === null || path === TICKETS_VIEW) {
         setNote(null);
-        setTabPath(activeRef.current, null);
+        setTabPath(activeRef.current, path);
+        setStatus("");
         return true;
       }
       let disk: string;
@@ -478,7 +504,7 @@ export function App() {
       } catch {
         return; // keep the note open so the conflict can be resolved
       }
-      const previous = noteRef.current?.path;
+      const previous = tabsRef.current.find((t) => t.id === activeRef.current)?.path ?? noteRef.current?.path;
       if (!(await load(path))) return;
       if (navigation === "push" && previous && previous !== path) {
         back.current.push(previous);
@@ -701,10 +727,16 @@ export function App() {
       kind = result.kind;
       if (chooseFolder) folder = result.folder;
     }
-    const path = uniquePath(folder, `${sanitizeName(name) || "Sans titre"}${kind === "drawing" ? DRAWING_SUFFIX : ".md"}`, filesRef.current);
+    const title = sanitizeName(name) || "Sans titre";
+    // Tickets go to their folder, numbered: "Tickets/12 - Titre.md".
+    const ticketId = kind === "ticket" ? nextTicketId(filesRef.current, settings.ticketsFolder) : 0;
+    const path =
+      kind === "ticket"
+        ? uniquePath(settings.ticketsFolder, `${ticketId} - ${title}.md`, filesRef.current)
+        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : ".md"}`, filesRef.current);
     try {
       await saveNow();
-      await createFile(path, kind === "drawing" ? newDrawingFile() : "");
+      await createFile(path, kind === "drawing" ? newDrawingFile() : kind === "ticket" ? newTicketFile(ticketId) : "");
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";
@@ -740,6 +772,15 @@ export function App() {
 
   /** The open page is a drawing (Name.excalidraw.md). */
   const drawing = note !== null && isDrawingPath(note.path);
+  /** The open page is a ticket (front matter type: ticket), read from the loaded text. */
+  const ticketPage = note !== null && !drawing && isTicketMarkdown(note.loaded);
+  const activePath = tabs.find((t) => t.id === activeTab)?.path ?? null;
+  const ticketPaths = useMemo(() => {
+    const found = new Set<string>();
+    const walk = (entries: VaultEntry[]) => entries.forEach((e) => (e.ticket ? found.add(e.path) : e.children && walk(e.children)));
+    walk(tree);
+    return found;
+  }, [tree]);
 
   if (!vault) {
     return (
@@ -767,6 +808,8 @@ export function App() {
           onSelect={(path, newTabRequested) => void select(path, "push", newTabRequested)}
           onNewPage={(parent) => void newPage(parent)}
           onNewPageInFolder={(folder) => void newPage(null, undefined, folder)}
+          onTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
+          ticketsActive={activePath === TICKETS_VIEW}
         />
         </div>
       )}
@@ -818,6 +861,9 @@ export function App() {
               {note && (
                 <ToolGroup>
                   {!drawing && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
+                  {!drawing && settings.spellChecker !== "off" && (
+                    <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={toggleSpelling} active={spellingOn} />
+                  )}
                   {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
                   <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
                 </ToolGroup>
@@ -834,8 +880,8 @@ export function App() {
           tabs={tabs}
           active={activeTab}
           dirty={dirty}
-          titleOf={(tab) => (tab.path ? noteTitle(tab.path) : "Accueil")}
-          iconOf={(tab) => (tab.path === null ? "home" : isDrawingPath(tab.path) ? "drawing" : "doc")}
+          titleOf={(tab) => (tab.path === TICKETS_VIEW ? "Tickets" : tab.path ? noteTitle(tab.path) : "Accueil")}
+          iconOf={(tab) => (tab.path === null ? "home" : tab.path === TICKETS_VIEW ? "ticket" : isDrawingPath(tab.path) ? "drawing" : ticketPaths.has(tab.path) ? "ticket" : "doc")}
           onSelect={(id) => void switchTab(id)}
           onClose={(id) => void closeTab(id)}
           onNew={() => void newTab(null)}
@@ -866,8 +912,19 @@ export function App() {
                     {vault.git && <button onClick={() => toggleGit(true)}>Résoudre</button>}
                   </div>
                 )}
-                {!rawMode && <PageTitle title={noteTitle(note.path)} onRename={renameCurrent} readOnly={hasConflictMarkers(note.disk)} />}
-                {rawMode ? (
+                {!rawMode && !ticketPage && <PageTitle title={noteTitle(note.path)} onRename={renameCurrent} readOnly={hasConflictMarkers(note.disk)} />}
+                {ticketPage && !rawMode ? (
+                  <TicketView
+                    key={`${note.path}#${note.reloads ?? 0}`}
+                    path={note.path}
+                    source={note.loaded}
+                    markdown={note.markdown}
+                    onMarkdown={onMarkdown}
+                    bridge={bridge}
+                    editable={!hasConflictMarkers(note.disk)}
+                    onEditor={setEditor}
+                  />
+                ) : rawMode ? (
                   <RawEditor key={`${note.path}#${note.reloads ?? 0}`} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} />
                 ) : (
                   <NoteEditor key={`${note.path}#${note.reloads ?? 0}`} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk)} onEditor={setEditor} />
@@ -881,6 +938,15 @@ export function App() {
             </div>
           </>
         ) : (
+          activePath === TICKETS_VIEW ? (
+            <TicketsView
+              key={activeTab}
+              vault={vault}
+              files={files}
+              onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
+              onCreate={() => void newPage(null, undefined, undefined, "ticket")}
+            />
+          ) : (
           <Dashboard
             key={activeTab}
             vault={vault}
@@ -889,7 +955,9 @@ export function App() {
             onCreate={(kind) => void newPage(null, undefined, undefined, kind)}
             onOpenGit={() => toggleGit(true)}
             onSearch={() => setModal("switcher")}
+            onOpenTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
           />
+          )
         )}
       </main>
       {gitMounted && vault.git && (

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
+import type { MutableRefObject } from "react";
 import type { Editor } from "@tiptap/core";
 import { EditorState } from "@tiptap/pm/state";
 import { defaultWiring, editorExtensions } from "./extensions";
@@ -23,6 +24,17 @@ interface Props {
   editable?: boolean;
   /** Receives the editor instance (outline, find bar), or null when it goes away. */
   onEditor?: (editor: Editor | null) => void;
+  /** Front matter keys managed by the app, not shown in the properties panel. */
+  hiddenProperties?: string[];
+  /** Lets the app read and change the front matter through the editor's session. */
+  frontmatterControl?: MutableRefObject<FrontmatterControl | null>;
+  /** False for text without front matter (ticket comments): no properties panel. */
+  properties?: boolean;
+}
+
+export interface FrontmatterControl {
+  get(): string | null;
+  set(raw: string | null): void;
 }
 
 async function readFiles(list: FileList | null | undefined): Promise<{ name: string; bytes: Uint8Array }[]> {
@@ -36,7 +48,7 @@ async function readFiles(list: FileList | null | undefined): Promise<{ name: str
   );
 }
 
-export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEditor }: Props) {
+export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEditor, hiddenProperties, frontmatterControl, properties = true }: Props) {
   const session = useRef<NoteSession | null>(null);
   const shell = useRef<HTMLDivElement>(null);
   const [wiring] = useState(defaultWiring);
@@ -95,6 +107,9 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
     setFrontmatter(raw);
     markdownCallback.current(session.current.serialize(editor.state.doc));
   };
+  const frontmatterRef = useRef(frontmatter);
+  frontmatterRef.current = frontmatter;
+  if (frontmatterControl) frontmatterControl.current = { get: () => frontmatterRef.current, set: changeFrontmatter };
 
   useEffect(() => {
     if (editor && !editor.isDestroyed) editor.setEditable(editable, false);
@@ -110,7 +125,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
 
   return (
     <div className="note-editor" ref={shell}>
-      <PropertiesPanel raw={frontmatter} readOnly={!editable} onChange={changeFrontmatter} />
+      {properties && <PropertiesPanel raw={frontmatter} readOnly={!editable} onChange={changeFrontmatter} hidden={hiddenProperties} />}
       <EditorContent editor={editor} />
       <BlockHandle editor={editor} shell={shell} />
       <TableHandles editor={editor} />

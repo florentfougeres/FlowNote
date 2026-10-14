@@ -228,3 +228,17 @@ describe("frontmatter edits", () => {
     expect(plain.session.serialize(plain.state.doc)).toBe("---\ntags:\n  - idée\n---\n# Titre\n");
   });
 });
+
+describe("notes with an empty body", () => {
+  it("typing in a note that only has front matter keeps the front matter separate", () => {
+    const { state, session } = open("---\ntype: ticket\nid: 2\n---\n\n");
+    const tr = state.tr.insertText("Une description", 1);
+    expect(session.serialize(tr.doc)).toBe("---\ntype: ticket\nid: 2\n---\n\nUne description\n");
+    const tight = open("---\na: 1\n---\n");
+    expect(tight.session.serialize(tight.state.tr.insertText("Texte", 1).doc)).toBe("---\na: 1\n---\nTexte\n");
+    const bare = open("---\na: 1\n---");
+    expect(bare.session.serialize(bare.state.tr.insertText("Texte", 1).doc)).toBe("---\na: 1\n---\nTexte\n");
+    const empty = open("");
+    expect(empty.session.serialize(empty.state.tr.insertText("Texte", 1).doc)).toBe("Texte\n");
+  });
+});
