@@ -13,6 +13,7 @@ export function isTauri(): boolean {
 export function tauriVault(root: string): Vault {
   return {
     name: root.split("/").filter(Boolean).pop() ?? root,
+    root,
     git: tauriGit(root),
     tree: () => invoke<VaultEntry[]>("vault_tree", { root }),
     read: (path) => invoke<string>("vault_read", { root, path }),

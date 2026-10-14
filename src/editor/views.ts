@@ -6,6 +6,8 @@ import type { BridgeRef } from "./bridge";
 import { isImage } from "./bridge";
 import { basename, dirname, noteTitle, resolveLink } from "../vault/links";
 import { calloutIconSvg, calloutInfo, calloutPicker } from "./callouts";
+import { cellView, isCellNode } from "../notebook/cellView";
+import { isFrozenClose, isFrozenOpen } from "../notebook/freeze";
 
 /**
  * Node views for blocks that need controls outside the editable text. None of
@@ -241,8 +243,24 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   };
 };
 
+/** Markers of a notebook's frozen table: a discreet label, and nothing for the end marker. */
+const frozenMarkerView: NodeViewRenderer = ({ node }) => {
+  const dom = element("div", isFrozenOpen(String(node.attrs.source)) ? "frozen-marker" : "frozen-marker end");
+  dom.contentEditable = "false";
+  if (isFrozenOpen(String(node.attrs.source))) {
+    dom.textContent = "Sortie figée";
+    dom.title = "Tableau écrit par « Figer » : visible dans Obsidian. Re-figer ou défiger depuis la sortie de la cellule.";
+  }
+  return { dom, update: (next) => next.type === node.type && next.attrs.source === node.attrs.source };
+};
+
 /** Markdown kept verbatim (tables, HTML, math...): double-click to edit its source. */
-export const rawBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
+export const rawBlockView: NodeViewRenderer = (props) => {
+  const source = String(props.node.attrs.source);
+  return isFrozenOpen(source) || isFrozenClose(source) ? frozenMarkerView(props) : editableRawBlockView(props);
+};
+
+const editableRawBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   const dom = element("div", "raw-block");
   dom.dataset.kind = node.attrs.kind;
   const pre = element("pre");
@@ -379,7 +397,8 @@ export function createNodeViews(bridge: BridgeRef): Record<string, NodeViewRende
   return {
     listItem: listItemView,
     callout: calloutView,
-    codeBlock: codeBlockView,
+    // In a notebook page, marimo cells get the cell view.
+    codeBlock: (props) => (isCellNode(bridge, props.node.attrs) ? cellView(bridge)(props) : codeBlockView(props)),
     rawBlock: rawBlockView,
     wikilink: wikilinkView(bridge),
     image: imageView(bridge),

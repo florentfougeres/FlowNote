@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "./scripts/build-grammar.sh && npm run dev",
-    "beforeBuildCommand": "./scripts/build-grammar.sh && npm run build"
+    "beforeDevCommand": "./scripts/build-grammar.sh && ./scripts/fetch-uv.sh && npm run dev",
+    "beforeBuildCommand": "./scripts/build-grammar.sh && ./scripts/fetch-uv.sh && npm run build"
   },
   "app": {
     "windows": [
@@ -65,7 +65,11 @@
       "hardenedRuntime": false
     },
     "externalBin": [
-      "binaries/flownote-grammar"
-    ]
+      "binaries/flownote-grammar",
+      "binaries/uv"
+    ],
+    "resources": {
+      "resources/kernel/flownote_kernel.py": "kernel/flownote_kernel.py"
+    }
   }
 }

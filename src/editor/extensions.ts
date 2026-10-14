@@ -13,6 +13,7 @@ import { EmojiSuggest, type EmojiItem } from "./emoji";
 import { codeHighlightPlugin } from "./codeHighlight";
 import { findPlugin } from "./find";
 import { grammarPlugin } from "./grammar";
+import { cellIdsPlugin } from "../notebook/cellIds";
 import { NULL_BRIDGE, type BridgeRef } from "./bridge";
 
 const Editing = Extension.create({
@@ -60,5 +61,7 @@ export function editorExtensions(wiring: EditorWiring = defaultWiring()): AnyExt
     SlashCommand.configure({ store: wiring.slashStore, bridge: wiring.bridge }),
     WikilinkSuggest.configure({ store: wiring.linkStore, bridge: wiring.bridge }),
     EmojiSuggest.configure({ store: wiring.emojiStore }),
+    // Notebook cells: stable ids, ⌘↵ to run (above the block keymap's ⌘↵).
+    Extension.create({ name: "notebookCells", priority: 400, addProseMirrorPlugins: () => [cellIdsPlugin(wiring.bridge)] }),
   ];
 }

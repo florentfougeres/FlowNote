@@ -13,6 +13,23 @@ pub struct VaultEntry {
     kind: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     children: Option<Vec<VaultEntry>>,
+    /// The note is a notebook (front matter with `marimo-version`).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    notebook: bool,
+}
+
+/// Whether a note is a notebook: `marimo-version` in its front matter. Only the
+/// beginning of the file is read (marimo scans the first bytes the same way).
+fn is_notebook_file(path: &Path) -> bool {
+    use std::io::Read;
+    let mut head = vec![0u8; 4096];
+    let Ok(mut file) = fs::File::open(path) else { return false };
+    let Ok(read) = file.read(&mut head) else { return false };
+    let text = String::from_utf8_lossy(&head[..read]);
+    let text = text.trim_start_matches('\u{feff}');
+    let Some(rest) = text.strip_prefix("---") else { return false };
+    let Some(end) = rest.find("\n---") else { return false };
+    rest[..end].lines().any(|line| line.trim_start_matches(' ').starts_with("marimo-version") && line.contains(':'))
 }
 
 fn is_hidden(name: &str) -> bool {
@@ -45,10 +62,11 @@ fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
         if file_type.is_dir() {
             let children = list(&entry.path(), &path)?;
             if !children.is_empty() {
-                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children) });
+                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children), notebook: false });
             }
         } else if let Some(stem) = name.strip_suffix(".md") {
-            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None });
+            let notebook = is_notebook_file(&entry.path());
+            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, notebook });
         }
     }
     entries.sort_by(|a, b| {
@@ -218,6 +236,21 @@ pub fn vault_trash(root: String, path: String) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn notebooks_are_recognised_by_their_front_matter() {
+        let dir = std::env::temp_dir().join(format!("flownote-nb-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let write = |name: &str, text: &str| {
+            fs::write(dir.join(name), text).unwrap();
+            is_notebook_file(&dir.join(name))
+        };
+        assert!(write("a.md", "---\ntitle: A\nmarimo-version: 0.25.1\n---\n# A\n"));
+        assert!(write("b.md", "\u{feff}---\r\nmarimo-version: 0.25.1\r\n---\r\n"));
+        assert!(!write("c.md", "# Note\n\nmarimo-version: 1\n"));
+        assert!(!write("d.md", "---\ntags: [x]\n---\n```python {.marimo}\n```\n"));
+        let _ = fs::remove_dir_all(dir);
+    }
 
     #[test]
     fn hidden_and_escaping_paths_are_refused() {

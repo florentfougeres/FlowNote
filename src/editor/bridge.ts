@@ -7,6 +7,14 @@ import { attachmentFolder, DEFAULT_CONFIG, IMAGE_EXTENSIONS, extension, linkText
  */
 export interface VaultBridge {
   notePath: string;
+  /** The page is a notebook: marimo cells are shown (and run) as cells. */
+  notebook: boolean;
+  /** Notebook execution (desktop app): runs the cell at this position. */
+  runCell?: (pos: number) => void;
+  /** Outputs and kernel state of the open notebook. */
+  runtime?: import("../notebook/runtime").NotebookRuntime | null;
+  /** "Figer" a table output under the cell at this position (null: "Défiger"). */
+  freezeCell?: (pos: number, unfreeze?: boolean) => void;
   files: string[];
   config: ObsidianConfig;
   /** Object URL for an image of the vault. */
@@ -24,6 +32,7 @@ export interface BridgeRef {
 
 export const NULL_BRIDGE: VaultBridge = {
   notePath: "",
+  notebook: false,
   files: [],
   config: DEFAULT_CONFIG,
   loadImage: async () => "",
