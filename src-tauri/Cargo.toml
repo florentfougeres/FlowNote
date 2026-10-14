@@ -1,6 +1,6 @@
 [package]
 name = "flownote"
-version = "0.5.2"
+version = "0.6.0"
 description = "FlowNote : éditeur de blocs façon Notion pour un vault Obsidian versionné avec Git"
 authors = ["Florent Fougères"]
 license = "MIT"
