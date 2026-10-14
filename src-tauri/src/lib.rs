@@ -1,5 +1,6 @@
 mod git;
 mod grammar;
+mod notebook;
 mod vault;
 
 /// Errors raised in the webview, printed in the terminal running the app.
@@ -32,6 +33,14 @@ pub fn run() {
       vault::vault_trash,
       vault::vault_search,
       grammar::grammar_check,
+      notebook::notebook_env_status,
+      notebook::notebook_env_init,
+      notebook::notebook_env_add,
+      notebook::kernel_start,
+      notebook::kernel_send,
+      notebook::kernel_interrupt,
+      notebook::kernel_stop,
+      notebook::notebook_open_marimo,
       git::git_status,
       git::git_diff,
       git::git_stage,
@@ -63,6 +72,7 @@ pub fn run() {
     .run(|_app, event| {
       if let tauri::RunEvent::Exit = event {
         grammar::shutdown();
+        notebook::shutdown_all();
       }
     });
 }

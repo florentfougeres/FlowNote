@@ -813,6 +813,7 @@ dependencies = [
 name = "flownote"
 version = "0.4.0"
 dependencies = [
+ "libc",
  "log",
  "serde",
  "serde_json",
