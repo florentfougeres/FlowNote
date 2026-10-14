@@ -661,10 +661,11 @@ button.ticket-tag.selected {
   padding-bottom: 12px;
 }
 
+/* Columns share the window's width; below 240px each, the board scrolls sideways. */
 .board-column {
-  flex: 0 0 272px;
+  flex: 1 1 0;
   box-sizing: border-box;
-  min-width: 0;
+  min-width: 240px;
   display: flex;
   flex-direction: column;
   min-height: 160px;
