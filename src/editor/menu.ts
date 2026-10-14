@@ -71,9 +71,11 @@ export function menuRenderer<T extends MenuItem>({ store, heading, close, closeA
     let command: ((item: T) => void) | null = null;
     let lengthAtLastResult = 0;
     let range: Range = { from: 0, to: 0 };
-    const show = (props: { items: T[]; query: string; range: Range; clientRect?: (() => DOMRect | null) | null; command: (item: T) => void }) => {
+    const show = (props: { items: T[]; query: string; range: Range; loading?: boolean; clientRect?: (() => DOMRect | null) | null; command: (item: T) => void }) => {
       command = props.command;
       range = props.range;
+      // Tiptap 3 also reports "still fetching" updates (empty items): only final results count.
+      if (props.loading) return;
       if (props.items.length > 0) lengthAtLastResult = props.query.length;
       else if (closeAfterMisses !== undefined && props.query.length - lengthAtLastResult > closeAfterMisses) return void setTimeout(() => close(range));
       store.set({ items: props.items, index: 0, rect: props.clientRect?.() ?? null, heading, select: props.command });
