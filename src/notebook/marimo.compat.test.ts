@@ -22,7 +22,7 @@ const uvAvailable = (() => {
 })();
 
 const marimo = (args: string[], cwd: string) =>
-  execFileSync("uvx", ["--from", `marimo==${MARIMO_VERSION}`, "marimo", ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 240_000 });
+  execFileSync("uvx", ["--python", "3.13", "--from", `marimo==${MARIMO_VERSION}`, "marimo", ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 240_000 });
 
 function cellsOf(markdown: string): { language: string; meta: string; text: string }[] {
   const { doc } = loadMarkdown(markdown);

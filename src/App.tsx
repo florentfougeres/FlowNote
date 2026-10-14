@@ -1,9 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { NoteEditor } from "./editor/NoteEditor";
 import { imageMime, type VaultBridge } from "./editor/bridge";
 import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
 import { DRAWING_SUFFIX, isDrawingPath, newDrawingFile } from "./drawing/format";
 import { isNotebookMarkdown, newNotebookFile } from "./notebook/format";
+import { NotebookRuntime } from "./notebook/runtime";
+import { envAdd, envInit, envStatus, openInMarimo, tauriKernel } from "./notebook/tauriKernel";
+import { cellIdAt, cellRequestAt, cellRequests, posOfCell } from "./notebook/cellIds";
+import { frozenMarkdown, setFrozen } from "./notebook/freeze";
+import { readDependencies, withDependency, withoutDependency } from "./notebook/deps";
+import { PackagesDialog, vaultDependencies } from "./notebook/PackagesDialog";
+import { readProperties, setProperty } from "./markdown/frontmatter";
+import type { FrontmatterControl } from "./editor/NoteEditor";
 import { demoDrawing } from "./drawing/demo";
 import { demoNotebook } from "./notebook/demo";
 import { DrawingEditor, type DrawingControls, type DrawingTool } from "./drawing/DrawingEditor";
@@ -47,6 +55,16 @@ interface OpenNote {
   markdown: string;
 }
 
+/** Kernel state, as shown in a notebook's toolbar. */
+const KERNEL_LABELS: Record<string, string> = {
+  none: "Exécution dans l'app de bureau",
+  off: "Kernel arrêté",
+  starting: "Démarrage…",
+  idle: "Prêt",
+  busy: "Exécution…",
+  dead: "Kernel arrêté (erreur)",
+};
+
 /** Drawing tools of the toolbar: Excalidraw tool, icon, label with its shortcut. */
 const DRAWING_TOOLS: [DrawingTool, IconName, string][] = [
   ["selection", "pointer", "Sélection (V)"],
@@ -74,6 +92,7 @@ interface Dialog {
 interface Confirm {
   message: string;
   confirmLabel: string;
+  tone?: "danger" | "primary";
   resolve: (confirmed: boolean) => void;
 }
 
@@ -477,7 +496,7 @@ export function App() {
     }
     return [...folders].sort((a, b) => a.localeCompare(b, "fr"));
   };
-  const askConfirm = (message: string, confirmLabel: string) => new Promise<boolean>((resolve) => setConfirm({ message, confirmLabel, resolve }));
+  const askConfirm = (message: string, confirmLabel: string, tone?: "danger" | "primary") => new Promise<boolean>((resolve) => setConfirm({ message, confirmLabel, tone, resolve }));
 
   /** Renames the open page from its title; links across the vault follow. */
   const renameCurrent = async (title: string): Promise<boolean> => {
@@ -575,9 +594,103 @@ export function App() {
   /** The open page is a notebook (front matter with marimo-version), read from the loaded text. */
   const notebookPage = note !== null && !isDrawingPath(note.path) && isNotebookMarkdown(note.loaded);
 
+  // ---- Notebook execution (desktop app) ----
+  const frontmatterControl = useRef<FrontmatterControl | null>(null);
+  /** The notebook's own dependencies (front matter `pyproject`, PEP 723). */
+  const notebookPyproject = () => {
+    const value = readProperties(frontmatterControl.current?.get() ?? null).properties.find((p) => p.key === "pyproject")?.value;
+    return typeof value === "string" ? value : null;
+  };
+  const runtime = useMemo(() => {
+    if (!notebookPage || !note || !vault?.root || !isTauri()) return null;
+    const root = vault.root;
+    return new NotebookRuntime(tauriKernel(root, note.path), async () => {
+      // The vault's Python environment is created once, after confirmation.
+      if (!(await envStatus(root)).pyproject) {
+        const ok = await askConfirm(
+          "Pour exécuter du Python, FlowNote va créer à la racine de ce vault : pyproject.toml (paquets duckdb, polars, pyarrow), uv.lock et un dossier .venv/, ignoré par Git (ajouté au .gitignore). La première fois, Python et les paquets sont téléchargés depuis internet.",
+          "Créer l'environnement",
+          "primary",
+        );
+        if (!ok) return { ok: false, deps: [] };
+        await envInit(root);
+      }
+      return { ok: true, deps: readDependencies(notebookPyproject()) };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notebookPage, note?.path, vault]);
+  useEffect(() => () => void runtime?.stop(), [runtime]);
+  const kernelState = useSyncExternalStore(
+    useCallback((listener: () => void) => runtime?.subscribe(listener) ?? (() => {}), [runtime]),
+    () => (runtime ? `${runtime.kernel}|${runtime.python ?? ""}` : "none"),
+  );
+  const [kernel, pythonVersion] = kernelState.split("|");
+  const [packagesOpen, setPackagesOpen] = useState(false);
+  const vaultPackages = useMemo(
+    () => (packagesOpen && vault ? vault.read("pyproject.toml").then(vaultDependencies, () => []) : Promise.resolve([] as string[])),
+    [packagesOpen, vault],
+  );
+
+  const runCell = (pos: number) => {
+    const ed = editorRef.current;
+    const request = ed && !ed.isDestroyed ? cellRequestAt(ed.state, pos) : null;
+    if (request && runtime) void runtime.execute([request]);
+  };
+  const runAll = () => {
+    const ed = editorRef.current;
+    if (ed && !ed.isDestroyed && runtime) void runtime.execute(cellRequests(ed.state).map(({ pos: _pos, ...request }) => request));
+  };
+  const freezeCell = async (pos: number, unfreeze = false) => {
+    const ed = editorRef.current;
+    if (!ed || ed.isDestroyed || !runtime) return;
+    if (unfreeze) return setFrozen(ed, pos, null);
+    const id = cellIdAt(ed.state, pos);
+    if (!id) return;
+    const limit = settings.freezeRows;
+    const data = await runtime.freezeData(id, limit);
+    const at = posOfCell(ed.state, id);
+    if (at !== null && !ed.isDestroyed) setFrozen(ed, at, frozenMarkdown(data, limit));
+  };
+  const addPackage = async (requirement: string, target: "vault" | "notebook"): Promise<string | null> => {
+    try {
+      if (target === "vault") {
+        if (!vault?.root) return "Disponible dans l'application de bureau.";
+        if (!(await envStatus(vault.root)).pyproject) await envInit(vault.root);
+        await envAdd(vault.root, requirement);
+      } else {
+        const control = frontmatterControl.current;
+        if (!control) return "La note n'est pas prête.";
+        control.set(setProperty(control.get(), "pyproject", withDependency(notebookPyproject(), requirement)));
+      }
+      // The running kernel does not have the new package: it restarts at the next run.
+      await runtime?.restart();
+      return null;
+    } catch (error) {
+      return String(error);
+    }
+  };
+  const openMarimo = async () => {
+    if (!vault?.root || !note) return;
+    try {
+      await saveNow();
+      await openInMarimo(vault.root, note.path);
+      setStatus("marimo s'ouvre dans votre navigateur (la première fois, il est téléchargé)…");
+    } catch (error) {
+      setStatus(String(error));
+    }
+  };
+  const removeNotebookPackage = (requirement: string) => {
+    const control = frontmatterControl.current;
+    const pyproject = notebookPyproject();
+    if (control && pyproject) control.set(setProperty(control.get(), "pyproject", withoutDependency(pyproject, requirement)));
+  };
+
   const bridge: VaultBridge = {
     notePath: note?.path ?? "",
     notebook: notebookPage,
+    runtime,
+    runCell: runtime ? runCell : undefined,
+    freezeCell: runtime ? (pos, unfreeze) => void freezeCell(pos, unfreeze) : undefined,
     // Read through a ref: callbacks may run between renders, after a file was created.
     get files() {
       return filesRef.current;
@@ -641,7 +754,7 @@ export function App() {
                 <ToolButton icon="chevronLeft" label="Page précédente (⌘[)" onClick={goBack} disabled={back.current.length === 0} />
                 <ToolButton icon="chevronRight" label="Page suivante (⌘])" onClick={goForward} disabled={forward.current.length === 0} />
               </ToolGroup>
-              {drawing && note && (
+              {(drawing || notebookPage) && note && (
                 <>
                   <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} />
                   <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : "Non enregistré · ⌘S") : "Enregistré"}</span>
@@ -656,7 +769,25 @@ export function App() {
                   <ToolButton key={tool} icon={icon} label={label} active={drawingTool === tool} disabled={!drawingControls} onClick={() => drawingControls?.setTool(tool)} />
                 ))}
               </ToolGroup>
-            ) : drawing ? (
+            ) : notebookPage && !rawMode ? (
+              <>
+                <ToolGroup>
+                  <ToolButton icon="runAll" label="Tout exécuter" onClick={runAll} disabled={!runtime} />
+                  <ToolButton icon="stop" label="Interrompre" onClick={() => void runtime?.interrupt()} disabled={!runtime || kernel !== "busy"} />
+                  <ToolButton icon="restart" label="Redémarrer le kernel (efface les variables et les sorties)" onClick={() => void runtime?.restart()} disabled={!runtime || kernel === "off"} />
+                </ToolGroup>
+                <span className={`kernel-pill ${kernel}`} title={kernel === "dead" && runtime?.log ? runtime.log.trim().split("\n").slice(-8).join("\n") : undefined}>
+                  <span className="kernel-dot" aria-hidden="true" />
+                  {KERNEL_LABELS[kernel] ?? kernel}
+                  {kernel === "idle" && pythonVersion ? ` · Python ${pythonVersion}` : ""}
+                </span>
+                <ToolGroup>
+                  <ToolButton icon="package" label="Paquets Python" onClick={() => setPackagesOpen(true)} disabled={!vault.root} />
+                  <ToolButton icon="open" label="Ouvrir dans marimo" onClick={() => void openMarimo()} disabled={!vault.root} />
+                </ToolGroup>
+                {status && <span className="status warning">{status}</span>}
+              </>
+            ) : drawing || notebookPage ? (
               status && <span className="status warning">{status}</span>
             ) : note ? (
               <>
@@ -719,7 +850,16 @@ export function App() {
                 {rawMode ? (
                   <RawEditor key={`${note.path}#${note.reloads ?? 0}`} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} />
                 ) : (
-                  <NoteEditor key={`${note.path}#${note.reloads ?? 0}`} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk)} onEditor={setEditor} />
+                  <NoteEditor
+                    key={`${note.path}#${note.reloads ?? 0}`}
+                    source={note.loaded}
+                    onMarkdown={onMarkdown}
+                    bridge={bridge}
+                    editable={!hasConflictMarkers(note.disk)}
+                    onEditor={setEditor}
+                    hiddenProperties={notebookPage ? ["marimo-version", "pyproject"] : undefined}
+                    frontmatterControl={frontmatterControl}
+                  />
                 )}
               </div>
               )}
@@ -780,6 +920,7 @@ export function App() {
         <ConfirmDialog
           message={confirm.message}
           confirmLabel={confirm.confirmLabel}
+          tone={confirm.tone}
           onDone={(ok) => {
             confirm.resolve(ok);
             setConfirm(null);
@@ -788,6 +929,15 @@ export function App() {
       )}
       {modal === "switcher" && (
         <QuickSwitcher files={files} onOpen={(path) => void select(path)} onCreate={(name) => void newPage(null, name)} onClose={() => setModal(null)} />
+      )}
+      {packagesOpen && vault && (
+        <PackagesDialog
+          vaultDeps={vaultPackages}
+          notebookDeps={readDependencies(notebookPyproject())}
+          onAdd={addPackage}
+          onRemoveNotebookDep={removeNotebookPackage}
+          onClose={() => setPackagesOpen(false)}
+        />
       )}
       {modal === "search" && (
         <VaultSearch

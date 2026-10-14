@@ -6,11 +6,14 @@ export interface Settings {
   autosave: boolean;
   theme: Theme;
   spellChecker: SpellChecker;
+  /** Notebooks: rows written by "Figer" before truncating. */
+  freezeRows: number;
 }
 
 const AUTOSAVE_KEY = "flownote:autosave";
 const THEME_KEY = "flownote:theme";
 const SPELL_KEY = "flownote:spellchecker";
+const FREEZE_KEY = "flownote:freeze-rows";
 /** Former on/off setting of Grammalecte, read once to keep the user's choice. */
 const LEGACY_GRAMMAR_KEY = "flownote:grammar";
 
@@ -27,9 +30,10 @@ export function loadSettings(): Settings {
       autosave: localStorage.getItem(AUTOSAVE_KEY) !== "false",
       theme: theme === "light" || theme === "dark" ? theme : "system",
       spellChecker: readSpellChecker(),
+      freezeRows: Math.max(1, Number(localStorage.getItem(FREEZE_KEY)) || 50),
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte" };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", freezeRows: 50 };
   }
 }
 
@@ -38,6 +42,7 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(AUTOSAVE_KEY, String(settings.autosave));
     localStorage.setItem(THEME_KEY, settings.theme);
     localStorage.setItem(SPELL_KEY, settings.spellChecker);
+    localStorage.setItem(FREEZE_KEY, String(settings.freezeRows));
   } catch {
     // Settings simply won't persist.
   }
@@ -111,6 +116,20 @@ export function SettingsDialog({
           </div>
           <small>{SPELL_HELP[current]}</small>
         </div>
+        <label className="setting">
+          <span>
+            Tableaux figés (notebooks)
+            <small>Nombre maximal de lignes écrites par « Figer » ; au-delà, le tableau est tronqué.</small>
+          </span>
+          <input
+            type="number"
+            className="setting-number"
+            min={1}
+            max={10000}
+            value={settings.freezeRows}
+            onChange={(e) => onChange({ ...settings, freezeRows: Math.max(1, Math.min(10000, Number(e.target.value) || 50)) })}
+          />
+        </label>
         <div className="setting">
           <span>Apparence</span>
           <div className="segmented" role="radiogroup" aria-label="Apparence">

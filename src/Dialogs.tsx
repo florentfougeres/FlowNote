@@ -89,7 +89,7 @@ export function NameDialog({
 }
 
 /** Confirmation modal (the webview has no reliable `confirm()`). */
-export function ConfirmDialog({ message, confirmLabel, onDone }: { message: string; confirmLabel: string; onDone: (confirmed: boolean) => void }) {
+export function ConfirmDialog({ message, confirmLabel, tone = "danger", onDone }: { message: string; confirmLabel: string; tone?: "danger" | "primary"; onDone: (confirmed: boolean) => void }) {
   return (
     <div className="modal-backdrop" onMouseDown={() => onDone(false)}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === "Escape" && onDone(false)}>
@@ -98,7 +98,7 @@ export function ConfirmDialog({ message, confirmLabel, onDone }: { message: stri
           <button autoFocus onClick={() => onDone(false)}>
             Annuler
           </button>
-          <button className="danger" onClick={() => onDone(true)}>
+          <button className={tone} onClick={() => onDone(true)}>
             {confirmLabel}
           </button>
         </div>

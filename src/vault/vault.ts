@@ -16,6 +16,8 @@ export interface VaultEntry {
 
 export interface Vault {
   name: string;
+  /** Folder of the vault on disk (desktop app). */
+  root?: string;
   /** Present when the vault is a Git repository manageable by the app. */
   git?: GitApi;
   tree(): Promise<VaultEntry[]>;

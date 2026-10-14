@@ -3718,3 +3718,379 @@ button.crumb:hover {
 .note .notebook-cell.folded .cell-fold {
   font-family: var(--font-mono);
 }
+
+/* ---- Notebook execution ---- */
+
+.note .cell-run {
+  width: 22px;
+  height: 22px;
+  margin-left: -4px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.note .cell-run:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.note .cell-run:disabled {
+  color: var(--faint);
+}
+
+.note .notebook-cell[data-state="running"] .cell-run,
+.note .notebook-cell[data-state="queued"] .cell-run {
+  color: var(--muted);
+}
+
+.note .cell-status {
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.note .notebook-cell[data-state="ok"] .cell-status {
+  color: var(--success);
+}
+
+.note .notebook-cell[data-state="error"] .cell-status,
+.note .notebook-cell[data-state="interrupted"] .cell-status {
+  color: var(--danger);
+}
+
+.note .notebook-cell[data-state="running"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.note .notebook-cell[data-state="running"] .cell-status::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 700ms linear infinite;
+}
+
+.note .notebook-cell.disabled pre {
+  opacity: 0.55;
+}
+
+.note .cell-output {
+  border-top: 0.5px solid color-mix(in srgb, var(--text) 12%, transparent);
+  background: var(--bg);
+  padding: 8px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  cursor: auto;
+  user-select: text;
+}
+
+.note .cell-output[hidden] {
+  display: none;
+}
+
+.note .cell-output pre {
+  margin: 0;
+  padding: 0;
+  background: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 12.5px/1.5 var(--font-mono);
+}
+
+.note .cell-stderr {
+  color: var(--warning);
+}
+
+.note .cell-image {
+  max-width: 100%;
+  border-radius: 6px;
+  align-self: flex-start;
+}
+
+.note .cell-html {
+  width: 100%;
+  height: 120px;
+  border: none;
+  background: transparent;
+}
+
+.note .cell-error {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--danger-bg);
+}
+
+.note .cell-error-title strong {
+  color: var(--danger);
+}
+
+.note .cell-error-frames {
+  margin: 6px 0 0;
+  padding-left: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.note .cell-error-frames li {
+  display: flex;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.note .cell-error-where {
+  flex: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.note .cell-error-frames code {
+  font: 12px var(--font-mono);
+  background: none;
+  padding: 0;
+}
+
+/* Data tables */
+.note .cell-table {
+  border: 0.5px solid color-mix(in srgb, var(--text) 14%, transparent);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.note .cell-table-scroll {
+  overflow: auto;
+  max-height: 420px;
+}
+
+.note .cell-table table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.note .cell-table th,
+.note .cell-table td {
+  border: none;
+  border-bottom: 0.5px solid color-mix(in srgb, var(--text) 10%, transparent);
+  padding: 4px 12px;
+  text-align: left;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note .cell-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-elevated);
+  font-weight: 600;
+  vertical-align: bottom;
+}
+
+.note .cell-table .numeric {
+  text-align: right;
+}
+
+.note .cell-table-name {
+  display: block;
+}
+
+.note .cell-table-type {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--faint);
+}
+
+.note .cell-table td.null {
+  color: var(--faint);
+  font-style: italic;
+}
+
+.note .cell-table tbody tr:hover {
+  background: var(--hover);
+}
+
+.note .cell-table-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px 5px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--bg-elevated);
+}
+
+.note .cell-table-nav,
+.note .cell-freeze {
+  border: 0.5px solid var(--border);
+  background: var(--bg);
+  box-shadow: none;
+  border-radius: 6px;
+  padding: 1px 8px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.note .cell-table-nav:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.note .cell-freeze {
+  color: var(--accent);
+}
+
+/* Frozen table markers */
+.note .frozen-marker {
+  margin: 10px 0 -2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--faint);
+  user-select: none;
+}
+
+.note .frozen-marker.end {
+  margin: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* Kernel state in the toolbar */
+.kernel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 13px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--toolbar-material);
+  border: 0.5px solid var(--border);
+  white-space: nowrap;
+}
+
+.kernel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.kernel-pill.idle .kernel-dot {
+  background: var(--success);
+}
+
+.kernel-pill.busy .kernel-dot,
+.kernel-pill.starting .kernel-dot {
+  background: var(--warning);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.kernel-pill.dead {
+  color: var(--danger);
+  cursor: help;
+}
+
+.kernel-pill.dead .kernel-dot {
+  background: var(--danger);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kernel-dot {
+    animation: none !important;
+  }
+}
+
+/* Packages dialog */
+.packages-dialog {
+  width: min(520px, 92vw);
+}
+
+.packages-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.packages-add input {
+  flex: 1 1 100%;
+  font: 13px var(--font-mono);
+  padding: 7px 10px;
+}
+
+.packages-add .primary {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.packages-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.packages-list h3 {
+  margin: 12px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.packages-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.packages-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+
+.package-remove {
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  color: var(--muted);
+  padding: 0 4px !important;
+}
+
+.setting-number {
+  width: 80px;
+  padding: 4px 8px;
+}

@@ -16,6 +16,10 @@ use tauri::{AppHandle, Emitter, Manager};
 /// marimo version used by "Ouvrir dans marimo" (same as the notebook format).
 const MARIMO_VERSION: &str = "0.25.1";
 
+/// Python used for notebooks (uv downloads it if needed). Pinned: the newest
+/// Python often lacks prebuilt packages for a while.
+const PYTHON_VERSION: &str = "3.13";
+
 struct Kernel {
     child: Child,
     stdin: ChildStdin,
@@ -73,7 +77,7 @@ fn path_with_uv() -> String {
 
 fn uv(vault: &str) -> Command {
     let mut cmd = Command::new(uv_binary());
-    cmd.current_dir(vault).env("PATH", path_with_uv()).env("UV_NO_PROGRESS", "1").stdin(Stdio::null());
+    cmd.current_dir(vault).env("PATH", path_with_uv()).env("UV_NO_PROGRESS", "1").env("UV_PYTHON", PYTHON_VERSION).stdin(Stdio::null());
     cmd
 }
 
