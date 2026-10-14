@@ -187,6 +187,32 @@ pub fn vault_config(root: String) -> String {
     fs::read_to_string(Path::new(&root).join(".obsidian").join("app.json")).unwrap_or_else(|_| "{}".into())
 }
 
+/// Every note of the vault with its content, in one call (dashboard statistics).
+/// Notes over 1 MB are skipped.
+#[tauri::command]
+pub fn vault_read_notes(root: String) -> Vec<(String, String)> {
+    let mut files = Vec::new();
+    collect_files(Path::new(&root), "", &mut files);
+    files
+        .into_iter()
+        .filter(|p| p.ends_with(".md"))
+        .filter_map(|p| {
+            let full = Path::new(&root).join(&p);
+            let size = fs::metadata(&full).map(|m| m.len()).unwrap_or(u64::MAX);
+            if size > 1_000_000 {
+                return None;
+            }
+            fs::read_to_string(full).ok().map(|text| (p, text))
+        })
+        .collect()
+}
+
+/// Obsidian's bookmarks (.obsidian/bookmarks.json), read only; "{}" when absent.
+#[tauri::command]
+pub fn vault_bookmarks(root: String) -> String {
+    fs::read_to_string(Path::new(&root).join(".obsidian").join("bookmarks.json")).unwrap_or_else(|_| "{}".into())
+}
+
 /// Renames a note or a folder; never overwrites an existing path.
 #[tauri::command]
 pub fn vault_rename(root: String, from: String, to: String) -> Result<(), String> {

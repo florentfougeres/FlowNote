@@ -282,6 +282,39 @@ pub fn git_log(root: String, path: String, limit: Option<u32>) -> Result<Vec<Git
     Ok(parse_log(&String::from_utf8_lossy(&output.stdout), &prefix))
 }
 
+/// Commits per day over the last `days` days (author dates), for the dashboard.
+#[tauri::command]
+pub fn git_activity(root: String, days: u32) -> Result<Vec<(String, u32)>, String> {
+    let mut cmd = git(&root);
+    cmd.args(["log", "--no-color", "--date=short", "--format=%ad"]).arg(format!("--since={days} days ago"));
+    let output = run(cmd, None, &[128])?;
+    let mut counts: std::collections::BTreeMap<String, u32> = std::collections::BTreeMap::new();
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        let day = line.trim();
+        if !day.is_empty() {
+            *counts.entry(day.to_string()).or_default() += 1;
+        }
+    }
+    Ok(counts.into_iter().collect())
+}
+
+/// The latest commit of the current branch (None in a repository without commits).
+#[tauri::command]
+pub fn git_last_commit(root: String) -> Result<Option<GitCommit>, String> {
+    if !has_head(&root) {
+        return Ok(None);
+    }
+    let mut cmd = git(&root);
+    cmd.args(["log", "-1", "--no-color"]).arg(format!("--format=%H{FIELD}%h{FIELD}%an{FIELD}%aI{FIELD}%s"));
+    let output = run(cmd, None, &[])?;
+    let text = String::from_utf8_lossy(&output.stdout);
+    let fields: Vec<&str> = text.trim_end().split(FIELD).collect();
+    if fields.len() < 5 {
+        return Ok(None);
+    }
+    Ok(Some(GitCommit { hash: fields[0].into(), short: fields[1].into(), author: fields[2].into(), date: fields[3].into(), subject: fields[4].into(), path: String::new() }))
+}
+
 /// Content of a file at a given commit (`path` relative to the vault).
 #[tauri::command]
 pub fn git_show(root: String, hash: String, path: String) -> Result<String, String> {
@@ -512,6 +545,22 @@ mod tests {
         assert!(dir.join("nouvelle.md").exists(), "only the listed files are discarded");
         assert!(git_discard(root.clone(), vec![".obsidian/app.json".into()]).is_err());
         assert!(git_discard(root.clone(), vec!["../dehors.md".into()]).is_err());
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn activity_and_last_commit() {
+        let (dir, root) = repo("activity");
+        assert_eq!(git_last_commit(root.clone()).unwrap(), None);
+        fs::write(dir.join("a.md"), "1\n").unwrap();
+        commit_all(&root, "premier");
+        fs::write(dir.join("a.md"), "2\n").unwrap();
+        commit_all(&root, "second");
+        let last = git_last_commit(root.clone()).unwrap().unwrap();
+        assert_eq!(last.subject, "second");
+        let activity = git_activity(root.clone(), 30).unwrap();
+        assert_eq!(activity.iter().map(|(_, n)| n).sum::<u32>(), 2);
+        assert_eq!(activity.len(), 1);
         let _ = fs::remove_dir_all(dir);
     }
 

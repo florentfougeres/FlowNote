@@ -28,6 +28,9 @@ import { FULL_NOTE } from "./markdown/fixtures";
 import { hasConflictMarkers } from "./vault/conflicts";
 import { forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
 import { Welcome } from "./Welcome";
+import { TabBar, type Tab } from "./TabBar";
+import { Dashboard } from "./Dashboard";
+import { moveRecentPage, recordRecentPage } from "./dashboard/recents";
 import { invoke } from "@tauri-apps/api/core";
 
 /** Narrowest Git panel, also its default width. */
@@ -44,6 +47,9 @@ interface OpenNote {
   /** Current serialization of the editor content. */
   markdown: string;
 }
+
+let tabCounter = 0;
+const newTabId = () => `tab-${Date.now().toString(36)}-${(tabCounter++).toString(36)}`;
 
 /** Drawing tools of the toolbar: Excalidraw tool, icon, label with its shortcut. */
 const DRAWING_TOOLS: [DrawingTool, IconName, string][] = [
@@ -66,6 +72,7 @@ interface Dialog {
   folders?: string[];
   folder?: string;
   kinds?: boolean;
+  initialKind?: PageKind;
   resolve: (result: NameResult | null) => void;
 }
 
@@ -238,9 +245,20 @@ export function App() {
     setGitMounted(true);
     requestAnimationFrame(() => requestAnimationFrame(() => gitOpenRef.current && setGitOpen(true)));
   }, []);
-  // Visited pages, for back/forward navigation.
+  // Visited pages of the active tab, for back/forward navigation.
   const back = useRef<string[]>([]);
   const forward = useRef<string[]>([]);
+
+  // ---- Tabs: one page (or the dashboard) each; only the active tab has an editor. ----
+  const [tabs, setTabs] = useState<Tab[]>(() => [{ id: newTabId(), path: null }]);
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
+  const [activeTab, setActiveTab] = useState(() => tabs[0].id);
+  const activeRef = useRef(activeTab);
+  /** Back/forward history and scroll position of the inactive tabs. */
+  const tabState = useRef(new Map<string, { back: string[]; forward: string[]; scroll: number }>());
+  const contentRef = useRef<HTMLElement>(null);
+  const setTabPath = (id: string, path: string | null) => setTabs((list) => list.map((t) => (t.id === id ? { ...t, path } : t)));
 
   // Latest values for async callbacks.
   const noteRef = useRef(note);
@@ -269,10 +287,16 @@ export function App() {
       images.current.clear();
       setVault(opened);
       setNote(null);
-      // Reopen the last note of this vault (or FLOWNOTE_OPEN in the desktop app, for debugging).
+      // A vault opens on the dashboard, in a single tab (FLOWNOTE_OPEN opens a page, for debugging).
+      const first = { id: newTabId(), path: null };
+      tabState.current.clear();
+      back.current = [];
+      forward.current = [];
+      activeRef.current = first.id;
+      setTabs([first]);
+      setActiveTab(first.id);
       const forced = isTauri() ? await invoke<string | null>("startup_note").catch(() => null) : null;
-      const last = forced ?? localStorage.getItem(`flownote:last-note:${opened.name}`);
-      if (last) setPendingOpen(last);
+      if (forced) setPendingOpen(forced);
     } catch (error) {
       setStatus(`Impossible d'ouvrir le vault : ${String(error)}`);
     }
@@ -332,34 +356,136 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [note?.markdown, dirty, saveNow, settings.autosave]);
 
-  const select = useCallback(
-    async (path: string, navigation: "push" | "history" = "push") => {
-      if (!vault) return;
-      try {
-        await saveNow();
-      } catch {
-        return; // keep the note open so the conflict can be resolved
+  /** Shows a page (or the dashboard) in the active tab, without touching its history. */
+  const load = useCallback(
+    async (path: string | null): Promise<boolean> => {
+      if (!vault) return false;
+      if (path === null) {
+        setNote(null);
+        setTabPath(activeRef.current, null);
+        return true;
       }
       let disk: string;
       try {
         disk = await vault.read(path);
       } catch (error) {
-        return setStatus(`Impossible d'ouvrir ${path} : ${String(error)}`);
+        setStatus(`Impossible d'ouvrir ${path} : ${String(error)}`);
+        return false;
+      }
+      setNote({ path, loaded: disk, disk, markdown: disk });
+      setTabPath(activeRef.current, path);
+      setStatus("");
+      recordRecentPage(vault.name, path);
+      return true;
+    },
+    [vault],
+  );
+
+  /** Makes another tab active: its page is read again, its scroll position restored. */
+  const activate = useCallback(
+    async (id: string) => {
+      const target = tabsRef.current.find((t) => t.id === id);
+      if (!target) return;
+      tabState.current.set(activeRef.current, { back: back.current, forward: forward.current, scroll: contentRef.current?.scrollTop ?? 0 });
+      const saved = tabState.current.get(id) ?? { back: [], forward: [], scroll: 0 };
+      back.current = saved.back;
+      forward.current = saved.forward;
+      activeRef.current = id;
+      setActiveTab(id);
+      await load(target.path);
+      requestAnimationFrame(() => requestAnimationFrame(() => contentRef.current && (contentRef.current.scrollTop = saved.scroll)));
+    },
+    [load],
+  );
+
+  const switchTab = useCallback(
+    async (id: string) => {
+      if (id === activeRef.current) return;
+      try {
+        await saveNow();
+      } catch {
+        return; // keep the note open so the conflict can be resolved
+      }
+      await activate(id);
+    },
+    [saveNow, activate],
+  );
+
+  /** A new tab after the active one, with a page or the dashboard. */
+  const newTab = useCallback(
+    async (path: string | null = null) => {
+      try {
+        await saveNow();
+      } catch {
+        return;
+      }
+      const tab = { id: newTabId(), path };
+      setTabs((list) => {
+        const index = list.findIndex((t) => t.id === activeRef.current);
+        return [...list.slice(0, index + 1), tab, ...list.slice(index + 1)];
+      });
+      tabsRef.current = [...tabsRef.current, tab];
+      await activate(tab.id);
+    },
+    [saveNow, activate],
+  );
+
+  const closeTab = useCallback(
+    async (id: string) => {
+      const list = tabsRef.current;
+      const index = list.findIndex((t) => t.id === id);
+      if (index < 0) return;
+      const closingActive = id === activeRef.current;
+      if (closingActive) {
+        try {
+          await saveNow();
+        } catch {
+          return;
+        }
+      }
+      tabState.current.delete(id);
+      let remaining = list.filter((t) => t.id !== id);
+      if (remaining.length === 0) remaining = [{ id: newTabId(), path: null }];
+      tabsRef.current = remaining;
+      setTabs(remaining);
+      if (closingActive) {
+        // The tab being closed keeps no state: the next one starts from its own.
+        activeRef.current = id;
+        await activate(remaining[Math.min(index, remaining.length - 1)].id);
+      }
+    },
+    [saveNow, activate],
+  );
+
+  const reorderTab = (id: string, before: string | null) =>
+    setTabs((list) => {
+      const moved = list.find((t) => t.id === id);
+      if (!moved) return list;
+      const rest = list.filter((t) => t.id !== id);
+      const index = before === null ? rest.length : rest.findIndex((t) => t.id === before);
+      return [...rest.slice(0, index), moved, ...rest.slice(index)];
+    });
+
+  /** Opens a page: in the active tab (with history), in a new tab, or in the tab already showing it. */
+  const select = useCallback(
+    async (path: string, navigation: "push" | "history" = "push", newTabRequested = false) => {
+      if (!vault) return;
+      if (newTabRequested) return newTab(path);
+      const elsewhere = tabsRef.current.find((t) => t.path === path && t.id !== activeRef.current);
+      if (elsewhere && navigation === "push") return switchTab(elsewhere.id);
+      try {
+        await saveNow();
+      } catch {
+        return; // keep the note open so the conflict can be resolved
       }
       const previous = noteRef.current?.path;
+      if (!(await load(path))) return;
       if (navigation === "push" && previous && previous !== path) {
         back.current.push(previous);
         forward.current = [];
       }
-      setNote({ path, loaded: disk, disk, markdown: disk });
-      setStatus("");
-      try {
-        localStorage.setItem(`flownote:last-note:${vault.name}`, path);
-      } catch {
-        // not remembered
-      }
     },
-    [vault, saveNow],
+    [vault, saveNow, load, newTab, switchTab],
   );
 
   useEffect(() => {
@@ -382,6 +508,13 @@ export function App() {
     void select(path, "history");
   }, [select]);
 
+  const cycleTab = (step: number) => {
+    const list = tabsRef.current;
+    const index = list.findIndex((t) => t.id === activeRef.current);
+    const next = list[(index + step + list.length) % list.length];
+    if (next) void switchTab(next.id);
+  };
+
   // Application shortcuts (editor shortcuts live in the editor extensions).
   const shortcuts = useRef<(event: KeyboardEvent) => void>(() => {});
   shortcuts.current = (event: KeyboardEvent) => {
@@ -402,8 +535,17 @@ export function App() {
     else if (!vault) return;
     else if (key === "p" || key === "k" || key === "o") run(() => setModal("switcher"));
     else if (key === "n" && !event.shiftKey) run(() => void newPage(null));
+    else if (event.code === "BracketLeft" && event.shiftKey) run(() => cycleTab(-1));
+    else if (event.code === "BracketRight" && event.shiftKey) run(() => cycleTab(1));
     else if (key === "[") run(goBack);
     else if (key === "]") run(goForward);
+    else if (key === "t" && !event.shiftKey) run(() => void newTab(null));
+    else if (key === "w" && !event.shiftKey) run(() => void closeTab(activeRef.current));
+    else if (/^[1-9]$/.test(key) && !event.shiftKey) run(() => {
+      const list = tabsRef.current;
+      const target = key === "9" ? list[list.length - 1] : list[Number(key) - 1];
+      if (target) void switchTab(target.id);
+    });
     else if (key === "g" && event.shiftKey) run(() => toggleGit());
     else if (key === "/") run(() => setModal("help"));
     else if (key === "\\") run(toggleSidebar);
@@ -486,6 +628,8 @@ export function App() {
       await refresh(vault);
       const disk = await vault.read(result.path);
       back.current = back.current.map((p) => (p === current.path ? result.path : p));
+      setTabs((list) => list.map((t) => (t.path === current.path ? { ...t, path: result.path } : t)));
+      moveRecentPage(vault.name, current.path, result.path);
       setNote({ path: result.path, loaded: disk, disk, markdown: disk });
       const others = result.updatedNotes.filter((p) => p !== result.path).length;
       setStatus(others > 0 ? `Page renommée ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}.` : "Page renommée.");
@@ -510,6 +654,9 @@ export function App() {
       await refresh(vault);
       back.current = back.current.filter((p) => p !== path);
       forward.current = forward.current.filter((p) => p !== path);
+      const gone = (p: string | null) => p !== null && (p === path || p.startsWith(`${subpageFolder(path)}/`));
+      setTabs((list) => list.map((t) => (gone(t.path) ? { ...t, path: null } : t)));
+      moveRecentPage(vault.name, path, null);
       if (noteRef.current && (noteRef.current.path === path || noteRef.current.path.startsWith(`${subpageFolder(path)}/`))) setNote(null);
       void refreshGit();
     } catch (error) {
@@ -531,7 +678,7 @@ export function App() {
    * "+ Nouvelle page" (asks for a name and a folder), "+" on a page (sub-page,
    * linked from its parent) or "+" on a folder (page inside it).
    */
-  const newPage = async (parent: string | null, presetName?: string, inFolder?: string) => {
+  const newPage = async (parent: string | null, presetName?: string, inFolder?: string, initialKind?: PageKind) => {
     if (!vault) return;
     let name = presetName ?? null;
     let kind: PageKind = "note";
@@ -545,6 +692,7 @@ export function App() {
           folders: chooseFolder ? folderChoices() : undefined,
           folder,
           kinds: true,
+          initialKind,
           resolve,
         }),
       );
@@ -583,7 +731,7 @@ export function App() {
       images.current.set(path, url);
       return url;
     },
-    openPath: (path) => void select(path),
+    openPath: (path, newTabRequested) => void select(path, "push", newTabRequested),
     askName,
     createFile,
   };
@@ -616,13 +764,13 @@ export function App() {
           vaultName={vault.name}
           tree={tree}
           selected={note?.path}
-          onSelect={(path) => void select(path)}
+          onSelect={(path, newTabRequested) => void select(path, "push", newTabRequested)}
           onNewPage={(parent) => void newPage(parent)}
           onNewPageInFolder={(folder) => void newPage(null, undefined, folder)}
         />
         </div>
       )}
-      <main className="content">
+      <main className="content" ref={contentRef}>
         <Toolbar
           left={
             <>
@@ -682,6 +830,17 @@ export function App() {
             </>
           }
         />
+        <TabBar
+          tabs={tabs}
+          active={activeTab}
+          dirty={dirty}
+          titleOf={(tab) => (tab.path ? noteTitle(tab.path) : "Accueil")}
+          iconOf={(tab) => (tab.path === null ? "home" : isDrawingPath(tab.path) ? "drawing" : "doc")}
+          onSelect={(id) => void switchTab(id)}
+          onClose={(id) => void closeTab(id)}
+          onNew={() => void newTab(null)}
+          onReorder={reorderTab}
+        />
         {note ? (
           <>
             {findRequest && !rawMode && !drawing && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
@@ -722,7 +881,15 @@ export function App() {
             </div>
           </>
         ) : (
-          <p className="empty">Choisissez une page dans la barre latérale.</p>
+          <Dashboard
+            key={activeTab}
+            vault={vault}
+            files={files}
+            onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
+            onCreate={(kind) => void newPage(null, undefined, undefined, kind)}
+            onOpenGit={() => toggleGit(true)}
+            onSearch={() => setModal("switcher")}
+          />
         )}
       </main>
       {gitMounted && vault.git && (
@@ -823,6 +990,7 @@ export function App() {
           folders={dialog.folders}
           folder={dialog.folder}
           kinds={dialog.kinds}
+          initialKind={dialog.initialKind}
           onDone={(result) => {
             dialog.resolve(result);
             setDialog(null);

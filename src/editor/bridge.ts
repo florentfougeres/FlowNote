@@ -11,7 +11,8 @@ export interface VaultBridge {
   config: ObsidianConfig;
   /** Object URL for an image of the vault. */
   loadImage(path: string): Promise<string>;
-  openPath(path: string): void;
+  /** Opens a page (in a new tab with ⌘-click). */
+  openPath(path: string, newTab?: boolean): void;
   /** Asks the user for a name (null when cancelled). */
   askName(title: string, initial: string): Promise<string | null>;
   /** Creates a file and adds it to `files`. */

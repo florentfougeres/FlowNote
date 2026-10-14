@@ -20,6 +20,7 @@ export function NameDialog({
   folders,
   folder: initialFolder = "",
   kinds = false,
+  initialKind = "note",
   onDone,
 }: {
   title: string;
@@ -28,11 +29,12 @@ export function NameDialog({
   folder?: string;
   /** Offer to create a note or a drawing. */
   kinds?: boolean;
+  initialKind?: PageKind;
   onDone: (result: NameResult | null) => void;
 }) {
   const [value, setValue] = useState(initial);
   const [folder, setFolder] = useState(initialFolder);
-  const [kind, setKind] = useState<PageKind>("note");
+  const [kind, setKind] = useState<PageKind>(initialKind);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
     input.current?.focus();

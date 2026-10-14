@@ -1,0 +1,116 @@
+import { useState } from "react";
+import { Icon, type IconName } from "./Icon";
+
+export interface Tab {
+  id: string;
+  /** Page shown in the tab; null: the dashboard. */
+  path: string | null;
+}
+
+/**
+ * Open pages, one tab each, under the toolbar. Drag to reorder, middle-click
+ * or × to close; the + opens the dashboard in a new tab.
+ */
+export function TabBar({
+  tabs,
+  active,
+  dirty,
+  titleOf,
+  iconOf,
+  onSelect,
+  onClose,
+  onNew,
+  onReorder,
+}: {
+  tabs: Tab[];
+  active: string;
+  /** The active tab has unsaved changes. */
+  dirty: boolean;
+  titleOf: (tab: Tab) => string;
+  iconOf: (tab: Tab) => IconName;
+  onSelect: (id: string) => void;
+  onClose: (id: string) => void;
+  onNew: () => void;
+  onReorder: (id: string, before: string | null) => void;
+}) {
+  const [dragged, setDragged] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  return (
+    <div className="tab-bar" role="tablist" aria-label="Pages ouvertes" data-tauri-drag-region>
+      {tabs.map((tab) => {
+        const isActive = tab.id === active;
+        const title = titleOf(tab);
+        return (
+          <div
+            key={tab.id}
+            role="tab"
+            aria-selected={isActive}
+            tabIndex={isActive ? 0 : -1}
+            className={`tab${isActive ? " active" : ""}${over === tab.id && dragged !== tab.id ? " drop-before" : ""}${dragged === tab.id ? " dragging" : ""}`}
+            title={tab.path ?? "Accueil"}
+            draggable
+            onDragStart={(event) => {
+              setDragged(tab.id);
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", title);
+            }}
+            onDragOver={(event) => {
+              if (!dragged) return;
+              event.preventDefault();
+              setOver(tab.id);
+            }}
+            onDragLeave={() => setOver((current) => (current === tab.id ? null : current))}
+            onDrop={(event) => {
+              event.preventDefault();
+              if (dragged && dragged !== tab.id) onReorder(dragged, tab.id);
+              setDragged(null);
+              setOver(null);
+            }}
+            onDragEnd={() => {
+              setDragged(null);
+              setOver(null);
+            }}
+            onMouseDown={(event) => {
+              if (event.button === 0) onSelect(tab.id);
+            }}
+            onAuxClick={(event) => event.button === 1 && onClose(tab.id)}
+          >
+            <Icon name={iconOf(tab)} size={13} />
+            <span className="tab-title">{title}</span>
+            {isActive && dirty && <span className="tab-dirty" aria-label="Modifications non enregistrées" />}
+            <button
+              className="tab-close"
+              aria-label={`Fermer ${title}`}
+              title="Fermer (⌘W)"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onClose(tab.id);
+              }}
+            >
+              <Icon name="close" size={10} />
+            </button>
+          </div>
+        );
+      })}
+      <div
+        className={`tab-end${over === "end" ? " drop-before" : ""}`}
+        onDragOver={(event) => {
+          if (!dragged) return;
+          event.preventDefault();
+          setOver("end");
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          if (dragged) onReorder(dragged, null);
+          setDragged(null);
+          setOver(null);
+        }}
+      >
+        <button className="tab-new" onClick={onNew} aria-label="Nouvel onglet" title="Nouvel onglet (⌘T)">
+          <Icon name="plus" size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}

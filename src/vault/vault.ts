@@ -35,6 +35,10 @@ export interface Vault {
   rename(from: string, to: string): Promise<void>;
   /** Removes a note or a folder (to the system trash in the desktop app). */
   remove(path: string): Promise<void>;
+  /** Every note with its content in one call (dashboard statistics); otherwise read one by one. */
+  readNotes?(): Promise<[string, string][]>;
+  /** Obsidian's bookmarks (.obsidian/bookmarks.json, read only), "{}" when absent. */
+  bookmarks?(): Promise<string>;
   /** Fast full-text search done by the backend; otherwise notes are read one by one. */
   search?(query: string, caseSensitive: boolean, limit: number): Promise<{ path: string; lines: [number, string][] }[]>;
 }

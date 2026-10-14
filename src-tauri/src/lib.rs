@@ -14,9 +14,53 @@ fn startup_note() -> Option<String> {
   std::env::var("FLOWNOTE_OPEN").ok()
 }
 
+/// macOS menu: the usual items, without "Close Window" on ⌘W (⌘W closes the
+/// current tab in the app). The Edit menu keeps copy and paste working.
+fn app_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+  use tauri::menu::{Menu, PredefinedMenuItem as Item, Submenu};
+  let flownote = Submenu::with_items(
+    app,
+    "FlowNote",
+    true,
+    &[
+      &Item::about(app, Some("À propos de FlowNote"), None)?,
+      &Item::separator(app)?,
+      &Item::services(app, None)?,
+      &Item::separator(app)?,
+      &Item::hide(app, Some("Masquer FlowNote"))?,
+      &Item::hide_others(app, Some("Masquer les autres"))?,
+      &Item::show_all(app, Some("Tout afficher"))?,
+      &Item::separator(app)?,
+      &Item::quit(app, Some("Quitter FlowNote"))?,
+    ],
+  )?;
+  let edit = Submenu::with_items(
+    app,
+    "Édition",
+    true,
+    &[
+      &Item::undo(app, Some("Annuler"))?,
+      &Item::redo(app, Some("Rétablir"))?,
+      &Item::separator(app)?,
+      &Item::cut(app, Some("Couper"))?,
+      &Item::copy(app, Some("Copier"))?,
+      &Item::paste(app, Some("Coller"))?,
+      &Item::select_all(app, Some("Tout sélectionner"))?,
+    ],
+  )?;
+  let window = Submenu::with_items(
+    app,
+    "Fenêtre",
+    true,
+    &[&Item::minimize(app, Some("Réduire"))?, &Item::maximize(app, Some("Agrandir"))?, &Item::separator(app)?, &Item::fullscreen(app, Some("Plein écran"))?],
+  )?;
+  Menu::with_items(app, &[&flownote, &edit, &window])
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .menu(app_menu)
     .plugin(tauri_plugin_dialog::init())
     .invoke_handler(tauri::generate_handler![
       log_frontend,
@@ -31,6 +75,8 @@ pub fn run() {
       vault::vault_rename,
       vault::vault_trash,
       vault::vault_search,
+      vault::vault_read_notes,
+      vault::vault_bookmarks,
       grammar::grammar_check,
       git::git_status,
       git::git_diff,
@@ -46,7 +92,9 @@ pub fn run() {
       git::git_conflict,
       git::git_resolve,
       git::git_merge_continue,
-      git::git_merge_abort
+      git::git_merge_abort,
+      git::git_activity,
+      git::git_last_commit
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

@@ -60,6 +60,10 @@ export interface GitApi {
   /** Merges the upstream branch (no rebase). Throws MergeConflictError on conflicts. */
   pull(): Promise<string>;
   push(): Promise<string>;
+  /** Commits per day over the last `days` days: [date "YYYY-MM-DD", count]. */
+  activity(days: number): Promise<[string, number][]>;
+  /** Latest commit of the current branch, null without commits. */
+  lastCommit(): Promise<GitCommit | null>;
   /** History of a note, newest first, following renames. */
   log(path: string): Promise<GitCommit[]>;
   /** Content of a file at a commit. */
@@ -103,6 +107,8 @@ export function tauriGit(root: string): GitApi {
     stage: (paths) => invoke("git_stage", { root, paths }),
     unstage: (paths) => invoke("git_unstage", { root, paths }),
     discard: (paths) => invoke("git_discard", { root, paths }),
+    activity: (days) => invoke<[string, number][]>("git_activity", { root, days }),
+    lastCommit: () => invoke<GitCommit | null>("git_last_commit", { root }),
     commit: (message) => invoke<string>("git_commit", { root, message }),
     fetch: () => invoke("git_fetch", { root }),
     pull: async () => {
@@ -280,6 +286,17 @@ export function memoryGit(contents: Map<string, string | Uint8Array>, remote: Re
         else index.set(path, value);
       }
     },
+    activity: async (days) => {
+      const since = Date.now() - days * 86400000;
+      const counts = new Map<string, number>();
+      for (const { commit } of history) {
+        if (Date.parse(commit.date) < since) continue;
+        const day = commit.date.slice(0, 10);
+        counts.set(day, (counts.get(day) ?? 0) + 1);
+      }
+      return [...counts].sort(([a], [b]) => a.localeCompare(b));
+    },
+    lastCommit: async () => history[0]?.commit ?? null,
     discard: async (paths) => {
       for (const path of paths) {
         const indexed = index.get(path);

@@ -49,12 +49,12 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
     extensions: editorExtensions(wiring),
     editorProps: {
       attributes: { class: "note", spellcheck: "true" },
-      handleClickOn: (_view, _pos, node) => {
+      handleClickOn: (_view, _pos, node, _nodePos, event) => {
         if (node.type.name !== "wikilink") return false;
         const current = wiring.bridge.current;
         const path = resolveLink(node.attrs.target, current.files, current.notePath);
         if (!path || (node.attrs.embed && !path.endsWith(".md"))) return false;
-        current.openPath(path);
+        current.openPath(path, event.metaKey || event.ctrlKey);
         return true;
       },
       handleDrop: (view, event, _slice, moved) => {

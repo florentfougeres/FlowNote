@@ -42,7 +42,8 @@ interface Props {
   vaultName: string;
   tree: VaultEntry[];
   selected?: string;
-  onSelect: (path: string) => void;
+  /** Opens a page; `newTab` with ⌘-click. */
+  onSelect: (path: string, newTab: boolean) => void;
   onNewPage: (parentNote: string | null) => void;
   /** Number of changed files, or null when the vault has no Git repository. */
   onDelete: (notePath: string) => void;
@@ -87,7 +88,8 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDele
               <button className="page-toggle" onClick={() => toggle(page.key)} aria-label={open ? "Replier" : "Déplier"} disabled={page.children.length === 0}>
                 {page.children.length > 0 && <Icon name={open ? "chevronDown" : "chevronRight"} size={12} />}
               </button>
-              <button className="page-name" onClick={() => (page.notePath ? onSelect(page.notePath) : toggle(page.key))}>
+              <button className="page-name" onClick={(event) => (page.notePath ? onSelect(page.notePath, event.metaKey || event.ctrlKey) : toggle(page.key))}
+                onAuxClick={(event) => event.button === 1 && page.notePath && onSelect(page.notePath, true)}>
                 <span className="page-icon">
                   <Icon name={page.notePath ? (isDrawingPath(page.notePath) ? "drawing" : "doc") : "folder"} />
                 </span>
