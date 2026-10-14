@@ -157,10 +157,9 @@ export function App() {
   };
   const frontmatter = useRef<FrontmatterControl | null>(null);
   useEffect(() => applyTheme(settings.theme), [settings.theme]);
-  // The macOS window is transparent so the sidebar can show the native material
-  // (on Linux the window is opaque, with the system title bar).
+  // The desktop window is transparent so the sidebar can show the native macOS material.
   useEffect(() => {
-    document.documentElement.classList.toggle("native-vibrancy", isTauri() && navigator.userAgent.includes("Mac"));
+    document.documentElement.classList.toggle("native-vibrancy", isTauri());
   }, []);
 
   // Visited pages of the active tab, for back/forward navigation.
