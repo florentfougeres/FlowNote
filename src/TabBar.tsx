@@ -48,6 +48,7 @@ export function TabBar({
             tabIndex={isActive ? 0 : -1}
             className={`tab${isActive ? " active" : ""}${over === tab.id && dragged !== tab.id ? " drop-before" : ""}${dragged === tab.id ? " dragging" : ""}`}
             title={tab.path ?? "Accueil"}
+            data-kind={tab.path === null ? "home" : tab.path.toLowerCase().endsWith(".excalidraw.md") ? "drawing" : "note"}
             draggable
             onDragStart={(event) => {
               setDragged(tab.id);
