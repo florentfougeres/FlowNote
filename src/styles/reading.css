@@ -1,0 +1,164 @@
+/* ---- Reading list (Lectures) ---- */
+
+.reading-view {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 32px 32px 60px;
+  box-sizing: border-box;
+}
+
+.reading-view .tickets-header p {
+  margin: 2px 0 0;
+}
+
+.reading-view .tickets-header > div {
+  margin-right: auto;
+}
+
+.reading-view .tickets-header button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9px;
+}
+
+.reading-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.reading-section {
+  margin-top: 18px;
+}
+
+.reading-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 4px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.reading-section-header:hover {
+  background: var(--hover);
+}
+
+.reading-section-header strong {
+  font-size: 15px;
+}
+
+.reading-section-header .dash-muted {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.reading-progress {
+  flex: 0 0 80px;
+  height: 4px;
+  margin-left: 6px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+}
+
+.reading-progress span {
+  display: block;
+  height: 100%;
+  background: var(--success, #34c759);
+}
+
+.reading-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 6px 2px 26px;
+  border-radius: 8px;
+}
+
+.reading-item:hover {
+  background: var(--hover);
+}
+
+.reading-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.reading-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reading-link:hover .reading-title {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.reading-site {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reading-item.read .reading-title {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+/* "Ajouter un lien" */
+.add-link label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.add-link-hint {
+  color: var(--faint, var(--muted));
+}
+
+/* Dashboard card */
+.dash-inline {
+  padding: 0 4px;
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: var(--accent);
+  font: inherit;
+}
+
+.dash-inline:hover {
+  text-decoration: underline;
+}
+
+.dash-reading-count {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

@@ -4,6 +4,8 @@ import { Icon } from "./Icon";
 import { readAllNotes, type Vault } from "./vault/vault";
 import { buildGraph, type VaultGraph } from "./graph/graph";
 import { GraphView } from "./graph/GraphView";
+import { parseReadingList, siteOf, type ReadingItem } from "./reading/readingList";
+import { openUrl } from "./reading/web";
 import type { GitCommit, GitStatus } from "./vault/git";
 import { isConflicted, isStaged, isUnstaged, isUntracked } from "./vault/git";
 import { syncSummary } from "./vault/gitMessages";
@@ -87,6 +89,10 @@ export function Dashboard({
   onSearch,
   onOpenTickets,
   onOpenGraph,
+  readingList,
+  readingVersion,
+  onOpenReading,
+  onAddLink,
 }: {
   vault: Vault;
   files: string[];
@@ -98,6 +104,12 @@ export function Dashboard({
   onSearch: () => void;
   onOpenTickets: (newTab: boolean) => void;
   onOpenGraph: (newTab: boolean) => void;
+  /** Path of the reading list note. */
+  readingList: string;
+  /** Bumped when a link was added. */
+  readingVersion: number;
+  onOpenReading: (newTab: boolean) => void;
+  onAddLink: () => void;
 }) {
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [lastCommit, setLastCommit] = useState<GitCommit | null>(null);
@@ -107,6 +119,17 @@ export function Dashboard({
   const [tickets, setTickets] = useState<TicketInfo[]>([]);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [graph, setGraph] = useState<VaultGraph | null>(null);
+  const [toRead, setToRead] = useState<ReadingItem[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void vault
+      .read(readingList)
+      .catch(() => "")
+      .then((text) => !cancelled && setToRead(parseReadingList(text).flatMap((s) => s.items.filter((i) => !i.checked))));
+    return () => {
+      cancelled = true;
+    };
+  }, [vault, readingList, readingVersion, files]);
   const [open, setOpen] = useState<"broken" | "orphans" | null>(null);
 
   useEffect(() => {
@@ -244,6 +267,40 @@ export function Dashboard({
               </>
             );
           })()}
+        </section>
+
+        <section className="dash-card">
+          <h2>
+            À lire
+            <button className="dash-card-action" onClick={(e) => onOpenReading(e.metaKey || e.ctrlKey)}>
+              Tout voir
+            </button>
+          </h2>
+          {toRead === null ? (
+            <p className="dash-muted">Lecture de la liste…</p>
+          ) : toRead.length === 0 ? (
+            <p className="dash-muted">
+              Rien en attente. <button className="dash-inline" onClick={onAddLink}>Ajouter un lien</button> (⌘⇧L)
+            </p>
+          ) : (
+            <>
+              <p className="dash-muted dash-reading-count">
+                {toRead.length} lien{toRead.length > 1 ? "s" : ""} à lire
+                <button className="dash-inline" onClick={() => openUrl(toRead[Math.floor(Math.random() * toRead.length)].url)}>
+                  Au hasard
+                </button>
+              </p>
+              <div className="dash-list">
+                {toRead.slice(0, 5).map((item) => (
+                  <button key={item.line} className="dash-page" onClick={() => openUrl(item.url)} title={item.url}>
+                    <Icon name="bookmark" size={14} />
+                    <span className="dash-page-title">{item.title}</span>
+                    <span className="dash-page-detail">{siteOf(item.url)}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </section>
 
         {vault.git && (

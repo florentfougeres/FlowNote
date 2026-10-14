@@ -15,6 +15,10 @@ export interface Settings {
   ticketsFolder: string;
   /** Columns of the tickets board (values of `status`). */
   ticketColumns: TicketColumn[];
+  /** Note of the reading list, relative to the vault. */
+  readingList: string;
+  /** Read the title of the pages added to the reading list. */
+  fetchTitles: boolean;
 }
 
 const AUTOSAVE_KEY = "flownote:autosave";
@@ -22,6 +26,8 @@ const THEME_KEY = "flownote:theme";
 const SPELL_KEY = "flownote:spellchecker";
 const TICKETS_KEY = "flownote:tickets-folder";
 const COLUMNS_KEY = "flownote:ticket-columns";
+const READING_KEY = "flownote:reading-list";
+const TITLES_KEY = "flownote:fetch-titles";
 
 function readColumns(): TicketColumn[] {
   try {
@@ -50,9 +56,11 @@ export function loadSettings(): Settings {
       spellChecker: readSpellChecker(),
       ticketsFolder: localStorage.getItem(TICKETS_KEY) ?? "Tickets",
       ticketColumns: readColumns(),
+      readingList: localStorage.getItem(READING_KEY) || "Lectures.md",
+      fetchTitles: localStorage.getItem(TITLES_KEY) !== "false",
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true };
   }
 }
 
@@ -63,6 +71,8 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(SPELL_KEY, settings.spellChecker);
     localStorage.setItem(TICKETS_KEY, settings.ticketsFolder);
     localStorage.setItem(COLUMNS_KEY, JSON.stringify(settings.ticketColumns));
+    localStorage.setItem(READING_KEY, settings.readingList);
+    localStorage.setItem(TITLES_KEY, String(settings.fetchTitles));
   } catch {
     // Settings simply won't persist.
   }
@@ -147,6 +157,26 @@ export function SettingsDialog({
             placeholder="Racine du vault"
             onChange={(e) => onChange({ ...settings, ticketsFolder: e.target.value.trim().replace(/^\/+|\/+$/g, "") })}
           />
+        </label>
+        <label className="setting">
+          <span>
+            Liste de lectures
+            <small>La note où sont rangés les liens à lire, par thème (une section par thème).</small>
+          </span>
+          <input
+            className="setting-text"
+            value={settings.readingList}
+            placeholder="Lectures.md"
+            onChange={(e) => onChange({ ...settings, readingList: e.target.value.trim().replace(/^\/+/, "") })}
+            onBlur={() => !settings.readingList.endsWith(".md") && settings.readingList && onChange({ ...settings, readingList: `${settings.readingList}.md` })}
+          />
+        </label>
+        <label className="setting">
+          <input type="checkbox" checked={settings.fetchTitles} onChange={(e) => onChange({ ...settings, fetchTitles: e.target.checked })} />
+          <span>
+            Titre automatique des liens
+            <small>En ajoutant un lien, l'app lit le titre de la page (une seule requête vers ce site). Sinon, le lien reste tel quel.</small>
+          </span>
         </label>
         <ColumnsSetting columns={settings.ticketColumns} onChange={(ticketColumns) => onChange({ ...settings, ticketColumns })} />
         <div className="setting">

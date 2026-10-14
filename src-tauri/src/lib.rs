@@ -1,6 +1,7 @@
 mod git;
 mod grammar;
 mod vault;
+mod web;
 
 /// Errors raised in the webview, printed in the terminal running the app.
 #[tauri::command]
@@ -64,6 +65,8 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .invoke_handler(tauri::generate_handler![
       log_frontend,
+      web::open_url,
+      web::fetch_page_title,
       startup_note,
       vault::vault_tree,
       vault::vault_read,

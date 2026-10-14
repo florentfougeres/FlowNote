@@ -14,6 +14,9 @@ import { deletePage, renamePage, subpagesOf } from "./vault/pageOps";
 import { PageIcon, Sidebar } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
 import { GraphPage } from "./graph/GraphPage";
+import { ReadingView } from "./reading/ReadingView";
+import { AddLinkDialog } from "./reading/AddLinkDialog";
+import { addLink, newReadingList, parseReadingList } from "./reading/readingList";
 import { noteIcon } from "./vault/icon";
 import { setProperty } from "./markdown/frontmatter";
 import type { FrontmatterControl } from "./editor/NoteEditor";
@@ -61,10 +64,13 @@ interface OpenNote {
 const TICKETS_VIEW = "flownote:tickets";
 /** Pseudo-path of the vault graph. */
 const GRAPH_VIEW = "flownote:graph";
+/** Pseudo-path of the reading list view. */
+const READING_VIEW = "flownote:reading";
 /** Views shown in a tab instead of a page. */
 const VIEWS: Record<string, { title: string; icon: IconName }> = {
   [TICKETS_VIEW]: { title: "Tickets", icon: "ticket" },
   [GRAPH_VIEW]: { title: "Graphe", icon: "graph" },
+  [READING_VIEW]: { title: "Lectures", icon: "bookmark" },
 };
 const isView = (path: string | null) => path !== null && path in VIEWS;
 
@@ -108,7 +114,10 @@ export function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [gitChanges, setGitChanges] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
-  const [modal, setModal] = useState<"switcher" | "help" | "settings" | "search" | null>(null);
+  const [modal, setModal] = useState<"switcher" | "help" | "settings" | "search" | "addLink" | null>(null);
+  /** Bumped when a link is added, so the reading list views read it again. */
+  const [readingVersion, setReadingVersion] = useState(0);
+  const [readingThemes, setReadingThemes] = useState<string[]>([]);
   const [findRequest, setFindRequest] = useState<FindRequest | null>(null);
   /** Selected text (one line) used to prefill the find fields. */
   const selectedText = () => {
@@ -476,6 +485,7 @@ export function App() {
       if (target) void switchTab(target.id);
     });
     else if (key === "g" && event.shiftKey) run(() => toggleGit());
+    else if (key === "l" && event.shiftKey) run(() => void openAddLink());
     else if (key === "/") run(() => setModal("help"));
     else if (key === "\\") run(toggleSidebar);
     else if (key === "e" && event.shiftKey && noteRef.current) run(toggleRaw);
@@ -700,6 +710,30 @@ export function App() {
     return found;
   }, [tree]);
 
+  const readingPath = settings.readingList || "Lectures.md";
+  /** "Ajouter un lien": the dialog lists the themes of the reading list. */
+  const openAddLink = async () => {
+    if (!vault) return;
+    const text = await vault.read(readingPath).catch(() => "");
+    setReadingThemes(parseReadingList(text).flatMap((s) => (s.title ? [s.title] : [])));
+    setModal("addLink");
+  };
+  /** Adds a link to the reading list note (created with its first link). */
+  const addReading = async (theme: string | null, title: string, url: string) => {
+    if (!vault) return;
+    const open = noteRef.current?.path === readingPath;
+    if (open) await saveNow();
+    // Created with its first link (a missing file may read as "" in some vaults).
+    if (!filesRef.current.includes(readingPath)) await createFile(readingPath, newReadingList(theme, title, url));
+    else {
+      const text = await vault.read(readingPath);
+      await vault.write(readingPath, addLink(text, theme, title, url), text);
+    }
+    if (open) await reloadFromDisk();
+    setReadingVersion((v) => v + 1);
+    void refreshGit();
+  };
+
   /** Back to the welcome screen: recent vaults, or another folder. */
   const changeVault = () => {
     setModal(null);
@@ -762,7 +796,7 @@ export function App() {
       vaultName={vault.name}
       tree={tree}
       selected={note?.path}
-      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : null}
+      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : null}
       liveIcon={note ? { path: note.path, icon: liveIcon } : undefined}
       gitChanges={vault.git ? gitChanges : null}
       gitOpen={gitOpen}
@@ -776,6 +810,7 @@ export function App() {
       onHome={(newTabRequested) => void (newTabRequested ? newTab(null) : showHome())}
       onTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
       onGraph={(newTabRequested) => void select(GRAPH_VIEW, "push", newTabRequested)}
+      onReading={(newTabRequested) => void select(READING_VIEW, "push", newTabRequested)}
       onGit={() => toggleGit()}
       onSettings={() => setModal("settings")}
       onHelp={() => setModal("help")}
@@ -938,7 +973,17 @@ export function App() {
               </div>
             </>
           ) : (
-            activePath === GRAPH_VIEW ? (
+            activePath === READING_VIEW ? (
+              <ReadingView
+                key={activeTab}
+                vault={vault}
+                path={readingPath}
+                version={readingVersion}
+                onAdd={() => void openAddLink()}
+                onOpenNote={(path, newTabRequested) => void select(path, "push", newTabRequested)}
+                onChanged={() => void refreshGit()}
+              />
+            ) : activePath === GRAPH_VIEW ? (
               <GraphPage key={activeTab} vault={vault} files={files} onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)} />
             ) : activePath === TICKETS_VIEW ? (
               <TicketsView
@@ -965,6 +1010,10 @@ export function App() {
               onSearch={() => setModal("switcher")}
               onOpenTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
               onOpenGraph={(newTabRequested) => void select(GRAPH_VIEW, "push", newTabRequested)}
+              readingList={readingPath}
+              readingVersion={readingVersion}
+              onOpenReading={(newTabRequested) => void select(READING_VIEW, "push", newTabRequested)}
+              onAddLink={() => void openAddLink()}
             />
             )
           )}
@@ -1022,6 +1071,7 @@ export function App() {
         />
       )}
       {modal === "help" && <ShortcutsHelp onClose={() => setModal(null)} />}
+      {modal === "addLink" && <AddLinkDialog themes={readingThemes} fetchTitles={settings.fetchTitles} onAdd={addReading} onClose={() => setModal(null)} />}
       {modal === "settings" && (
         <SettingsDialog
           settings={settings}
