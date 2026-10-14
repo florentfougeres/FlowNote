@@ -1,0 +1,435 @@
+/*
+ * FlowNote theme. Colours follow Apple's system palette (labels, fills,
+ * separators, system blue) in light and dark; typography uses the system font
+ * with size-specific tracking; chrome is made of translucent materials.
+ */
+:root {
+  color-scheme: light dark;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+
+  --bg: #ffffff;
+  --bg-elevated: #ffffff;
+  --text: rgba(0, 0, 0, 0.85);
+  --muted: rgba(0, 0, 0, 0.5);
+  --faint: rgba(0, 0, 0, 0.26);
+  --border: rgba(0, 0, 0, 0.1);
+  --hover: rgba(0, 0, 0, 0.05);
+  --selected: rgba(0, 0, 0, 0.08);
+  --sidebar: rgba(0, 0, 0, 0.035);
+  --accent: #007aff;
+  --accent-soft: rgba(0, 122, 255, 0.1);
+  --accent-line: rgba(0, 122, 255, 0.55);
+  --on-accent: #ffffff;
+  --code-bg: rgba(0, 0, 0, 0.045);
+  --code-text: #c4285a;
+  --highlight: rgba(255, 204, 0, 0.3);
+  --success: #248a3d;
+  --success-bg: rgba(52, 199, 89, 0.12);
+  --success-mark: rgba(52, 199, 89, 0.32);
+  --warning: #a85500;
+  --warning-bg: rgba(255, 149, 0, 0.1);
+  --warning-border: rgba(255, 149, 0, 0.4);
+  --danger: #d70015;
+  --danger-bg: rgba(255, 59, 48, 0.08);
+  --danger-mark: rgba(255, 59, 48, 0.24);
+  --callout-note: #007aff;
+  --callout-tip: #28a745;
+  --callout-warning: #ff9500;
+  --callout-danger: #ff3b30;
+
+  /* Materials: translucent layers over content (backdrop-filter). */
+  --sidebar-material: rgba(244, 244, 246, 0.82);
+  /* Liquid Glass: light catching the edges, soft depth. */
+  --glass-sheen: rgba(255, 255, 255, 0.45);
+  --glass-edge: rgba(255, 255, 255, 0.6);
+  --glass-highlight: rgba(255, 255, 255, 0.9);
+  --glass-outline: rgba(0, 0, 0, 0.08);
+  --glass-shadow: rgba(0, 0, 0, 0.1);
+  --toolbar-material: rgba(255, 255, 255, 0.72);
+  --menu-material: rgba(252, 252, 253, 0.82);
+  --material-blur: blur(24px) saturate(180%);
+  --scrim: rgba(0, 0, 0, 0.18);
+  --shadow-menu: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.14);
+  --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.08), 0 12px 28px rgba(0, 0, 0, 0.16);
+
+  font-family: var(--font-ui);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* Dark palette: applied when the system is dark (unless "light" is forced) or when "dark" is chosen. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1e1e1e;
+    --bg-elevated: #2a2a2c;
+    --text: rgba(255, 255, 255, 0.88);
+    --muted: rgba(255, 255, 255, 0.55);
+    --faint: rgba(255, 255, 255, 0.28);
+    --border: rgba(255, 255, 255, 0.1);
+    --hover: rgba(255, 255, 255, 0.07);
+    --selected: rgba(255, 255, 255, 0.11);
+    --sidebar: rgba(255, 255, 255, 0.04);
+    --accent: #0a84ff;
+    --accent-soft: rgba(10, 132, 255, 0.2);
+    --accent-line: rgba(10, 132, 255, 0.7);
+    --code-bg: rgba(255, 255, 255, 0.07);
+    --code-text: #ff6b8e;
+    --highlight: rgba(255, 214, 10, 0.28);
+    --success: #30d158;
+    --success-bg: rgba(48, 209, 88, 0.14);
+    --success-mark: rgba(48, 209, 88, 0.34);
+    --warning: #ff9f0a;
+    --warning-bg: rgba(255, 159, 10, 0.12);
+    --warning-border: rgba(255, 159, 10, 0.4);
+    --danger: #ff453a;
+    --danger-bg: rgba(255, 69, 58, 0.13);
+    --danger-mark: rgba(255, 69, 58, 0.32);
+    --callout-note: #0a84ff;
+    --callout-tip: #30d158;
+    --callout-warning: #ff9f0a;
+    --callout-danger: #ff453a;
+    --sidebar-material: rgba(38, 38, 40, 0.8);
+    --glass-sheen: rgba(255, 255, 255, 0.07);
+    --glass-edge: rgba(255, 255, 255, 0.1);
+    --glass-highlight: rgba(255, 255, 255, 0.16);
+    --glass-outline: rgba(0, 0, 0, 0.5);
+    --glass-shadow: rgba(0, 0, 0, 0.35);
+    --toolbar-material: rgba(30, 30, 30, 0.72);
+    --menu-material: rgba(44, 44, 46, 0.84);
+    --scrim: rgba(0, 0, 0, 0.4);
+    --shadow-menu: 0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 2px 6px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.5);
+    --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 32px rgba(0, 0, 0, 0.55);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #1e1e1e;
+  --bg-elevated: #2a2a2c;
+  --text: rgba(255, 255, 255, 0.88);
+  --muted: rgba(255, 255, 255, 0.55);
+  --faint: rgba(255, 255, 255, 0.28);
+  --border: rgba(255, 255, 255, 0.1);
+  --hover: rgba(255, 255, 255, 0.07);
+  --selected: rgba(255, 255, 255, 0.11);
+  --sidebar: rgba(255, 255, 255, 0.04);
+  --accent: #0a84ff;
+  --accent-soft: rgba(10, 132, 255, 0.2);
+  --accent-line: rgba(10, 132, 255, 0.7);
+  --code-bg: rgba(255, 255, 255, 0.07);
+  --code-text: #ff6b8e;
+  --highlight: rgba(255, 214, 10, 0.28);
+  --success: #30d158;
+  --success-bg: rgba(48, 209, 88, 0.14);
+  --success-mark: rgba(48, 209, 88, 0.34);
+  --warning: #ff9f0a;
+  --warning-bg: rgba(255, 159, 10, 0.12);
+  --warning-border: rgba(255, 159, 10, 0.4);
+  --danger: #ff453a;
+  --danger-bg: rgba(255, 69, 58, 0.13);
+  --danger-mark: rgba(255, 69, 58, 0.32);
+  --callout-note: #0a84ff;
+  --callout-tip: #30d158;
+  --callout-warning: #ff9f0a;
+  --callout-danger: #ff453a;
+  --sidebar-material: rgba(38, 38, 40, 0.8);
+  --glass-sheen: rgba(255, 255, 255, 0.07);
+  --glass-edge: rgba(255, 255, 255, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.16);
+  --glass-outline: rgba(0, 0, 0, 0.5);
+  --glass-shadow: rgba(0, 0, 0, 0.35);
+  --toolbar-material: rgba(30, 30, 30, 0.72);
+  --menu-material: rgba(44, 44, 46, 0.84);
+  --scrim: rgba(0, 0, 0, 0.4);
+  --shadow-menu: 0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 2px 6px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 32px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* In the desktop app the window itself is transparent; every surface paints its own color. */
+:root.native-vibrancy {
+  background: transparent;
+}
+
+body {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: -0.006em;
+}
+
+button {
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--text);
+  border: 0.5px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: default;
+  box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.06);
+  transition:
+    background-color 120ms ease-out,
+    transform 100ms ease-out;
+}
+
+button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--text));
+}
+
+/* Feedback on press, instantly (not on release). */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button:focus-visible {
+  outline: 3px solid var(--accent-soft);
+  outline-offset: 1px;
+}
+
+button:disabled {
+  opacity: 0.45;
+}
+
+.warning {
+  color: var(--warning);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) auto;
+  height: 100vh;
+}
+
+/*
+ * Floating sidebar in Liquid Glass (macOS 26): a rounded glass panel inset in
+ * its column, on the page color (white or black, like the rest of the app).
+ */
+/* Starts under the toolbar strip, level with the top of the page; the window
+   buttons stay in the strip above it. */
+.sidebar-dock {
+  display: flex;
+  min-height: 0;
+  padding: 52px 0 8px 8px;
+  background: var(--bg);
+}
+
+.sidebar {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, var(--glass-sheen), transparent 38%),
+    var(--sidebar-material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow:
+    inset 0 0 0 0.5px var(--glass-edge),
+    inset 0 1px 0 var(--glass-highlight),
+    0 0 0 0.5px var(--glass-outline),
+    0 6px 24px var(--glass-shadow);
+  overflow: auto;
+  padding: 10px 8px;
+  font-size: 13px;
+  letter-spacing: -0.003em;
+}
+
+.vault-name {
+  font-weight: 600;
+  padding: 4px 8px 10px;
+}
+
+.tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.page-row {
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.page-row:hover,
+.page-row.selected {
+  background: var(--hover);
+}
+
+.page-row.selected .page-name {
+  font-weight: 500;
+}
+
+.page-row button {
+  border: none;
+  background: none;
+  padding: 3px 4px;
+  color: var(--text);
+}
+
+.page-toggle {
+  width: 20px;
+  color: var(--muted) !important;
+  font-size: 11px;
+}
+
+.page-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-icon {
+  margin-right: 6px;
+  font-size: 13px;
+}
+
+.page-add {
+  visibility: hidden;
+  color: var(--muted) !important;
+  width: 22px;
+}
+
+.page-row:hover .page-add {
+  visibility: visible;
+}
+
+.new-page {
+  margin-top: 12px;
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  color: var(--muted);
+  padding: 4px 8px;
+}
+
+.new-page:hover {
+  background: var(--hover);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 18vh;
+  z-index: 200;
+  animation: fade-in 160ms ease-out;
+}
+
+.modal {
+  background: var(--menu-material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  border-radius: 12px;
+  padding: 16px;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow-menu);
+  animation: materialize 200ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.modal input {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.content {
+  overflow: auto;
+  background: var(--bg);
+  position: relative;
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  background: var(--toolbar-material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  font-size: 13px;
+  z-index: 3;
+  user-select: none;
+}
+
+.toolbar .path {
+  color: var(--muted);
+  flex: 1;
+}
+
+.badge {
+  color: var(--success);
+}
+
+.badge.dirty {
+  color: var(--warning);
+}
+
+.status {
+  color: var(--muted);
+}
+
+.empty {
+  color: var(--muted);
+  text-align: center;
+  margin-top: 30vh;
+}
+
+.panes {
+  display: flex;
+  align-items: flex-start;
+}
+
+.page {
+  flex: 1;
+  min-width: 0;
+}
+
+.page-title {
+  display: block;
+  /* Same box as the note column (content width 720px, 32px side padding). */
+  box-sizing: content-box;
+  width: calc(100% - 64px);
+  max-width: 720px;
+  margin: 48px auto 0;
+  padding: 0 32px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 2.5em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.note-editor {
+  position: relative;
+}

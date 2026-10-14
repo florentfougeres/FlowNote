@@ -85,7 +85,9 @@ npm run dev            # version navigateur (Chrome) sur http://localhost:1420
 | --- | --- |
 | `npm test` | Tests unitaires (Vitest) |
 | `npm run typecheck` | Vérification TypeScript |
+| `npm run lint` | Analyse du code (oxlint) |
 | `npm run fidelity -- <vault>` | Vérifie, en lecture seule, que chaque note d'un vault est réécrite à l'identique |
+| `cargo test --manifest-path src-tauri/Cargo.toml` | Tests Rust (fichiers du vault, Git, Grammalecte) |
 | `npm run tauri build` | Construit `FlowNote.app` et le `.dmg` dans `src-tauri/target/release/bundle/` |
 
 ### Architecture

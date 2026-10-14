@@ -23,7 +23,9 @@
  *
  * The file is split in two: the head (front matter + description), edited by
  * the note editor, and the comments section, parsed into a thread. Each part
- * is written back verbatim while unchanged.
+ * is written back verbatim while unchanged; when the thread changes, only the
+ * callouts are rewritten: text around them in the section (an introduction, a
+ * "## Notes" added in Obsidian…) and the line endings are kept.
  */
 
 export const COMMENTS_HEADING = "## Commentaires";
@@ -36,12 +38,24 @@ export interface TicketComment {
   replies: TicketComment[];
 }
 
+/** What surrounds the thread in the comments section, kept when it is rewritten. */
+export interface SectionLayout {
+  /** Lines between the heading and the first comment (usually one blank line). */
+  intro: string[];
+  /** Lines after the last comment, from the line ending it (usually just the final newline). */
+  outro: string[];
+  eol: "\n" | "\r\n";
+}
+
+export const DEFAULT_SECTION_LAYOUT: SectionLayout = { intro: [""], outro: [""], eol: "\n" };
+
 export interface TicketFile {
   /** Front matter and description, edited by the note editor. */
   head: string;
   /** From the "## Commentaires" line to the end (verbatim), "" when there is none. */
   commentsSection: string;
   comments: TicketComment[];
+  layout: SectionLayout;
 }
 
 const FRONTMATTER = /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
@@ -52,17 +66,57 @@ export function isTicketMarkdown(markdown: string): boolean {
   return match !== null && /^type[ \t]*:[ \t]*["']?ticket["']?[ \t]*$/m.test(match[1]);
 }
 
+/** Offset of the "## Commentaires" line, ignoring code blocks; -1 when there is none. */
+function commentsHeadingAt(markdown: string): number {
+  let fence: string | null = null;
+  let offset = 0;
+  for (const line of markdown.split("\n")) {
+    const text = line.replace(/\r$/, "");
+    const marker = /^ {0,3}(`{3,}|~{3,})/.exec(text)?.[1];
+    if (fence) {
+      if (marker && marker[0] === fence[0] && marker.length >= fence.length && text.trim() === marker) fence = null;
+    } else if (marker) {
+      fence = marker;
+    } else if (new RegExp(`^${COMMENTS_HEADING}[ \\t]*$`).test(text)) {
+      return offset;
+    }
+    offset += line.length + 1;
+  }
+  return -1;
+}
+
+const COMMENT_HEADER = /^>[ \t]?\[!comment\]/i;
+
+/** Splits the section into the text around the thread and the thread's lines. */
+function sectionParts(section: string): { layout: SectionLayout; thread: string[] } {
+  const eol = section.includes("\r\n") ? "\r\n" : "\n";
+  const lines = section.split(/\r?\n/).slice(1);
+  const start = lines.findIndex((line) => COMMENT_HEADER.test(line));
+  if (start < 0) {
+    // No comment yet: new ones go after the existing text, one blank line apart.
+    let end = lines.length;
+    while (end > 0 && lines[end - 1].trim() === "") end--;
+    return { layout: { intro: [...lines.slice(0, end), ""], outro: [""], eol }, thread: [] };
+  }
+  // The thread runs over quoted and blank lines, up to the first other line.
+  let end = start;
+  for (let i = start; i < lines.length && (lines[i].trim() === "" || lines[i].startsWith(">")); i++) {
+    if (lines[i].startsWith(">")) end = i + 1;
+  }
+  return { layout: { intro: lines.slice(0, start), outro: lines.slice(end), eol }, thread: lines.slice(start, end) };
+}
+
 export function splitTicket(markdown: string): TicketFile {
-  const at = new RegExp(`^${COMMENTS_HEADING}[ \\t]*$`, "m").exec(markdown);
-  if (!at) return { head: markdown, commentsSection: "", comments: [] };
-  const section = markdown.slice(at.index);
-  return { head: markdown.slice(0, at.index), commentsSection: section, comments: parseComments(section) };
+  const at = commentsHeadingAt(markdown);
+  if (at < 0) return { head: markdown, commentsSection: "", comments: [], layout: DEFAULT_SECTION_LAYOUT };
+  const section = markdown.slice(at);
+  const { layout, thread } = sectionParts(section);
+  return { head: markdown.slice(0, at), commentsSection: section, comments: parseLevel(thread, 1), layout };
 }
 
 /** Comments of the section: `> [!comment] date` callouts, replies nested one level deeper. */
 export function parseComments(section: string): TicketComment[] {
-  const lines = section.replace(/\r\n/g, "\n").split("\n").slice(1);
-  return parseLevel(lines, 1);
+  return parseLevel(sectionParts(section).thread, 1);
 }
 
 function depthOf(line: string): number {
@@ -99,12 +153,14 @@ function parseLevel(lines: string[], depth: number): TicketComment[] {
     }
     if (!current) continue;
     if (d > depth) {
-      // A reply starts with its own [!comment] header one level deeper.
-      if (/^\[!comment\]/i.test(unquote(line, depth + 1).trim()) || !replyBlock) {
+      // A reply starts with its own [!comment] header one level deeper; other
+      // deeper lines (a quote or a callout written in the comment) are its text.
+      if (/^\[!comment\]/i.test(unquote(line, depth + 1).trim())) {
         replyBlock = [];
         current.nested.push(replyBlock);
       }
-      replyBlock.push(line);
+      if (replyBlock) replyBlock.push(line);
+      else current.body.push(inner);
       continue;
     }
     replyBlock = null;
@@ -127,16 +183,22 @@ function serializeComment(comment: TicketComment, depth: number): string[] {
   return lines;
 }
 
-/** The comments section for a thread (regenerated only when the thread changes). */
-export function serializeComments(comments: TicketComment[]): string {
-  if (comments.length === 0) return "";
-  return `${COMMENTS_HEADING}\n\n${comments.map((c) => serializeComment(c, 1).join("\n")).join("\n\n")}\n`;
+/**
+ * The comments section for a thread (regenerated only when the thread changes),
+ * keeping the text around the thread. "" when nothing is left in the section.
+ */
+export function serializeComments(comments: TicketComment[], layout: SectionLayout = DEFAULT_SECTION_LAYOUT): string {
+  const blank = (lines: string[]) => lines.every((line) => line.trim() === "");
+  if (comments.length === 0 && blank(layout.intro) && blank(layout.outro)) return "";
+  const thread = comments.flatMap((c, i) => [...(i > 0 ? [""] : []), ...serializeComment(c, 1)]);
+  return [COMMENTS_HEADING, ...layout.intro, ...thread, ...layout.outro].join(layout.eol);
 }
 
 /** Joins the head and a comments section, with a blank line between them. */
 export function joinTicket(head: string, commentsSection: string): string {
   if (!commentsSection) return head;
-  const separator = head === "" || head.endsWith("\n\n") ? "" : head.endsWith("\n") ? "\n" : "\n\n";
+  const eol = head.includes("\r\n") || commentsSection.includes("\r\n") ? "\r\n" : "\n";
+  const separator = head === "" || head.endsWith(eol + eol) ? "" : head.endsWith(eol) ? eol : eol + eol;
   return `${head}${separator}${commentsSection}`;
 }
 
@@ -152,10 +214,13 @@ export function isoMinute(date = new Date()): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-/** Next ticket number: one more than the highest "<n> - " file name in the folder. */
-export function nextTicketId(files: string[], folder: string): number {
+/**
+ * Next ticket number: one more than the highest "<n> - " file name in the folder
+ * and the highest `id` already used (tickets renamed or created elsewhere).
+ */
+export function nextTicketId(files: string[], folder: string, usedIds: number[] = []): number {
   const prefix = folder ? `${folder}/` : "";
-  let max = 0;
+  let max = Math.max(0, ...usedIds.filter(Number.isFinite));
   for (const file of files) {
     if (!file.startsWith(prefix)) continue;
     const match = /^(\d+) - /.exec(file.slice(prefix.length));

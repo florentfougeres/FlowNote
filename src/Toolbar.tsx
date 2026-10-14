@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { keys } from "./keys";
 import { Icon, type IconName } from "./Icon";
 
 /**
@@ -22,7 +23,7 @@ export function ToolButton({
   badge?: number;
 }) {
   return (
-    <button className={active ? "tool-button active" : "tool-button"} onClick={onClick} disabled={disabled} title={label} aria-label={label} aria-pressed={active}>
+    <button className={active ? "tool-button active" : "tool-button"} onClick={onClick} disabled={disabled} title={keys(label)} aria-label={keys(label)} aria-pressed={active}>
       <Icon name={icon} />
       {badge ? <span className="tool-badge">{badge > 99 ? "99+" : badge}</span> : null}
     </button>

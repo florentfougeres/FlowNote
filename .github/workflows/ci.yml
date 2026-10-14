@@ -1,0 +1,49 @@
+# Tests on every push and pull request; also run by the release workflow
+# before building.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test # includes the Markdown fidelity check over fixtures/vault
+
+  # Rust commands (vault files, Git, Grammalecte). On Linux, which also checks
+  # that the Linux-only code compiles.
+  rust:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.13.0"
+      - run: npm ci
+      # The Tauri build needs the frontend and the Grammalecte companion.
+      - run: ./scripts/build-grammar.sh && npm run build
+      - run: cargo test --manifest-path src-tauri/Cargo.toml

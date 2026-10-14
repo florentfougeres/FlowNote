@@ -1,4 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from "react";
+import { keys } from "./keys";
 import type { Editor } from "@tiptap/core";
 import { clearFind, findKey, findState, findStep, replaceAll, replaceCurrent, selectCurrent, setFindQuery } from "./editor/find";
 import { Icon } from "./Icon";
@@ -69,7 +70,7 @@ export function FindBar({ editor, request, onClose }: { editor: Editor | null; r
     <div className="find-bar-anchor">
       <div className="find-bar" role="search" onKeyDown={(e) => e.key === "Escape" && (e.preventDefault(), close(true))}>
         <div className="find-row">
-          <button className="find-toggle" onClick={() => setShowReplace(!showReplace)} aria-label="Remplacer" aria-expanded={showReplace} title="Remplacer (⌘⌥F)">
+          <button className="find-toggle" onClick={() => setShowReplace(!showReplace)} aria-label="Remplacer" aria-expanded={showReplace} title={keys("Remplacer (⌘⌥F)")}>
             <Icon name={showReplace ? "chevronDown" : "chevronRight"} size={12} />
           </button>
           <input
@@ -117,7 +118,7 @@ export function FindBar({ editor, request, onClose }: { editor: Editor | null; r
             <button className="find-text" onClick={() => live && replaceCurrent(live.view, replacement)} disabled={!total || !live?.isEditable} title="Remplacer (↵)">
               Remplacer
             </button>
-            <button className="find-text" onClick={() => live && replaceAll(live.view, replacement)} disabled={!total || !live?.isEditable} title="Tout remplacer (⌘↵)">
+            <button className="find-text" onClick={() => live && replaceAll(live.view, replacement)} disabled={!total || !live?.isEditable} title={keys("Tout remplacer (⌘↵)")}>
               Tout
             </button>
           </div>

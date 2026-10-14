@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { keys } from "./keys";
 import { NoteEditor } from "./editor/NoteEditor";
 import { imageMime, type VaultBridge } from "./editor/bridge";
 import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
 import { DRAWING_SUFFIX, isDrawingPath, newDrawingFile } from "./drawing/format";
-import { demoDrawing } from "./drawing/demo";
-import { DrawingEditor, type DrawingControls, type DrawingTool } from "./drawing/DrawingEditor";
+import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
+import { DRAWING_TOOLS } from "./drawing/tools";
 import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
@@ -18,13 +19,15 @@ import { OutlinePanel } from "./OutlinePanel";
 import { RawEditor } from "./RawEditor";
 import { FindBar, type FindRequest } from "./FindBar";
 import { VaultSearch } from "./VaultSearch";
-import { setGrammarChecker, setSystemSpellcheck, type ParagraphResult } from "./editor/grammar";
+import { useSpellChecking } from "./editor/useSpellChecking";
 import type { Editor } from "@tiptap/core";
-import { Icon, type IconName } from "./Icon";
 import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
 import { DEFAULT_CONFIG, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
-import { FULL_NOTE } from "./markdown/fixtures";
+import { DEMO_FILES, DEMO_REMOTE } from "./demo";
+import { GitDrawer, useGitDrawer } from "./GitDrawer";
+import { usePersistentFlag } from "./hooks/usePersistentFlag";
+import { useSystemDark } from "./hooks/useSystemDark";
 import { hasConflictMarkers } from "./vault/conflicts";
 import { forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
 import { Welcome } from "./Welcome";
@@ -33,11 +36,9 @@ import { Dashboard } from "./Dashboard";
 import { TicketView } from "./ticket/TicketView";
 import { TicketsView } from "./ticket/TicketsView";
 import { isTicketMarkdown, newTicketFile, nextTicketId } from "./ticket/format";
+import { ticketInfo } from "./ticket/agenda";
 import { moveRecentPage, recordRecentPage } from "./dashboard/recents";
 import { invoke } from "@tauri-apps/api/core";
-
-/** Narrowest Git panel, also its default width. */
-const GIT_MIN_WIDTH = 300;
 
 interface OpenNote {
   path: string;
@@ -57,21 +58,6 @@ const TICKETS_VIEW = "flownote:tickets";
 let tabCounter = 0;
 const newTabId = () => `tab-${Date.now().toString(36)}-${(tabCounter++).toString(36)}`;
 
-/** Drawing tools of the toolbar: Excalidraw tool, icon, label with its shortcut. */
-const DRAWING_TOOLS: [DrawingTool, IconName, string][] = [
-  ["selection", "pointer", "Sélection (V)"],
-  ["hand", "hand", "Déplacer la vue (H)"],
-  ["rectangle", "rectangle", "Rectangle (R)"],
-  ["diamond", "diamond", "Losange (D)"],
-  ["ellipse", "ellipse", "Ellipse (O)"],
-  ["arrow", "arrow", "Flèche (A)"],
-  ["line", "line", "Trait (L)"],
-  ["freedraw", "pencil", "Crayon (P)"],
-  ["text", "text", "Texte (T)"],
-  ["image", "image", "Image (9)"],
-  ["eraser", "eraser", "Gomme (E)"],
-];
-
 interface Dialog {
   title: string;
   initial: string;
@@ -90,17 +76,6 @@ interface Confirm {
 
 const AUTOSAVE_DELAY_MS = 700;
 
-/** The simulated remote changed the same line of "Projets.md": edit it locally, commit, then pull to see a conflict. */
-const DEMO_REMOTE = { "Projets.md": "# Projets\n\n[[Mon Notion]] — modifié sur un autre ordinateur\n" };
-
-const DEMO_FILES = {
-  "Exemple.md": FULL_NOTE,
-  "Projets.md": "# Projets\n\n[[Mon Notion]]\n",
-  "Projets/Mon Notion.md": "Une sous-page de [[Projets]].\n",
-  "Croquis.excalidraw.md": demoDrawing(),
-  "Tickets/1 - Exporter en PDF.md": `---\ntype: ticket\nid: 1\nstatus: open\ntags: [idée, export]\ndue: ${new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10)}\ncreated: 2026-10-14T09:00\n---\n\nPouvoir exporter une note en PDF depuis la barre d'outils.\n\n- [x] Regarder les options d'impression\n- [ ] Choisir une mise en page 📅 ${new Date().toISOString().slice(0, 10)}\n\n## Commentaires\n\n> [!comment] 14/10/2026 09:12\n> Bonne idée, à prévoir pour la prochaine version.\n>\n> > [!comment] 14/10/2026 10:30\n> > Il faudra garder les callouts en couleur.\n`,
-};
-
 export function App() {
   const [vault, setVault] = useState<Vault | null>(null);
   const [tree, setTree] = useState<VaultEntry[]>([]);
@@ -117,9 +92,6 @@ export function App() {
   };
   const [status, setStatus] = useState("");
   const [dialog, setDialog] = useState<Dialog | null>(null);
-  // The Git drawer stays mounted while it slides out, so it leaves the way it came in.
-  const [gitOpen, setGitOpen] = useState(false);
-  const [gitMounted, setGitMounted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [gitChanges, setGitChanges] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
@@ -137,52 +109,21 @@ export function App() {
     setFindRequest((previous) => ({ query: selectedText() || previous?.query || "", replace, nonce: Date.now() }));
   const [settings, setSettings] = useState<Settings>(loadSettings);
   /** Toolbar switch: pauses the checker chosen in the settings without changing it. */
-  const [spellingOn, setSpellingOn] = useState(() => {
-    try {
-      return localStorage.getItem("flownote:spelling") !== "off";
-    } catch {
-      return true;
-    }
-  });
-  const toggleSpelling = () =>
-    setSpellingOn((on) => {
-      try {
-        localStorage.setItem("flownote:spelling", on ? "off" : "on");
-      } catch {
-        // The choice simply won't persist.
-      }
-      return !on;
-    });
-  useEffect(() => {
-    const spellChecker = spellingOn ? settings.spellChecker : "off";
-    const grammalecte = isTauri() && spellChecker === "grammalecte";
-    setGrammarChecker(grammalecte ? (paragraphs) => invoke<ParagraphResult[]>("grammar_check", { paragraphs }) : null);
-    // Outside the desktop app, the Grammalecte choice falls back to the system checker.
-    setSystemSpellcheck(spellChecker === "system" || (spellChecker === "grammalecte" && !isTauri()));
-  }, [settings.spellChecker, spellingOn]);
+  const [spellingOn, toggleSpelling] = useSpellChecking(settings.spellChecker);
   const [pendingOpen, setPendingOpen] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [drawingControls, setDrawingControls] = useState<DrawingControls | null>(null);
   const [drawingTool, setDrawingTool] = useState("selection");
   /** Light or dark, as displayed (the "system" setting follows macOS). */
-  const [systemDark, setSystemDark] = useState(() => matchMedia("(prefers-color-scheme: dark)").matches);
-  useEffect(() => {
-    const media = matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => setSystemDark(media.matches);
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, []);
+  const systemDark = useSystemDark();
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
-  const [showOutline, setShowOutline] = useState(() => {
-    try {
-      return localStorage.getItem("flownote:outline") === "shown";
-    } catch {
-      return false;
-    }
-  });
+  const [showOutline, setShowOutline] = usePersistentFlag("flownote:outline", false, ["shown", "hidden"]);
   /** Outline set aside while the Git panel is open (the preference is kept). */
   const [outlineHidden, setOutlineHidden] = useState(false);
+  // Git and the outline share the right edge: Git takes the place.
+  const gitDrawer = useGitDrawer(() => setOutlineHidden(true));
+  const { open: gitOpen, toggle: toggleGit } = gitDrawer;
   useEffect(() => {
     if (!gitOpen) setOutlineHidden(false);
   }, [gitOpen]);
@@ -195,32 +136,10 @@ export function App() {
       return;
     }
     if (!showOutline) toggleGit(false);
-    setShowOutline((shown) => {
-      try {
-        localStorage.setItem("flownote:outline", shown ? "hidden" : "shown");
-      } catch {
-        // not remembered
-      }
-      return !shown;
-    });
+    setShowOutline((shown) => !shown);
   };
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    try {
-      return localStorage.getItem("flownote:sidebar") !== "hidden";
-    } catch {
-      return true;
-    }
-  });
-  const toggleSidebar = useCallback(() => {
-    setSidebarOpen((open) => {
-      try {
-        localStorage.setItem("flownote:sidebar", open ? "hidden" : "shown");
-      } catch {
-        // not remembered
-      }
-      return !open;
-    });
-  }, []);
+  const [sidebarOpen, setSidebarOpen] = usePersistentFlag("flownote:sidebar", true, ["shown", "hidden"]);
+  const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [setSidebarOpen]);
   useEffect(() => applyTheme(settings.theme), [settings.theme]);
   // The macOS window is transparent so the sidebar can show the native material
   // (on Linux the window is opaque, with the system title bar).
@@ -228,49 +147,6 @@ export function App() {
     document.documentElement.classList.toggle("native-vibrancy", isTauri() && navigator.userAgent.includes("Mac"));
   }, []);
 
-  const [gitWidth, setGitWidth] = useState(() => {
-    try {
-      return Number(localStorage.getItem("flownote:git-width")) || GIT_MIN_WIDTH;
-    } catch {
-      return GIT_MIN_WIDTH;
-    }
-  });
-  const [resizingGit, setResizingGit] = useState(false);
-  /** Drag on the drawer's left edge; the width is remembered. */
-  const startGitResize = (event: React.PointerEvent) => {
-    event.preventDefault();
-    const startX = event.clientX;
-    const startWidth = gitWidth;
-    let width = startWidth;
-    setResizingGit(true);
-    const move = (e: PointerEvent) => {
-      width = Math.round(Math.min(Math.max(startX - e.clientX + startWidth, GIT_MIN_WIDTH), window.innerWidth * 0.7));
-      setGitWidth(width);
-    };
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      setResizingGit(false);
-      try {
-        localStorage.setItem("flownote:git-width", String(width));
-      } catch {
-        // not remembered
-      }
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-  };
-  const gitOpenRef = useRef(false);
-  const toggleGit = useCallback((open?: boolean) => {
-    const next = open ?? !gitOpenRef.current;
-    gitOpenRef.current = next;
-    if (!next) return setGitOpen(false);
-    // Git and the outline share the right edge: Git takes the place.
-    setOutlineHidden(true);
-    // Mount closed, then open on the next frame so the drawer slides in.
-    setGitMounted(true);
-    requestAnimationFrame(() => requestAnimationFrame(() => gitOpenRef.current && setGitOpen(true)));
-  }, []);
   // Visited pages of the active tab, for back/forward navigation.
   const back = useRef<string[]>([]);
   const forward = useRef<string[]>([]);
@@ -730,7 +606,9 @@ export function App() {
     }
     const title = sanitizeName(name) || "Sans titre";
     // Tickets go to their folder, numbered: "Tickets/12 - Titre.md".
-    const ticketId = kind === "ticket" ? nextTicketId(filesRef.current, settings.ticketsFolder) : 0;
+    const usedIds =
+      kind === "ticket" ? await Promise.all([...ticketPaths].map((p) => vault.read(p).then((text) => ticketInfo(p, text).id ?? 0, () => 0))) : [];
+    const ticketId = kind === "ticket" ? nextTicketId(filesRef.current, settings.ticketsFolder, usedIds) : 0;
     const path =
       kind === "ticket"
         ? uniquePath(settings.ticketsFolder, `${ticketId} - ${title}.md`, filesRef.current)
@@ -783,6 +661,8 @@ export function App() {
     return found;
   }, [tree]);
 
+  const saveState = <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : keys("Non enregistré · ⌘S")) : "Enregistré"}</span>;
+
   if (!vault) {
     return (
       <Welcome
@@ -828,7 +708,7 @@ export function App() {
               {drawing && note && (
                 <>
                   <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} />
-                  <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : "Non enregistré · ⌘S") : "Enregistré"}</span>
+                  {saveState}
                 </>
               )}
             </>
@@ -845,7 +725,7 @@ export function App() {
             ) : note ? (
               <>
                 <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} />
-                <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : "Non enregistré · ⌘S") : "Enregistré"}</span>
+                {saveState}
                 {status && <span className="status warning">{status}</span>}
               </>
             ) : (
@@ -961,48 +841,32 @@ export function App() {
           )
         )}
       </main>
-      {gitMounted && vault.git && (
-        <aside
-          className={`git-drawer${gitOpen ? " open" : ""}${resizingGit ? " resizing" : ""}`}
-          style={{ width: gitOpen ? gitWidth : 0 }}
-          aria-label="Gestionnaire Git"
-          onTransitionEnd={(e) => e.target === e.currentTarget && !gitOpen && setGitMounted(false)}
-        >
-          <div className="git-drawer-resize" onPointerDown={startGitResize} role="separator" aria-orientation="vertical" aria-label="Redimensionner le panneau Git" />
-          <div className="git-drawer-inner" style={{ width: gitWidth }}>
-          <div className="git-drawer-header">
-            <span>Git</span>
-            <button onClick={() => toggleGit(false)} aria-label="Fermer le panneau Git" title="Fermer (⌘⇧G)">
-              <Icon name="close" size={14} />
-            </button>
-          </div>
-          <div className="git-drawer-body">
-            <GitPanel
-              git={vault.git}
-              beforeCommit={saveNow}
-              onOpenNote={(path) => void select(path)}
-              onChanged={() => {
-                void refreshGit();
-                void refresh(vault);
-              }}
-              onPulled={() => {
-                void refresh(vault);
-                void reloadFromDisk();
-              }}
-              onDiscarded={(paths) => {
-                void refresh(vault);
-                const current = noteRef.current;
-                if (!current || !paths.includes(current.path)) return;
-                // A new note sent to the trash is closed; a modified one shows its restored version.
-                void vault.read(current.path).then(
-                  () => reloadFromDisk(true),
-                  () => setNote(null),
-                );
-              }}
-            />
-          </div>
-          </div>
-        </aside>
+      {vault.git && (
+        <GitDrawer drawer={gitDrawer}>
+          <GitPanel
+            git={vault.git}
+            beforeCommit={saveNow}
+            onOpenNote={(path) => void select(path)}
+            onChanged={() => {
+              void refreshGit();
+              void refresh(vault);
+            }}
+            onPulled={() => {
+              void refresh(vault);
+              void reloadFromDisk();
+            }}
+            onDiscarded={(paths) => {
+              void refresh(vault);
+              const current = noteRef.current;
+              if (!current || !paths.includes(current.path)) return;
+              // A new note sent to the trash is closed; a modified one shows its restored version.
+              void vault.read(current.path).then(
+                () => reloadFromDisk(true),
+                () => setNote(null),
+              );
+            }}
+          />
+        </GitDrawer>
       )}
       {confirm && (
         <ConfirmDialog

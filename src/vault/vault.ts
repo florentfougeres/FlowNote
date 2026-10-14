@@ -203,7 +203,8 @@ export function createMemoryVault(name: string, files: Record<string, string | U
       }
     },
     remove: async (path) => {
-      for (const key of [...contents.keys()]) if (key === path || key.startsWith(`${path}/`)) contents.delete(key);
+      // Deleting entries while iterating a Map is well defined.
+      for (const key of contents.keys()) if (key === path || key.startsWith(`${path}/`)) contents.delete(key);
     },
   };
 }

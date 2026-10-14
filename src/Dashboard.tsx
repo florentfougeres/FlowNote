@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { keys } from "./keys";
 import { Icon, type IconName } from "./Icon";
 import type { Vault } from "./vault/vault";
 import type { GitCommit, GitStatus } from "./vault/git";
@@ -143,7 +144,7 @@ export function Dashboard({
           </p>
         </div>
         <button className="dash-search" onClick={onSearch}>
-          <Icon name="search" size={14} /> Rechercher une page <kbd>⌘P</kbd>
+          <Icon name="search" size={14} /> Rechercher une page <kbd>{keys("⌘P")}</kbd>
         </button>
       </header>
 

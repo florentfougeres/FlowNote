@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { keys } from "../keys";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
 import { Selection, TextSelection } from "@tiptap/pm/state";
@@ -268,7 +269,7 @@ function BlockMenu({ editor, block, x, y, onClose }: { editor: Editor; block: Bl
         Supprimer <kbd>Suppr</kbd>
       </button>
       <button onClick={() => run(() => editor.view.dispatch(duplicateBlock(editor.state, block)))}>
-        Dupliquer <kbd>⌘D</kbd>
+        Dupliquer <kbd>{keys("⌘D")}</kbd>
       </button>
       <button
         onClick={() =>
@@ -279,7 +280,7 @@ function BlockMenu({ editor, block, x, y, onClose }: { editor: Editor; block: Bl
           })
         }
       >
-        Monter <kbd>⌘⇧↑</kbd>
+        Monter <kbd>{keys("⌘⇧↑")}</kbd>
       </button>
       <button
         onClick={() =>
@@ -290,7 +291,7 @@ function BlockMenu({ editor, block, x, y, onClose }: { editor: Editor; block: Bl
           })
         }
       >
-        Descendre <kbd>⌘⇧↓</kbd>
+        Descendre <kbd>{keys("⌘⇧↓")}</kbd>
       </button>
       <button onClick={() => setTurnOpen(!turnOpen)}>Transformer en {turnOpen ? "▾" : "▸"}</button>
       {turnOpen && (

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { keys } from "./keys";
 import { Icon, type IconName } from "./Icon";
 
 export interface Tab {
@@ -82,7 +83,7 @@ export function TabBar({
             <button
               className="tab-close"
               aria-label={`Fermer ${title}`}
-              title="Fermer (⌘W)"
+              title={keys("Fermer (⌘W)")}
               onMouseDown={(event) => event.stopPropagation()}
               onClick={(event) => {
                 event.stopPropagation();
@@ -108,7 +109,7 @@ export function TabBar({
           setOver(null);
         }}
       >
-        <button className="tab-new" onClick={onNew} aria-label="Nouvel onglet" title="Nouvel onglet (⌘T)">
+        <button className="tab-new" onClick={onNew} aria-label="Nouvel onglet" title={keys("Nouvel onglet (⌘T)")}>
           <Icon name="plus" size={13} />
         </button>
       </div>

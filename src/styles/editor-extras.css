@@ -1,0 +1,276 @@
+/* ---- Table handles ---- */
+
+.table-grip,
+.table-add {
+  position: fixed;
+  z-index: 35;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: var(--bg-elevated);
+  border: 0.5px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 5px;
+  cursor: pointer;
+  animation: handle-in 120ms ease-out;
+}
+
+.table-grip.col {
+  width: 24px;
+  height: 18px;
+}
+
+.table-grip.row {
+  width: 18px;
+  height: 24px;
+}
+
+.table-grip:hover,
+.table-grip.open {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.table-add {
+  color: var(--faint);
+  background: transparent;
+  border-color: transparent;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.55;
+}
+
+.table-add.row {
+  height: 16px;
+}
+
+.table-add.col {
+  width: 16px;
+}
+
+.table-add:hover {
+  opacity: 1;
+  color: var(--text);
+  background: var(--hover);
+}
+
+.table-handle-menu {
+  min-width: 220px;
+}
+
+.table-handle-menu button:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.table-handle-menu button.danger {
+  color: var(--danger);
+}
+
+.table-handle-menu button.active {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+@keyframes handle-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-grip,
+  .table-add {
+    animation: none;
+  }
+}
+
+/* ---- Mermaid ---- */
+
+.code-block:not(.is-mermaid) .mermaid-preview {
+  display: none;
+}
+
+/* Diagram only, until the cursor enters the block. */
+.code-block.is-mermaid:not(.editing) pre {
+  display: none;
+}
+
+.code-block.is-mermaid:not(.editing) {
+  background: transparent;
+}
+
+.code-block.is-mermaid:not(.editing) .code-header {
+  opacity: 0;
+}
+
+.code-block.is-mermaid:not(.editing):hover .code-header {
+  opacity: 1;
+}
+
+.mermaid-preview {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  cursor: text;
+  overflow-x: auto;
+}
+
+.code-block.is-mermaid.editing .mermaid-preview {
+  border-top: 0.5px solid var(--border);
+}
+
+.mermaid-preview svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-empty,
+.mermaid-error {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px;
+}
+
+.mermaid-error {
+  color: var(--danger);
+}
+
+/* ---- Emoji shortcodes (:warning:) shown as emoji ---- */
+
+.emoji-shortcode-source {
+  display: none;
+}
+
+.emoji-shortcode {
+  font-style: normal;
+}
+
+/* ---- Callout type picker ---- */
+
+.callout-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.callout-picker {
+  width: 300px;
+  max-height: 360px;
+  display: flex;
+  flex-direction: column;
+}
+
+.callout-picker input {
+  font-size: 13px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  outline: none;
+}
+
+.callout-picker-list {
+  overflow-y: auto;
+}
+
+.callout-picker-list button {
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start !important;
+}
+
+.callout-picker-list button.active {
+  background: var(--hover);
+}
+
+.callout-picker-list kbd {
+  margin-left: auto;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.callout-picker-icon {
+  display: flex;
+  flex: none;
+}
+
+.callout-picker-empty {
+  padding: 6px 8px;
+  color: var(--muted);
+}
+
+/* Default callout title (the type, as Obsidian shows it), in the callout's color. */
+.note .callout-title.is-empty::before {
+  color: var(--callout);
+  opacity: 0.75;
+}
+
+/* ---- Grammar and spelling (Grammalecte) ---- */
+
+.note .gc-error {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+  cursor: pointer;
+}
+
+.note .gc-spelling {
+  text-decoration-color: var(--danger);
+}
+
+.note .gc-grammar {
+  text-decoration-color: var(--accent);
+}
+
+.grammar-popover {
+  width: 280px;
+  min-width: 0;
+}
+
+.grammar-message {
+  padding: 4px 8px 8px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.grammar-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 8px 8px;
+}
+
+.grammar-popover .grammar-suggestion {
+  width: auto;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.grammar-popover .grammar-suggestion:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* A setting whose control sits under its label, with an explanation below. */
+.setting.setting-column {
+  flex-wrap: wrap;
+}
+
+.setting.setting-column > small {
+  flex-basis: 100%;
+  margin-top: -2px;
+}

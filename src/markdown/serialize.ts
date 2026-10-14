@@ -386,7 +386,7 @@ function codeSpan(text: string, preferredTicks: number): string {
   let ticks = Math.max(1, preferredTicks);
   while (runs.has(ticks)) ticks++;
   const fence = "`".repeat(ticks);
-  const pad = /^`|`$/.test(text) || (/^ /.test(text) && / $/.test(text) && text.trim() !== "") ? " " : "";
+  const pad = /^`|`$/.test(text) || (text.startsWith(" ") && text.endsWith(" ") && text.trim() !== "") ? " " : "";
   return `${fence}${pad}${text}${pad}${fence}`;
 }
 

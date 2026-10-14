@@ -1,3 +1,5 @@
+import { keys } from "./keys";
+
 export type Theme = "system" | "light" | "dark";
 /** Grammalecte (desktop app), the system's spell checker, or none. */
 export type SpellChecker = "grammalecte" | "system" | "off";
@@ -102,7 +104,7 @@ export function SettingsDialog({
           <input type="checkbox" checked={settings.autosave} onChange={(e) => onChange({ ...settings, autosave: e.target.checked })} />
           <span>
             Enregistrement automatique
-            <small>Sinon, enregistrez avec ⌘S. Les modifications en attente sont enregistrées avant de changer de page.</small>
+            <small>{keys("Sinon, enregistrez avec ⌘S. Les modifications en attente sont enregistrées avant de changer de page.")}</small>
           </span>
         </label>
         <div className="setting setting-column">

@@ -472,12 +472,21 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let root = dir.to_string_lossy().into_owned();
-        for args in [vec!["init", "-q", "-b", "main"], vec!["config", "user.email", "test@example.com"], vec!["config", "user.name", "Test"]] {
-            let mut cmd = git(&root);
+        let mut cmd = git(&root);
+        cmd.args(["init", "-q", "-b", "main"]);
+        run(cmd, None, &[]).unwrap();
+        configure(&root);
+        (dir, root)
+    }
+
+    /// Test identity, and no commit signing: the developer's global config may
+    /// sign with GPG, which fails when tests commit in parallel.
+    fn configure(root: &str) {
+        for args in [["config", "user.email", "test@example.com"], ["config", "user.name", "Test"], ["config", "commit.gpgsign", "false"], ["config", "tag.gpgsign", "false"]] {
+            let mut cmd = git(root);
             cmd.args(args);
             run(cmd, None, &[]).unwrap();
         }
-        (dir, root)
     }
 
     #[test]
@@ -603,11 +612,7 @@ mod tests {
         cmd.args(["clone", "-q", &remote, clone_dir.to_str().unwrap()]);
         run(cmd, None, &[]).unwrap();
         let clone = clone_dir.to_string_lossy().into_owned();
-        for args in [["config", "user.email", "test@example.com"], ["config", "user.name", "Test"]] {
-            let mut cmd = git(&clone);
-            cmd.args(args);
-            run(cmd, None, &[]).unwrap();
-        }
+        configure(&clone);
         // Accept pushes to the checked-out branch of the non-bare test remote.
         let mut cmd = git(&remote);
         cmd.args(["config", "receive.denyCurrentBranch", "updateInstead"]);

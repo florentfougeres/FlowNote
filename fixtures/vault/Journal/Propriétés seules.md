@@ -1,0 +1,3 @@
+---
+title: Seulement des propriétés
+---

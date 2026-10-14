@@ -1,3 +1,5 @@
+import { keys } from "./keys";
+
 const SHORTCUTS: [string, string][] = [
   ["⌘P / ⌘K", "Rechercher une page"],
   ["⌘N", "Nouvelle page"],
@@ -37,10 +39,10 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
         </header>
         <table>
           <tbody>
-            {SHORTCUTS.map(([keys, label]) => (
-              <tr key={keys}>
+            {SHORTCUTS.map(([shortcut, label]) => (
+              <tr key={shortcut}>
                 <td>
-                  <kbd>{keys}</kbd>
+                  <kbd>{keys(shortcut)}</kbd>
                 </td>
                 <td>{label}</td>
               </tr>

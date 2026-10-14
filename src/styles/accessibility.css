@@ -1,0 +1,151 @@
+/* ---- Accessibility preferences ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .slash-menu,
+  .block-menu,
+  .modal {
+    animation: fade-in 150ms ease-out;
+  }
+
+  .git-drawer {
+    transition: none;
+  }
+
+  button:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --sidebar-material: #f4f4f6;
+    --toolbar-material: var(--bg);
+    --menu-material: var(--bg-elevated);
+    --material-blur: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sidebar-material: #262628;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: rgba(0, 0, 0, 0.35);
+    --muted: rgba(0, 0, 0, 0.7);
+    --toolbar-material: var(--bg);
+    --menu-material: var(--bg-elevated);
+  }
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--hover);
+}
+
+.segmented button {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 3px 12px;
+  border-radius: 6px;
+}
+
+.segmented button.selected {
+  background: var(--bg-elevated);
+  box-shadow: 0 0.5px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* A dropped block glows briefly where it landed. */
+.just-dropped {
+  animation: dropped 700ms ease-out;
+  border-radius: 6px;
+}
+
+@keyframes dropped {
+  from {
+    background-color: var(--accent-soft);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .just-dropped {
+    animation: none;
+  }
+}
+
+/* Desktop app: the title bar overlays the window; traffic lights sit in the sidebar. */
+/* Plain controls: list rows, toolbar icons, menu items — no bezel, a fill on hover. */
+.page-row button,
+.new-page,
+.sidebar-search,
+.sidebar-header button,
+.help-button,
+.git-button,
+.toolbar .nav,
+.block-handle button,
+.slash-item,
+.block-menu button,
+.history-panel > header button,
+.git-drawer-header button,
+.modal-header button,
+.callout-fold,
+.segmented button {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.page-row button:hover:not(:disabled),
+.new-page:hover,
+.sidebar-search:hover,
+.sidebar-header button:hover,
+.help-button:hover,
+.git-button:hover,
+.toolbar .nav:hover:not(:disabled),
+.block-handle button:hover,
+.block-menu button:hover,
+.history-panel > header button:hover,
+.git-drawer-header button:hover,
+.modal-header button:hover {
+  background: var(--hover);
+}
+
+.page-row:hover .page-name:hover,
+.page-row.selected button:hover {
+  background: transparent;
+}
+
+.slash-item.active,
+.segmented button.selected {
+  background: var(--selected);
+}
+
+.segmented button.selected {
+  background: var(--bg-elevated);
+  box-shadow: 0 0.5px 2px rgba(0, 0, 0, 0.15);
+}
+
+.crash {
+  max-width: 760px;
+  margin: 12vh auto;
+  padding: 0 24px;
+  background: var(--bg);
+}
+
+.crash pre {
+  white-space: pre-wrap;
+  font: 12px/1.5 var(--font-mono);
+  background: var(--code-bg);
+  padding: 12px;
+  border-radius: 8px;
+  max-height: 40vh;
+  overflow: auto;
+}

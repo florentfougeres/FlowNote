@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { keys } from "./keys";
 import type { VaultEntry } from "./vault/vault";
 import { Icon } from "./Icon";
 import { isDrawingPath } from "./drawing/format";
@@ -131,7 +132,7 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDele
         <span>
           <Icon name="search" size={14} /> Rechercher
         </span>
-        <kbd>⌘P</kbd>
+        <kbd>{keys("⌘P")}</kbd>
       </button>
       <button className={ticketsActive ? "sidebar-search sidebar-tickets active" : "sidebar-search sidebar-tickets"} onClick={(e) => onTickets(e.metaKey || e.ctrlKey)}>
         <Icon name="ticket" size={14} /> Tickets

@@ -1,0 +1,607 @@
+/* ---- Due dates (📅) ---- */
+
+.due-chip {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 0.88em;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  color: var(--muted);
+}
+
+.due-chip.overdue {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.due-chip.today {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.due-chip.soon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* ---- Ticket page ---- */
+
+/* Header and thread in the same column as the description (the note: 720px + 32px padding). */
+.ticket-header,
+.ticket-thread {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 32px;
+  padding-right: 32px;
+}
+
+.ticket-body .note {
+  padding-bottom: 24px;
+  min-height: 80px;
+}
+
+.ticket-header {
+  margin-top: 28px;
+  margin-bottom: 0;
+  padding-bottom: 16px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.ticket-title {
+  margin: 0 0 10px;
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: -0.024em;
+}
+
+.ticket-number {
+  color: var(--faint);
+  font-weight: 400;
+}
+
+.ticket-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.ticket-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: white;
+  background: #1a7f37;
+}
+
+.ticket-state.closed {
+  background: #8250df;
+}
+
+.ticket-meta-text {
+  color: var(--muted);
+}
+
+.ticket-meta .cell-spacer {
+  flex: 1;
+}
+
+.ticket-close {
+  color: #8250df;
+}
+
+.ticket-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin-top: 14px;
+}
+
+.ticket-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.ticket-field-label {
+  color: var(--muted);
+  min-width: 64px;
+}
+
+.ticket-tags,
+.tickets-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.ticket-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: none;
+  box-shadow: none;
+  font-size: 12px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ticket-tag.small {
+  margin-left: 6px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+
+.ticket-tag button {
+  border: none;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+button.ticket-tag {
+  cursor: pointer;
+}
+
+button.ticket-tag.selected {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
+.ticket-add {
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 0.5px dashed var(--border);
+  background: none;
+  box-shadow: none;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ticket-tag-input {
+  width: 90px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.ticket-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ticket-due input {
+  padding: 3px 8px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.ticket-due.overdue small {
+  color: var(--danger);
+}
+
+.ticket-due.today small {
+  color: var(--warning);
+}
+
+.ticket-due small {
+  color: var(--muted);
+}
+
+/* Comment thread */
+.ticket-thread {
+  padding-top: 16px;
+  padding-bottom: 30vh;
+  border-top: 0.5px solid var(--border);
+}
+
+.ticket-thread > h2 {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.comment {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.comment-card {
+  border: 0.5px solid color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.comment-card > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+  border-bottom: 0.5px solid color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.comment-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.comment-date {
+  font-variant-numeric: tabular-nums;
+}
+
+.comment-actions {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.comment-card:hover .comment-actions,
+.comment-actions:focus-within {
+  opacity: 1;
+}
+
+.comment-actions button {
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comment-actions button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.comment-text {
+  padding: 8px 14px;
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+/* Comments use the note editor, sized down to fit the card. */
+.comment-text .note,
+.comment-composer .note {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.comment-text .note {
+  word-break: break-word;
+}
+
+.comment-text .note > :first-child,
+.comment-composer .note > :first-child {
+  margin-top: 0;
+}
+
+.comment-text .block-handle,
+.comment-text .table-handles,
+.comment-composer .block-handle {
+  display: none;
+}
+
+.comment-composer-editor {
+  position: relative;
+  min-height: 64px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 10px 14px;
+  cursor: text;
+}
+
+.comment-placeholder {
+  position: absolute;
+  top: 13px;
+  left: 14px;
+  color: var(--faint);
+  font-size: 14.5px;
+  pointer-events: none;
+}
+
+/* The composer shows its own placeholder, not the editor's block hint. */
+.comment-composer .note > p.is-empty:only-child::before {
+  content: none;
+}
+
+.comment-composer.focused {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.comment-card /* The composer shows its own placeholder, not the editor's block hint. */
+.comment-composer .note > p.is-empty:only-child::before {
+  content: none;
+}
+
+.comment-composer.focused {
+  box-shadow: none;
+}
+
+.comment-replies {
+  margin: 10px 0 0 22px;
+  padding-left: 14px;
+  border-left: 2px solid color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.comment-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: var(--danger-bg);
+}
+
+.comment-confirm span {
+  flex: 1;
+}
+
+.comment-confirm .danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+
+.comment-composer {
+  display: flex;
+  flex-direction: column;
+  border: 0.5px solid color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.comment-card .comment-composer {
+  border: none;
+  border-radius: 0;
+  margin: 0;
+}
+
+.comment-composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-top: 0.5px solid color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.comment-composer-actions small {
+  flex: 1;
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+/* ---- Tickets list ---- */
+
+.tickets-view {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 32px 60px;
+  box-sizing: border-box;
+}
+
+.tickets-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.tickets-header h1 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: -0.026em;
+}
+
+.tickets-header .primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9px;
+}
+
+.tickets-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tickets-toolbar .segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Search: a rounded field with its icon, focus ring in the accent colour. */
+.tickets-search {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 6px 0 11px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  border: 0.5px solid transparent;
+  color: var(--faint);
+  cursor: text;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.tickets-search:focus-within {
+  background: var(--bg-elevated);
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  color: var(--text);
+}
+
+.tickets-search input,
+.tickets-search input:focus {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  font-size: 13.5px;
+}
+
+.tickets-search button {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  background: color-mix(in srgb, var(--text) 12%, transparent);
+  color: var(--text);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tickets-tags {
+  margin-bottom: 12px;
+}
+
+.tickets-list {
+  border: 0.5px solid color-mix(in srgb, var(--text) 14%, transparent);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+
+.ticket-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 0.5px solid color-mix(in srgb, var(--text) 9%, transparent);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.ticket-row:last-child {
+  border-bottom: none;
+}
+
+.ticket-row:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.ticket-row-state {
+  flex: none;
+  display: inline-flex;
+  color: #1a7f37;
+}
+
+.ticket-row-state.closed {
+  color: #8250df;
+}
+
+.ticket-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ticket-row-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ticket-row-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ticket-row-count {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.tickets-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.sidebar-tickets {
+  justify-content: flex-start !important;
+  gap: 6px;
+}
+
+.sidebar-tickets.active {
+  background: var(--selected, var(--hover));
+  color: var(--text);
+}
+
+.dash-create-icon.ticket {
+  color: #1a7f37;
+  background: color-mix(in srgb, #1a7f37 13%, transparent);
+}
+
+.dash-todo .due-chip {
+  margin-left: auto;
+  flex: none;
+}
+
+.setting-text {
+  width: 160px;
+  padding: 4px 8px;
+}

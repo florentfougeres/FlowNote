@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { keys } from "../keys";
 import { NoteEditor, type FrontmatterControl } from "../editor/NoteEditor";
 import type { VaultBridge } from "../editor/bridge";
 import type { Editor } from "@tiptap/core";
@@ -61,7 +62,7 @@ function Composer({ placeholder, initial = "", submitLabel, bridge, onSubmit, on
         <NoteEditor key={generation} source={generation === 0 ? initial : ""} onMarkdown={setText} bridge={bridge} onEditor={(e) => (editor.current = e)} properties={false} />
       </div>
       <div className="comment-composer-actions">
-        <small>Markdown · / pour les blocs · ⌘↵ pour envoyer</small>
+        <small>{keys("Markdown · / pour les blocs · ⌘↵ pour envoyer")}</small>
         {onCancel && <button onClick={onCancel}>Annuler</button>}
         {extra && (
           <button disabled={empty} onClick={() => submit(extra.onClick)}>
@@ -235,7 +236,7 @@ export function TicketView({
   };
   const changeComments = (next: TicketComment[]) => {
     setComments(next);
-    section.current = serializeComments(next);
+    section.current = serializeComments(next, initial.layout);
     // Without comments left, the blank line that preceded the section goes too.
     if (!section.current) head.current = head.current.replace(/(\r?\n)(\r?\n)+$/, "$1");
     onMarkdown(joinTicket(head.current, section.current));

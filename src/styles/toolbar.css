@@ -1,0 +1,162 @@
+/* ---- Unified toolbar: capsule groups of icon buttons ---- */
+
+:root {
+  --glass: rgba(255, 255, 255, 0.78);
+  --glass-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --glass: rgba(62, 62, 66, 0.72);
+    --glass-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+
+:root[data-theme="dark"] {
+  --glass: rgba(62, 62, 66, 0.72);
+  --glass-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.toolbar-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.toolbar-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.toolbar-location {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar-folder {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.save-state {
+  color: var(--faint);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.save-state.dirty {
+  color: var(--muted);
+}
+
+.tool-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--glass);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+}
+
+.tool-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+}
+
+.tool-button:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.tool-button.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.tool-button:disabled {
+  opacity: 0.3;
+}
+
+.tool-badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  text-align: center;
+}
+
+.icon {
+  display: block;
+  flex: none;
+}
+
+.page-icon {
+  display: inline-flex;
+  margin-right: 6px;
+  color: var(--muted);
+  vertical-align: -3px;
+}
+
+.page-name {
+  display: flex;
+  align-items: center;
+}
+
+.page-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-search span,
+.new-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.new-page {
+  display: flex;
+}
+
+/* Hidden sidebar: the toolbar leaves room for the window buttons in the desktop app. */
+.layout.no-sidebar {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.native-vibrancy .layout.no-sidebar .toolbar {
+  padding-left: 80px;
+}

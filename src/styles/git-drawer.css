@@ -1,0 +1,87 @@
+/* ---- Git drawer: on the far right, only when opened; enters and leaves on the same side ---- */
+
+/* The drawer's width animates (not a transform), so the note column follows
+   it and no empty band shows through the transparent window while it closes. */
+.git-drawer {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  border-left: 0.5px solid var(--border);
+  transition: width 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.git-drawer:not(.open) {
+  border-left-color: transparent;
+}
+
+.git-drawer.resizing {
+  transition: none;
+  user-select: none;
+}
+
+.git-drawer-inner {
+  height: 100%;
+}
+
+.git-drawer-resize {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  cursor: col-resize;
+}
+
+.git-drawer-resize:hover,
+.git-drawer.resizing .git-drawer-resize {
+  background: var(--accent-line);
+}
+
+.git-drawer .git-panel {
+  height: 100%;
+}
+
+/* The diff sits under the file list; when nothing is selected the hint stays discreet. */
+.git-diff:has(> .git-none:only-child) {
+  border-top: none;
+}
+
+.git-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px 0;
+  font-weight: 600;
+}
+
+.git-drawer-header button {
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+}
+
+.git-drawer-body {
+  height: calc(100% - 40px);
+}
+
+@keyframes materialize {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
