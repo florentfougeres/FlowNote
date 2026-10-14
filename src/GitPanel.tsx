@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { DiffView } from "./DiffView";
 import { ConflictResolver } from "./ConflictResolver";
+import { Icon } from "./Icon";
 import { explainGitError, fetchResult, pullResult, pushResult, syncSummary } from "./vault/gitMessages";
 import { autoCommitMessage, isConflicted, isUntracked, isStaged, isUnstaged, MergeConflictError, statusLabel, type GitApi, type GitFile, type GitStatus } from "./vault/git";
 import { basename, dirname } from "./vault/links";
@@ -195,12 +196,24 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
         {files.length > 0 && (
           <span className="git-section-actions">
             {!stagedSection && (
-              <button disabled={busy} title="Annuler toutes les modifications non indexées" onClick={() => setConfirmDiscard({ paths: files.map((f) => f.path), all: true })}>
-                Tout annuler
+              <button
+                className="git-icon-button git-discard"
+                disabled={busy}
+                title="Tout annuler"
+                aria-label="Annuler toutes les modifications"
+                onClick={() => setConfirmDiscard({ paths: files.map((f) => f.path), all: true })}
+              >
+                <Icon name="undo" size={14} />
               </button>
             )}
-            <button disabled={busy} onClick={() => void act("stage", () => (stagedSection ? git.unstage(files.map((f) => f.path)) : git.stage(files.map((f) => f.path))))}>
-              {stagedSection ? "Tout retirer" : "Tout indexer"}
+            <button
+              className="git-icon-button"
+              disabled={busy}
+              title={stagedSection ? "Tout retirer de l'index" : "Tout indexer"}
+              aria-label={stagedSection ? "Tout retirer de l'index" : "Tout indexer"}
+              onClick={() => void act("stage", () => (stagedSection ? git.unstage(files.map((f) => f.path)) : git.stage(files.map((f) => f.path))))}
+            >
+              <Icon name={stagedSection ? "minus" : "plus"} size={14} />
             </button>
           </span>
         )}
@@ -237,9 +250,7 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
                     setConfirmDiscard({ paths: [file.path], all: false });
                   }}
                 >
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M5.5 3.5 2.5 6.5l3 3 M2.5 6.5h7a3.5 3.5 0 0 1 0 7H7" />
-                  </svg>
+                  <Icon name="undo" size={13} />
                 </button>
               )}
               <button
@@ -251,7 +262,7 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
                   void act("stage", () => (stagedSection ? git.unstage([file.path]) : git.stage([file.path])));
                 }}
               >
-                {stagedSection ? "−" : "+"}
+                <Icon name={stagedSection ? "minus" : "plus"} size={13} />
               </button>
             </li>
           );
@@ -411,10 +422,15 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
         ) : selection ? (
           <>
             <header>
-              <span className="git-diff-path">
-                {selection.file.path} <span className="git-folder">{selection.staged ? "indexé" : "non indexé"}</span>
+              <span className="git-diff-path" title={selection.file.path}>
+                <span className="git-diff-name">{basename(selection.file.path)}</span>
+                <span className="git-diff-tag">{selection.staged ? "Indexé" : "Non indexé"}</span>
               </span>
-              {selection.file.path.endsWith(".md") && selection.file.worktree !== "D" && <button onClick={() => onOpenNote(selection.file.path)}>Ouvrir la note</button>}
+              {selection.file.path.endsWith(".md") && selection.file.worktree !== "D" && (
+                <button className="git-icon-button" onClick={() => onOpenNote(selection.file.path)} title="Ouvrir la note" aria-label="Ouvrir la note">
+                  <Icon name="open" size={14} />
+                </button>
+              )}
             </header>
             <DiffView diff={diff} />
           </>
