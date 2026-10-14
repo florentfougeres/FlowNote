@@ -6,39 +6,13 @@
 }
 
 .sidebar-footer {
-  margin-top: auto;
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 1px;
+  padding-top: 6px;
+  margin-top: 6px;
+  border-top: 0.5px solid var(--separator, var(--border));
 }
-
-.help-button {
-  border: none;
-  background: none;
-  color: var(--muted);
-  width: 28px;
-}
-
-.help-button:hover {
-  background: var(--hover);
-}
-
-.git-button {
-  flex: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: none;
-  background: none;
-  padding: 6px 8px;
-  border-radius: 4px;
-  color: var(--text);
-}
-
-.git-button:hover,
-.git-button.active {
-  background: var(--hover);
-}
-
 .git-badge {
   background: var(--accent);
   color: var(--on-accent);
@@ -113,7 +87,6 @@ button.primary:active:not(:disabled),
 .welcome-primary:active:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 78%, black);
 }
-
 
 .git-section {
   margin-bottom: 14px;
@@ -739,36 +712,10 @@ button.primary:active:not(:disabled),
 
 .sidebar-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 4px;
   padding: 0 0 6px;
 }
-
-.sidebar-header .vault-name {
-  padding: 4px 8px;
-}
-
-.sidebar-header button {
-  border: none;
-  background: none;
-  color: var(--muted);
-}
-
-.sidebar-search {
-  display: flex;
-  justify-content: space-between;
-  border: none;
-  background: none;
-  color: var(--muted);
-  padding: 4px 8px;
-  margin-bottom: 8px;
-  border-radius: 4px;
-}
-
-.sidebar-search:hover {
-  background: var(--hover);
-}
-
 kbd {
   font: inherit;
   font-size: 12px;
@@ -834,11 +781,21 @@ button.danger {
 
 .switcher-list li {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   padding: 6px 10px;
   border-radius: 4px;
   cursor: pointer;
+}
+
+/* Page icons (emoji or line icon) in one centered column. */
+.switcher-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  color: var(--muted);
 }
 
 .switcher-list li.active {

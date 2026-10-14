@@ -3,7 +3,7 @@
 .drawing-pane {
   flex: 1;
   min-width: 0;
-  height: calc(100vh - 52px - var(--tab-bar-height));
+  height: calc(100vh - var(--titlebar-height) - var(--pagebar-height));
   position: relative;
 }
 

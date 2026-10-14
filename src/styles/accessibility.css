@@ -84,11 +84,7 @@
 /* Desktop app: the title bar overlays the window; traffic lights sit in the sidebar. */
 /* Plain controls: list rows, toolbar icons, menu items — no bezel, a fill on hover. */
 .page-row button,
-.new-page,
-.sidebar-search,
 .sidebar-header button,
-.help-button,
-.git-button,
 .toolbar .nav,
 .block-handle button,
 .slash-item,
@@ -104,11 +100,7 @@
 }
 
 .page-row button:hover:not(:disabled),
-.new-page:hover,
-.sidebar-search:hover,
 .sidebar-header button:hover,
-.help-button:hover,
-.git-button:hover,
 .toolbar .nav:hover:not(:disabled),
 .block-handle button:hover,
 .block-menu button:hover,

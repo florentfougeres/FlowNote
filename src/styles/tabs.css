@@ -1,22 +1,22 @@
 /* ---- Tabs: rounded pills, the active one raised (Safari / Arc style) ---- */
 
 :root {
-  --tab-bar-height: 40px;
+  /* Tab strip at the top of the window, and the page bar under it (sticky in the page). */
+  --titlebar-height: 44px;
+  --pagebar-height: 44px;
 }
 
+/* In the title bar, after the sidebar and back / forward buttons. */
 .tab-bar {
-  position: sticky;
-  top: 52px;
-  z-index: 3;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 4px;
-  height: var(--tab-bar-height);
+  height: 100%;
   box-sizing: border-box;
-  padding: 0 12px 6px;
-  background: var(--toolbar-material);
-  -webkit-backdrop-filter: var(--material-blur);
-  backdrop-filter: var(--material-blur);
+  /* Room for the active tab's shadow: the scrolling strip clips its overflow. */
+  padding: 0 4px;
   overflow-x: auto;
   scrollbar-width: none;
   user-select: none;
@@ -27,14 +27,14 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  flex: 0 1 210px;
+  flex: 0 1 200px;
   min-width: 96px;
-  height: 30px;
-  padding: 0 6px 0 11px;
-  border-radius: 10px;
+  height: 28px;
+  padding: 0 5px 0 10px;
+  border-radius: 8px;
   font-size: 12.5px;
   color: var(--muted);
-  background: color-mix(in srgb, var(--text) 5%, transparent);
+  background: transparent;
   cursor: default;
   transition:
     background-color 140ms ease-out,
@@ -43,7 +43,7 @@
 }
 
 .tab:hover {
-  background: color-mix(in srgb, var(--text) 9%, transparent);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
   color: var(--text);
 }
 
@@ -57,21 +57,22 @@
     0 3px 10px rgba(0, 0, 0, 0.07);
 }
 
-/* The type of page, by the color of its icon. */
-.tab > .icon {
+/* The page's emoji, or its kind by the color of its icon. */
+.tab-icon {
   flex: none;
+  display: inline-flex;
   color: var(--accent);
 }
 
-.tab[data-kind="drawing"] > .icon {
+.tab[data-kind="drawing"] .tab-icon {
   color: #8e44ad;
 }
 
-.tab[data-kind="home"] > .icon {
+.tab[data-kind="home"] .tab-icon {
   color: var(--muted);
 }
 
-.tab:not(.active) > .icon {
+.tab:not(.active) .tab-icon {
   opacity: 0.8;
 }
 

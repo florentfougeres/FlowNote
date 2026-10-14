@@ -580,17 +580,6 @@ button.ticket-tag.selected {
   text-align: center;
   color: var(--muted);
 }
-
-.sidebar-tickets {
-  justify-content: flex-start !important;
-  gap: 6px;
-}
-
-.sidebar-tickets.active {
-  background: var(--selected, var(--hover));
-  color: var(--text);
-}
-
 .dash-create-icon.ticket {
   color: #1a7f37;
   background: color-mix(in srgb, #1a7f37 13%, transparent);

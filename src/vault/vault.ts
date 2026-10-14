@@ -12,6 +12,8 @@ export interface VaultEntry {
   children?: VaultEntry[];
   /** The note is a ticket (front matter with `type: ticket`). */
   ticket?: boolean;
+  /** Emoji of the note's `icon` property. */
+  icon?: string;
 }
 
 export interface Vault {
@@ -51,6 +53,13 @@ export class ConflictError extends Error {}
 
 import { memoryGit, type GitApi } from "./git";
 import { isTicketMarkdown } from "../ticket/format";
+import { noteIcon } from "./icon";
+
+/** What the tree shows of a note besides its name, read from its beginning. */
+function noteMeta(head: string): Pick<VaultEntry, "ticket" | "icon"> {
+  const icon = noteIcon(head);
+  return { ...(isTicketMarkdown(head) ? { ticket: true } : {}), ...(icon ? { icon } : {}) };
+}
 
 /** Folders never shown nor touched: Obsidian config, Git data, trash. */
 export function isHiddenName(name: string): boolean {
@@ -83,9 +92,9 @@ export async function openBrowserVault(): Promise<Vault> {
         const children = await list(handle as DirectoryHandle, path);
         if (children.length > 0) entries.push({ path, name: handle.name, kind: "dir", children });
       } else if (handle.name.endsWith(".md")) {
-        // Only the beginning is read to recognise tickets.
+        // Only the beginning is read to recognise tickets and icons.
         const head = await (await (handle as FileSystemFileHandle).getFile()).slice(0, 4096).text();
-        entries.push({ path, name: handle.name.slice(0, -3), kind: "file", ...(isTicketMarkdown(head) ? { ticket: true } : {}) });
+        entries.push({ path, name: handle.name.slice(0, -3), kind: "file", ...noteMeta(head) });
       }
     }
     return entries.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name, "fr") : a.kind === "dir" ? -1 : 1));
@@ -175,7 +184,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
     tree: async () => {
       const notes = [...contents.keys()].filter((p) => p.endsWith(".md"));
       const text = (v: string | Uint8Array | undefined) => (typeof v === "string" ? v : v ? new TextDecoder().decode(v) : "");
-      return buildTree(notes, new Set(notes.filter((p) => isTicketMarkdown(text(contents.get(p))))));
+      return buildTree(notes, (p) => noteMeta(text(contents.get(p))));
     },
     readNotes: async () => [...contents.entries()].filter(([p]) => p.endsWith(".md")).map(([p, v]): [string, string] => [p, typeof v === "string" ? v : new TextDecoder().decode(v)]),
     read: async (path) => text(path),
@@ -210,7 +219,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
 }
 
 /** Builds the sidebar tree from a flat list of note paths. */
-export function buildTree(paths: string[], tickets: Set<string> = new Set()): VaultEntry[] {
+export function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultEntry, "ticket" | "icon"> = () => ({})): VaultEntry[] {
   const root: VaultEntry[] = [];
   for (const path of paths) {
     const parts = path.split("/");
@@ -218,7 +227,7 @@ export function buildTree(paths: string[], tickets: Set<string> = new Set()): Va
     parts.forEach((part, i) => {
       const sub = parts.slice(0, i + 1).join("/");
       if (i === parts.length - 1) {
-        level.push({ path: sub, name: part.replace(/\.md$/, ""), kind: "file", ...(tickets.has(sub) ? { ticket: true } : {}) });
+        level.push({ path: sub, name: part.replace(/\.md$/, ""), kind: "file", ...metaOf(sub) });
         return;
       }
       let dir = level.find((e) => e.kind === "dir" && e.path === sub);

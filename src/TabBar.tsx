@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { keys } from "./keys";
-import { Icon, type IconName } from "./Icon";
+import { Icon } from "./Icon";
 
 export interface Tab {
   id: string;
@@ -9,7 +9,7 @@ export interface Tab {
 }
 
 /**
- * Open pages, one tab each, under the toolbar. Drag to reorder, middle-click
+ * Open pages, one tab each, in the window's title bar (like Notion). Drag to reorder, middle-click
  * or × to close; the + opens the dashboard in a new tab.
  */
 export function TabBar({
@@ -28,7 +28,8 @@ export function TabBar({
   /** The active tab has unsaved changes. */
   dirty: boolean;
   titleOf: (tab: Tab) => string;
-  iconOf: (tab: Tab) => IconName;
+  /** Icon of the page: its emoji, or the icon of its kind. */
+  iconOf: (tab: Tab) => ReactNode;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
   onNew: () => void;
@@ -77,7 +78,7 @@ export function TabBar({
             }}
             onAuxClick={(event) => event.button === 1 && onClose(tab.id)}
           >
-            <Icon name={iconOf(tab)} size={13} />
+            <span className="tab-icon">{iconOf(tab)}</span>
             <span className="tab-title">{title}</span>
             {isActive && dirty && <span className="tab-dirty" aria-label="Modifications non enregistrées" />}
             <button

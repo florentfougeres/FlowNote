@@ -11,7 +11,11 @@ import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { applyTheme, loadSettings, saveSettings, SettingsDialog, type Settings } from "./SettingsDialog";
 import { deletePage, renamePage, subpagesOf } from "./vault/pageOps";
-import { Sidebar } from "./Sidebar";
+import { PageIcon, Sidebar } from "./Sidebar";
+import { Icon } from "./Icon";
+import { noteIcon } from "./vault/icon";
+import { setProperty } from "./markdown/frontmatter";
+import type { FrontmatterControl } from "./editor/NoteEditor";
 import { GitPanel } from "./GitPanel";
 import { ToolButton, ToolGroup, Toolbar } from "./Toolbar";
 import { Breadcrumbs } from "./Breadcrumbs";
@@ -140,6 +144,18 @@ export function App() {
   };
   const [sidebarOpen, setSidebarOpen] = usePersistentFlag("flownote:sidebar", true, ["shown", "hidden"]);
   const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [setSidebarOpen]);
+  /** Hidden sidebar shown over the page while the pointer is near the left edge, like Notion. */
+  const [peek, setPeek] = useState(false);
+  const peekTimer = useRef<number>(undefined);
+  const openPeek = () => {
+    window.clearTimeout(peekTimer.current);
+    setPeek(true);
+  };
+  const closePeekSoon = () => {
+    window.clearTimeout(peekTimer.current);
+    peekTimer.current = window.setTimeout(() => setPeek(false), 250);
+  };
+  const frontmatter = useRef<FrontmatterControl | null>(null);
   useEffect(() => applyTheme(settings.theme), [settings.theme]);
   // The macOS window is transparent so the sidebar can show the native material
   // (on Linux the window is opaque, with the system title bar).
@@ -242,6 +258,8 @@ export function App() {
         noteRef.current = { ...current, disk: current.markdown };
         setStatus("");
         void refreshGit();
+        // The page tree shows icons read from the files: re-read it when the icon changed.
+        if (noteIcon(current.markdown) !== noteIcon(current.disk)) void refresh(vault);
       } catch (error) {
         setStatus(error instanceof ConflictError ? `Conflit : ${error.message} Rechargez la note.` : String(error));
         throw error;
@@ -249,7 +267,7 @@ export function App() {
     };
     saving.current = saving.current.then(run, run);
     return saving.current;
-  }, [vault, refreshGit]);
+  }, [vault, refreshGit, refresh]);
 
   // Autosave, like Notion and Obsidian (can be turned off in the settings).
   useEffect(() => {
@@ -521,19 +539,30 @@ export function App() {
   };
   const askConfirm = (message: string, confirmLabel: string) => new Promise<boolean>((resolve) => setConfirm({ message, confirmLabel, resolve }));
 
-  /** Renames the open page from its title; links across the vault follow. */
-  const renameCurrent = async (title: string): Promise<boolean> => {
-    const current = noteRef.current;
-    if (!vault || !current) return false;
+  /**
+   * Renames a page (and its sub-pages folder); links across the vault follow.
+   * Tabs, history and the open note follow the new paths.
+   */
+  const renamePath = async (path: string, title: string): Promise<boolean> => {
+    if (!vault) return false;
     try {
       await saveNow();
-      const result = await renamePage(vault, current.path, title);
+      const result = await renamePage(vault, path, title);
       await refresh(vault);
-      const disk = await vault.read(result.path);
-      back.current = back.current.map((p) => (p === current.path ? result.path : p));
-      setTabs((list) => list.map((t) => (t.path === current.path ? { ...t, path: result.path } : t)));
-      moveRecentPage(vault.name, current.path, result.path);
-      setNote({ path: result.path, loaded: disk, disk, markdown: disk });
+      const oldFolder = `${subpageFolder(path)}/`;
+      const moved = (p: string) => (p === path ? result.path : p.startsWith(oldFolder) ? `${subpageFolder(result.path)}/${p.slice(oldFolder.length)}` : p);
+      back.current = back.current.map(moved);
+      forward.current = forward.current.map(moved);
+      setTabs((list) => list.map((t) => (t.path && t.path !== TICKETS_VIEW ? { ...t, path: moved(t.path) } : t)));
+      moveRecentPage(vault.name, path, result.path);
+      const current = noteRef.current;
+      if (current && (moved(current.path) !== current.path || result.updatedNotes.includes(current.path))) {
+        const openPath = moved(current.path);
+        const disk = await vault.read(openPath);
+        const reloaded = { path: openPath, loaded: disk, disk, markdown: disk, reloads: (current.reloads ?? 0) + 1 };
+        noteRef.current = reloaded;
+        setNote(reloaded);
+      }
       const others = result.updatedNotes.filter((p) => p !== result.path).length;
       setStatus(others > 0 ? `Page renommée ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}.` : "Page renommée.");
       void refreshGit();
@@ -543,6 +572,8 @@ export function App() {
       return false;
     }
   };
+  /** Renames the open page from its title. */
+  const renameCurrent = (title: string) => (noteRef.current ? renamePath(noteRef.current.path, title) : Promise.resolve(false));
 
   const removePage = async (path: string) => {
     if (!vault) return;
@@ -661,6 +692,48 @@ export function App() {
     return found;
   }, [tree]);
 
+  /** Back to the welcome screen: recent vaults, or another folder. */
+  const changeVault = () => {
+    setModal(null);
+    void saveNow()
+      .catch(() => {})
+      .then(() => {
+        setVault(null);
+        setNote(null);
+        setStatus("");
+      });
+  };
+
+  /** Shows the dashboard in the active tab; Back returns to the page. */
+  const showHome = async () => {
+    try {
+      await saveNow();
+    } catch {
+      return;
+    }
+    const previous = tabsRef.current.find((t) => t.id === activeRef.current)?.path ?? null;
+    if ((await load(null)) && previous && previous !== TICKETS_VIEW) {
+      back.current.push(previous);
+      forward.current = [];
+    }
+  };
+
+  /** Icon of the open page, live from its text (the tree is read from disk). */
+  const liveIcon = note ? noteIcon(note.markdown) : null;
+  const treeIcons = useMemo(() => {
+    const found = new Map<string, string>();
+    const walk = (entries: VaultEntry[]) => entries.forEach((e) => (e.icon && found.set(e.path, e.icon), e.children && walk(e.children)));
+    walk(tree);
+    return found;
+  }, [tree]);
+  const iconOf = (path: string) => (note?.path === path ? liveIcon : (treeIcons.get(path) ?? null));
+  const pageIconFor = (path: string) => <PageIcon path={path} icon={iconOf(path)} ticket={ticketPaths.has(path)} />;
+  /** Sets or removes the page icon (the `icon` property of the open note). */
+  const setPageIcon = (icon: string | null) => {
+    const control = frontmatter.current;
+    if (control) control.set(setProperty(control.get(), "icon", icon ?? undefined));
+  };
+
   const saveState = <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : keys("Non enregistré · ⌘S")) : "Enregistré"}</span>;
 
   if (!vault) {
@@ -676,198 +749,236 @@ export function App() {
     );
   }
 
+  const sidebar = (
+    <Sidebar
+      vaultName={vault.name}
+      tree={tree}
+      selected={note?.path}
+      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : null}
+      liveIcon={note ? { path: note.path, icon: liveIcon } : undefined}
+      gitChanges={vault.git ? gitChanges : null}
+      gitOpen={gitOpen}
+      onSelect={(path, newTabRequested) => void select(path, "push", newTabRequested)}
+      onNewPage={(parent) => void newPage(parent)}
+      onNewPageInFolder={(folder) => void newPage(null, undefined, folder)}
+      onDelete={(path) => void removePage(path)}
+      onRename={(path) => void askName("Renommer la page", noteTitle(path)).then((name) => (name ? renamePath(path, name) : false))}
+      onSearch={() => setModal("switcher")}
+      onVaultSearch={() => setModal("search")}
+      onHome={(newTabRequested) => void (newTabRequested ? newTab(null) : showHome())}
+      onTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
+      onGit={() => toggleGit()}
+      onSettings={() => setModal("settings")}
+      onHelp={() => setModal("help")}
+      onChangeVault={changeVault}
+    />
+  );
+
   return (
-    <div className={sidebarOpen ? "layout" : "layout no-sidebar"}>
-      {sidebarOpen && (
-        <div className="sidebar-dock" data-tauri-drag-region>
-        <Sidebar
-          onDelete={(path) => void removePage(path)}
-          onSearch={() => setModal("switcher")}
-          vaultName={vault.name}
-          tree={tree}
-          selected={note?.path}
-          onSelect={(path, newTabRequested) => void select(path, "push", newTabRequested)}
-          onNewPage={(parent) => void newPage(parent)}
-          onNewPageInFolder={(folder) => void newPage(null, undefined, folder)}
-          onTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
-          ticketsActive={activePath === TICKETS_VIEW}
-        />
+    <div className={`layout${sidebarOpen ? "" : " no-sidebar"}`}>
+      <header className="titlebar" data-tauri-drag-region>
+        <div className="titlebar-controls">
+          <button
+            className="titlebar-button"
+            onClick={() => {
+              setPeek(false);
+              toggleSidebar();
+            }}
+            onMouseEnter={() => !sidebarOpen && openPeek()}
+            onMouseLeave={() => !sidebarOpen && closePeekSoon()}
+            aria-label={sidebarOpen ? "Masquer la barre latérale" : "Afficher la barre latérale"}
+            title={keys(sidebarOpen ? "Masquer la barre latérale (⌘\\)" : "Afficher la barre latérale (⌘\\)")}
+          >
+            <Icon name="sidebar" size={16} />
+          </button>
+          <button className="titlebar-button" onClick={goBack} disabled={back.current.length === 0} aria-label="Page précédente" title={keys("Page précédente (⌘[)")}>
+            <Icon name="chevronLeft" size={16} />
+          </button>
+          <button className="titlebar-button" onClick={goForward} disabled={forward.current.length === 0} aria-label="Page suivante" title={keys("Page suivante (⌘])")}>
+            <Icon name="chevronRight" size={16} />
+          </button>
         </div>
-      )}
-      <main className="content" ref={contentRef}>
-        <Toolbar
-          left={
-            <>
-              <ToolGroup>
-                <ToolButton icon="sidebar" label="Afficher ou masquer la barre latérale (⌘\)" onClick={toggleSidebar} active={sidebarOpen} />
-              </ToolGroup>
-              <ToolGroup>
-                <ToolButton icon="chevronLeft" label="Page précédente (⌘[)" onClick={goBack} disabled={back.current.length === 0} />
-                <ToolButton icon="chevronRight" label="Page suivante (⌘])" onClick={goForward} disabled={forward.current.length === 0} />
-              </ToolGroup>
-              {drawing && note && (
+        <TabBar
+          tabs={tabs}
+          active={activeTab}
+          dirty={dirty}
+          titleOf={(tab) => (tab.path === TICKETS_VIEW ? "Tickets" : tab.path ? noteTitle(tab.path) : "Accueil")}
+          iconOf={(tab) =>
+            tab.path === null ? <Icon name="home" size={13} /> : tab.path === TICKETS_VIEW ? <Icon name="ticket" size={13} /> : <PageIcon path={tab.path} icon={iconOf(tab.path)} ticket={ticketPaths.has(tab.path)} size={13} />
+          }
+          onSelect={(id) => void switchTab(id)}
+          onClose={(id) => void closeTab(id)}
+          onNew={() => void newTab(null)}
+          onReorder={reorderTab}
+        />
+      </header>
+      <div className="workspace">
+        {sidebarOpen ? (
+          <div className="sidebar-dock">{sidebar}</div>
+        ) : (
+          <>
+            <div className="sidebar-hotzone" onMouseEnter={openPeek} onMouseLeave={closePeekSoon} />
+            {peek && (
+              <div className="sidebar-dock floating" onMouseEnter={openPeek} onMouseLeave={closePeekSoon}>
+                {sidebar}
+              </div>
+            )}
+          </>
+        )}
+        <main className="content" ref={contentRef}>
+          <Toolbar
+            left={
+              note ? (
                 <>
                   <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} />
                   {saveState}
+                  {status && <span className="status warning">{status}</span>}
                 </>
-              )}
-            </>
-          }
-          center={
-            drawing && !rawMode ? (
-              <ToolGroup>
-                {DRAWING_TOOLS.map(([tool, icon, label]) => (
-                  <ToolButton key={tool} icon={icon} label={label} active={drawingTool === tool} disabled={!drawingControls} onClick={() => drawingControls?.setTool(tool)} />
-                ))}
-              </ToolGroup>
-            ) : drawing ? (
-              status && <span className="status warning">{status}</span>
-            ) : note ? (
-              <>
-                <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} />
-                {saveState}
-                {status && <span className="status warning">{status}</span>}
-              </>
-            ) : (
-              <span className="toolbar-location">{vault.name}</span>
-            )
-          }
-          right={
-            <>
-              <ToolGroup>
-                <ToolButton icon="search" label="Rechercher une page (⌘P)" onClick={() => setModal("switcher")} />
-                <ToolButton icon="replace" label="Rechercher dans le vault (⌘⇧F)" onClick={() => setModal("search")} />
-                <ToolButton icon="compose" label="Nouvelle page (⌘N)" onClick={() => void newPage(null)} />
-              </ToolGroup>
-              {note && (
+              ) : (
+                <span className="toolbar-location">{activePath === TICKETS_VIEW ? "Tickets" : "Accueil"}</span>
+              )
+            }
+            center={
+              drawing && !rawMode ? (
                 <ToolGroup>
+                  {DRAWING_TOOLS.map(([tool, icon, label]) => (
+                    <ToolButton key={tool} icon={icon} label={label} active={drawingTool === tool} disabled={!drawingControls} onClick={() => drawingControls?.setTool(tool)} />
+                  ))}
+                </ToolGroup>
+              ) : null
+            }
+            right={
+              note && (
+                <div className="page-actions">
                   {!drawing && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
                   {!drawing && settings.spellChecker !== "off" && (
                     <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={toggleSpelling} active={spellingOn} />
                   )}
                   {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
                   <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
-                </ToolGroup>
-              )}
-              <ToolGroup>
-                {vault.git && gitChanges !== null && <ToolButton icon="branch" label="Git (⌘⇧G)" onClick={() => toggleGit()} active={gitOpen} badge={gitChanges} />}
-                <ToolButton icon="sliders" label="Réglages" onClick={() => setModal("settings")} />
-                <ToolButton icon="question" label="Raccourcis (⌘/)" onClick={() => setModal("help")} />
-              </ToolGroup>
-            </>
-          }
-        />
-        <TabBar
-          tabs={tabs}
-          active={activeTab}
-          dirty={dirty}
-          titleOf={(tab) => (tab.path === TICKETS_VIEW ? "Tickets" : tab.path ? noteTitle(tab.path) : "Accueil")}
-          iconOf={(tab) => (tab.path === null ? "home" : tab.path === TICKETS_VIEW ? "ticket" : isDrawingPath(tab.path) ? "drawing" : ticketPaths.has(tab.path) ? "ticket" : "doc")}
-          onSelect={(id) => void switchTab(id)}
-          onClose={(id) => void closeTab(id)}
-          onNew={() => void newTab(null)}
-          onReorder={reorderTab}
-        />
-        {note ? (
-          <>
-            {findRequest && !rawMode && !drawing && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
-            <div className="panes">
-              {drawing && !rawMode ? (
-                <div className="drawing-pane">
-                  <DrawingEditor
-                    key={`${note.path}#${note.reloads ?? 0}`}
-                    source={note.loaded}
-                    onMarkdown={onMarkdown}
-                    bridge={bridge}
-                    theme={settings.theme === "dark" || (settings.theme === "system" && systemDark) ? "dark" : "light"}
-                    editable={!hasConflictMarkers(note.disk)}
-                    onControls={setDrawingControls}
-                    onToolChange={setDrawingTool}
-                  />
                 </div>
-              ) : (
-              <div className="page">
-                {hasConflictMarkers(note.disk) && (
-                  <div className="conflict-note-banner">
-                    <span>Cette note contient un conflit de fusion : elle est en lecture seule jusqu'à sa résolution.</span>
-                    {vault.git && <button onClick={() => toggleGit(true)}>Résoudre</button>}
+              )
+            }
+          />
+          {note ? (
+            <>
+              {findRequest && !rawMode && !drawing && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
+              <div className="panes">
+                {drawing && !rawMode ? (
+                  <div className="drawing-pane">
+                    <DrawingEditor
+                      key={`${note.path}#${note.reloads ?? 0}`}
+                      source={note.loaded}
+                      onMarkdown={onMarkdown}
+                      bridge={bridge}
+                      theme={settings.theme === "dark" || (settings.theme === "system" && systemDark) ? "dark" : "light"}
+                      editable={!hasConflictMarkers(note.disk)}
+                      onControls={setDrawingControls}
+                      onToolChange={setDrawingTool}
+                    />
                   </div>
-                )}
-                {!rawMode && !ticketPage && <PageTitle title={noteTitle(note.path)} onRename={renameCurrent} readOnly={hasConflictMarkers(note.disk)} />}
-                {ticketPage && !rawMode ? (
-                  <TicketView
-                    key={`${note.path}#${note.reloads ?? 0}`}
-                    path={note.path}
-                    source={note.loaded}
-                    markdown={note.markdown}
-                    onMarkdown={onMarkdown}
-                    bridge={bridge}
-                    editable={!hasConflictMarkers(note.disk)}
-                    onEditor={setEditor}
-                  />
-                ) : rawMode ? (
-                  <RawEditor key={`${note.path}#${note.reloads ?? 0}`} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} />
                 ) : (
-                  <NoteEditor key={`${note.path}#${note.reloads ?? 0}`} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk)} onEditor={setEditor} />
+                <div className="page">
+                  {hasConflictMarkers(note.disk) && (
+                    <div className="conflict-note-banner">
+                      <span>Cette note contient un conflit de fusion : elle est en lecture seule jusqu'à sa résolution.</span>
+                      {vault.git && <button onClick={() => toggleGit(true)}>Résoudre</button>}
+                    </div>
+                  )}
+                  {!rawMode && !ticketPage && (
+                    <PageTitle
+                      title={noteTitle(note.path)}
+                      onRename={renameCurrent}
+                      readOnly={hasConflictMarkers(note.disk)}
+                      icon={drawing ? undefined : liveIcon}
+                      onIcon={drawing ? undefined : setPageIcon}
+                    />
+                  )}
+                  {ticketPage && !rawMode ? (
+                    <TicketView
+                      key={`${note.path}#${note.reloads ?? 0}`}
+                      path={note.path}
+                      source={note.loaded}
+                      markdown={note.markdown}
+                      onMarkdown={onMarkdown}
+                      bridge={bridge}
+                      editable={!hasConflictMarkers(note.disk)}
+                      onEditor={setEditor}
+                    />
+                  ) : rawMode ? (
+                    <RawEditor key={`${note.path}#${note.reloads ?? 0}`} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} />
+                  ) : (
+                    <NoteEditor
+                      key={`${note.path}#${note.reloads ?? 0}`}
+                      source={note.loaded}
+                      onMarkdown={onMarkdown}
+                      bridge={bridge}
+                      editable={!hasConflictMarkers(note.disk)}
+                      onEditor={setEditor}
+                      frontmatterControl={frontmatter}
+                      hiddenProperties={["icon"]}
+                    />
+                  )}
+                </div>
+                )}
+                {showOutline && !outlineHidden && !rawMode && !drawing && <OutlinePanel editor={editor} onClose={toggleOutline} />}
+                {showHistory && vault.git && (
+                  <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
                 )}
               </div>
-              )}
-              {showOutline && !outlineHidden && !rawMode && !drawing && <OutlinePanel editor={editor} onClose={toggleOutline} />}
-              {showHistory && vault.git && (
-                <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
-              )}
-            </div>
-          </>
-        ) : (
-          activePath === TICKETS_VIEW ? (
-            <TicketsView
+            </>
+          ) : (
+            activePath === TICKETS_VIEW ? (
+              <TicketsView
+                key={activeTab}
+                vault={vault}
+                files={files}
+                onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
+                onCreate={() => void newPage(null, undefined, undefined, "ticket")}
+              />
+            ) : (
+            <Dashboard
               key={activeTab}
               vault={vault}
               files={files}
+              iconOf={pageIconFor}
               onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
-              onCreate={() => void newPage(null, undefined, undefined, "ticket")}
+              onCreate={(kind) => void newPage(null, undefined, undefined, kind)}
+              onOpenGit={() => toggleGit(true)}
+              onSearch={() => setModal("switcher")}
+              onOpenTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
             />
-          ) : (
-          <Dashboard
-            key={activeTab}
-            vault={vault}
-            files={files}
-            onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
-            onCreate={(kind) => void newPage(null, undefined, undefined, kind)}
-            onOpenGit={() => toggleGit(true)}
-            onSearch={() => setModal("switcher")}
-            onOpenTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
-          />
-          )
+            )
+          )}
+        </main>
+        {vault.git && (
+          <GitDrawer drawer={gitDrawer}>
+            <GitPanel
+              git={vault.git}
+              beforeCommit={saveNow}
+              onOpenNote={(path) => void select(path)}
+              onChanged={() => {
+                void refreshGit();
+                void refresh(vault);
+              }}
+              onPulled={() => {
+                void refresh(vault);
+                void reloadFromDisk();
+              }}
+              onDiscarded={(paths) => {
+                void refresh(vault);
+                const current = noteRef.current;
+                if (!current || !paths.includes(current.path)) return;
+                // A new note sent to the trash is closed; a modified one shows its restored version.
+                void vault.read(current.path).then(
+                  () => reloadFromDisk(true),
+                  () => setNote(null),
+                );
+              }}
+            />
+          </GitDrawer>
         )}
-      </main>
-      {vault.git && (
-        <GitDrawer drawer={gitDrawer}>
-          <GitPanel
-            git={vault.git}
-            beforeCommit={saveNow}
-            onOpenNote={(path) => void select(path)}
-            onChanged={() => {
-              void refreshGit();
-              void refresh(vault);
-            }}
-            onPulled={() => {
-              void refresh(vault);
-              void reloadFromDisk();
-            }}
-            onDiscarded={(paths) => {
-              void refresh(vault);
-              const current = noteRef.current;
-              if (!current || !paths.includes(current.path)) return;
-              // A new note sent to the trash is closed; a modified one shows its restored version.
-              void vault.read(current.path).then(
-                () => reloadFromDisk(true),
-                () => setNote(null),
-              );
-            }}
-          />
-        </GitDrawer>
-      )}
+      </div>
       {confirm && (
         <ConfirmDialog
           message={confirm.message}
@@ -879,7 +990,7 @@ export function App() {
         />
       )}
       {modal === "switcher" && (
-        <QuickSwitcher files={files} onOpen={(path) => void select(path)} onCreate={(name) => void newPage(null, name)} onClose={() => setModal(null)} />
+        <QuickSwitcher files={files} iconOf={pageIconFor} onOpen={(path) => void select(path)} onCreate={(name) => void newPage(null, name)} onClose={() => setModal(null)} />
       )}
       {modal === "search" && (
         <VaultSearch
@@ -902,17 +1013,7 @@ export function App() {
             setSettings(next);
             saveSettings(next);
           }}
-          onChangeVault={() => {
-            setModal(null);
-            void saveNow()
-              .catch(() => {})
-              // Back to the welcome screen: recent vaults, or another folder.
-              .then(() => {
-                setVault(null);
-                setNote(null);
-                setStatus("");
-              });
-          }}
+          onChangeVault={changeVault}
           onClose={() => setModal(null)}
         />
       )}

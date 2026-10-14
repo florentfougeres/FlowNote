@@ -16,6 +16,9 @@ pub struct VaultEntry {
     /// The note is a ticket (front matter with `type: ticket`).
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     ticket: bool,
+    /// Emoji of the `icon` front matter property, shown like a Notion page icon.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    icon: Option<String>,
 }
 
 /// Front matter of a note, read from the beginning of the file only.
@@ -30,13 +33,26 @@ fn front_matter(path: &Path) -> Option<String> {
     Some(rest[..end].to_string())
 }
 
-fn is_ticket_file(path: &Path) -> bool {
-    front_matter(path).is_some_and(|yaml| {
-        yaml.lines().any(|line| {
-            let line = line.trim_end_matches('\r');
-            line.strip_prefix("type").map(|r| r.trim_start()).and_then(|r| r.strip_prefix(':')).is_some_and(|v| v.trim().trim_matches(|c| c == '"' || c == '\'') == "ticket")
-        })
+/// Value of a top-level `key: value` line of the front matter, unquoted.
+fn property<'a>(yaml: &'a str, key: &str) -> Option<&'a str> {
+    yaml.lines().find_map(|line| {
+        let value = line.trim_end_matches('\r').strip_prefix(key)?.trim_start().strip_prefix(':')?;
+        Some(value.trim().trim_matches(|c| c == '"' || c == '\''))
     })
+}
+
+fn is_ticket(yaml: &str) -> bool {
+    property(yaml, "type") == Some("ticket")
+}
+
+/// The `icon` property when it is an emoji (not a plugin icon name like "LiHome").
+fn icon_of(yaml: &str) -> Option<String> {
+    property(yaml, "icon").filter(|v| !v.is_empty() && v.chars().count() <= 16 && !v.is_ascii()).map(str::to_string)
+}
+
+#[cfg(test)]
+fn is_ticket_file(path: &Path) -> bool {
+    front_matter(path).is_some_and(|yaml| is_ticket(&yaml))
 }
 
 fn is_hidden(name: &str) -> bool {
@@ -69,11 +85,13 @@ fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
         if file_type.is_dir() {
             let children = list(&entry.path(), &path)?;
             if !children.is_empty() {
-                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children), ticket: false });
+                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children), ticket: false, icon: None });
             }
         } else if let Some(stem) = name.strip_suffix(".md") {
-            let ticket = is_ticket_file(&entry.path());
-            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket });
+            let yaml = front_matter(&entry.path());
+            let ticket = yaml.as_deref().is_some_and(is_ticket);
+            let icon = yaml.as_deref().and_then(icon_of);
+            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket, icon });
         }
     }
     entries.sort_by(|a, b| {
@@ -269,6 +287,15 @@ pub fn vault_trash(root: String, path: String) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn page_icons_come_from_the_icon_property() {
+        assert_eq!(icon_of("title: x\nicon: 🚀"), Some("🚀".into()));
+        assert_eq!(icon_of("icon: \"📚\"\r"), Some("📚".into()));
+        assert_eq!(icon_of("icon: LiHome"), None);
+        assert_eq!(icon_of("icon:"), None);
+        assert_eq!(icon_of("type: ticket"), None);
+    }
 
     #[test]
     fn tickets_are_recognised_by_their_front_matter() {

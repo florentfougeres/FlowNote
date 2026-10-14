@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { keys } from "./keys";
-import { Icon, type IconName } from "./Icon";
+import { Icon } from "./Icon";
 import type { Vault } from "./vault/vault";
 import type { GitCommit, GitStatus } from "./vault/git";
 import { isConflicted, isStaged, isUnstaged, isUntracked } from "./vault/git";
 import { syncSummary } from "./vault/gitMessages";
 import { noteTitle } from "./vault/links";
-import { isDrawingPath } from "./drawing/format";
 import { recentPages } from "./dashboard/recents";
 import { bookmarkedFiles, computeStats, type VaultStats } from "./dashboard/stats";
 import { agenda, dueLabel, ticketsOf, urgency, type AgendaItem, type TicketInfo } from "./ticket/agenda";
@@ -18,7 +17,6 @@ import { agenda, dueLabel, ticketsOf, urgency, type AgendaItem, type TicketInfo 
 
 export type CreateKind = "note" | "drawing" | "ticket";
 
-const pageIcon = (path: string): IconName => (isDrawingPath(path) ? "drawing" : "doc");
 const folderOf = (path: string) => (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
 const relative = new Intl.RelativeTimeFormat("fr", { numeric: "auto" });
@@ -36,10 +34,10 @@ export function timeAgo(at: number, now = Date.now()): string {
   return "à l'instant";
 }
 
-function PageLink({ path, onOpen, detail }: { path: string; onOpen: (path: string, newTab: boolean) => void; detail?: string }) {
+function PageLink({ path, iconOf, onOpen, detail }: { path: string; iconOf: (path: string) => ReactNode; onOpen: (path: string, newTab: boolean) => void; detail?: string }) {
   return (
     <button className="dash-page" onClick={(e) => onOpen(path, e.metaKey || e.ctrlKey)} onAuxClick={(e) => e.button === 1 && onOpen(path, true)} title={path}>
-      <Icon name={pageIcon(path)} size={14} />
+      {iconOf(path)}
       <span className="dash-page-title">{noteTitle(path)}</span>
       <span className="dash-page-detail">{detail ?? folderOf(path)}</span>
     </button>
@@ -80,6 +78,7 @@ function Heatmap({ activity }: { activity: [string, number][] }) {
 export function Dashboard({
   vault,
   files,
+  iconOf,
   onOpen,
   onCreate,
   onOpenGit,
@@ -88,6 +87,8 @@ export function Dashboard({
 }: {
   vault: Vault;
   files: string[];
+  /** Icon of a page: its emoji, or the icon of its kind. */
+  iconOf: (path: string) => ReactNode;
   onOpen: (path: string, newTab: boolean) => void;
   onCreate: (kind: CreateKind) => void;
   onOpenGit: () => void;
@@ -187,7 +188,7 @@ export function Dashboard({
           ) : (
             <div className="dash-list">
               {recents.map((p) => (
-                <PageLink key={p.path} path={p.path} onOpen={onOpen} detail={timeAgo(p.at)} />
+                <PageLink iconOf={iconOf} key={p.path} path={p.path} onOpen={onOpen} detail={timeAgo(p.at)} />
               ))}
             </div>
           )}
@@ -233,7 +234,7 @@ export function Dashboard({
                     .sort((a, b) => (b.created ?? "").localeCompare(a.created ?? ""))
                     .slice(0, 5)
                     .map((t) => (
-                      <PageLink key={t.path} path={t.path} onOpen={onOpen} detail={t.id !== null ? `#${t.id}` : ""} />
+                      <PageLink iconOf={iconOf} key={t.path} path={t.path} onOpen={onOpen} detail={t.id !== null ? `#${t.id}` : ""} />
                     ))}
                 </div>
               </>
@@ -322,7 +323,7 @@ export function Dashboard({
               {open === "broken" && (
                 <div className="dash-list">
                   {stats.brokenLinks.slice(0, 30).map((l, i) => (
-                    <PageLink key={`${l.from}-${i}`} path={l.from} onOpen={onOpen} detail={`→ ${l.target}`} />
+                    <PageLink iconOf={iconOf} key={`${l.from}-${i}`} path={l.from} onOpen={onOpen} detail={`→ ${l.target}`} />
                   ))}
                 </div>
               )}
@@ -333,7 +334,7 @@ export function Dashboard({
               {open === "orphans" && (
                 <div className="dash-list">
                   {stats.orphans.slice(0, 30).map((p) => (
-                    <PageLink key={p} path={p} onOpen={onOpen} />
+                    <PageLink iconOf={iconOf} key={p} path={p} onOpen={onOpen} />
                   ))}
                 </div>
               )}
@@ -346,7 +347,7 @@ export function Dashboard({
             <h2>Favoris</h2>
             <div className="dash-list">
               {favorites.map((p) => (
-                <PageLink key={p} path={p} onOpen={onOpen} />
+                <PageLink iconOf={iconOf} key={p} path={p} onOpen={onOpen} />
               ))}
             </div>
           </section>

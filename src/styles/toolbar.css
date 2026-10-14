@@ -141,22 +141,383 @@
   justify-content: center;
 }
 
-.sidebar-search span,
-.new-page {
+/* ---- Tab strip (title bar): sidebar, back / forward, then the tabs ---- */
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--titlebar-height);
+  flex: none;
+  box-sizing: border-box;
+  padding: 0 12px;
+  background: var(--chrome);
+  user-select: none;
+}
+
+/*
+ * The window buttons sit at the left of the strip, on its vertical axis
+ * (trafficLightPosition in tauri.conf.json, y = centre + 2: 14 pt buttons at 22 pt,
+ * the last one ending at 78 pt); the controls follow after the same gap as
+ * between two window buttons.
+ */
+.native-vibrancy .titlebar {
+  padding-left: 80px;
+}
+
+.titlebar-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+
+.titlebar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+}
+
+.titlebar-button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.titlebar-button:disabled {
+  opacity: 0.35;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ---- Sidebar, laid out like Notion's ---- */
+
+.vault-switcher,
+.sidebar-compose,
+.sidebar-row,
+.sidebar-menu button,
+.page-heading-actions button,
+.page-heading-icon {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
+.vault-switcher {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px 0 6px;
+  border-radius: 8px;
+}
+
+.vault-switcher > .icon {
+  color: var(--muted);
+}
+
+.vault-avatar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sidebar-compose {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--muted);
+}
+
+.vault-switcher:hover,
+.sidebar-compose:hover,
+.sidebar-row:hover {
+  background: var(--hover);
+}
+
+.sidebar-compose:hover {
+  color: var(--text);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-bottom: 8px;
+}
+
+.sidebar-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-align: left;
+}
+
+.sidebar-row:hover,
+.sidebar-row.active {
+  color: var(--text);
+}
+
+.sidebar-row.active {
+  background: var(--selected);
+  font-weight: 500;
+}
+
+.sidebar-row-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-row kbd {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.sidebar-row:hover kbd {
+  opacity: 1;
+}
+
+.sidebar-badge {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+
+.sidebar-section {
+  padding: 6px 8px 4px;
+  color: var(--faint, var(--muted));
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.sidebar-tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.page-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-emoji {
+  display: inline-flex;
+  justify-content: center;
+  line-height: 1;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+}
+
+.sidebar-menu {
+  position: fixed;
+  z-index: 300;
+  min-width: 220px;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--menu-material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow: var(--shadow-menu);
+  animation: materialize 140ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.sidebar-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: left;
+}
+
+.sidebar-menu button:hover {
+  background: var(--hover);
+}
+
+.sidebar-menu button.danger {
+  color: var(--danger);
+}
+
+/* ---- Page icon and title ---- */
+
+.page-heading {
+  box-sizing: content-box;
+  max-width: 720px;
+  margin: 40px auto 0;
+  padding: 0 32px;
+}
+
+.page-heading .page-title {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.page-heading-actions {
+  height: 28px;
+  margin-bottom: 4px;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.page-heading:hover .page-heading-actions,
+.page-heading-actions:focus-within {
+  opacity: 1;
+}
+
+.page-heading-actions button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  margin-left: -8px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
-.new-page {
+.page-heading-actions button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.page-heading-icon {
+  display: block;
+  margin: 0 0 6px -6px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  font-size: 64px;
+  line-height: 1;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+}
+
+.page-heading-icon:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.page-heading-icon:disabled {
+  opacity: 1;
+}
+
+.icon-picker {
+  position: fixed;
+  z-index: 300;
   display: flex;
+  flex-direction: column;
+  width: 352px;
+  max-height: 380px;
+  border-radius: 12px;
+  background: var(--menu-material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow: var(--shadow-menu);
+  animation: materialize 160ms cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
-/* Hidden sidebar: the toolbar leaves room for the window buttons in the desktop app. */
-.layout.no-sidebar {
-  grid-template-columns: minmax(0, 1fr) auto;
+.icon-picker-header {
+  display: flex;
+  gap: 6px;
+  padding: 10px 10px 8px;
+  border-bottom: 0.5px solid var(--border);
 }
 
-.native-vibrancy .layout.no-sidebar .toolbar {
-  padding-left: 80px;
+.icon-picker-header input {
+  flex: 1;
+  min-width: 0;
+}
+
+.icon-picker-header button {
+  flex: none;
+  font-size: 12.5px;
+}
+
+.icon-picker-body {
+  overflow: auto;
+  padding: 4px 10px 10px;
+}
+
+.icon-picker-body h4 {
+  margin: 8px 0 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+}
+
+.icon-picker-grid button {
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  font-size: 20px;
+  line-height: 1;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  content-visibility: auto;
+}
+
+.icon-picker-grid button:hover,
+.icon-picker-grid button.selected {
+  background: var(--hover);
+}
+
+.icon-picker-empty {
+  margin: 16px 0;
+  color: var(--muted);
+  text-align: center;
 }

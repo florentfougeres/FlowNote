@@ -82,9 +82,9 @@ button.crumb:hover {
 
 .outline-panel {
   position: sticky;
-  top: calc(52px + var(--tab-bar-height));
+  top: var(--pagebar-height);
   flex: 0 0 240px;
-  max-height: calc(100vh - 52px - var(--tab-bar-height));
+  max-height: calc(100vh - var(--titlebar-height) - var(--pagebar-height));
   overflow: auto;
   box-sizing: border-box;
   padding: 18px 12px 24px 4px;

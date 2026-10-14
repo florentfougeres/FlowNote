@@ -17,6 +17,8 @@ export interface EmojiEntry {
   label: string;
   tags: string[];
   codes: string[];
+  /** Emojibase group (0 smileys … 9 flags). */
+  group?: number;
 }
 
 export interface EmojiItem extends MenuItem {
@@ -44,7 +46,7 @@ export function loadEmojis(): Promise<EmojiEntry[]> {
       if (e.group === 2) continue; // skin tone and hair components
       const codes = codesOf(e.hexcode);
       for (const code of codes) if (!byCode.has(code)) byCode.set(code, e.unicode);
-      entries.push({ emoji: e.unicode, label: e.label, tags: e.tags ?? [], codes });
+      entries.push({ emoji: e.unicode, label: e.label, tags: e.tags ?? [], codes, group: e.group });
     }
     index = entries;
     return entries;
