@@ -1,0 +1,77 @@
+/* ---- Graph of the vault (dashboard preview and its own tab) ---- */
+
+.graph-view {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.graph-view canvas {
+  display: block;
+  touch-action: none;
+}
+
+.graph-view.compact {
+  height: 280px;
+  margin: 0 -6px -6px;
+  border-radius: 10px;
+}
+
+.graph-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--titlebar-height) - var(--pagebar-height));
+  box-sizing: border-box;
+}
+
+.graph-page .graph-view {
+  flex: 1;
+}
+
+.graph-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 32px 10px;
+}
+
+.graph-header h1 {
+  margin: 0 0 2px;
+  font-size: 1.6em;
+  letter-spacing: -0.02em;
+}
+
+.graph-header p {
+  margin: 0;
+}
+
+.graph-filters {
+  display: flex;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.graph-filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.graph-recenter {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  font-size: 12.5px;
+}
+
+.graph-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: var(--muted);
+}

@@ -12,7 +12,8 @@ import { ShortcutsHelp } from "./ShortcutsHelp";
 import { applyTheme, loadSettings, saveSettings, SettingsDialog, type Settings } from "./SettingsDialog";
 import { deletePage, renamePage, subpagesOf } from "./vault/pageOps";
 import { PageIcon, Sidebar } from "./Sidebar";
-import { Icon } from "./Icon";
+import { Icon, type IconName } from "./Icon";
+import { GraphPage } from "./graph/GraphPage";
 import { noteIcon } from "./vault/icon";
 import { setProperty } from "./markdown/frontmatter";
 import type { FrontmatterControl } from "./editor/NoteEditor";
@@ -58,6 +59,14 @@ interface OpenNote {
 
 /** Pseudo-path of the tickets list (a tab can show it like a page). */
 const TICKETS_VIEW = "flownote:tickets";
+/** Pseudo-path of the vault graph. */
+const GRAPH_VIEW = "flownote:graph";
+/** Views shown in a tab instead of a page. */
+const VIEWS: Record<string, { title: string; icon: IconName }> = {
+  [TICKETS_VIEW]: { title: "Tickets", icon: "ticket" },
+  [GRAPH_VIEW]: { title: "Graphe", icon: "graph" },
+};
+const isView = (path: string | null) => path !== null && path in VIEWS;
 
 let tabCounter = 0;
 const newTabId = () => `tab-${Date.now().toString(36)}-${(tabCounter++).toString(36)}`;
@@ -279,7 +288,7 @@ export function App() {
   const load = useCallback(
     async (path: string | null): Promise<boolean> => {
       if (!vault) return false;
-      if (path === null || path === TICKETS_VIEW) {
+      if (path === null || isView(path)) {
         setNote(null);
         setTabPath(activeRef.current, path);
         setStatus("");
@@ -552,7 +561,7 @@ export function App() {
       const moved = (p: string) => (p === path ? result.path : p.startsWith(oldFolder) ? `${subpageFolder(result.path)}/${p.slice(oldFolder.length)}` : p);
       back.current = back.current.map(moved);
       forward.current = forward.current.map(moved);
-      setTabs((list) => list.map((t) => (t.path && t.path !== TICKETS_VIEW ? { ...t, path: moved(t.path) } : t)));
+      setTabs((list) => list.map((t) => (t.path && !isView(t.path) ? { ...t, path: moved(t.path) } : t)));
       moveRecentPage(vault.name, path, result.path);
       const current = noteRef.current;
       if (current && (moved(current.path) !== current.path || result.updatedNotes.includes(current.path))) {
@@ -711,7 +720,7 @@ export function App() {
       return;
     }
     const previous = tabsRef.current.find((t) => t.id === activeRef.current)?.path ?? null;
-    if ((await load(null)) && previous && previous !== TICKETS_VIEW) {
+    if ((await load(null)) && previous && !isView(previous)) {
       back.current.push(previous);
       forward.current = [];
     }
@@ -753,7 +762,7 @@ export function App() {
       vaultName={vault.name}
       tree={tree}
       selected={note?.path}
-      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : null}
+      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : null}
       liveIcon={note ? { path: note.path, icon: liveIcon } : undefined}
       gitChanges={vault.git ? gitChanges : null}
       gitOpen={gitOpen}
@@ -766,6 +775,7 @@ export function App() {
       onVaultSearch={() => setModal("search")}
       onHome={(newTabRequested) => void (newTabRequested ? newTab(null) : showHome())}
       onTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
+      onGraph={(newTabRequested) => void select(GRAPH_VIEW, "push", newTabRequested)}
       onGit={() => toggleGit()}
       onSettings={() => setModal("settings")}
       onHelp={() => setModal("help")}
@@ -801,9 +811,9 @@ export function App() {
           tabs={tabs}
           active={activeTab}
           dirty={dirty}
-          titleOf={(tab) => (tab.path === TICKETS_VIEW ? "Tickets" : tab.path ? noteTitle(tab.path) : "Accueil")}
+          titleOf={(tab) => (tab.path === null ? "Accueil" : (VIEWS[tab.path]?.title ?? noteTitle(tab.path)))}
           iconOf={(tab) =>
-            tab.path === null ? <Icon name="home" size={13} /> : tab.path === TICKETS_VIEW ? <Icon name="ticket" size={13} /> : <PageIcon path={tab.path} icon={iconOf(tab.path)} ticket={ticketPaths.has(tab.path)} size={13} />
+            tab.path === null ? <Icon name="home" size={13} /> : isView(tab.path) ? <Icon name={VIEWS[tab.path].icon} size={13} /> : <PageIcon path={tab.path} icon={iconOf(tab.path)} ticket={ticketPaths.has(tab.path)} size={13} />
           }
           onSelect={(id) => void switchTab(id)}
           onClose={(id) => void closeTab(id)}
@@ -834,7 +844,7 @@ export function App() {
                   {status && <span className="status warning">{status}</span>}
                 </>
               ) : (
-                <span className="toolbar-location">{activePath === TICKETS_VIEW ? "Tickets" : "Accueil"}</span>
+                <span className="toolbar-location">{activePath === null ? "Accueil" : (VIEWS[activePath]?.title ?? "")}</span>
               )
             }
             center={
@@ -927,7 +937,9 @@ export function App() {
               </div>
             </>
           ) : (
-            activePath === TICKETS_VIEW ? (
+            activePath === GRAPH_VIEW ? (
+              <GraphPage key={activeTab} vault={vault} files={files} onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)} />
+            ) : activePath === TICKETS_VIEW ? (
               <TicketsView
                 key={activeTab}
                 vault={vault}
@@ -946,6 +958,7 @@ export function App() {
               onOpenGit={() => toggleGit(true)}
               onSearch={() => setModal("switcher")}
               onOpenTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
+              onOpenGraph={(newTabRequested) => void select(GRAPH_VIEW, "push", newTabRequested)}
             />
             )
           )}

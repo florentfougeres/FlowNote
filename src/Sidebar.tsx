@@ -128,7 +128,7 @@ interface Props {
   tree: VaultEntry[];
   selected?: string;
   /** What the active tab shows when it is not a page. */
-  view: "home" | "tickets" | null;
+  view: "home" | "tickets" | "graph" | null;
   /** Live icon of the open page (its front matter may not be saved yet). */
   liveIcon?: { path: string; icon: string | null };
   /** Number of changed files, or null when the vault has no Git repository. */
@@ -144,6 +144,7 @@ interface Props {
   onVaultSearch: () => void;
   onHome: (newTab: boolean) => void;
   onTickets: (newTab: boolean) => void;
+  onGraph: (newTab: boolean) => void;
   onGit: () => void;
   onSettings: () => void;
   onHelp: () => void;
@@ -260,6 +261,7 @@ export function Sidebar(props: Props) {
         <NavRow icon="replace" label="Rechercher dans les notes" shortcut="⌘⇧F" onClick={props.onVaultSearch} />
         <NavRow icon="home" label="Accueil" active={view === "home"} onClick={(event) => props.onHome(event.metaKey || event.ctrlKey)} />
         <NavRow icon="ticket" label="Tickets" active={view === "tickets"} onClick={(event) => props.onTickets(event.metaKey || event.ctrlKey)} />
+        <NavRow icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />
       </nav>
       <div className="sidebar-section">Pages</div>
       <div className="sidebar-tree">{render(pages, 0)}</div>

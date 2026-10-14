@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { keys } from "./keys";
 import { Icon } from "./Icon";
-import type { Vault } from "./vault/vault";
+import { readAllNotes, type Vault } from "./vault/vault";
+import { buildGraph, type VaultGraph } from "./graph/graph";
+import { GraphView } from "./graph/GraphView";
 import type { GitCommit, GitStatus } from "./vault/git";
 import { isConflicted, isStaged, isUnstaged, isUntracked } from "./vault/git";
 import { syncSummary } from "./vault/gitMessages";
@@ -84,6 +86,7 @@ export function Dashboard({
   onOpenGit,
   onSearch,
   onOpenTickets,
+  onOpenGraph,
 }: {
   vault: Vault;
   files: string[];
@@ -94,6 +97,7 @@ export function Dashboard({
   onOpenGit: () => void;
   onSearch: () => void;
   onOpenTickets: (newTab: boolean) => void;
+  onOpenGraph: (newTab: boolean) => void;
 }) {
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [lastCommit, setLastCommit] = useState<GitCommit | null>(null);
@@ -102,6 +106,7 @@ export function Dashboard({
   const [todo, setTodo] = useState<AgendaItem[] | null>(null);
   const [tickets, setTickets] = useState<TicketInfo[]>([]);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
+  const [graph, setGraph] = useState<VaultGraph | null>(null);
   const [open, setOpen] = useState<"broken" | "orphans" | null>(null);
 
   useEffect(() => {
@@ -114,10 +119,9 @@ export function Dashboard({
     }
     vault.bookmarks?.().then((json) => !cancelled && setBookmarks(bookmarkedFiles(json)), () => {});
     (async () => {
-      const notes: [string, string][] = vault.readNotes
-        ? await vault.readNotes()
-        : await Promise.all(files.filter((f) => f.endsWith(".md")).map(async (f): Promise<[string, string]> => [f, await vault.read(f).catch(() => "")]));
+      const notes = await readAllNotes(vault, files);
       if (cancelled) return;
+      setGraph(buildGraph(notes, files));
       setStats(computeStats(notes, files));
       setTodo(agenda(notes));
       setTickets(ticketsOf(notes));
@@ -272,6 +276,16 @@ export function Dashboard({
             )}
           </section>
         )}
+
+        <section className="dash-card dash-wide">
+          <h2>
+            Graphe
+            <button className="dash-card-action" onClick={(e) => onOpenGraph(e.metaKey || e.ctrlKey)}>
+              Agrandir
+            </button>
+          </h2>
+          {!graph ? <p className="dash-muted">Analyse des liens…</p> : <GraphView graph={graph} onOpen={onOpen} compact />}
+        </section>
 
         {vault.git && status?.isRepo && (
           <section className="dash-card dash-wide">

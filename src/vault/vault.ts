@@ -244,3 +244,9 @@ export function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultE
       .sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name, "fr") : a.kind === "dir" ? -1 : 1));
   return sort(root);
 }
+
+/** The text of every note of the vault (in one call when the vault supports it). */
+export async function readAllNotes(vault: Vault, files: string[]): Promise<[string, string][]> {
+  if (vault.readNotes) return vault.readNotes();
+  return Promise.all(files.filter((f) => f.endsWith(".md")).map(async (f): Promise<[string, string]> => [f, await vault.read(f).catch(() => "")]));
+}

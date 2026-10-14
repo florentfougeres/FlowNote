@@ -41,6 +41,12 @@ const TAG = /(?:^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
 const WIKILINK = /(!?)\[\[([^\]|#^\n]+)(?:[#^][^\]|\n]*)?(?:\|[^\]\n]*)?\]\]/g;
 const MDLINK = /\[[^\]\n]*\]\(([^)\s]+\.md)(?:#[^)]*)?\)/g;
 
+/** Link targets written in a note's prose (wikilinks and Markdown links to notes), outside code. */
+export function noteLinkTargets(text: string): string[] {
+  const prose = withoutCode(frontmatter(text).body);
+  return [...[...prose.matchAll(WIKILINK)].map((m) => m[2].trim()), ...[...prose.matchAll(MDLINK)].map((m) => decodeURIComponent(m[1]))];
+}
+
 export function computeStats(notes: [string, string][], files: string[]): VaultStats {
   const tagCounts = new Map<string, number>();
   const brokenLinks: VaultStats["brokenLinks"] = [];
@@ -55,8 +61,7 @@ export function computeStats(notes: [string, string][], files: string[]): VaultS
     const prose = withoutCode(body);
     for (const tag of tags) tagCounts.set(tag.toLowerCase(), (tagCounts.get(tag.toLowerCase()) ?? 0) + 1);
     for (const match of prose.matchAll(TAG)) tagCounts.set(match[1].toLowerCase(), (tagCounts.get(match[1].toLowerCase()) ?? 0) + 1);
-    const targets = [...[...prose.matchAll(WIKILINK)].map((m) => m[2].trim()), ...[...prose.matchAll(MDLINK)].map((m) => decodeURIComponent(m[1]))];
-    for (const target of targets) {
+    for (const target of noteLinkTargets(text)) {
       const resolved = resolveLink(target, files, path);
       if (resolved) {
         if (resolved !== path) linked.add(resolved);
