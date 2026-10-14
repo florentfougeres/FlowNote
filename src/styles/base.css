@@ -224,6 +224,8 @@ button:disabled {
   min-height: 0;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) auto;
+  /* One row of the window's height: the sidebar never grows with its tree (the tree scrolls). */
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .layout.no-sidebar .workspace {
@@ -235,6 +237,7 @@ button:disabled {
 .sidebar-dock {
   display: flex;
   min-height: 0;
+  overflow: hidden;
   background: var(--chrome);
   box-shadow: inset -1px 0 0 var(--chrome-edge);
 }
