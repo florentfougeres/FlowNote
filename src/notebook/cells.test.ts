@@ -57,3 +57,42 @@ describe("notebook cells in the editor", () => {
     expect(cell.querySelector(".cell-fold")?.textContent).toContain("import marimo as mo");
   });
 });
+
+describe("running cells", () => {
+  it("running cells shows outputs and never changes the file", async () => {
+    const { NotebookRuntime } = await import("./runtime");
+    const events: ((e: Record<string, unknown> & { type: string }) => void)[] = [];
+    const runtime = new NotebookRuntime(
+      {
+        start: async () => void setTimeout(() => events[0]?.({ type: "ready", pid: 1, python: "3.13.0" })),
+        send: async (message) => {
+          const cell = message.cell as string;
+          setTimeout(() => {
+            events[0]?.({ type: "status", cell, state: "running" });
+            events[0]?.({ type: "stream", cell, name: "stdout", text: "550\n" });
+            events[0]?.({ type: "table", cell, columns: [{ name: "a", dtype: "Int64" }], rows: [[1]], total: 1, offset: 0 });
+            events[0]?.({ type: "status", cell, state: "ok", elapsed_ms: 7, defs: [], refs: [] });
+          });
+        },
+        interrupt: async () => {},
+        stop: async () => {},
+        listen: (fn) => {
+          events[0] = fn;
+          return () => {};
+        },
+      },
+      async () => ({ ok: true, deps: [] }),
+    );
+    const source = '---\nmarimo-version: 0.25.1\n---\n\nTexte  \n\n```python {.marimo}\nprint(550)\n```\n\n```sql {.marimo query="r"}\nSELECT 1\n```\n';
+    const { cellRequests } = await import("./cellIds");
+    const bridge = { notebook: true, runtime, runCell: () => {} };
+    const { editor, save } = openEditor(source, bridge);
+    await runtime.execute(cellRequests(editor.state).map(({ pos: _pos, ...r }) => r));
+    await new Promise((r) => setTimeout(r, 20));
+    const outputs = [...editor.view.dom.querySelectorAll<HTMLElement>(".cell-output")];
+    expect(outputs.every((o) => !o.hidden)).toBe(true);
+    expect(outputs[0].textContent).toContain("550");
+    expect(editor.view.dom.querySelectorAll(".notebook-cell .cell-status")[0].textContent).toBe("✓ 7 ms");
+    expect(save()).toBe(source);
+  });
+});

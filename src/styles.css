@@ -3721,6 +3721,10 @@ button.crumb:hover {
 
 /* ---- Notebook execution ---- */
 
+.note .cell-run[hidden] {
+  display: none;
+}
+
 .note .cell-run {
   width: 22px;
   height: 22px;
@@ -3862,6 +3866,7 @@ button.crumb:hover {
   font: 12px var(--font-mono);
   background: none;
   padding: 0;
+  color: var(--text);
 }
 
 /* Data tables */

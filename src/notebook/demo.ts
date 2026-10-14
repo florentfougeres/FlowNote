@@ -5,7 +5,7 @@ export function demoNotebook(): string {
   return newNotebookFile().replace(
     "```python {.marimo}\n\n```",
     [
-      "Un notebook mêle texte et cellules de code. Exécution à venir : pour l'instant, les cellules s'éditent.",
+      "Un notebook mêle texte et cellules de code. Exécutez une cellule avec ▶ ou ⌘↵ (dans l'application de bureau).",
       "",
       "```python {.marimo}",
       "ventes = [120, 340, 90]",

@@ -77,7 +77,10 @@ fn path_with_uv() -> String {
 
 fn uv(vault: &str) -> Command {
     let mut cmd = Command::new(uv_binary());
-    cmd.current_dir(vault).env("PATH", path_with_uv()).env("UV_NO_PROGRESS", "1").env("UV_PYTHON", PYTHON_VERSION).stdin(Stdio::null());
+    cmd.current_dir(vault).env("PATH", path_with_uv()).env("UV_NO_PROGRESS", "1").env("UV_PYTHON", PYTHON_VERSION)
+        // Always uv's own Python: a system or Homebrew Python (with its leftovers) never leaks in.
+        .env("UV_PYTHON_PREFERENCE", "only-managed")
+        .stdin(Stdio::null());
     cmd
 }
 
