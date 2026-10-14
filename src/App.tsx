@@ -222,9 +222,10 @@ export function App() {
     });
   }, []);
   useEffect(() => applyTheme(settings.theme), [settings.theme]);
-  // The desktop window is transparent so the sidebar can show the native macOS material.
+  // The macOS window is transparent so the sidebar can show the native material
+  // (on Linux the window is opaque, with the system title bar).
   useEffect(() => {
-    document.documentElement.classList.toggle("native-vibrancy", isTauri());
+    document.documentElement.classList.toggle("native-vibrancy", isTauri() && navigator.userAgent.includes("Mac"));
   }, []);
 
   const [gitWidth, setGitWidth] = useState(() => {

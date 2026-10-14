@@ -1,5 +1,5 @@
-# Builds the macOS .dmg files and prepares a draft GitHub release when a
-# version tag is pushed (git tag v0.1.0 && git push origin v0.1.0).
+# Builds the macOS .dmg and the Linux AppImage and prepares a draft GitHub
+# release when a version tag is pushed (git tag v0.1.0 && git push origin v0.1.0).
 name: Release
 
 on:
@@ -26,6 +26,8 @@ jobs:
   build:
     needs: test
     runs-on: macos-latest # Apple Silicon runner: builds the arm64 app
+    outputs:
+      releaseId: ${{ steps.tauri.outputs.releaseId }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -41,6 +43,7 @@ jobs:
           version: "0.13.0" # pinned: looking up "latest" can fail on a GitHub API hiccup
       - run: npm ci
       - uses: tauri-apps/tauri-action@v1
+        id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -50,6 +53,38 @@ jobs:
             Pour Mac Apple Silicon (M1 et suivants).
 
             Premier lancement : l'application n'est pas signée par Apple. Ouvrez *Réglages Système → Confidentialité et sécurité* puis **Ouvrir quand même**, ou lancez `xattr -cr /Applications/FlowNote.app`.
+
+            Pour Linux x86_64 : le fichier `.AppImage`. Rendez-le exécutable (`chmod +x FlowNote_*.AppImage`) puis lancez-le.
           releaseDraft: true
           prerelease: false
           args: --bundles dmg
+
+  # Linux AppImage, added to the release created by the macOS job. Its window
+  # settings come from src-tauri/tauri.linux.conf.json (macOS is unaffected).
+  build-linux:
+    needs: build
+    runs-on: ubuntu-22.04 # oldest supported glibc: the AppImage runs on more distributions
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - uses: astral-sh/setup-uv@v7 # builds the Grammalecte companion (scripts/build-grammar.sh)
+        with:
+          version: "0.13.0"
+      - run: npm ci
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ needs.build.outputs.releaseId }}
+          args: --bundles appimage
