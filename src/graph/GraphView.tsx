@@ -9,6 +9,7 @@ interface SimNode extends SimulationNodeDatum {
 type SimLink = SimulationLinkDatum<SimNode>;
 
 const DRAWING_COLOR = "#8e44ad";
+const PRESENTATION_COLOR = "#e67e22";
 
 /**
  * The vault graph drawn on a canvas, laid out by a force simulation (linked
@@ -99,7 +100,7 @@ export function GraphView({ graph, onOpen, compact = false }: { graph: VaultGrap
       for (const n of nodes) {
         const kind = n.node.kind;
         ctx.globalAlpha = lit && !lit.has(n) ? 0.15 : kind === "missing" ? 0.45 : 1;
-        ctx.fillStyle = n === hover ? c.accent : kind === "ticket" ? c.accent : kind === "drawing" ? DRAWING_COLOR : c.muted;
+        ctx.fillStyle = n === hover ? c.accent : kind === "ticket" ? c.accent : kind === "drawing" ? DRAWING_COLOR : kind === "presentation" ? PRESENTATION_COLOR : c.muted;
         ctx.beginPath();
         ctx.arc(n.x!, n.y!, n.r, 0, Math.PI * 2);
         ctx.fill();

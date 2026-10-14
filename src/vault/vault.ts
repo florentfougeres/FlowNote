@@ -14,6 +14,8 @@ export interface VaultEntry {
   ticket?: boolean;
   /** Emoji of the note's `icon` property. */
   icon?: string;
+  /** The note is a presentation (front matter with `marp: true`). */
+  presentation?: boolean;
 }
 
 export interface Vault {
@@ -54,11 +56,12 @@ export class ConflictError extends Error {}
 import { memoryGit, type GitApi } from "./git";
 import { isTicketMarkdown } from "../ticket/format";
 import { noteIcon } from "./icon";
+import { isPresentationMarkdown } from "../presentation/format";
 
 /** What the tree shows of a note besides its name, read from its beginning. */
-function noteMeta(head: string): Pick<VaultEntry, "ticket" | "icon"> {
+function noteMeta(head: string): Pick<VaultEntry, "ticket" | "icon" | "presentation"> {
   const icon = noteIcon(head);
-  return { ...(isTicketMarkdown(head) ? { ticket: true } : {}), ...(icon ? { icon } : {}) };
+  return { ...(isTicketMarkdown(head) ? { ticket: true } : {}), ...(isPresentationMarkdown(head) ? { presentation: true } : {}), ...(icon ? { icon } : {}) };
 }
 
 /** Folders never shown nor touched: Obsidian config, Git data, trash. */
@@ -219,7 +222,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
 }
 
 /** Builds the sidebar tree from a flat list of note paths. */
-export function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultEntry, "ticket" | "icon"> = () => ({})): VaultEntry[] {
+export function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultEntry, "ticket" | "icon" | "presentation"> = () => ({})): VaultEntry[] {
   const root: VaultEntry[] = [];
   for (const path of paths) {
     const parts = path.split("/");

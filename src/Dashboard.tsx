@@ -19,7 +19,7 @@ import { agenda, dueLabel, ticketsOf, urgency, type AgendaItem, type TicketInfo 
  * commit activity, vault statistics and health, Obsidian bookmarks.
  */
 
-export type CreateKind = "note" | "drawing" | "ticket";
+export type CreateKind = "note" | "drawing" | "ticket" | "presentation";
 
 const folderOf = (path: string) => (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
@@ -202,6 +202,15 @@ export function Dashboard({
           <span>
             <strong>Nouveau ticket</strong>
             <small>Suivi, commentaires, échéance</small>
+          </span>
+        </button>
+        <button onClick={() => onCreate("presentation")}>
+          <span className="dash-create-icon presentation">
+            <Icon name="slides" size={20} />
+          </span>
+          <span>
+            <strong>Nouvelle présentation</strong>
+            <small>Diapos en Markdown (Marp)</small>
           </span>
         </button>
         {/* « Nouveau notebook » arrivera avec la fusion de la branche feature/notebooks. */}

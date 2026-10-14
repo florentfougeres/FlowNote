@@ -16,6 +16,9 @@ pub struct VaultEntry {
     /// The note is a ticket (front matter with `type: ticket`).
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     ticket: bool,
+    /// The note is a presentation (front matter with `marp: true`).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    presentation: bool,
     /// Emoji of the `icon` front matter property, shown like a Notion page icon.
     #[serde(skip_serializing_if = "Option::is_none")]
     icon: Option<String>,
@@ -43,6 +46,10 @@ fn property<'a>(yaml: &'a str, key: &str) -> Option<&'a str> {
 
 fn is_ticket(yaml: &str) -> bool {
     property(yaml, "type") == Some("ticket")
+}
+
+fn is_presentation(yaml: &str) -> bool {
+    property(yaml, "marp") == Some("true")
 }
 
 /// The `icon` property when it is an emoji (not a plugin icon name like "LiHome").
@@ -85,13 +92,14 @@ fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
         if file_type.is_dir() {
             let children = list(&entry.path(), &path)?;
             if !children.is_empty() {
-                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children), ticket: false, icon: None });
+                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children), ticket: false, presentation: false, icon: None });
             }
         } else if let Some(stem) = name.strip_suffix(".md") {
             let yaml = front_matter(&entry.path());
             let ticket = yaml.as_deref().is_some_and(is_ticket);
+            let presentation = yaml.as_deref().is_some_and(is_presentation);
             let icon = yaml.as_deref().and_then(icon_of);
-            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket, icon });
+            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket, presentation, icon });
         }
     }
     entries.sort_by(|a, b| {
@@ -287,6 +295,14 @@ pub fn vault_trash(root: String, path: String) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn presentations_have_marp_true() {
+        assert!(is_presentation("marp: true\ntheme: gaia"));
+        assert!(is_presentation("marp: \"true\"\r"));
+        assert!(!is_presentation("marp: false"));
+        assert!(!is_presentation("type: ticket"));
+    }
 
     #[test]
     fn page_icons_come_from_the_icon_property() {

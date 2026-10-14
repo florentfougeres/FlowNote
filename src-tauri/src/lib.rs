@@ -67,6 +67,8 @@ pub fn run() {
       log_frontend,
       web::open_url,
       web::fetch_page_title,
+      web::save_export,
+      web::open_export,
       startup_note,
       vault::vault_tree,
       vault::vault_read,

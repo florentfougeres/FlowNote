@@ -44,6 +44,10 @@ import { Dashboard } from "./Dashboard";
 import { TicketView } from "./ticket/TicketView";
 import { TicketsView } from "./ticket/TicketsView";
 import { isTicketMarkdown, newTicketFile, nextTicketId } from "./ticket/format";
+import { isPresentationMarkdown, newPresentationFile } from "./presentation/format";
+import { slideAt, useSlides } from "./presentation/useSlides";
+import { SlidesPanel } from "./presentation/SlidesPanel";
+import { Presenter } from "./presentation/Presenter";
 import { ticketInfo } from "./ticket/agenda";
 import { moveRecentPage, recordRecentPage } from "./dashboard/recents";
 import { invoke } from "@tauri-apps/api/core";
@@ -141,6 +145,9 @@ export function App() {
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
   const [showOutline, setShowOutline] = usePersistentFlag("flownote:outline", false, ["shown", "hidden"]);
+  const [showSlides, setShowSlides] = usePersistentFlag("flownote:slides", true, ["shown", "hidden"]);
+  /** Presenting mode, from this slide. */
+  const [presenting, setPresenting] = useState<number | null>(null);
   /** Outline set aside while the Git panel is open (the preference is kept). */
   const [outlineHidden, setOutlineHidden] = useState(false);
   // Git and the outline share the right edge: Git takes the place.
@@ -276,7 +283,7 @@ export function App() {
         setStatus("");
         void refreshGit();
         // The page tree shows icons read from the files: re-read it when the icon changed.
-        if (noteIcon(current.markdown) !== noteIcon(current.disk)) void refresh(vault);
+        if (noteIcon(current.markdown) !== noteIcon(current.disk) || isPresentationMarkdown(current.markdown) !== isPresentationMarkdown(current.disk)) void refresh(vault);
       } catch (error) {
         setStatus(error instanceof ConflictError ? `Conflit : ${error.message} Rechargez la note.` : String(error));
         throw error;
@@ -471,6 +478,7 @@ export function App() {
     };
     if (key === "s") run(() => void saveNow().catch(() => {}));
     else if (!vault) return;
+    else if (key === "p" && event.shiftKey && presentationPageRef.current) run(() => present());
     else if (key === "p" || key === "k" || key === "o") run(() => setModal("switcher"));
     else if (key === "n" && !event.shiftKey) run(() => void newPage(null));
     else if (event.code === "BracketLeft" && event.shiftKey) run(() => cycleTab(-1));
@@ -664,7 +672,7 @@ export function App() {
         : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : ".md"}`, filesRef.current);
     try {
       await saveNow();
-      await createFile(path, kind === "drawing" ? newDrawingFile() : kind === "ticket" ? newTicketFile(ticketId) : "");
+      await createFile(path, kind === "drawing" ? newDrawingFile() : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : "");
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";
@@ -676,14 +684,8 @@ export function App() {
     }
   };
 
-  const bridge: VaultBridge = {
-    notePath: note?.path ?? "",
-    // Read through a ref: callbacks may run between renders, after a file was created.
-    get files() {
-      return filesRef.current;
-    },
-    config,
-    loadImage: async (path) => {
+  const loadImage = useCallback(
+    async (path: string) => {
       const cached = images.current.get(path);
       if (cached || !vault) return cached ?? "";
       const bytes = await vault.readBinary(path);
@@ -691,6 +693,17 @@ export function App() {
       images.current.set(path, url);
       return url;
     },
+    [vault],
+  );
+
+  const bridge: VaultBridge = {
+    notePath: note?.path ?? "",
+    // Read through a ref: callbacks may run between renders, after a file was created.
+    get files() {
+      return filesRef.current;
+    },
+    config,
+    loadImage,
     openPath: (path, newTabRequested) => void select(path, "push", newTabRequested),
     askName,
     createFile,
@@ -702,6 +715,9 @@ export function App() {
   const drawing = note !== null && isDrawingPath(note.path);
   /** The open page is a ticket (front matter type: ticket), read from the loaded text. */
   const ticketPage = note !== null && !drawing && isTicketMarkdown(note.loaded);
+  /** The open page is a presentation (`marp: true`), read from the current text so a conversion shows at once. */
+  const presentationPage = note !== null && !drawing && !ticketPage && isPresentationMarkdown(note.markdown);
+  const slides = useSlides(presentationPage ? note.markdown : "", note?.path ?? "", files, loadImage, presentationPage);
   const activePath = tabs.find((t) => t.id === activeTab)?.path ?? null;
   const ticketPaths = useMemo(() => {
     const found = new Set<string>();
@@ -769,7 +785,38 @@ export function App() {
     return found;
   }, [tree]);
   const iconOf = (path: string) => (note?.path === path ? liveIcon : (treeIcons.get(path) ?? null));
-  const pageIconFor = (path: string) => <PageIcon path={path} icon={iconOf(path)} ticket={ticketPaths.has(path)} />;
+  /** Presentations, from the tree (from the text for the open page: a conversion shows at once). */
+  const presentationPaths = useMemo(() => {
+    const found = new Set<string>();
+    const walk = (entries: VaultEntry[]) => entries.forEach((e) => (e.presentation ? found.add(e.path) : e.children && walk(e.children)));
+    walk(tree);
+    return found;
+  }, [tree]);
+  const isPresentation = (path: string) => (note?.path === path ? presentationPage : presentationPaths.has(path));
+  const pageIconFor = (path: string) => <PageIcon path={path} icon={iconOf(path)} ticket={ticketPaths.has(path)} presentation={isPresentation(path)} />;
+  /** Presents from the slide under the cursor. */
+  const present = () => {
+    const current = editorRef.current;
+    setPresenting(current && !current.isDestroyed ? slideAt(current.state.doc, current.state.selection.from) : 0);
+  };
+  const presentationPageRef = useRef(false);
+  presentationPageRef.current = presentationPage;
+  /** "Transformer en présentation": the note gets `marp: true`, its rules become slide breaks. */
+  const convertToPresentation = () => {
+    const control = frontmatter.current;
+    if (control) control.set(setProperty(control.get(), "marp", true));
+  };
+  const exportCurrent = async () => {
+    const current = noteRef.current;
+    if (!vault || !current) return;
+    try {
+      const { exportPresentation } = await import("./presentation/exportHtml");
+      const where = await exportPresentation(current.markdown, noteTitle(current.path), current.path, filesRef.current, (path) => vault.readBinary(path));
+      if (where) setStatus(`Présentation exportée : ${where}`);
+    } catch (error) {
+      setStatus(`Export impossible : ${String(error)}`);
+    }
+  };
   /** Sets or removes the page icon (the `icon` property of the open note). */
   const setPageIcon = (icon: string | null) => {
     const control = frontmatter.current;
@@ -848,7 +895,7 @@ export function App() {
           dirty={dirty}
           titleOf={(tab) => (tab.path === null ? "Accueil" : (VIEWS[tab.path]?.title ?? noteTitle(tab.path)))}
           iconOf={(tab) =>
-            tab.path === null ? <Icon name="home" size={13} /> : isView(tab.path) ? <Icon name={VIEWS[tab.path].icon} size={13} /> : <PageIcon path={tab.path} icon={iconOf(tab.path)} ticket={ticketPaths.has(tab.path)} size={13} />
+            tab.path === null ? <Icon name="home" size={13} /> : isView(tab.path) ? <Icon name={VIEWS[tab.path].icon} size={13} /> : <PageIcon path={tab.path} icon={iconOf(tab.path)} ticket={ticketPaths.has(tab.path)} presentation={isPresentation(tab.path)} size={13} />
           }
           onSelect={(id) => void switchTab(id)}
           onClose={(id) => void closeTab(id)}
@@ -898,7 +945,15 @@ export function App() {
                   {!drawing && settings.spellChecker !== "off" && (
                     <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={toggleSpelling} active={spellingOn} />
                   )}
-                  {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
+                  {presentationPage && (
+                  <>
+                    <ToolButton icon="slides" label="Miniatures des diapos" onClick={() => setShowSlides(!showSlides)} active={showSlides} />
+                    <ToolButton icon="play" label="Présenter (⌘⇧P)" onClick={() => present()} disabled={!slides} />
+                    <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportCurrent()} />
+                  </>
+                )}
+                {!drawing && !ticketPage && !presentationPage && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
+                {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
                   <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
                 </div>
               )
@@ -922,7 +977,7 @@ export function App() {
                     />
                   </div>
                 ) : (
-                <div className="page">
+                <div className={presentationPage ? "page presentation-page" : "page"}>
                   {hasConflictMarkers(note.disk) && (
                     <div className="conflict-note-banner">
                       <span>Cette note contient un conflit de fusion : elle est en lecture seule jusqu'à sa résolution.</span>
@@ -967,6 +1022,7 @@ export function App() {
                 </div>
                 )}
                 {showOutline && !outlineHidden && !rawMode && !drawing && <OutlinePanel editor={editor} onClose={toggleOutline} />}
+              {presentationPage && showSlides && !rawMode && <SlidesPanel editor={editor} rendered={slides} onPresent={(index) => setPresenting(index)} onClose={() => setShowSlides(false)} />}
                 {showHistory && vault.git && (
                   <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
                 )}
@@ -1070,6 +1126,7 @@ export function App() {
           onClose={() => setModal(null)}
         />
       )}
+      {presenting !== null && slides && presentationPage && <Presenter rendered={slides} start={presenting} onClose={() => setPresenting(null)} />}
       {modal === "help" && <ShortcutsHelp onClose={() => setModal(null)} />}
       {modal === "addLink" && <AddLinkDialog themes={readingThemes} fetchTitles={settings.fetchTitles} onAdd={addReading} onClose={() => setModal(null)} />}
       {modal === "settings" && (

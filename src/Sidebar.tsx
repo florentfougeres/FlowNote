@@ -22,6 +22,7 @@ interface Page {
   notePath: string | null;
   children: Page[];
   ticket?: boolean;
+  presentation?: boolean;
   icon?: string;
 }
 
@@ -33,7 +34,7 @@ export function toPages(entries: VaultEntry[]): Page[] {
     if (entry.kind !== "file") continue;
     const folder = dirs.get(entry.name);
     if (folder) usedDirs.add(folder.name);
-    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children: folder ? toPages(folder.children ?? []) : [], ticket: entry.ticket, icon: entry.icon });
+    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children: folder ? toPages(folder.children ?? []) : [], ticket: entry.ticket, presentation: entry.presentation, icon: entry.icon });
   }
   const folders = entries
     .filter((e) => e.kind === "dir" && !usedDirs.has(e.name))
@@ -46,7 +47,7 @@ function containsPath(page: Page, path: string): boolean {
 }
 
 /** Emoji of the page, or the icon of its kind (folder when `path` is null). */
-export function PageIcon({ path, icon, ticket, size = 14 }: { path: string | null; icon?: string | null; ticket?: boolean; size?: number }) {
+export function PageIcon({ path, icon, ticket, presentation, size = 14 }: { path: string | null; icon?: string | null; ticket?: boolean; presentation?: boolean; size?: number }) {
   if (icon) {
     return (
       <span className="page-emoji" style={{ fontSize: size, width: size + 2 }}>
@@ -54,7 +55,7 @@ export function PageIcon({ path, icon, ticket, size = 14 }: { path: string | nul
       </span>
     );
   }
-  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : ticket ? "ticket" : "doc";
+  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : ticket ? "ticket" : presentation ? "slides" : "doc";
   return <Icon name={name} size={size} />;
 }
 
@@ -210,7 +211,7 @@ export function Sidebar(props: Props) {
                 onAuxClick={(event) => event.button === 1 && page.notePath && props.onSelect(page.notePath, true)}
               >
                 <span className="page-icon">
-                  <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} />
+                  <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} presentation={page.presentation} />
                 </span>
                 <span className="page-label">{page.notePath ? noteTitle(page.notePath) : page.name}</span>
               </button>

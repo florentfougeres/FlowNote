@@ -10,6 +10,7 @@ const SHORTCUTS: [string, string][] = [
   ["⌘-clic", "Ouvrir dans un nouvel onglet"],
   ["⌘⇧G", "Panneau Git"],
   ["⌘⇧L", "Ajouter un lien à lire"],
+  ["⌘⇧P", "Présenter (présentation ouverte)"],
   ["⌘F / ⌘⌥F", "Rechercher / remplacer dans la note"],
   ["⌘⇧F", "Rechercher dans tout le vault"],
   ["⌘⇧E", "Mode Markdown brut"],

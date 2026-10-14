@@ -20,6 +20,24 @@ pub fn open_url(url: String) -> Result<(), String> {
     std::process::Command::new("open").arg(url.trim()).spawn().map(|_| ()).map_err(|e| e.to_string())
 }
 
+/// Writes an exported presentation where the user chose to save it (an .html file only).
+#[tauri::command]
+pub fn save_export(path: String, content: String) -> Result<(), String> {
+    if !path.to_ascii_lowercase().ends_with(".html") {
+        return Err(format!("Export refusé : {path}"));
+    }
+    std::fs::write(&path, content).map_err(|e| e.to_string())
+}
+
+/// Opens an exported presentation in the default browser.
+#[tauri::command]
+pub fn open_export(path: String) -> Result<(), String> {
+    if !path.to_ascii_lowercase().ends_with(".html") || !std::path::Path::new(&path).is_file() {
+        return Err(format!("Fichier introuvable : {path}"));
+    }
+    std::process::Command::new("open").arg(&path).spawn().map(|_| ()).map_err(|e| e.to_string())
+}
+
 /// Title of a web page (`og:title`, else `<title>`), or None. Reads at most
 /// 512 KB, gives up after a few seconds.
 #[tauri::command]

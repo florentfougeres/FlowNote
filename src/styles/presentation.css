@@ -1,0 +1,238 @@
+/* ---- Presentations (Marp) ---- */
+
+/* A slide scaled to its box (see SlideFrame). */
+.slide-frame {
+  position: relative;
+  overflow: hidden;
+}
+
+.slide-frame.contain {
+  width: 100%;
+  height: 100%;
+}
+
+.slide-frame > .marpit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  /* The slide's theme decides; nothing inherited from the button around a thumbnail. */
+  text-align: start;
+  line-height: normal;
+  letter-spacing: normal;
+  white-space: normal;
+  color: initial;
+}
+
+/* Thumbnails next to the note. */
+.slides-panel {
+  position: sticky;
+  top: var(--pagebar-height);
+  flex: 0 0 220px;
+  max-height: calc(100vh - var(--titlebar-height) - var(--pagebar-height));
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 18px 16px 24px 4px;
+  font-size: 13px;
+}
+
+.slides-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.slides-panel > header button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+}
+
+.slides-panel > header button:hover {
+  background: var(--hover);
+}
+
+.slides-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slide-thumb {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.slide-number {
+  flex: 0 0 16px;
+  padding-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.slide-thumb > button {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0.5px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.slide-thumb.current > button {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Slide breaks (the rules between slides) in the note. */
+.presentation-page .note > hr {
+  position: relative;
+  height: 0;
+  margin: 2.4em 0;
+  border: none;
+  border-top: 2px dashed color-mix(in srgb, #e67e22 55%, transparent);
+  overflow: visible;
+}
+
+.presentation-page .note {
+  counter-reset: slide 1;
+}
+
+.presentation-page .note > hr::after {
+  counter-increment: slide;
+  content: "Diapo " counter(slide);
+  position: absolute;
+  top: -0.8em;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 8px;
+  background: var(--bg);
+  color: #d35400;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Presenting mode. */
+.presenter {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #000;
+  color: #eee;
+}
+
+.presenter-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+
+
+.presenter-hint {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  color: #777;
+  font-size: 12px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  pointer-events: none;
+}
+
+.presenter:hover .presenter-hint {
+  opacity: 1;
+}
+
+.presenter-black {
+  position: fixed;
+  inset: 0;
+  background: #000;
+}
+
+.presenter-view {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 24px;
+  padding: 28px;
+  box-sizing: border-box;
+  background: #111;
+}
+
+.presenter-current {
+  min-height: 0;
+}
+
+.presenter-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+}
+
+.presenter-side small {
+  display: block;
+  margin-bottom: 6px;
+  color: #888;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.presenter-next .slide-frame {
+  opacity: 0.85;
+}
+
+.presenter-end {
+  color: #777;
+}
+
+.presenter-notes {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.presenter-notes p {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.presenter-clock {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: #aaa;
+}
+
+.presenter-clock strong {
+  color: #fff;
+  font-size: 34px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-create-icon.presentation {
+  color: #d35400;
+  background: color-mix(in srgb, #e67e22 14%, transparent);
+}
