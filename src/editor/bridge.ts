@@ -7,6 +7,8 @@ import { attachmentFolder, DEFAULT_CONFIG, IMAGE_EXTENSIONS, extension, linkText
  */
 export interface VaultBridge {
   notePath: string;
+  /** The page is a notebook: marimo cells are shown (and later run) as cells. */
+  notebook: boolean;
   files: string[];
   config: ObsidianConfig;
   /** Object URL for an image of the vault. */
@@ -24,6 +26,7 @@ export interface BridgeRef {
 
 export const NULL_BRIDGE: VaultBridge = {
   notePath: "",
+  notebook: false,
   files: [],
   config: DEFAULT_CONFIG,
   loadImage: async () => "",

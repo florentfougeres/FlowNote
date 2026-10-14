@@ -3,7 +3,9 @@ import { NoteEditor } from "./editor/NoteEditor";
 import { imageMime, type VaultBridge } from "./editor/bridge";
 import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
 import { DRAWING_SUFFIX, isDrawingPath, newDrawingFile } from "./drawing/format";
+import { isNotebookMarkdown, newNotebookFile } from "./notebook/format";
 import { demoDrawing } from "./drawing/demo";
+import { demoNotebook } from "./notebook/demo";
 import { DrawingEditor, type DrawingControls, type DrawingTool } from "./drawing/DrawingEditor";
 import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
@@ -85,6 +87,7 @@ const DEMO_FILES = {
   "Projets.md": "# Projets\n\n[[Mon Notion]]\n",
   "Projets/Mon Notion.md": "Une sous-page de [[Projets]].\n",
   "Croquis.excalidraw.md": demoDrawing(),
+  "Analyse.md": demoNotebook(),
 };
 
 export function App() {
@@ -553,10 +556,11 @@ export function App() {
       kind = result.kind;
       if (chooseFolder) folder = result.folder;
     }
-    const path = uniquePath(folder, `${sanitizeName(name) || "Sans titre"}${kind === "drawing" ? DRAWING_SUFFIX : ".md"}`, filesRef.current);
+    const title = sanitizeName(name) || "Sans titre";
+    const path = uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : ".md"}`, filesRef.current);
     try {
       await saveNow();
-      await createFile(path, kind === "drawing" ? newDrawingFile() : "");
+      await createFile(path, kind === "drawing" ? newDrawingFile() : kind === "notebook" ? newNotebookFile() : "");
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";
@@ -568,8 +572,12 @@ export function App() {
     }
   };
 
+  /** The open page is a notebook (front matter with marimo-version), read from the loaded text. */
+  const notebookPage = note !== null && !isDrawingPath(note.path) && isNotebookMarkdown(note.loaded);
+
   const bridge: VaultBridge = {
     notePath: note?.path ?? "",
+    notebook: notebookPage,
     // Read through a ref: callbacks may run between renders, after a file was created.
     get files() {
       return filesRef.current;

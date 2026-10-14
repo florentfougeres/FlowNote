@@ -6,6 +6,7 @@ import type { BridgeRef } from "./bridge";
 import { isImage } from "./bridge";
 import { basename, dirname, noteTitle, resolveLink } from "../vault/links";
 import { calloutIconSvg, calloutInfo, calloutPicker } from "./callouts";
+import { cellView, isCellNode } from "../notebook/cellView";
 
 /**
  * Node views for blocks that need controls outside the editable text. None of
@@ -379,7 +380,8 @@ export function createNodeViews(bridge: BridgeRef): Record<string, NodeViewRende
   return {
     listItem: listItemView,
     callout: calloutView,
-    codeBlock: codeBlockView,
+    // In a notebook page, marimo cells get the cell view.
+    codeBlock: (props) => (isCellNode(bridge, props.node.attrs) ? cellView(bridge)(props) : codeBlockView(props)),
     rawBlock: rawBlockView,
     wikilink: wikilinkView(bridge),
     image: imageView(bridge),

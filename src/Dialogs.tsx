@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
 
 /** Small modal asking for a page name (the webview has no reliable `prompt()`). */
-export type PageKind = "note" | "drawing";
+export type PageKind = "note" | "drawing" | "notebook";
 
 export interface NameResult {
   name: string;
@@ -55,6 +55,7 @@ export function NameDialog({
               [
                 ["note", "Note", "doc"],
                 ["drawing", "Dessin", "drawing"],
+                ["notebook", "Notebook", "notebook"],
               ] as const
             ).map(([value, label, icon]) => (
               <button key={value} type="button" role="radio" aria-checked={kind === value} className={kind === value ? "selected" : ""} onClick={() => setKind(value)}>

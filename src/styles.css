@@ -3615,3 +3615,106 @@ button.crumb:hover {
   box-shadow: 0 0 0 3px var(--accent-soft);
   min-width: 60px;
 }
+
+/* ---- Notebook cells (marimo) ---- */
+
+.note .notebook-cell {
+  margin: 6px 0;
+  border-radius: 10px;
+  border: 0.5px solid color-mix(in srgb, var(--text) 16%, transparent);
+  background: var(--code-bg);
+  overflow: hidden;
+}
+
+.note .notebook-cell:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.note .cell-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+  user-select: none;
+}
+
+.note .cell-language {
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.note .notebook-cell[data-language="sql"] .cell-language {
+  color: #8e44ad;
+  background: color-mix(in srgb, #8e44ad 14%, transparent);
+}
+
+.note .cell-query[hidden] {
+  display: none;
+}
+
+.note .cell-query {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.note .cell-query input {
+  width: 9em;
+  padding: 1px 6px;
+  border: 0.5px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: 12px var(--font-mono);
+  outline: none;
+}
+
+.note .cell-query input:hover,
+.note .cell-query input:focus {
+  border-color: var(--border);
+  background: var(--bg);
+}
+
+.note .cell-spacer {
+  flex: 1;
+}
+
+.note .cell-fold {
+  border: none;
+  background: none;
+  box-shadow: none;
+  padding: 2px 6px;
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.note .cell-fold:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.note .notebook-cell pre {
+  margin: 0;
+  padding: 2px 14px 12px;
+  background: transparent;
+}
+
+/* Folded (hide_code): only a one-line summary. */
+.note .notebook-cell.folded pre {
+  display: none;
+}
+
+.note .notebook-cell.folded .cell-fold {
+  font-family: var(--font-mono);
+}

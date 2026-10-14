@@ -16,6 +16,7 @@ interface Page {
   /** Note opened by clicking the row; null for a plain folder. */
   notePath: string | null;
   children: Page[];
+  notebook?: boolean;
 }
 
 export function toPages(entries: VaultEntry[]): Page[] {
@@ -26,7 +27,7 @@ export function toPages(entries: VaultEntry[]): Page[] {
     if (entry.kind !== "file") continue;
     const folder = dirs.get(entry.name);
     if (folder) usedDirs.add(folder.name);
-    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children: folder ? toPages(folder.children ?? []) : [] });
+    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children: folder ? toPages(folder.children ?? []) : [], notebook: entry.notebook });
   }
   const folders = entries
     .filter((e) => e.kind === "dir" && !usedDirs.has(e.name))
@@ -89,7 +90,7 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDele
               </button>
               <button className="page-name" onClick={() => (page.notePath ? onSelect(page.notePath) : toggle(page.key))}>
                 <span className="page-icon">
-                  <Icon name={page.notePath ? (isDrawingPath(page.notePath) ? "drawing" : "doc") : "folder"} />
+                  <Icon name={page.notePath ? (isDrawingPath(page.notePath) ? "drawing" : page.notebook ? "notebook" : "doc") : "folder"} />
                 </span>
                 {page.notePath ? noteTitle(page.notePath) : page.name}
               </button>

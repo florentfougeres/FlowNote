@@ -1,4 +1,5 @@
 import { CALLOUT_TYPES, calloutPicker } from "./callouts";
+import { newCellMeta } from "../notebook/format";
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";
@@ -16,6 +17,8 @@ import { linkTextFor, sanitizeName, subpageFolder, uniquePath } from "../vault/l
 
 export interface SlashItem extends MenuItem {
   keywords: string[];
+  /** Only offered in notebook pages. */
+  notebook?: boolean;
   run: (editor: Editor, range: Range, bridge: VaultBridge) => void;
 }
 
@@ -34,6 +37,12 @@ async function createSubpage(editor: Editor, range: Range, bridge: VaultBridge) 
 const kind = (k: BlockKind, type?: string) => (editor: Editor, range: Range) => {
   turnInto(editor, k, range, type);
 };
+
+/** A marimo cell: an ordinary fenced block ```python {.marimo} / ```sql {.marimo}. */
+function insertCell(editor: Editor, range: Range, language: "python" | "sql") {
+  turnInto(editor, "code", range);
+  editor.commands.updateAttributes("codeBlock", { language, meta: newCellMeta() });
+}
 
 export const SLASH_ITEMS: SlashItem[] = [
   { key: "paragraph", title: "Texte", description: "Paragraphe simple", icon: "¶", keywords: ["texte", "paragraphe", "text"], run: kind("paragraph") },
@@ -73,6 +82,24 @@ export const SLASH_ITEMS: SlashItem[] = [
       editor.commands.updateAttributes("codeBlock", { language: "mermaid" });
       editor.commands.insertContent("graph TD\n  A[Début] --> B[Fin]");
     },
+  },
+  {
+    key: "cell-python",
+    title: "Cellule Python",
+    description: "Code exécutable (marimo)",
+    icon: "Py",
+    keywords: ["cellule", "python", "code", "exécuter", "cell"],
+    notebook: true,
+    run: (editor, range) => insertCell(editor, range, "python"),
+  },
+  {
+    key: "cell-sql",
+    title: "Cellule SQL",
+    description: "Requête DuckDB sur vos données",
+    icon: "SQL",
+    keywords: ["cellule", "sql", "requête", "duckdb", "cell"],
+    notebook: true,
+    run: (editor, range) => insertCell(editor, range, "sql"),
   },
   { key: "divider", title: "Séparateur", description: "Ligne horizontale", icon: "—", keywords: ["séparateur", "divider", "ligne", "hr"], run: kind("divider") },
   {
@@ -205,7 +232,7 @@ export const SlashCommand = Extension.create<{ store: SlashMenuStore; bridge: Br
         char: "/",
         allowedPrefixes: [" ", " "],
         allow: ({ state, range }) => freshSlashKey.getState(state) === range.from,
-        items: ({ query }) => filterSlashItems(query, SLASH_ITEMS, loadFrecency()),
+        items: ({ query }) => filterSlashItems(query, SLASH_ITEMS.filter((item) => !item.notebook || bridge.current.notebook), loadFrecency()),
         command: ({ editor, range, props }) => {
           recordUse(props.key);
           props.run(editor, range, bridge.current);
