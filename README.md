@@ -13,9 +13,17 @@
 
 FlowNote est une application de bureau macOS qui ouvre un dossier de notes Obsidian et permet de les éditer comme dans Notion : blocs, menu `/`, glisser-déposer, tableaux, callouts… Il n'y a ni base de données ni format caché : chaque note reste un fichier `.md` que vous pouvez continuer à ouvrir dans Obsidian, sans plugin.
 
-Un gestionnaire Git intégré permet de versionner le vault : statut, diff, commit, pull/push, historique d'une note et résolution des conflits.
+Autour de l'éditeur : des dessins Excalidraw, des tickets façon GitHub avec un tableau kanban, une liste de lectures, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. Tout reste du texte, lisible dans Obsidian et propre dans Git.
+
+Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 
 ## Fonctionnalités
+
+**Interface façon Notion**
+- Onglets en haut de la fenêtre, barre latérale avec le vault, Rechercher, Accueil, Tickets, Lectures, Graphe et l'arbre des pages (menu « … » : renommer, supprimer, sous-page)
+- Barre latérale masquable (`⌘\`), qui réapparaît au survol du bord gauche
+- Icône de page : un emoji choisi au-dessus du titre (propriété `icon`)
+- Accueil : créer, récents, à faire, tickets, à lire, graphe, Git, activité et statistiques du vault
 
 **Éditeur de blocs**
 - Titres, listes, tâches, citations, callouts Obsidian (`> [!note]`), toggles (callouts repliables), séparateurs
@@ -32,9 +40,25 @@ Un gestionnaire Git intégré permet de versionner le vault : statut, diff, comm
 - Les outils de dessin prennent place dans la barre d'outils de FlowNote
 - Format du plugin Obsidian « Excalidraw » (`Nom.excalidraw.md`) : avec ce plugin, les dessins s'ouvrent aussi dans Obsidian ; sans lui, on voit le JSON du dessin
 
+**Tickets**
+- Comme les issues GitHub : un ticket est une note de `Tickets/` (« 12 - Titre.md ») avec état, tags, échéance (`📅` du plugin Tasks) et fil de commentaires en callouts `[!comment]`
+- Vue liste (ouverts / fermés, tri, recherche, tags) ou **tableau kanban** avec glisser-déposer ; colonnes personnalisables dans les réglages
+
+**Lectures**
+- Une note `Lectures.md` : une section par thème, une case à cocher par lien, cochée une fois lu
+- Ajout rapide (`⌘⇧L`) avec le titre de la page lu automatiquement, vue dédiée et carte « À lire » sur l'accueil
+
+**Présentations**
+- Une note avec `marp: true` devient une présentation [Marp](https://marp.app) : diapos séparées par `---`, notes de l'orateur en commentaires
+- Miniatures à jour pendant l'écriture, mode Présenter (`⌘⇧P`) avec vue présentateur, export en HTML autonome
+
+**Graphe**
+- Le graphe des liens entre les notes, comme dans Obsidian : aperçu sur l'accueil et vue complète (zoom, survol, filtres)
+
 **Correction**
 - Grammaire et orthographe en français avec [Grammalecte](https://grammalecte.net), entièrement sur votre Mac, sans service en ligne
 - Clic sur un mot souligné pour voir les suggestions, l'ignorer ou l'ajouter à votre dictionnaire
+- Un bouton de la barre de page coupe ou réactive la correction sans changer le correcteur choisi
 
 **Navigation**
 - Recherche de page (`⌘P`), recherche et remplacement dans la note (`⌘F` / `⌘⌥F`), recherche dans tout le vault (`⌘⇧F`)
@@ -53,6 +77,7 @@ C'est le cœur du projet : **une note que FlowNote n'a pas modifiée est réécr
 
 - Frontmatter YAML, `[[wikilinks]]`, `![[embeds]]`, `#tags`, pièces jointes : tout reste lisible et éditable dans Obsidian.
 - Les blocs sans équivalent Markdown standard utilisent une syntaxe qu'Obsidian affiche nativement (callouts pour les toggles, blocs ```` ```mermaid ````…).
+- Tickets, lectures et présentations sont des notes ordinaires : propriétés YAML (`type: ticket`, `status`, `marp: true`…), cases à cocher et callouts, que les plugins Tasks et Marp Slides savent aussi lire.
 - Exceptions assumées : les codes emoji (`:warning:`) et les dessins (`.excalidraw.md`) demandent un plugin Obsidian pour être rendus ; sans lui, on voit leur texte.
 - Le dossier `.obsidian` n'est jamais modifié. FlowNote lit seulement ses réglages de liens et de pièces jointes.
 - Une note modifiée ailleurs (Obsidian, git) n'est jamais écrasée : l'écriture est refusée et la différence est signalée.
@@ -87,22 +112,24 @@ npm run dev            # version navigateur (Chrome) sur http://localhost:1420
 | `npm run typecheck` | Vérification TypeScript |
 | `npm run lint` | Analyse du code (oxlint) |
 | `npm run fidelity -- <vault>` | Vérifie, en lecture seule, que chaque note d'un vault est réécrite à l'identique |
-| `cargo test --manifest-path src-tauri/Cargo.toml` | Tests Rust (fichiers du vault, Git, Grammalecte) |
+| `cargo test --manifest-path src-tauri/Cargo.toml` | Tests Rust (fichiers du vault, Git, Grammalecte, liens web) |
 | `npm run tauri build` | Construit `FlowNote.app` et le `.dmg` dans `src-tauri/target/release/bundle/` |
 
 ### Architecture
 
-- **`src-tauri/`** : backend Rust (Tauri 2). Il gère l'accès aux fichiers du vault, le Git système et la recherche plein texte.
+- **`src-tauri/`** : backend Rust (Tauri 2). Il gère l'accès aux fichiers du vault, le Git système, la recherche plein texte, l'ouverture des liens et la lecture du titre des pages web.
 - **`src/markdown/`** : moteur de fidélité Markdown. Il parse avec remark/mdast, conserve la source de chaque bloc et ne re-sérialise que les blocs modifiés, en vérifiant l'équivalence.
 - **`src/editor/`** : éditeur basé sur Tiptap/ProseMirror. Il contient le schéma, les vues de blocs, le menu `/`, le glisser-déposer, les poignées de tableau et la recherche.
 - **`src/vault/`** : accès au vault, résolution des liens façon Obsidian, opérations sur les pages et client Git.
+- **`src/ticket/`**, **`src/reading/`**, **`src/presentation/`**, **`src/graph/`**, **`src/drawing/`** : tickets et kanban, liste de lectures, présentations Marp, graphe des liens, dessins Excalidraw.
 - **`grammar/`** : petit programme compagnon qui fait tourner Grammalecte. FlowNote lui envoie les paragraphes par l'entrée standard.
 
 ### Publier une version
 
-1. Mettez à jour la version dans `package.json`, `src-tauri/tauri.conf.json` et `src-tauri/Cargo.toml`.
-2. Commitez, puis poussez un tag : `git tag v0.2.0 && git push origin v0.2.0`.
-3. Le workflow GitHub Actions construit le `.dmg` (Apple Silicon) et prépare une release en brouillon. Relisez-la, puis publiez-la sur GitHub.
+1. Ajoutez la version et ses changements en tête de `CHANGELOG.md`.
+2. Mettez à jour la version dans `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `src-tauri/Cargo.lock`.
+3. Commitez, puis poussez un tag : `git tag v0.7.2 && git push origin v0.7.2`.
+4. Le workflow GitHub Actions lance les tests, construit le `.dmg` (Apple Silicon) et prépare une release en brouillon. Relisez-la, puis publiez-la sur GitHub.
 
 ## Licence
 
