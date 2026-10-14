@@ -55,6 +55,10 @@ export function TicketBoard({
 
   const onPointerDown = (event: React.PointerEvent, ticket: TicketInfo) => {
     if (event.button !== 0) return;
+    // No text selection while a card is pressed or dragged (the click still opens it).
+    event.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    (event.currentTarget as HTMLElement).focus({ preventScroll: true });
     pressed.current = { ticket, x: event.clientX, y: event.clientY, rect: event.currentTarget.getBoundingClientRect() };
     event.currentTarget.setPointerCapture(event.pointerId);
   };

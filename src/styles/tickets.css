@@ -732,6 +732,7 @@ button.ticket-tag.selected {
   cursor: grab;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 .board-card:hover {
@@ -746,6 +747,13 @@ button.ticket-tag.selected {
 .board.dragging .board-card {
   cursor: grabbing;
   user-select: none;
+  -webkit-user-select: none;
+}
+
+/* While a card is dragged, nothing on the page gets selected. */
+body:has(.board.dragging) {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* The card under the pointer while it is dragged, tilted like in Notion. */
