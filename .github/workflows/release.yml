@@ -14,8 +14,8 @@ jobs:
   test:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -27,8 +27,8 @@ jobs:
     needs: test
     runs-on: macos-latest # Apple Silicon runner: builds the arm64 app
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -36,11 +36,11 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-      - uses: astral-sh/setup-uv@v6 # builds the Grammalecte companion (scripts/build-grammar.sh)
+      - uses: astral-sh/setup-uv@v7 # builds the Grammalecte companion (scripts/build-grammar.sh)
         with:
           version: "0.13.0" # pinned: looking up "latest" can fail on a GitHub API hiccup
       - run: npm ci
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
