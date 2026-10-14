@@ -6,8 +6,22 @@ import { dirname, noteTitle } from "./vault/links";
  * ("Projets.md" next to "Projets/", or "Projets/Projets.md") when there is one,
  * otherwise lists the pages it contains.
  */
-export function Breadcrumbs({ vaultName, path, files, onOpen }: { vaultName: string; path: string; files: string[]; onOpen: (path: string) => void }) {
+export function Breadcrumbs({
+  vaultName,
+  path,
+  files,
+  onOpen,
+  onRename,
+}: {
+  vaultName: string;
+  path: string;
+  files: string[];
+  onOpen: (path: string) => void;
+  /** Double-click on the page name renames it (resolves to false when refused). */
+  onRename?: (title: string) => Promise<boolean>;
+}) {
   const [menu, setMenu] = useState<{ folder: string; left: number } | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const parts = path.split("/");
   const folders = parts.slice(0, -1);
@@ -51,9 +65,29 @@ export function Breadcrumbs({ vaultName, path, files, onOpen }: { vaultName: str
         );
       })}
       <span className="crumb-separator">›</span>
-      <span className="crumb current" title={path}>
-        {noteTitle(path)}
-      </span>
+      {editing !== null ? (
+        <input
+          className="crumb-rename"
+          autoFocus
+          value={editing}
+          size={Math.max(editing.length, 4)}
+          onFocus={(e) => e.currentTarget.select()}
+          onChange={(e) => setEditing(e.target.value)}
+          onBlur={() => {
+            const title = editing.trim();
+            setEditing(null);
+            if (title && title !== noteTitle(path)) void onRename?.(title);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+            else if (e.key === "Escape") setEditing(null);
+          }}
+        />
+      ) : (
+        <span className="crumb current" title={onRename ? `${path} · double-cliquer pour renommer` : path} onDoubleClick={() => onRename && setEditing(noteTitle(path))}>
+          {noteTitle(path)}
+        </span>
+      )}
       {menu && (
         <div className="crumb-menu" style={{ left: menu.left }}>
           {pagesIn(menu.folder).length === 0 && <span className="git-none">Aucune page dans ce dossier.</span>}

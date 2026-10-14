@@ -51,8 +51,12 @@ export function dirname(path: string): string {
   return slash < 0 ? "" : path.slice(0, slash);
 }
 
+/** File name without ".md": what links and sub-page folders are named after ("Schéma.excalidraw" for a drawing). */
+const fileStem = (path: string) => basename(path).replace(/\.md$/i, "");
+
+/** Title shown for a page: file name without ".md" (drawings: without ".excalidraw.md"). */
 export function noteTitle(path: string): string {
-  return basename(path).replace(/\.md$/i, "");
+  return basename(path).replace(/\.excalidraw\.md$/i, "").replace(/\.md$/i, "");
 }
 
 function join(folder: string, name: string): string {
@@ -73,7 +77,8 @@ export function linkPath(target: string): string {
 export function resolveLink(target: string, files: string[], fromPath = ""): string | null {
   const wanted = linkPath(target).replace(/^\/+/, "");
   if (!wanted) return null;
-  const candidates = extension(wanted) ? [wanted] : [`${wanted}.md`, wanted];
+  // "Schéma.excalidraw" names a drawing note, Schéma.excalidraw.md (as in Obsidian).
+  const candidates = /\.md$/i.test(wanted) ? [wanted] : extension(wanted) ? [wanted, `${wanted}.md`] : [`${wanted}.md`, wanted];
   for (const candidate of candidates) {
     if (files.includes(candidate)) return candidate;
     const local = join(dirname(fromPath), candidate);
@@ -88,7 +93,7 @@ export function resolveLink(target: string, files: string[], fromPath = ""): str
 /** Shortest link text that Obsidian resolves to `path` ("shortest path when possible"). */
 export function linkTextFor(path: string, files: string[]): string {
   const isNote = /\.md$/i.test(path);
-  const name = isNote ? noteTitle(path) : basename(path);
+  const name = isNote ? fileStem(path) : basename(path);
   const sameName = files.filter((f) => basename(f) === basename(path));
   if (sameName.length <= 1) return name;
   return isNote ? path.replace(/\.md$/i, "") : path;
@@ -112,7 +117,7 @@ export function newNoteFolder(notePath: string, config: ObsidianConfig): string 
 
 /** Sub-pages live in a folder named after their parent note (folder-note convention). */
 export function subpageFolder(parentPath: string): string {
-  return join(dirname(parentPath), noteTitle(parentPath));
+  return join(dirname(parentPath), fileStem(parentPath));
 }
 
 /** Characters Obsidian refuses in file names. */

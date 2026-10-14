@@ -17,7 +17,9 @@ export async function renamePage(vault: Vault, oldPath: string, title: string): 
   const name = sanitizeName(title);
   if (!name) throw new Error("Le titre ne peut pas être vide.");
   const folder = dirname(oldPath);
-  const newPath = folder ? `${folder}/${name}.md` : `${name}.md`;
+  // A drawing keeps its ".excalidraw.md" extension.
+  const extension = /\.excalidraw\.md$/i.test(oldPath) ? ".excalidraw.md" : ".md";
+  const newPath = folder ? `${folder}/${name}${extension}` : `${name}${extension}`;
   if (newPath === oldPath) return { path: oldPath, updatedNotes: [] };
 
   const filesBefore = await vault.files();

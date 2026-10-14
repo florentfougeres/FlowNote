@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NoteEditor } from "./editor/NoteEditor";
 import { imageMime, type VaultBridge } from "./editor/bridge";
-import { ConfirmDialog, NameDialog, type NameResult } from "./Dialogs";
+import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
+import { DRAWING_SUFFIX, isDrawingPath, newDrawingFile } from "./drawing/format";
+import { demoDrawing } from "./drawing/demo";
+import { DrawingEditor, type DrawingControls, type DrawingTool } from "./drawing/DrawingEditor";
 import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
@@ -17,7 +20,7 @@ import { FindBar, type FindRequest } from "./FindBar";
 import { VaultSearch } from "./VaultSearch";
 import { setGrammarChecker, setSystemSpellcheck, type ParagraphResult } from "./editor/grammar";
 import type { Editor } from "@tiptap/core";
-import { Icon } from "./Icon";
+import { Icon, type IconName } from "./Icon";
 import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
 import { DEFAULT_CONFIG, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
@@ -42,11 +45,27 @@ interface OpenNote {
   markdown: string;
 }
 
+/** Drawing tools of the toolbar: Excalidraw tool, icon, label with its shortcut. */
+const DRAWING_TOOLS: [DrawingTool, IconName, string][] = [
+  ["selection", "pointer", "Sélection (V)"],
+  ["hand", "hand", "Déplacer la vue (H)"],
+  ["rectangle", "rectangle", "Rectangle (R)"],
+  ["diamond", "diamond", "Losange (D)"],
+  ["ellipse", "ellipse", "Ellipse (O)"],
+  ["arrow", "arrow", "Flèche (A)"],
+  ["line", "line", "Trait (L)"],
+  ["freedraw", "pencil", "Crayon (P)"],
+  ["text", "text", "Texte (T)"],
+  ["image", "image", "Image (9)"],
+  ["eraser", "eraser", "Gomme (E)"],
+];
+
 interface Dialog {
   title: string;
   initial: string;
   folders?: string[];
   folder?: string;
+  kinds?: boolean;
   resolve: (result: NameResult | null) => void;
 }
 
@@ -65,6 +84,7 @@ const DEMO_FILES = {
   "Exemple.md": FULL_NOTE,
   "Projets.md": "# Projets\n\n[[Mon Notion]]\n",
   "Projets/Mon Notion.md": "Une sous-page de [[Projets]].\n",
+  "Croquis.excalidraw.md": demoDrawing(),
 };
 
 export function App() {
@@ -110,6 +130,16 @@ export function App() {
   }, [settings.spellChecker]);
   const [pendingOpen, setPendingOpen] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [drawingControls, setDrawingControls] = useState<DrawingControls | null>(null);
+  const [drawingTool, setDrawingTool] = useState("selection");
+  /** Light or dark, as displayed (the "system" setting follows macOS). */
+  const [systemDark, setSystemDark] = useState(() => matchMedia("(prefers-color-scheme: dark)").matches);
+  useEffect(() => {
+    const media = matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => setSystemDark(media.matches);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
   const [showOutline, setShowOutline] = useState(() => {
@@ -504,6 +534,7 @@ export function App() {
   const newPage = async (parent: string | null, presetName?: string, inFolder?: string) => {
     if (!vault) return;
     let name = presetName ?? null;
+    let kind: PageKind = "note";
     let folder = parent ? subpageFolder(parent) : (inFolder ?? newNoteFolder("", config));
     if (!name) {
       const chooseFolder = !parent && inFolder === undefined;
@@ -513,17 +544,19 @@ export function App() {
           initial: "Sans titre",
           folders: chooseFolder ? folderChoices() : undefined,
           folder,
+          kinds: true,
           resolve,
         }),
       );
       if (!result) return;
       name = result.name;
+      kind = result.kind;
       if (chooseFolder) folder = result.folder;
     }
-    const path = uniquePath(folder, `${sanitizeName(name) || "Sans titre"}.md`, filesRef.current);
+    const path = uniquePath(folder, `${sanitizeName(name) || "Sans titre"}${kind === "drawing" ? DRAWING_SUFFIX : ".md"}`, filesRef.current);
     try {
       await saveNow();
-      await createFile(path, "");
+      await createFile(path, kind === "drawing" ? newDrawingFile() : "");
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";
@@ -556,6 +589,9 @@ export function App() {
   };
 
   const onMarkdown = useCallback((markdown: string) => setNote((current) => (current ? { ...current, markdown } : current)), []);
+
+  /** The open page is a drawing (Name.excalidraw.md). */
+  const drawing = note !== null && isDrawingPath(note.path);
 
   if (!vault) {
     return (
@@ -597,12 +633,26 @@ export function App() {
                 <ToolButton icon="chevronLeft" label="Page précédente (⌘[)" onClick={goBack} disabled={back.current.length === 0} />
                 <ToolButton icon="chevronRight" label="Page suivante (⌘])" onClick={goForward} disabled={forward.current.length === 0} />
               </ToolGroup>
+              {drawing && note && (
+                <>
+                  <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} />
+                  <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : "Non enregistré · ⌘S") : "Enregistré"}</span>
+                </>
+              )}
             </>
           }
           center={
-            note ? (
+            drawing && !rawMode ? (
+              <ToolGroup>
+                {DRAWING_TOOLS.map(([tool, icon, label]) => (
+                  <ToolButton key={tool} icon={icon} label={label} active={drawingTool === tool} disabled={!drawingControls} onClick={() => drawingControls?.setTool(tool)} />
+                ))}
+              </ToolGroup>
+            ) : drawing ? (
+              status && <span className="status warning">{status}</span>
+            ) : note ? (
               <>
-                <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} />
+                <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} />
                 <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : "Non enregistré · ⌘S") : "Enregistré"}</span>
                 {status && <span className="status warning">{status}</span>}
               </>
@@ -619,9 +669,9 @@ export function App() {
               </ToolGroup>
               {note && (
                 <ToolGroup>
-                  <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />
+                  {!drawing && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
                   {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
-                  <ToolButton icon="raw" label="Mode Markdown brut (⌘⇧E)" onClick={toggleRaw} active={rawMode} />
+                  <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
                 </ToolGroup>
               )}
               <ToolGroup>
@@ -634,8 +684,22 @@ export function App() {
         />
         {note ? (
           <>
-            {findRequest && !rawMode && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
+            {findRequest && !rawMode && !drawing && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
             <div className="panes">
+              {drawing && !rawMode ? (
+                <div className="drawing-pane">
+                  <DrawingEditor
+                    key={`${note.path}#${note.reloads ?? 0}`}
+                    source={note.loaded}
+                    onMarkdown={onMarkdown}
+                    bridge={bridge}
+                    theme={settings.theme === "dark" || (settings.theme === "system" && systemDark) ? "dark" : "light"}
+                    editable={!hasConflictMarkers(note.disk)}
+                    onControls={setDrawingControls}
+                    onToolChange={setDrawingTool}
+                  />
+                </div>
+              ) : (
               <div className="page">
                 {hasConflictMarkers(note.disk) && (
                   <div className="conflict-note-banner">
@@ -650,7 +714,8 @@ export function App() {
                   <NoteEditor key={`${note.path}#${note.reloads ?? 0}`} source={note.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk)} onEditor={setEditor} />
                 )}
               </div>
-              {showOutline && !outlineHidden && !rawMode && <OutlinePanel editor={editor} onClose={toggleOutline} />}
+              )}
+              {showOutline && !outlineHidden && !rawMode && !drawing && <OutlinePanel editor={editor} onClose={toggleOutline} />}
               {showHistory && vault.git && (
                 <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
               )}
@@ -757,6 +822,7 @@ export function App() {
           initial={dialog.initial}
           folders={dialog.folders}
           folder={dialog.folder}
+          kinds={dialog.kinds}
           onDone={(result) => {
             dialog.resolve(result);
             setDialog(null);

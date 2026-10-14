@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "./Icon";
 
 /** Small modal asking for a page name (the webview has no reliable `prompt()`). */
+export type PageKind = "note" | "drawing";
+
 export interface NameResult {
   name: string;
   folder: string;
+  kind: PageKind;
 }
 
 /**
@@ -15,16 +19,20 @@ export function NameDialog({
   initial,
   folders,
   folder: initialFolder = "",
+  kinds = false,
   onDone,
 }: {
   title: string;
   initial: string;
   folders?: string[];
   folder?: string;
+  /** Offer to create a note or a drawing. */
+  kinds?: boolean;
   onDone: (result: NameResult | null) => void;
 }) {
   const [value, setValue] = useState(initial);
   const [folder, setFolder] = useState(initialFolder);
+  const [kind, setKind] = useState<PageKind>("note");
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
     input.current?.focus();
@@ -37,10 +45,24 @@ export function NameDialog({
         onMouseDown={(e) => e.stopPropagation()}
         onSubmit={(e) => {
           e.preventDefault();
-          onDone(value.trim() ? { name: value.trim(), folder } : null);
+          onDone(value.trim() ? { name: value.trim(), folder, kind } : null);
         }}
       >
         <label>{title}</label>
+        {kinds && (
+          <div className="segmented kind-choice" role="radiogroup" aria-label="Type de page">
+            {(
+              [
+                ["note", "Note", "doc"],
+                ["drawing", "Dessin", "drawing"],
+              ] as const
+            ).map(([value, label, icon]) => (
+              <button key={value} type="button" role="radio" aria-checked={kind === value} className={kind === value ? "selected" : ""} onClick={() => setKind(value)}>
+                <Icon name={icon} size={14} /> {label}
+              </button>
+            ))}
+          </div>
+        )}
         <input ref={input} value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === "Escape" && onDone(null)} />
         {folders && (
           <label className="folder-field">

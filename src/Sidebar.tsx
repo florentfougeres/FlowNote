@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { VaultEntry } from "./vault/vault";
 import { Icon } from "./Icon";
+import { isDrawingPath } from "./drawing/format";
+import { noteTitle } from "./vault/links";
 
 /**
  * Page tree. A note and the folder of the same name next to it ("Projet.md" +
@@ -87,9 +89,9 @@ export function Sidebar({ vaultName, tree, selected, onSelect, onNewPage, onDele
               </button>
               <button className="page-name" onClick={() => (page.notePath ? onSelect(page.notePath) : toggle(page.key))}>
                 <span className="page-icon">
-                  <Icon name={page.notePath ? "doc" : "folder"} />
+                  <Icon name={page.notePath ? (isDrawingPath(page.notePath) ? "drawing" : "doc") : "folder"} />
                 </span>
-                {page.name}
+                {page.notePath ? noteTitle(page.notePath) : page.name}
               </button>
               {!page.notePath && (
                 <button className="page-add" title="Nouvelle page dans ce dossier" aria-label="Nouvelle page dans ce dossier" onClick={() => onNewPageInFolder(page.key)}>

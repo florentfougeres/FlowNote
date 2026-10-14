@@ -120,3 +120,14 @@ describe("updating links after a rename", () => {
     expect(rewriteLinks(src, change("Index.md"))).toBe("```\n[[Mon Notion]]\n```\n`[[Mon Notion]]` mais [[FlowNote]]\n");
   });
 });
+
+describe("links to drawings", () => {
+  it("[[Name.excalidraw]] resolves to Name.excalidraw.md; titles drop the suffix", async () => {
+    const { resolveLink, noteTitle, linkTextFor } = await import("./links");
+    const files = ["Croquis.excalidraw.md", "Dossier/Note.md", "img.png"];
+    expect(resolveLink("Croquis.excalidraw", files)).toBe("Croquis.excalidraw.md");
+    expect(resolveLink("img.png", files)).toBe("img.png");
+    expect(noteTitle("Dossier/Croquis.excalidraw.md")).toBe("Croquis");
+    expect(linkTextFor("Croquis.excalidraw.md", files)).toBe("Croquis.excalidraw");
+  });
+});

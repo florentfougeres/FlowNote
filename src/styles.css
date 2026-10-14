@@ -3540,3 +3540,78 @@ button.crumb:hover {
     animation: none;
   }
 }
+
+/* ---- Drawings (Excalidraw) ---- */
+
+.drawing-pane {
+  flex: 1;
+  min-width: 0;
+  height: calc(100vh - 52px);
+  position: relative;
+}
+
+.drawing-page,
+.drawing-page .excalidraw-wrapper {
+  position: absolute;
+  inset: 0;
+}
+
+.drawing-loading,
+.drawing-error {
+  padding: 40px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.drawing-error {
+  color: var(--danger);
+}
+
+.kind-choice {
+  align-self: flex-start;
+}
+
+.kind-choice button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* FlowNote's toolbar holds the drawing tools: Excalidraw's own shape bar and its hint are hidden. */
+.drawing-pane .excalidraw .shapes-section {
+  visibility: hidden; /* keeps its place, so the menu and library buttons stay in their corners */
+  pointer-events: none;
+}
+
+/* Excalidraw in the app's colors and type. */
+.drawing-pane .excalidraw {
+  --ui-font: var(--font-ui);
+  --color-primary: var(--accent);
+  --color-primary-darker: color-mix(in srgb, var(--accent) 85%, black);
+  --color-primary-darkest: color-mix(in srgb, var(--accent) 70%, black);
+  --color-primary-hover: color-mix(in srgb, var(--accent) 88%, black);
+  --color-primary-light: var(--accent-soft);
+  --color-primary-light-darker: color-mix(in srgb, var(--accent) 22%, transparent);
+  --color-surface-primary-container: var(--accent-soft);
+  --island-bg-color: var(--bg-elevated);
+  --border-radius-lg: 10px;
+  --shadow-island: var(--shadow-menu);
+}
+
+.drawing-pane .excalidraw.theme--dark {
+  --color-primary: var(--accent);
+  --color-primary-light: var(--accent-soft);
+  --island-bg-color: var(--bg-elevated);
+}
+
+.crumb-rename {
+  font: inherit;
+  font-weight: 600;
+  padding: 1px 6px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--bg);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  min-width: 60px;
+}
