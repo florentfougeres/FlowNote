@@ -37,6 +37,7 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 - **Glisser-déposer** : utiliser des pointer events, pas le drag HTML5 (WebKit le refuse sur les `<button>`). Ajouter `user-select: none` et `-webkit-user-select: none` pour qu'aucun texte ne reste sélectionné.
 - **Versions figées** : TanStack Table en v8 (la v9 change d'API), mind-elixir 5.15.x. Marp avec `inlineSVG: false` (WebKit dessine mal `foreignObject`).
 - **Plotly 3+** n'affiche plus les titres écrits en texte simple (`title: Ventes`) : `src/editor/plotly.ts` les convertit en `{ text }` au dessin.
+- **Dependabot `glib` (Rust)** : tiré par la pile GTK de Tauri pour Linux, jamais compilé pour macOS. Toute alerte `glib`/`gtk` se ferme comme « non utilisé » (`gh api -X PATCH …/dependabot/alerts/N -f state=dismissed -f dismissed_reason=not_used`).
 - **Thème sombre écrit deux fois** dans `base.css` (sombre du système et sombre choisi) : garder les deux listes identiques.
 - **Format des bases** (vérifié dans le code d'Obsidian 1.14.4) :
   - types de vue natifs : `table`, `cards`, `list`, `kanban` ;
@@ -57,7 +58,6 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 - v0.12.0 taguée (graphiques Plotly au format obsidian-plotly avec éditeur visuel, mode sombre réparé pour toute l'app). Le workflow de release crée un brouillon à publier.
 - Pistes ouvertes :
-  - alerte Dependabot `glib` (Rust) : compilé seulement pour Linux, sans correctif possible côté Tauri ; à fermer comme « non utilisé » ;
   - renommer ou supprimer le dossier des tickets par son menu ne met pas à jour le réglage « Dossier des tickets » ;
   - branche `feature/notebooks` (notebooks Python marimo) jamais fusionnée, 41 commits de retard ;
   - suppression d'une base « en plusieurs fois » dans l'app de bureau : rendue robuste mais pas reproduite, à confirmer ;
