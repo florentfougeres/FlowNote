@@ -992,6 +992,15 @@ body:has(.db-board.dragging) {
   font-weight: 500;
 }
 
+/* Summary menu, placed in fixed coordinates in the page body (see summaryMenuPlace). */
+.db-summary-menu {
+  position: fixed;
+  top: auto;
+  z-index: 300;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
 .db-menu-up {
   top: auto;
   bottom: calc(100% + 4px);

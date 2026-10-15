@@ -26,9 +26,11 @@ interface Page {
   ticket?: boolean;
   presentation?: boolean;
   icon?: string;
+  /** A row of the base next to its folder (`X.base` + `X/`). */
+  row?: boolean;
 }
 
-export function toPages(entries: VaultEntry[]): Page[] {
+export function toPages(entries: VaultEntry[], rows = false): Page[] {
   const dirs = new Map(entries.filter((e) => e.kind === "dir").map((e) => [e.name, e]));
   const usedDirs = new Set<string>();
   const pages: Page[] = [];
@@ -36,7 +38,8 @@ export function toPages(entries: VaultEntry[]): Page[] {
     if (entry.kind !== "file") continue;
     const folder = dirs.get(entry.name);
     if (folder) usedDirs.add(folder.name);
-    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children: folder ? toPages(folder.children ?? []) : [], ticket: entry.ticket, presentation: entry.presentation, icon: entry.icon });
+    const children = folder ? toPages(folder.children ?? [], isBasePath(entry.path)) : [];
+    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children, ticket: entry.ticket, presentation: entry.presentation, icon: entry.icon, row: rows && entry.path.endsWith(".md") });
   }
   const folders = entries
     .filter((e) => e.kind === "dir" && !usedDirs.has(e.name))
@@ -54,7 +57,7 @@ function containsPath(page: Page, path: string): boolean {
 }
 
 /** Emoji of the page, or the icon of its kind (folder when `path` is null). */
-export function PageIcon({ path, icon, ticket, presentation, size = 14 }: { path: string | null; icon?: string | null; ticket?: boolean; presentation?: boolean; size?: number }) {
+export function PageIcon({ path, icon, ticket, presentation, row, size = 14 }: { path: string | null; icon?: string | null; ticket?: boolean; presentation?: boolean; row?: boolean; size?: number }) {
   if (icon) {
     return (
       <span className="page-emoji" style={{ fontSize: size, width: size + 2 }}>
@@ -62,7 +65,7 @@ export function PageIcon({ path, icon, ticket, presentation, size = 14 }: { path
       </span>
     );
   }
-  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isBasePath(path) ? "database" : ticket ? "ticket" : presentation ? "slides" : "doc";
+  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isBasePath(path) ? "database" : ticket ? "ticket" : presentation ? "slides" : row ? "baseRow" : "doc";
   return <Icon name={name} size={size} />;
 }
 
@@ -199,6 +202,11 @@ interface Props {
   onSettings: (newTab: boolean) => void;
   onHelp: () => void;
   onChangeVault: () => void;
+  /** Other vaults opened recently (desktop app), to switch in one click. */
+  otherVaults: { root: string; name: string }[];
+  onSwitchVault: (root: string) => void;
+  /** Picks another vault folder; absent outside the desktop app. */
+  onPickVault?: () => void;
 }
 
 export function Sidebar(props: Props) {
@@ -381,7 +389,7 @@ export function Sidebar(props: Props) {
                   folder: !page.notePath,
                   ticket: page.ticket,
                   label: page.notePath ? noteTitle(page.notePath) : page.name,
-                  icon: <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} presentation={page.presentation} />,
+                  icon: <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} presentation={page.presentation} row={page.row} />,
                 })
               }
               onContextMenu={(event) => openContextMenu(event, page.notePath ? pageMenu(page.notePath, page.ticket) : folderMenu(page.key))}
@@ -395,7 +403,7 @@ export function Sidebar(props: Props) {
                 onAuxClick={(event) => event.button === 1 && page.notePath && props.onSelect(page.notePath, true)}
               >
                 <span className="page-icon">
-                  <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} presentation={page.presentation} />
+                  <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} presentation={page.presentation} row={page.row} />
                 </span>
                 <span className="page-label">{page.notePath ? noteTitle(page.notePath) : page.name}</span>
               </button>
@@ -432,7 +440,9 @@ export function Sidebar(props: Props) {
           aria-label={`Vault ${vaultName}`}
           onClick={(event) =>
             openMenu(event, [
-              { label: "Changer de vault…", icon: "folder", run: props.onChangeVault },
+              ...props.otherVaults.map((other): MenuItem => ({ label: other.name, icon: "folder", run: () => props.onSwitchVault(other.root) })),
+              ...(props.onPickVault ? [{ label: "Ouvrir un autre vault…", icon: "folderAdd" as IconName, run: props.onPickVault }] : []),
+              { label: "Changer de vault…", icon: "open", run: props.onChangeVault },
               { label: "Réglages", icon: "sliders", run: () => props.onSettings(false) },
             ])
           }

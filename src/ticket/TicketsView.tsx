@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "../Icon";
 import { readAllNotes, type Vault } from "../vault/vault";
 import { usePersistentFlag } from "../hooks/usePersistentFlag";
@@ -6,6 +6,7 @@ import { dueLabel, ticketsOf, urgency, type TicketInfo } from "./agenda";
 import { applyChange, boardColumns, planMove, type TicketColumn } from "./board";
 import { isoMinute } from "./format";
 import { TicketBoard } from "./TicketBoard";
+import { ColumnsSetting } from "../SettingsPage";
 
 /**
  * Every ticket of the vault, as a list like GitHub's issues (open / closed,
@@ -15,6 +16,7 @@ export function TicketsView({
   vault,
   files,
   columns,
+  onColumns,
   onOpen,
   onCreate,
   onChanged,
@@ -22,6 +24,8 @@ export function TicketsView({
   vault: Vault;
   files: string[];
   columns: TicketColumn[];
+  /** The board's columns were changed here (the same setting as in the settings page). */
+  onColumns: (columns: TicketColumn[]) => void;
   onOpen: (path: string, newTab: boolean) => void;
   onCreate: () => void;
   /** Tickets were rewritten (moved on the board). */
@@ -34,6 +38,19 @@ export function TicketsView({
   const [tag, setTag] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"due" | "created" | "id">("due");
+  const [editingColumns, setEditingColumns] = useState(false);
+  const columnsPanel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!editingColumns) return;
+    const down = (event: MouseEvent) => !columnsPanel.current?.contains(event.target as Node) && setEditingColumns(false);
+    const key = (event: KeyboardEvent) => event.key === "Escape" && setEditingColumns(false);
+    window.addEventListener("mousedown", down);
+    window.addEventListener("keydown", key);
+    return () => {
+      window.removeEventListener("mousedown", down);
+      window.removeEventListener("keydown", key);
+    };
+  }, [editingColumns]);
 
   const reload = useCallback(() => readAllNotes(vault, files).then((notes) => ticketsOf(notes)), [vault, files]);
   useEffect(() => {
@@ -110,6 +127,18 @@ export function TicketsView({
             <Icon name="board" size={13} /> Tableau
           </button>
         </div>
+        {board && (
+          <div className="tickets-columns" ref={columnsPanel}>
+            <button className={editingColumns ? "selected" : ""} aria-expanded={editingColumns} onClick={() => setEditingColumns(!editingColumns)}>
+              <Icon name="sliders" size={13} /> Colonnes
+            </button>
+            {editingColumns && (
+              <div className="tickets-columns-panel settings-card">
+                <ColumnsSetting columns={columns} onChange={onColumns} />
+              </div>
+            )}
+          </div>
+        )}
         <button className="primary" onClick={onCreate}>
           <Icon name="plus" size={13} /> Nouveau ticket
         </button>

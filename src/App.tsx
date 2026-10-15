@@ -41,14 +41,14 @@ import { useSpellChecking } from "./editor/useSpellChecking";
 import type { Editor } from "@tiptap/core";
 import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
-import { DEFAULT_CONFIG, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
+import { DEFAULT_CONFIG, dirname, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
 import { DEMO_FILES, DEMO_REMOTE } from "./demo";
 import { GitDrawer, useGitDrawer } from "./GitDrawer";
 import { usePersistentFlag } from "./hooks/usePersistentFlag";
 import { useWidePages } from "./hooks/useWidePages";
 import { useSystemDark } from "./hooks/useSystemDark";
 import { hasConflictMarkers } from "./vault/conflicts";
-import { forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
+import { currentTauriVault, forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
 import { Welcome } from "./Welcome";
 import { TabBar, type Tab } from "./TabBar";
 import { Dashboard } from "./Dashboard";
@@ -1092,7 +1092,9 @@ export function App() {
     return found;
   }, [tree]);
   const isPresentation = (path: string) => (note?.path === path ? presentationPage : presentationPaths.has(path));
-  const pageIconFor = (path: string) => <PageIcon path={path} icon={iconOf(path)} ticket={ticketPaths.has(path)} presentation={isPresentation(path)} />;
+  /** A note of the folder next to a base (`X/` and `X.base`) is one of its rows. */
+  const isBaseRow = (path: string) => path.endsWith(".md") && path.includes("/") && files.includes(`${dirname(path)}.base`);
+  const pageIconFor = (path: string) => <PageIcon path={path} icon={iconOf(path)} ticket={ticketPaths.has(path)} presentation={isPresentation(path)} row={isBaseRow(path)} />;
   /** Presents from the slide under the cursor. */
   const present = () => {
     const current = editorRef.current;
@@ -1262,6 +1264,9 @@ export function App() {
       onSettings={(newTabRequested) => void select(SETTINGS_VIEW, "push", newTabRequested)}
       onHelp={() => setModal("help")}
       onChangeVault={changeVault}
+      otherVaults={isTauri() ? recentTauriVaults().filter((root) => root !== currentTauriVault()).map((root) => ({ root, name: root.split("/").filter(Boolean).pop() ?? root })) : []}
+      onSwitchVault={(root) => void saveNow().catch(() => {}).then(() => open(openTauriVault(root)))}
+      onPickVault={isTauri() ? () => void saveNow().catch(() => {}).then(() => open(pickTauriVault())) : undefined}
     />
   );
 
@@ -1540,6 +1545,11 @@ export function App() {
                 vault={vault}
                 files={files}
                 columns={settings.ticketColumns}
+                onColumns={(ticketColumns) => {
+                  const next = { ...settings, ticketColumns };
+                  setSettings(next);
+                  saveSettings(next);
+                }}
                 onChanged={() => {
                   void refreshGit();
                   void refresh(vault);
