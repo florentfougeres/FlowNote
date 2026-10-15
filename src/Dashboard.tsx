@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { keys } from "./keys";
 import { Icon } from "./Icon";
+import { PAGE_KINDS, kindIconClass, type PageKind } from "./pageKinds";
 import { readAllNotes, type Vault } from "./vault/vault";
 import { buildGraph, type VaultGraph } from "./graph/graph";
 import { GraphView } from "./graph/GraphView";
@@ -19,7 +20,7 @@ import { agenda, dueLabel, ticketsOf, urgency, type AgendaItem, type TicketInfo 
  * commit activity, vault statistics and health, Obsidian bookmarks.
  */
 
-export type CreateKind = "note" | "base" | "drawing" | "mindmap" | "ticket" | "presentation";
+export type CreateKind = PageKind;
 
 const folderOf = (path: string) => (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
@@ -177,60 +178,17 @@ export function Dashboard({
       </header>
 
       <section className="dash-create" aria-label="Créer">
-        <button onClick={() => onCreate("note")}>
-          <span className="dash-create-icon">
-            <Icon name="doc" size={20} />
-          </span>
-          <span>
-            <strong>Nouvelle note</strong>
-            <small>Texte, listes, tableaux, callouts</small>
-          </span>
-        </button>
-        <button onClick={() => onCreate("base")}>
-          <span className="dash-create-icon base">
-            <Icon name="database" size={20} />
-          </span>
-          <span>
-            <strong>Nouvelle base</strong>
-            <small>Tableau, kanban, galerie, calendrier</small>
-          </span>
-        </button>
-        <button onClick={() => onCreate("drawing")}>
-          <span className="dash-create-icon drawing">
-            <Icon name="drawing" size={20} />
-          </span>
-          <span>
-            <strong>Nouveau dessin</strong>
-            <small>Schémas à main levée (Excalidraw)</small>
-          </span>
-        </button>
-        <button onClick={() => onCreate("mindmap")}>
-          <span className="dash-create-icon mindmap">
-            <Icon name="mindmap" size={20} />
-          </span>
-          <span>
-            <strong>Nouvelle mind map</strong>
-            <small>Idées en branches, à la souris et au clavier</small>
-          </span>
-        </button>
-        <button onClick={() => onCreate("ticket")}>
-          <span className="dash-create-icon ticket">
-            <Icon name="ticket" size={20} />
-          </span>
-          <span>
-            <strong>Nouveau ticket</strong>
-            <small>Suivi, commentaires, échéance</small>
-          </span>
-        </button>
-        <button onClick={() => onCreate("presentation")}>
-          <span className="dash-create-icon presentation">
-            <Icon name="slides" size={20} />
-          </span>
-          <span>
-            <strong>Nouvelle présentation</strong>
-            <small>Diapos en Markdown (Marp)</small>
-          </span>
-        </button>
+        {PAGE_KINDS.map((k) => (
+          <button key={k.kind} onClick={() => onCreate(k.kind)}>
+            <span className={kindIconClass(k.kind)}>
+              <Icon name={k.icon} size={20} />
+            </span>
+            <span>
+              <strong>{k.create}</strong>
+              <small>{k.description}</small>
+            </span>
+          </button>
+        ))}
         {/* « Nouveau notebook » arrivera avec la fusion de la branche feature/notebooks. */}
       </section>
 

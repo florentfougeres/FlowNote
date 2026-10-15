@@ -24,28 +24,6 @@
   color: var(--danger);
 }
 
-/* "Nouvelle page" with its page types: wider, the types in equal columns. */
-.modal.with-kinds {
-  width: min(560px, calc(100vw - 32px));
-}
-
-.kind-choice {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.kind-choice button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 0;
-  padding-inline: 8px;
-  white-space: nowrap;
-}
-
 /* FlowNote's toolbar holds the drawing tools: Excalidraw's own shape bar and its hint are hidden. */
 .drawing-pane .excalidraw .shapes-section {
   visibility: hidden; /* keeps its place, so the menu and library buttons stay in their corners */

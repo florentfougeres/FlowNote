@@ -188,25 +188,3 @@
   background: var(--bg);
   color: var(--text);
 }
-
-.folder-field {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.folder-field select {
-  flex: 1;
-  min-width: 0;
-  max-width: 100%;
-  text-overflow: ellipsis;
-  font: inherit;
-  color: var(--text);
-  padding: 5px 8px;
-  border: 0.5px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg-elevated);
-}
