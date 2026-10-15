@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { keys } from "./keys";
 import { NoteEditor } from "./editor/NoteEditor";
-import { imageMime, type VaultBridge } from "./editor/bridge";
+import { imageMime, NULL_BRIDGE, type VaultBridge } from "./editor/bridge";
+import DOCUMENTATION from "./docs/documentation.md?raw";
 import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
 import { DRAWING_SUFFIX, isDrawingPath, newDrawingFile } from "./drawing/format";
 import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
@@ -86,12 +87,15 @@ const GRAPH_VIEW = "flownote:graph";
 const READING_VIEW = "flownote:reading";
 /** Pseudo-path of the settings page. */
 const SETTINGS_VIEW = "flownote:settings";
+/** Pseudo-path of the documentation (a read-only note shipped with the app). */
+const DOCS_VIEW = "flownote:docs";
 /** Views shown in a tab instead of a page. */
 const VIEWS: Record<string, { title: string; icon: IconName }> = {
   [TICKETS_VIEW]: { title: "Tickets", icon: "ticket" },
   [GRAPH_VIEW]: { title: "Graphe", icon: "graph" },
   [READING_VIEW]: { title: "Lectures", icon: "bookmark" },
   [SETTINGS_VIEW]: { title: "Réglages", icon: "sliders" },
+  [DOCS_VIEW]: { title: "Documentation", icon: "book" },
 };
 const isView = (path: string | null) => path !== null && path in VIEWS;
 
@@ -1335,7 +1339,7 @@ export function App() {
       ticketsFolder={settings.ticketsFolder}
       hidden={[settings.ticketsFolder, readingPath].filter(Boolean)}
       selected={note?.path}
-      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : null}
+      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
       liveIcon={note ? { path: note.path, icon: liveIcon } : undefined}
       gitChanges={vault.git ? gitChanges : null}
       gitOpen={gitOpen}
@@ -1359,6 +1363,7 @@ export function App() {
       onTickets={(newTabRequested) => void openView(TICKETS_VIEW, newTabRequested)}
       onGraph={(newTabRequested) => void openView(GRAPH_VIEW, newTabRequested)}
       onReading={(newTabRequested) => void openView(READING_VIEW, newTabRequested)}
+      onDocs={(newTabRequested) => void openView(DOCS_VIEW, newTabRequested)}
       onGit={() => toggleGit()}
       onSettings={(newTabRequested) => void select(SETTINGS_VIEW, "push", newTabRequested)}
       onHelp={() => setModal("help")}
@@ -1632,7 +1637,11 @@ export function App() {
               </div>
             </>
           ) : (
-            activePath === SETTINGS_VIEW ? (
+            activePath === DOCS_VIEW ? (
+              <div className="page docs-page">
+                <NoteEditor key="docs" source={DOCUMENTATION} onMarkdown={() => {}} bridge={NULL_BRIDGE} editable={false} properties={false} />
+              </div>
+            ) : activePath === SETTINGS_VIEW ? (
               <SettingsPage
                 key={activeTab}
                 settings={settings}

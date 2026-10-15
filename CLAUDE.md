@@ -29,8 +29,11 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 - `src/editor/` : Tiptap/ProseMirror. Les vues de nœuds sont dans `views.ts`, le pont vers l'app dans `bridge.ts`.
 - `src/vault/` : accès au vault, résolution des liens façon Obsidian (`links.ts`), opérations sur les pages (`pageOps.ts`), notes liées (`backlinks.ts`), copie des notes en mémoire (`noteCache.ts` : le vault ouvert est enveloppé, ses écritures tiennent la copie à jour).
 - `src/print.ts` : export PDF par le panneau d'impression (styles dans `styles/print.css`).
+- `src/SplitPane.tsx` : côté droit du split view (lecture et enregistrement propres) ; l'onglet affiché à droite est `splitTab` dans `App.tsx`.
+- `src/DatePicker.tsx` : sélecteur de date de l'app (jamais d'`<input type="date">`).
+- `src/docs/documentation.md` : documentation affichée dans l'app (`flownote:docs`). **La mettre à jour avec chaque fonctionnalité.**
 - Types de page, un dossier chacun : `base/` (`.base`), `drawing/` (`.excalidraw.md`), `mindmap/` (`.mindmap.md`), `ticket/` (`type: ticket`), `presentation/` (`marp: true`), plus `reading/` et `graph/`.
-- `src/App.tsx` : état global, onglets, choix du type de page. Les vues hors page sont des pseudo-chemins `flownote:tickets`, `flownote:graph`, `flownote:reading`.
+- `src/App.tsx` : état global, onglets, choix du type de page. Les vues hors page sont des pseudo-chemins `flownote:tickets`, `flownote:graph`, `flownote:reading`, `flownote:settings`, `flownote:docs`.
 - Styles : `src/styles/*.css`, importés depuis `src/styles.css`.
 
 ## Pièges connus
@@ -46,6 +49,8 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
   - noms de calculs : Average, Min, Max, Sum, Range, Median, Stddev, Earliest, Latest, Checked, Unchecked, Empty, Filled, Unique ;
   - Obsidian conserve les clés qu'il ne connaît pas ;
   - FlowNote écrit `type: kanban`, et le calendrier comme `type: cards` + `flownoteView: calendar`. Couleurs et types des colonnes sous `flownote: properties:`. Modifier le YAML via l'API Document de `yaml`, pour garder les clés inconnues.
+- **Admonitions HedgeDoc** (`:::type` … `:::`) : masquées pour remark derrière un commentaire HTML de même longueur (`maskContainers` dans `parse.ts`), puis lues comme des callouts `syntax: "hedgedoc"`.
+- **Mind map** : Mind Elixir écrit `translate3d(…) scale(…)` en style inline ; l'affichage passe par `--map-transform` (2D, pixels entiers) pour rester net au zoom.
 - **Bases et dossiers** : les lignes de `X.base` sont les notes du dossier `X/` (filtre `file.inFolder("X")`). Renommer une base réécrit ce filtre.
 
 ## Publier une version
@@ -65,5 +70,6 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
   - branche `feature/notebooks` (notebooks Python marimo) jamais fusionnée, 41 commits de retard ;
   - suppression d'une base « en plusieurs fois » dans l'app de bureau : rendue robuste mais pas reproduite, à confirmer ;
   - kanban et calendrier des bases à vérifier dans Obsidian ;
+  - retours d'usage d'octobre (split view, sélecteur de date, taille de l'interface par le zoom de la webview, touche morte `` ` ``, menu du croquis, netteté de la mind map) testés dans Chrome seulement, à vérifier dans l'app de bureau ;
   - nouveautés des 0.10 à 0.13 testées dans Chrome seulement, à vérifier dans l'app de bureau (⌘,, clic droit, glisser-déposer, Finder, défilement de la fenêtre, menu du fil d'Ariane, graphiques, thème de la fenêtre, export PDF par le panneau d'impression, copie HTML, import CSV, mode focus).
 - L'historique détaillé des sessions est dans `.remember/` (à lire sur demande).

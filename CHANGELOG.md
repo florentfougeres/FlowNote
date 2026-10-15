@@ -2,6 +2,33 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Ajouté
+- **Split view** : deux pages côte à côte, une seule barre d'onglets. `⌥-clic` sur une page (ou « Ouvrir à droite ») l'affiche à droite, clic droit sur un onglet : « Afficher à droite ». Un clic sur l'onglet de droite échange les côtés, le séparateur se déplace, `⌘⌥\` ouvre ou ferme le panneau.
+- **Documentation** de toutes les fonctionnalités, en lecture seule, sous « Graphe » dans la barre latérale.
+- **Admonitions HedgeDoc** (`:::info` … `:::`, `success`, `warning`, `danger`, `spoiler`) affichées comme des callouts ; le fichier garde leur syntaxe. `:::type` suivi d'un espace en crée une, « Admonition HedgeDoc » dans le menu `/`.
+- `⌘K` sur un texte sélectionné : adresse du lien (sur un lien : le modifier ou le retirer).
+- Réglage **Taille de l'interface** (petite, normale, grande, très grande).
+- **Sélecteur de date** au style de l'app (calendrier du mois, date tapée, clavier) pour les propriétés, les bases et l'échéance des tickets.
+- Menu du vault : les vaults récents en un clic et « Ouvrir un autre vault… ».
+- Bouton **Colonnes** sur le tableau des tickets.
+
+### Modifié
+- Barre latérale : Accueil en haut, nouvelle icône pour « Rechercher dans les notes », dossier des tickets et note des lectures masqués.
+- Accueil, Tickets, Lectures et Graphe s'ouvrent dans un nouvel onglet quand une page est ouverte.
+- Plan et historique s'affichent dans une même colonne ; l'historique est plus étroit.
+- `⌫` au début d'une ligne remonte au bout de la ligne du dessus, aussi sous une liste, une citation ou un callout ; sous un tableau, le curseur va dans la dernière cellule ; un séparateur est sélectionné au lieu d'être supprimé.
+- `` ` `` tapé sur une sélection la met en code ; tapé avant un texte déjà suivi d'un `` ` ``, ce texte devient du code (aussi avec la touche morte du clavier Mac).
+- Croquis : menu du clic droit au style de l'app, bibliothèque retirée.
+- Bases : les lignes d'une base ont leur propre icône dans la barre latérale.
+
+### Corrigé
+- Plus de `\` isolé quand on vide un bloc qui contenait un saut de ligne.
+- « Ajouter des propriétés » s'affiche sur une note sans propriétés.
+- Mind map : le texte reste net après un zoom (+ / −).
+- Bases : le menu « Calculer » ne passe plus sous les onglets de vue.
+
 ## [0.13.0] - 2026-10-15
 
 ### Ajouté

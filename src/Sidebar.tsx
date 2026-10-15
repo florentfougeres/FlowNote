@@ -162,7 +162,7 @@ interface Props {
   tree: VaultEntry[];
   selected?: string;
   /** What the active tab shows when it is not a page. */
-  view: "home" | "tickets" | "graph" | "reading" | "settings" | null;
+  view: "home" | "tickets" | "graph" | "reading" | "settings" | "docs" | null;
   /** Folder of the tickets (a setting): numbered by the app, so it never moves nor receives drops. */
   ticketsFolder: string;
   /** Paths left out of the tree: the tickets folder and the reading list have their own views. */
@@ -200,6 +200,7 @@ interface Props {
   onTickets: (newTab: boolean) => void;
   onGraph: (newTab: boolean) => void;
   onReading: (newTab: boolean) => void;
+  onDocs: (newTab: boolean) => void;
   onGit: () => void;
   onSettings: (newTab: boolean) => void;
   onHelp: () => void;
@@ -465,6 +466,7 @@ export function Sidebar(props: Props) {
         <NavRow icon="ticket" label="Tickets" active={view === "tickets"} onClick={(event) => props.onTickets(event.metaKey || event.ctrlKey)} />
         <NavRow icon="bookmark" label="Lectures" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
         <NavRow icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />
+        <NavRow icon="book" label="Documentation" active={view === "docs"} onClick={(event) => props.onDocs(event.metaKey || event.ctrlKey)} />
       </nav>
       {props.favorites.length > 0 && (
         <>
