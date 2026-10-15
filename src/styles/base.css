@@ -164,6 +164,19 @@
   background: transparent;
 }
 
+/*
+ * The window never scrolls: only the panes inside do. Otherwise an element
+ * overflowing the bottom lets the whole interface slide up under the window
+ * buttons.
+ */
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   font-size: 14px;

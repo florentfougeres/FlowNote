@@ -4,7 +4,8 @@
    it and no empty band shows through the transparent window while it closes. */
 .git-drawer {
   position: relative;
-  height: 100vh;
+  /* The height of its grid row, under the tab strip (100vh would overflow the window by the strip's height). */
+  height: 100%;
   overflow: hidden;
   background: var(--bg);
   border-left: 0.5px solid var(--border);
