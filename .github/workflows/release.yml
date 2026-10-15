@@ -17,6 +17,9 @@ jobs:
   build:
     needs: test
     runs-on: macos-latest # Apple Silicon runner: builds the arm64 app
+    env:
+      # Bundling Plotly (a 4.8 MB CommonJS file) needs more than Node's default heap.
+      NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
