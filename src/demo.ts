@@ -5,6 +5,7 @@ import { FULL_NOTE } from "./markdown/fixtures";
 export const DEMO_REMOTE = { "Projets.md": "# Projets\n\n[[Mon Notion]] — modifié sur un autre ordinateur\n" };
 
 export const DEMO_FILES = {
+  ".obsidian/bookmarks.json": JSON.stringify({ items: [{ type: "file", path: "Exemple.md" }, { type: "file", path: "Projets/Mon Notion.md" }] }),
   "Exemple.md": FULL_NOTE,
   "Projets.md": "# Projets\n\n[[Mon Notion]]\n",
   "Projets/Mon Notion.md": "Une sous-page de [[Projets]].\n",

@@ -171,6 +171,14 @@ interface Props {
   onNewFolder: (parent: string) => void;
   onRenameFolder: (folder: string) => void;
   onDeleteFolder: (folder: string) => void;
+  /** Obsidian's bookmarked files, shown above the tree. */
+  favorites: string[];
+  /** A copy of the page next to it. */
+  onDuplicate: (notePath: string) => void;
+  /** Copies a `[[link]]` to the page. */
+  onCopyLink: (notePath: string) => void;
+  /** Shows a page or folder in the Finder; absent outside the desktop app. */
+  onReveal?: (path: string) => void;
   /** Moves a page (with its sub-pages) or a folder into `target` ("" is the vault root). */
   onMove: (item: { path: string; folder: boolean }, target: string) => void;
   onRename: (notePath: string) => void;
@@ -191,6 +199,10 @@ export function Sidebar(props: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ anchor: DOMRect; items: MenuItem[] } | null>(null);
   const pages = toPages(tree);
+  /** What the tree knows of each note (icon, ticket, presentation), for the favorites. */
+  const entries = new Map<string, VaultEntry>();
+  const index = (list: VaultEntry[]) => list.forEach((e) => (e.kind === "file" ? entries.set(e.path, e) : index(e.children ?? [])));
+  index(tree);
   /** The dragged item, the pointer, and where it would land (null: nowhere valid). */
   const [drag, setDrag] = useState<{ item: DragItem; x: number; y: number; target: string | null } | null>(null);
   /** A drag just ended: the click that follows the release must not open the page. */
@@ -232,9 +244,15 @@ export function Sidebar(props: Props) {
     setMenu({ anchor: new DOMRect(event.clientX, event.clientY - 4, 0, 0), items });
   };
 
-  const pageMenu = (path: string): MenuItem[] => [
+  const reveal = (path: string): MenuItem[] => (props.onReveal ? [{ label: "Afficher dans le Finder", icon: "folder", run: () => props.onReveal!(path) }] : []);
+
+  /** Tickets are numbered and bases share their rows' folder: neither is duplicated. */
+  const pageMenu = (path: string, ticket = false): MenuItem[] => [
     { label: "Ouvrir dans un nouvel onglet", icon: "open", run: () => props.onSelect(path, true) },
     { label: "Ajouter une sous-page", icon: "plus", run: () => props.onNewPage(path) },
+    { label: "Copier le lien", icon: "link", run: () => props.onCopyLink(path) },
+    ...(ticket || isBasePath(path) ? [] : [{ label: "Dupliquer", icon: "copy" as IconName, run: () => props.onDuplicate(path) }]),
+    ...reveal(path),
     { label: "Renommer", icon: "pencil", run: () => props.onRename(path) },
     { label: "Supprimer", icon: "trash", danger: true, run: () => props.onDelete(path) },
   ];
@@ -327,6 +345,7 @@ export function Sidebar(props: Props) {
         props.onNewFolder(folder);
       },
     },
+    ...reveal(folder),
     { label: "Renommer", icon: "pencil", run: () => props.onRenameFolder(folder) },
     { label: "Supprimer", icon: "trash", danger: true, run: () => props.onDeleteFolder(folder) },
   ];
@@ -358,7 +377,7 @@ export function Sidebar(props: Props) {
                   icon: <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} presentation={page.presentation} />,
                 })
               }
-              onContextMenu={(event) => openContextMenu(event, page.notePath ? pageMenu(page.notePath) : folderMenu(page.key))}
+              onContextMenu={(event) => openContextMenu(event, page.notePath ? pageMenu(page.notePath, page.ticket) : folderMenu(page.key))}
             >
               <button className="page-toggle" onClick={() => toggle(page.key)} aria-label={open ? "Replier" : "Déplier"} disabled={page.children.length === 0}>
                 {page.children.length > 0 && <Icon name={open ? "chevronDown" : "chevronRight"} size={12} />}
@@ -377,7 +396,7 @@ export function Sidebar(props: Props) {
                 className="page-add"
                 title="Renommer, supprimer…"
                 aria-label="Plus d'actions"
-                onClick={(event) => openMenu(event, page.notePath ? pageMenu(page.notePath) : folderMenu(page.key))}
+                onClick={(event) => openMenu(event, page.notePath ? pageMenu(page.notePath, page.ticket) : folderMenu(page.key))}
               >
                 <Icon name="more" size={14} />
               </button>
@@ -427,6 +446,35 @@ export function Sidebar(props: Props) {
         <NavRow icon="bookmark" label="Lectures" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
         <NavRow icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />
       </nav>
+      {props.favorites.length > 0 && (
+        <>
+          <div className="sidebar-section">Favoris</div>
+          <ul className="tree sidebar-favorites">
+            {props.favorites.map((path) => (
+              <li key={path}>
+                <div
+                  className={path === selected && view === null ? "page-row selected" : "page-row"}
+                  style={{ paddingLeft: 4 }}
+                  onContextMenu={(event) => openContextMenu(event, pageMenu(path, entries.get(path)?.ticket))}
+                >
+                  <span className="page-toggle" aria-hidden="true" />
+                  <button className="page-name" onClick={(event) => props.onSelect(path, event.metaKey || event.ctrlKey)} onAuxClick={(event) => event.button === 1 && props.onSelect(path, true)}>
+                    <span className="page-icon">
+                      <PageIcon
+                        path={path}
+                        icon={path === liveIcon?.path ? liveIcon.icon : entries.get(path)?.icon}
+                        ticket={entries.get(path)?.ticket}
+                        presentation={entries.get(path)?.presentation}
+                      />
+                    </span>
+                    <span className="page-label">{noteTitle(path)}</span>
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <div className="sidebar-section">
         Pages
         <button className="sidebar-section-add" onClick={() => props.onNewFolder("")} aria-label="Nouveau dossier" title="Nouveau dossier">

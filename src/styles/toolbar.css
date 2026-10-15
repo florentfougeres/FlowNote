@@ -55,6 +55,12 @@
   color: var(--muted);
 }
 
+.word-count {
+  color: var(--faint);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .tool-group {
   display: inline-flex;
   align-items: center;
@@ -610,4 +616,11 @@ body.tree-dragging * {
 
 .tree-drag-ghost.refused {
   opacity: 0.6;
+}
+
+/* Favorites (Obsidian bookmarks) above the tree: a few rows, scrolling beyond. */
+.sidebar-favorites {
+  flex: none;
+  max-height: 30vh;
+  overflow: auto;
 }

@@ -85,6 +85,28 @@ export const SLASH_ITEMS: SlashItem[] = [
       editor.chain().focus().deleteRange(range).insertContent(`📅 ${isoDay()}`).run();
     },
   },
+  {
+    key: "today",
+    title: "Date du jour",
+    description: "Insère la date d'aujourd'hui (AAAA-MM-JJ)",
+    icon: "🗓",
+    keywords: ["date", "aujourd'hui", "aujourdhui", "jour", "today"],
+    run: (editor, range) => {
+      editor.chain().focus().deleteRange(range).insertContent(isoDay()).run();
+    },
+  },
+  {
+    key: "now",
+    title: "Date et heure",
+    description: "Insère la date et l'heure (AAAA-MM-JJ HH:MM)",
+    icon: "🕒",
+    keywords: ["date", "heure", "maintenant", "now", "time"],
+    run: (editor, range) => {
+      const now = new Date();
+      const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      editor.chain().focus().deleteRange(range).insertContent(`${isoDay(now)} ${time}`).run();
+    },
+  },
   { key: "divider", title: "Séparateur", description: "Ligne horizontale", icon: "—", keywords: ["séparateur", "divider", "ligne", "hr"], run: kind("divider") },
   {
     key: "table",

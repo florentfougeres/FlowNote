@@ -57,6 +57,8 @@ import { SlidesPanel } from "./presentation/SlidesPanel";
 import { Presenter } from "./presentation/Presenter";
 import { ticketInfo } from "./ticket/agenda";
 import { moveRecentPage, recordRecentPage } from "./dashboard/recents";
+import { countWords, readingMinutes } from "./markdown/wordCount";
+import { bookmarkedFiles } from "./dashboard/stats";
 import { invoke } from "@tauri-apps/api/core";
 
 interface OpenNote {
@@ -112,6 +114,8 @@ const AUTOSAVE_DELAY_MS = 700;
 export function App() {
   const [vault, setVault] = useState<Vault | null>(null);
   const [tree, setTree] = useState<VaultEntry[]>([]);
+  /** Obsidian's bookmarked files (.obsidian/bookmarks.json), shown as favorites. */
+  const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [files, setFiles] = useState<string[]>([]);
   const [config, setConfig] = useState<ObsidianConfig>(DEFAULT_CONFIG);
   const [note, setNote] = useState<OpenNote | null>(null);
@@ -225,10 +229,11 @@ export function App() {
   const dirty = note !== null && note.markdown !== note.disk;
 
   const refresh = useCallback(async (v: Vault) => {
-    const [newTree, newFiles] = await Promise.all([v.tree(), v.files()]);
+    const [newTree, newFiles, bookmarksJson] = await Promise.all([v.tree(), v.files(), v.bookmarks?.().catch(() => "{}") ?? "{}"]);
     setTree(newTree);
     setFiles(newFiles);
     filesRef.current = newFiles;
+    setBookmarks(bookmarkedFiles(bookmarksJson).filter((p) => newFiles.includes(p)));
   }, []);
 
   const open = async (pending: Vault | null | Promise<Vault | null>) => {
@@ -682,6 +687,33 @@ export function App() {
     }
   };
 
+  /** A copy of a page next to it ("Nom 1"), opened; its sub-pages are not copied. */
+  const duplicatePage = async (path: string) => {
+    if (!vault) return;
+    try {
+      await saveNow();
+      const extension = /\.(?:excalidraw|mindmap)\.md$|\.base$|\.md$/i.exec(path)?.[0] ?? "";
+      const stem = path.slice(0, path.length - extension.length);
+      let copy = "";
+      for (let i = 1; !copy || filesRef.current.some((f) => f.toLowerCase() === copy.toLowerCase()); i++) copy = `${stem} ${i}${extension}`;
+      await createFile(copy, await vault.read(path));
+      await select(copy);
+    } catch (error) {
+      setStatus(String(error));
+    }
+  };
+
+  /** Copies a `[[link]]` to the page, as Obsidian would write it. */
+  const copyLink = async (path: string) => {
+    const link = `[[${linkTextFor(path, filesRef.current)}]]`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setStatus(`Lien copié : ${link}`);
+    } catch (error) {
+      setStatus(`Copie impossible : ${String(error)}`);
+    }
+  };
+
   /** Removes a folder and everything in it, after confirmation. */
   const removeFolder = async (folder: string) => {
     if (!vault) return;
@@ -1022,6 +1054,14 @@ export function App() {
     if (control) control.set(setProperty(control.get(), "icon", icon ?? undefined));
   };
 
+  // Words and reading time of a plain note (not a drawing, mind map nor base).
+  const words = note && !drawing && !mindmap && !basePage ? countWords(note.markdown) : null;
+  const wordStats =
+    words !== null && words > 0 ? (
+      <span className="word-count" title={`${words} mot${words > 1 ? "s" : ""}, environ ${readingMinutes(words)} min de lecture`}>
+        {words.toLocaleString("fr-FR")} mot{words > 1 ? "s" : ""} · {readingMinutes(words)} min
+      </span>
+    ) : null;
   const saveState = <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : keys("Non enregistré · ⌘S")) : "Enregistré"}</span>;
 
   if (!vault) {
@@ -1051,6 +1091,10 @@ export function App() {
       onNewPage={(parent) => void newPage(parent)}
       onNewPageInFolder={(folder) => void newPage(null, undefined, folder)}
       onDelete={(path) => void removePage(path)}
+      favorites={bookmarks}
+      onDuplicate={(path) => void duplicatePage(path)}
+      onCopyLink={(path) => void copyLink(path)}
+      onReveal={vault.reveal ? (path) => void vault.reveal!(path).catch((error: unknown) => setStatus(String(error))) : undefined}
       onNewFolder={(parent) => void newFolder(parent)}
       onRenameFolder={(folder) => void renameFolderPath(folder)}
       onDeleteFolder={(folder) => void removeFolder(folder)}
@@ -1127,6 +1171,7 @@ export function App() {
                 <>
                   <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} />
                   {saveState}
+                  {wordStats}
                   {status && <span className="status warning">{status}</span>}
                 </>
               ) : (

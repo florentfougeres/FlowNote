@@ -30,6 +30,7 @@ export function tauriVault(root: string): Vault {
     create: (path, content) =>
       invoke("vault_create", { root, path, content: Array.from(typeof content === "string" ? encodeText(content) : content) }),
     createFolder: (path) => invoke("vault_create_dir", { root, path }),
+    reveal: (path) => invoke("vault_reveal", { root, path }),
     obsidianConfig: () => invoke<string>("vault_config", { root }),
     rename: (from, to) => invoke("vault_rename", { root, from, to }),
     remove: (path) => invoke("vault_trash", { root, path }),

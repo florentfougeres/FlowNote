@@ -251,6 +251,16 @@ pub fn vault_create_dir(root: String, path: String) -> Result<(), String> {
     fs::create_dir_all(&dir).map_err(|e| format!("{path}: {e}"))
 }
 
+/// Shows a note or folder of the vault in the Finder, selected.
+#[tauri::command]
+pub fn vault_reveal(root: String, path: String) -> Result<(), String> {
+    let target = resolve(&root, &path)?;
+    if !target.exists() {
+        return Err(format!("{path} n'existe pas."));
+    }
+    std::process::Command::new("open").arg("-R").arg(&target).spawn().map(|_| ()).map_err(|e| e.to_string())
+}
+
 /// Obsidian settings (`.obsidian/app.json`), read only; "{}" when absent.
 #[tauri::command]
 pub fn vault_config(root: String) -> String {

@@ -49,6 +49,8 @@ export interface Vault {
   stats?(): Promise<{ path: string; ctime: number; mtime: number }[]>;
   /** Obsidian's bookmarks (.obsidian/bookmarks.json, read only), "{}" when absent. */
   bookmarks?(): Promise<string>;
+  /** Shows a note or folder in the Finder (desktop app only). */
+  reveal?(path: string): Promise<void>;
   /** Fast full-text search done by the backend; otherwise notes are read one by one. */
   search?(query: string, caseSensitive: boolean, limit: number): Promise<{ path: string; lines: [number, string][] }[]>;
 }
@@ -209,6 +211,8 @@ export function createMemoryVault(name: string, files: Record<string, string | U
   /** Folders created empty (a folder exists otherwise through its files). */
   const folders = new Set<string>();
   const inside = (path: string, folder: string) => path === folder || path.startsWith(`${folder}/`);
+  /** Under a hidden folder (".obsidian"): Obsidian's configuration, never listed. */
+  const hidden = (path: string) => path.split("/").some(isHiddenName);
   const text = (path: string) => {
     const value = contents.get(path) ?? "";
     return typeof value === "string" ? value : new TextDecoder().decode(value);
@@ -217,17 +221,17 @@ export function createMemoryVault(name: string, files: Record<string, string | U
     name,
     git: memoryGit(contents, remote),
     tree: async () => {
-      const notes = [...contents.keys()].filter((p) => p.endsWith(".md") || p.endsWith(".base"));
+      const notes = [...contents.keys()].filter((p) => !hidden(p) && (p.endsWith(".md") || p.endsWith(".base")));
       const text = (v: string | Uint8Array | undefined) => (typeof v === "string" ? v : v ? new TextDecoder().decode(v) : "");
       return buildTree(notes, (p) => (p.endsWith(".md") ? noteMeta(text(contents.get(p))) : {}), [...folders]);
     },
-    readNotes: async () => [...contents.entries()].filter(([p]) => p.endsWith(".md")).map(([p, v]): [string, string] => [p, typeof v === "string" ? v : new TextDecoder().decode(v)]),
+    readNotes: async () => [...contents.entries()].filter(([p]) => !hidden(p) && p.endsWith(".md")).map(([p, v]): [string, string] => [p, typeof v === "string" ? v : new TextDecoder().decode(v)]),
     read: async (path) => text(path),
     write: async (path, content, expected) => {
       if (text(path) !== expected) throw new ConflictError(`${path} a été modifié en dehors de l'application.`);
       contents.set(path, content);
     },
-    files: async () => [...contents.keys()].sort(),
+    files: async () => [...contents.keys()].filter((p) => !hidden(p)).sort(),
     readBinary: async (path) => {
       const value = contents.get(path);
       return typeof value === "string" ? encodeText(value) : (value ?? new Uint8Array());
@@ -240,7 +244,8 @@ export function createMemoryVault(name: string, files: Record<string, string | U
       if ([...contents.keys(), ...folders].some((k) => inside(k, path))) throw new Error(`${path} existe déjà.`);
       folders.add(path);
     },
-    obsidianConfig: async () => "{}",
+    obsidianConfig: async () => text(".obsidian/app.json") || "{}",
+    bookmarks: async () => text(".obsidian/bookmarks.json") || "{}",
     rename: async (from, to) => {
       const moved = [...contents.keys()].filter((k) => inside(k, from));
       const movedFolders = [...folders].filter((f) => inside(f, from));

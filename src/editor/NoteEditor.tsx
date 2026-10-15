@@ -79,9 +79,17 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         return true;
       },
       handlePaste: (view, event) => {
-        if (!event.clipboardData?.files.length) return false;
-        const pos = view.state.selection.from;
-        void readFiles(event.clipboardData.files).then((files) => editorRef.current && insertAttachments(editorRef.current, wiring.bridge.current, files, pos));
+        if (event.clipboardData?.files.length) {
+          const pos = view.state.selection.from;
+          void readFiles(event.clipboardData.files).then((files) => editorRef.current && insertAttachments(editorRef.current, wiring.bridge.current, files, pos));
+          return true;
+        }
+        // A web address pasted over selected text links that text, like in Notion.
+        const url = event.clipboardData?.getData("text/plain").trim() ?? "";
+        const { selection, schema, doc } = view.state;
+        const linkable = !selection.empty && selection.$from.sameParent(selection.$to) && selection.$from.parent.isTextblock && !selection.$from.parent.type.spec.code;
+        if (!/^https?:\/\/\S+$/i.test(url) || !linkable || doc.rangeHasMark(selection.from, selection.to, schema.marks.code)) return false;
+        view.dispatch(view.state.tr.removeMark(selection.from, selection.to, schema.marks.link).addMark(selection.from, selection.to, schema.marks.link.create({ href: url, title: null, kind: "inline" })));
         return true;
       },
     },
