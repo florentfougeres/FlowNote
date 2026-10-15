@@ -280,7 +280,7 @@ function BlockMenu({ editor, block, x, y, onClose }: { editor: Editor; block: Bl
           })
         }
       >
-        Monter <kbd>{keys("⌘⇧↑")}</kbd>
+        Monter <kbd>{keys("⌥↑")}</kbd>
       </button>
       <button
         onClick={() =>
@@ -291,7 +291,7 @@ function BlockMenu({ editor, block, x, y, onClose }: { editor: Editor; block: Bl
           })
         }
       >
-        Descendre <kbd>{keys("⌘⇧↓")}</kbd>
+        Descendre <kbd>{keys("⌥↓")}</kbd>
       </button>
       <button onClick={() => setTurnOpen(!turnOpen)}>Transformer en {turnOpen ? "▾" : "▸"}</button>
       {turnOpen && (

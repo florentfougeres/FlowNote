@@ -6,6 +6,7 @@ import remarkFrontmatter from "remark-frontmatter";
 import type { List, ListItem, Nodes, PhrasingContent, Root, RootContent, Table } from "mdast";
 import type { PMJSON, PMMark } from "./types";
 import { equivalent } from "./normalize";
+import { mkdocsSyntax } from "./flavor";
 
 /**
  * Markdown -> ProseMirror JSON.
@@ -56,16 +57,13 @@ export function parseDocument(src: string): ParsedDocument {
   const definitions = root.children.filter((c) => DEFINITION_TYPES.has(c.type)).map((c) => src.slice(...span(c)));
   const context: ParseContext = { definitions: definitions.join("\n\n"), definitionCount: definitions.length };
   let frontmatterEnd: number | null = null;
-  const blocks: TopLevelBlock[] = [];
-  for (const child of root.children) {
-    const [start, end] = span(child);
-    if (child.type === "yaml" && start === 0) {
-      frontmatterEnd = end;
-      continue;
-    }
-    blocks.push({ json: convertBlock(child, src, context), start, end });
+  let children = root.children;
+  const first = children[0];
+  if (first?.type === "yaml" && span(first)[0] === 0) {
+    frontmatterEnd = span(first)[1];
+    children = children.slice(1);
   }
-  return { frontmatterEnd, blocks, context };
+  return { frontmatterEnd, blocks: convertBlocks(children, src, context), context };
 }
 
 /** Parses Markdown that is not a whole file (container content, serializer output). */
@@ -76,11 +74,119 @@ export function parseFragment(md: string, context: ParseContext = NO_CONTEXT): P
     const appended = root.children.slice(own.length);
     // If the fragment swallowed the appended definitions (e.g. an unclosed fence), parse it alone.
     if (appended.length === context.definitionCount && appended.every((c) => DEFINITION_TYPES.has(c.type) && span(c)[0] >= md.length)) {
-      return own.map((child) => convertBlock(child, md, context));
+      return convertBlocks(own, md, context).map((b) => b.json);
     }
   }
   const root = fragmentProcessor.parse(md) as Root;
-  return root.children.map((child) => convertBlock(child, md, context));
+  return convertBlocks(root.children, md, context).map((b) => b.json);
+}
+
+/** The blocks of a list of mdast siblings; with the MkDocs syntax on, admonitions and content tabs are gathered first. */
+function convertBlocks(children: RootContent[], src: string, ctx: ParseContext): TopLevelBlock[] {
+  if (!mkdocsSyntax()) return children.map((child) => ({ json: convertBlock(child, src, ctx), ...spanOf(child) }));
+  const blocks: TopLevelBlock[] = [];
+  let i = 0;
+  while (i < children.length) {
+    const { start, end } = spanOf(children[i]);
+    const lineEnd = endOfLine(src, start);
+    const header = src.slice(start, lineEnd);
+    const admonition = ADMONITION.exec(header);
+    if (!admonition && !TAB.test(header)) {
+      blocks.push({ json: convertBlock(children[i], src, ctx), start, end });
+      i++;
+      continue;
+    }
+    if (admonition) {
+      const region = indentedRegion(children, i, src, lineEnd);
+      blocks.push({ json: admonitionJson(admonition, src, lineEnd, region.end, ctx), start, end: region.end });
+      i = region.next;
+      continue;
+    }
+    // Consecutive `=== "Title"` blocks make one set of tabs.
+    const tabs: PMJSON[] = [];
+    let groupEnd = end;
+    while (i < children.length) {
+      const tabStart = spanOf(children[i]).start;
+      const tabLineEnd = endOfLine(src, tabStart);
+      const match = TAB.exec(src.slice(tabStart, tabLineEnd));
+      if (!match) break;
+      const region = indentedRegion(children, i, src, tabLineEnd);
+      const body = parseFragment(unindentBody(src.slice(Math.min(tabLineEnd + 1, region.end), region.end)), ctx);
+      tabs.push(node("tab", { title: match[2], marker: match[1], spaced: blankAfterHeader(src, tabLineEnd, region.end) }, body.length > 0 ? body : [node("paragraph")]));
+      groupEnd = region.end;
+      i = region.next;
+    }
+    blocks.push({ json: node("tabs", undefined, tabs), start, end: groupEnd });
+  }
+  return blocks;
+}
+
+// ---------------------------------------------------------------------------
+// MkDocs Material: admonitions and content tabs
+
+/** `!!! type`, `??? type` (folded) or `???+ type` (foldable, open), with modifiers and a quoted title. */
+const ADMONITION = /^(!!!|\?\?\?\+?)[ \t]+([A-Za-z][\w-]*)((?:[ \t]+(?:inline|end))*)(?:[ \t]+"([^"\n]*)")?[ \t]*$/;
+/** `=== "Title"` (`===+` selects the tab, `===!` starts a new set). */
+const TAB = /^(===[+!]?)[ \t]+"([^"\n]*)"[ \t]*$/;
+
+function spanOf(node: Nodes): { start: number; end: number } {
+  const [start, end] = span(node);
+  return { start, end };
+}
+
+function endOfLine(src: string, from: number): number {
+  const at = src.indexOf("\n", from);
+  return at < 0 ? src.length : at;
+}
+
+/**
+ * The body of a header line ending at `headerEnd`: the following lines that
+ * are blank or indented by four spaces (or a tab), up to the last indented
+ * one. Siblings starting inside it are part of it (`next` is the first that
+ * is not), and widen it when they run past.
+ */
+function indentedRegion(children: RootContent[], index: number, src: string, headerEnd: number): { end: number; next: number } {
+  let end = headerEnd;
+  let at = headerEnd;
+  while (at < src.length) {
+    const lineEnd = endOfLine(src, at + 1);
+    const line = src.slice(at + 1, lineEnd);
+    if (line.trim() !== "") {
+      if (!/^( {4}|\t)/.test(line)) break;
+      end = lineEnd;
+    }
+    at = lineEnd;
+  }
+  let next = index;
+  while (next < children.length && span(children[next])[0] < Math.max(end, headerEnd + 1)) {
+    end = Math.max(end, span(children[next])[1]);
+    next++;
+  }
+  return { end, next: Math.max(next, index + 1) };
+}
+
+/** Text indented by up to four spaces (or a tab), unindented. */
+function unindentBody(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => line.replace(/^( {1,4}|\t)/, ""))
+    .join("\n");
+}
+
+/** Whether the body starts after a blank line (kept when the block is rewritten). */
+function blankAfterHeader(src: string, headerEnd: number, end: number): boolean {
+  return /^\n[ \t]*\n/.test(src.slice(headerEnd, end));
+}
+
+function admonitionJson(header: RegExpExecArray, src: string, headerEnd: number, end: number, ctx: ParseContext): PMJSON {
+  const [, marker, calloutType, modifiers, title] = header;
+  const body = end > headerEnd ? parseFragment(unindentBody(src.slice(headerEnd + 1, end)), ctx) : [];
+  const fold = marker === "???" ? "-" : marker === "???+" ? "+" : "";
+  return node(
+    "callout",
+    { calloutType, fold, compact: false, syntax: "mkdocs", modifiers: modifiers.trim(), explicitTitle: title !== undefined, spaced: blankAfterHeader(src, headerEnd, end) },
+    [node("calloutTitle", undefined, title ? [{ type: "text", text: title }] : undefined), ...body],
+  );
 }
 
 function span(node: Nodes): [number, number] {

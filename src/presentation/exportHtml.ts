@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { imageMime } from "../editor/bridge";
 import { isTauri } from "../vault/tauriVault";
-import { renderSlides, standaloneHtml, withLocalImages } from "./slides";
+import { renderSlides, standaloneHtml, withLocalImages, type RenderedSlides } from "./slides";
 
 function dataUrl(bytes: Uint8Array, path: string): string {
   let binary = "";
@@ -10,13 +10,18 @@ function dataUrl(bytes: Uint8Array, path: string): string {
   return `data:${imageMime(path)};base64,${btoa(binary)}`;
 }
 
+/** The slides of a presentation with the vault's images embedded, for an export. */
+export async function renderSlidesForExport(markdown: string, notePath: string, files: string[], readBinary: (path: string) => Promise<Uint8Array>): Promise<RenderedSlides> {
+  const rendered = renderSlides(markdown);
+  const slides = await Promise.all(rendered.slides.map((html) => withLocalImages(html, notePath, files, async (path) => dataUrl(await readBinary(path), path))));
+  return { ...rendered, slides };
+}
+
 /**
  * Exports a presentation as one standalone HTML file (images embedded).
  */
 export async function exportPresentation(markdown: string, title: string, notePath: string, files: string[], readBinary: (path: string) => Promise<Uint8Array>): Promise<string | null> {
-  const rendered = renderSlides(markdown);
-  const slides = await Promise.all(rendered.slides.map((html) => withLocalImages(html, notePath, files, async (path) => dataUrl(await readBinary(path), path))));
-  const html = standaloneHtml(title, { ...rendered, slides });
+  const html = standaloneHtml(title, await renderSlidesForExport(markdown, notePath, files, readBinary));
   return saveExport(new Blob([html], { type: "text/html" }), `${title}.html`, "Page web", "html");
 }
 

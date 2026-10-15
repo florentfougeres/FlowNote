@@ -9,6 +9,8 @@ export interface MindmapControls {
   exportPng: () => Promise<Blob | null>;
   /** Fits the whole map in view. */
   fit: () => void;
+  /** A copy of the whole map in the light theme, with its size (for the PDF export). */
+  printable: () => { element: HTMLElement; width: number; height: number };
 }
 
 export interface MindmapCanvasProps {
@@ -159,6 +161,23 @@ export default function MindmapCanvas({ source, onMarkdown, title, theme, editab
       fit: () => {
         instance.scaleFit();
         instance.toCenter();
+      },
+      printable: () => {
+        // The map's own HTML (text stays text): no toolbars, no selection,
+        // not moved, in the light theme since paper is white.
+        const copy = instance.container.cloneNode(true) as HTMLElement;
+        copy.querySelectorAll(".mind-elixir-toolbar, .context-menu, .tips, #input-box, .selection-area, .circle").forEach((e) => e.remove());
+        copy.querySelectorAll(".selected").forEach((e) => e.classList.remove("selected"));
+        for (const [name, value] of Object.entries(LIGHT_THEME.cssVar ?? {})) if (value) copy.style.setProperty(name, value);
+        const canvas = copy.querySelector<HTMLElement>(".map-canvas");
+        if (canvas) canvas.style.transform = "none";
+        const width = instance.nodes.offsetWidth;
+        const height = instance.nodes.offsetHeight;
+        Object.assign(copy.style, { width: `${width}px`, height: `${height}px`, overflow: "visible" });
+        const page = document.createElement("div");
+        page.className = "mindmap-page";
+        page.append(copy);
+        return { element: page, width, height };
       },
     });
     return () => {

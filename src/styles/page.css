@@ -1,0 +1,225 @@
+/* ---- Full width, focus mode, backlinks ---- */
+
+/* Full width (per page): the note column spans the page, like Notion's. */
+.page.wide .page-heading,
+.page.wide .page-title,
+.page.wide .properties,
+.page.wide .note,
+.page.wide .backlinks {
+  max-width: none;
+}
+
+/*
+ * Focus mode: no sidebar; the tabs and the page bar fade out and come back
+ * under the pointer. The window chrome takes the page colour.
+ */
+.layout.focus-mode .titlebar {
+  background: var(--bg);
+}
+
+.layout.focus-mode .titlebar > *,
+.layout.focus-mode .content > .toolbar {
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+
+.layout.focus-mode .titlebar:hover > *,
+.layout.focus-mode .content > .toolbar:hover,
+.layout.focus-mode .content > .toolbar:focus-within {
+  opacity: 1;
+}
+
+.layout.focus-mode .status-pill-anchor {
+  display: none;
+}
+
+/* Notes linking to the page, under it. */
+.note-editor:has(+ .backlinks) .note {
+  padding-bottom: 48px;
+}
+
+.backlinks {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 32px 30vh;
+}
+
+.backlinks h2 {
+  margin: 0 0 6px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.backlinks ul {
+  margin: 0 -8px;
+  padding: 0;
+  list-style: none;
+}
+
+.backlinks .backlinks-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.backlinks .backlinks-item:hover {
+  background: var(--hover);
+}
+
+.backlinks-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.backlinks h2 + h2,
+.backlinks ul + h2 {
+  margin-top: 20px;
+}
+
+.backlinks-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: -4px;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.backlinks-toggle:hover {
+  background: var(--hover);
+}
+
+.backlinks-mention {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.backlinks-mention .backlinks-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.backlinks-excerpt mark {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: var(--highlight);
+  color: inherit;
+}
+
+.backlinks .backlinks-link {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.backlinks .backlinks-link:hover {
+  background: var(--hover);
+}
+
+.backlinks-error {
+  margin: 4px 0;
+  color: var(--warning);
+  font-size: 13px;
+}
+
+.backlinks-excerpt {
+  overflow: hidden;
+  padding-left: 22px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Table of contents of a `[TOC]` paragraph (HedgeDoc). */
+.note .toc-source {
+  display: none;
+}
+
+.note .toc {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 8px 0 16px;
+  padding: 8px 8px 8px 4px;
+  border-left: 2px solid var(--border);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.note .toc button {
+  max-width: 100%;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.note .toc .toc-title {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.note .toc .toc-item {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note .toc button:hover {
+  background: var(--hover);
+}
+
+.note .toc-empty {
+  padding: 3px 8px;
+  color: var(--faint);
+  font-size: 14px;
+}

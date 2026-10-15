@@ -48,12 +48,21 @@ export function serializeBlock(n: PMJSON, v: Variant): string {
     case "blockquote":
       return prefixLines(joinBlocks(n.content ?? [], v, attr(n, "compact", false)));
     case "callout": {
+      if (attr<string>(n, "syntax", "") === "mkdocs") return serializeAdmonition(n, v);
       const [title, ...body] = n.content ?? [];
       const titleText = serializeInline(title?.content ?? [], v).replace(/\n/g, " ");
       const header = `[!${attr(n, "calloutType", "note")}]${attr(n, "fold", "")}${titleText ? ` ${titleText}` : ""}`;
       const inner = joinBlocks(body, v, attr(n, "compact", false));
       return prefixLines(inner ? `${header}\n${inner}` : header);
     }
+    case "tabs":
+      return (n.content ?? [])
+        .map((tab) => {
+          const header = `${attr(tab, "marker", "===")} "${attr(tab, "title", "")}"`;
+          const body = joinBlocks(tab.content ?? [], v, false);
+          return body ? `${header}\n${attr(tab, "spaced", true) ? "\n" : ""}${indentLines(body)}` : header;
+        })
+        .join("\n\n");
     case "list":
       return serializeList(n, v);
     case "rawBlock":
@@ -63,6 +72,26 @@ export function serializeBlock(n: PMJSON, v: Variant): string {
     default:
       throw new Error(`Cannot serialize block of type ${n.type}`);
   }
+}
+
+/** Body of a MkDocs block: indented by four spaces, blank lines left empty. */
+function indentLines(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => (line.trim() === "" ? "" : `    ${line}`))
+    .join("\n");
+}
+
+/** A MkDocs Material admonition: `!!!` (or `???`, `???+` when foldable), type, modifiers, quoted title, indented body. */
+function serializeAdmonition(n: PMJSON, v: Variant): string {
+  const [title, ...body] = n.content ?? [];
+  const fold = attr<string>(n, "fold", "");
+  const marker = fold === "-" ? "???" : fold === "+" ? "???+" : "!!!";
+  const titleText = (title?.content ?? []).map((c) => c.text ?? "").join("").replace(/\n/g, " ").replace(/"/g, "'");
+  const modifiers = attr(n, "modifiers", "");
+  const header = `${marker} ${attr(n, "calloutType", "note")}${modifiers ? ` ${modifiers}` : ""}${titleText || attr(n, "explicitTitle", false) ? ` "${titleText}"` : ""}`;
+  const inner = joinBlocks(body, v, false);
+  return inner ? `${header}\n${attr(n, "spaced", false) ? "\n" : ""}${indentLines(inner)}` : header;
 }
 
 function prefixLines(text: string): string {

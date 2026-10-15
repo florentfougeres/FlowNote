@@ -19,6 +19,8 @@ export interface Settings {
   readingList: string;
   /** Read the title of the pages added to the reading list. */
   fetchTitles: boolean;
+  /** MkDocs Material syntax (admonitions, content tabs, inline extensions) shown in notes. */
+  mkdocs: boolean;
 }
 
 const AUTOSAVE_KEY = "flownote:autosave";
@@ -28,6 +30,7 @@ const TICKETS_KEY = "flownote:tickets-folder";
 const COLUMNS_KEY = "flownote:ticket-columns";
 const READING_KEY = "flownote:reading-list";
 const TITLES_KEY = "flownote:fetch-titles";
+const MKDOCS_KEY = "flownote:mkdocs";
 
 function readColumns(): TicketColumn[] {
   try {
@@ -58,9 +61,10 @@ export function loadSettings(): Settings {
       ticketColumns: readColumns(),
       readingList: localStorage.getItem(READING_KEY) || "Lectures.md",
       fetchTitles: localStorage.getItem(TITLES_KEY) !== "false",
+      mkdocs: localStorage.getItem(MKDOCS_KEY) === "true",
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true, mkdocs: false };
   }
 }
 
@@ -73,6 +77,7 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(COLUMNS_KEY, JSON.stringify(settings.ticketColumns));
     localStorage.setItem(READING_KEY, settings.readingList);
     localStorage.setItem(TITLES_KEY, String(settings.fetchTitles));
+    localStorage.setItem(MKDOCS_KEY, String(settings.mkdocs));
   } catch {
     // Settings simply won't persist.
   }
@@ -223,6 +228,12 @@ export function SettingsPage({
                   </button>
                 ))}
               </div>
+            </Row>
+            <Row
+              label="Syntaxe MkDocs Material"
+              help={"Pour les notes écrites pour MkDocs, Zensical ou ProperDocs : admonitions (!!! note), onglets (=== \"Titre\"), touches ++ctrl++, icônes :material-…:, Jinja, attributs { .classe } et abréviations. Les fichiers ne changent pas."}
+            >
+              <Switch checked={settings.mkdocs} label="Syntaxe MkDocs Material" onChange={(mkdocs) => onChange({ ...settings, mkdocs })} />
             </Row>
           </section>
         )}

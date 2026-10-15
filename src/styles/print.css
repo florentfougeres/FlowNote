@@ -1,0 +1,153 @@
+/* ---- PDF export (print) ---- */
+
+/* The sheet container stays off screen, measurable but never seen. */
+#print-root {
+  position: fixed;
+  top: 0;
+  left: -100000px;
+  pointer-events: none;
+}
+
+@media print {
+  /* Paper is white: the light palette, whatever the app's theme. */
+  :root,
+  :root:not([data-theme="light"]),
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --bg: #ffffff;
+    --bg-elevated: #ffffff;
+    --text: rgba(0, 0, 0, 0.85);
+    --muted: rgba(0, 0, 0, 0.5);
+    --faint: rgba(0, 0, 0, 0.26);
+    --border: rgba(0, 0, 0, 0.12);
+    --code-bg: rgba(0, 0, 0, 0.045);
+    --code-text: #c4285a;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* A note: the page alone, running over as many sheets as needed. */
+  html[data-print="note"] .titlebar,
+  html[data-print="note"] .sidebar-dock,
+  html[data-print="note"] .sidebar-hotzone,
+  html[data-print="note"] .toolbar,
+  html[data-print="note"] .status-pill-anchor,
+  html[data-print="note"] .find-bar-anchor,
+  html[data-print="note"] .outline-panel,
+  html[data-print="note"] .history-panel,
+  html[data-print="note"] .git-drawer,
+  html[data-print="note"] .conflict-note-banner,
+  html[data-print="note"] .backlinks,
+  html[data-print="note"] .block-handle,
+  html[data-print="note"] .table-handles,
+  html[data-print="note"] .page-heading-actions,
+  html[data-print="note"] .property-add,
+  html[data-print="note"] .property-remove,
+  html[data-print="note"] .chip > button,
+  html[data-print="note"] .chip-input,
+  html[data-print="note"] .code-header,
+  html[data-print="note"] .plot-editor-host,
+  html[data-print="note"] .ProseMirror-gapcursor,
+  html[data-print="note"] #print-root {
+    display: none !important;
+  }
+
+  html[data-print="note"] body,
+  html[data-print="note"] #root,
+  html[data-print="note"] .layout,
+  html[data-print="note"] .workspace,
+  html[data-print="note"] .content,
+  html[data-print="note"] .panes,
+  html[data-print="note"] .page {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  html[data-print="note"] .page-heading,
+  html[data-print="note"] .page-title,
+  html[data-print="note"] .properties,
+  html[data-print="note"] .note {
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  html[data-print="note"] .page-title {
+    width: 100% !important;
+    margin-top: 0 !important;
+  }
+
+  html[data-print="note"] .note {
+    padding-bottom: 0 !important;
+  }
+
+  html[data-print="note"] .property-value::-webkit-calendar-picker-indicator {
+    display: none;
+  }
+
+  html[data-print="note"] .note h1,
+  html[data-print="note"] .note h2,
+  html[data-print="note"] .note h3 {
+    break-after: avoid;
+  }
+
+  html[data-print="note"] .note pre,
+  html[data-print="note"] .note table,
+  html[data-print="note"] .note img,
+  html[data-print="note"] .note .callout,
+  html[data-print="note"] .note .plotly-chart,
+  html[data-print="note"] .note .mermaid-preview {
+    break-inside: avoid;
+  }
+
+  /* Slides, a drawing or a mind map: the sheet container alone. */
+  html[data-print="sheet"] body > *:not(#print-root) {
+    display: none !important;
+  }
+
+  html[data-print="sheet"] #print-root {
+    position: static;
+    left: auto;
+  }
+
+  #print-root.print-slides div.marpit > section {
+    break-after: page;
+  }
+
+  #print-root.print-slides div.marpit > section:last-child {
+    break-after: auto;
+  }
+
+  #print-root .print-image-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #print-root .mindmap-page {
+    position: static;
+  }
+
+  #print-root .print-image-frame > svg,
+  #print-root .print-image-frame > img {
+    max-width: 100%;
+    max-height: 100%;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}

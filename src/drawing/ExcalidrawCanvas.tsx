@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Excalidraw, getSceneVersion, MainMenu } from "@excalidraw/excalidraw";
+import { Excalidraw, exportToSvg, getSceneVersion, MainMenu } from "@excalidraw/excalidraw";
 import type { ExcalidrawImperativeAPI, BinaryFileData } from "@excalidraw/excalidraw/types";
 import "@excalidraw/excalidraw/index.css";
 import type { VaultBridge } from "../editor/bridge";
@@ -11,6 +11,8 @@ export type DrawingTool = "selection" | "hand" | "rectangle" | "diamond" | "elli
 
 export interface DrawingControls {
   setTool(tool: DrawingTool): void;
+  /** The whole drawing as SVG, on a white background (for the PDF export). */
+  exportSvg(): Promise<SVGSVGElement>;
 }
 
 export interface CanvasProps {
@@ -76,7 +78,16 @@ export default function ExcalidrawCanvas({ source, onMarkdown, bridge, theme, ed
   // The toolbar drives the canvas through these controls.
   useEffect(() => {
     if (!api) return;
-    onControls({ setTool: (type) => api.setActiveTool(type === "image" ? { type: "image", insertOnCanvasDirectly: false } : { type }) });
+    onControls({
+      setTool: (type) => api.setActiveTool(type === "image" ? { type: "image", insertOnCanvasDirectly: false } : { type }),
+      exportSvg: () =>
+        exportToSvg({
+          elements: api.getSceneElements(),
+          appState: { ...api.getAppState(), exportBackground: true, exportWithDarkMode: false, viewBackgroundColor: "#ffffff" },
+          files: api.getFiles(),
+          exportPadding: 16,
+        }),
+    });
     return () => onControls(null);
   }, [api, onControls]);
 

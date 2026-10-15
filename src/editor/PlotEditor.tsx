@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Icon } from "../Icon";
-import { applyModel, parsePlot, PLOT_KINDS, toModel, type PlotModel } from "./plotModel";
+import { applyModel, csvToData, parsePlot, PLOT_KINDS, toModel, type PlotModel } from "./plotModel";
 
 interface Props {
   source: string;
@@ -37,6 +37,8 @@ function PlotEditor({ source, onChange, onEditText, onClose }: Props) {
   /** Bumped when the block changed elsewhere: the fields start again from it. */
   const [version, setVersion] = useState(0);
   const emitted = useRef(source);
+  const csvInput = useRef<HTMLInputElement>(null);
+  const [csvError, setCsvError] = useState<string | null>(null);
 
   useEffect(() => {
     if (source === emitted.current) return;
@@ -75,6 +77,17 @@ function PlotEditor({ source, onChange, onEditText, onClose }: Props) {
     change({ ...model, labels: model.labels.filter((_, i) => i !== row), series: model.series.map((s) => ({ ...s, values: s.values.filter((_, i) => i !== row) })) });
   const addSeries = () => change({ ...model, series: [...model.series, { name: `Série ${model.series.length + 1}`, values: model.labels.map(() => null) }] });
   const removeSeries = (column: number) => change({ ...model, series: model.series.filter((_, j) => j !== column) });
+  /** A CSV file replaces the data; the kind, titles and other settings stay. */
+  const importCsv = async (file: File) => {
+    try {
+      const data = csvToData(await file.text());
+      change({ ...model, labels: data.labels, series: pie ? data.series.slice(0, 1) : data.series });
+      setVersion((v) => v + 1);
+      setCsvError(null);
+    } catch (error) {
+      setCsvError(`Import impossible : ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
 
   return (
     <div className="plot-editor" key={version}>
@@ -179,6 +192,7 @@ function PlotEditor({ source, onChange, onEditText, onClose }: Props) {
         </table>
       </div>
 
+      {csvError && <p className="plot-editor-message">{csvError}</p>}
       <div className="plot-editor-footer">
         <button onClick={addRow}>
           <Icon name="plus" size={12} /> Ligne
@@ -188,6 +202,20 @@ function PlotEditor({ source, onChange, onEditText, onClose }: Props) {
             <Icon name="plus" size={12} /> Série
           </button>
         )}
+        <button onClick={() => csvInput.current?.click()} title="Remplacer les données par celles d'un fichier CSV (1re colonne : abscisses ou parts, une colonne par série)">
+          <Icon name="table" size={12} /> Importer un CSV
+        </button>
+        <input
+          ref={csvInput}
+          type="file"
+          accept=".csv,.tsv,.txt,text/csv"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) void importCsv(file);
+          }}
+        />
         <button className="plot-editor-text" onClick={onEditText}>
           <Icon name="code" size={12} /> Modifier le texte
         </button>

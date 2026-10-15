@@ -18,7 +18,7 @@ import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { applyTheme, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
 import { deletePage, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "./vault/pageOps";
-import { PageIcon, Sidebar } from "./Sidebar";
+import { PageIcon, PopoverMenu, Sidebar, type MenuItem } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
 import { GraphPage } from "./graph/GraphPage";
 import { ReadingView } from "./reading/ReadingView";
@@ -29,6 +29,7 @@ import { setProperty } from "./markdown/frontmatter";
 import type { FrontmatterControl } from "./editor/NoteEditor";
 import { GitPanel } from "./GitPanel";
 import { ToolButton, ToolGroup, Toolbar } from "./Toolbar";
+import { Backlinks } from "./Backlinks";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { OutlinePanel } from "./OutlinePanel";
 import { RawEditor } from "./RawEditor";
@@ -42,6 +43,7 @@ import { DEFAULT_CONFIG, linkTextFor, newNoteFolder, noteTitle, parseObsidianCon
 import { DEMO_FILES, DEMO_REMOTE } from "./demo";
 import { GitDrawer, useGitDrawer } from "./GitDrawer";
 import { usePersistentFlag } from "./hooks/usePersistentFlag";
+import { useWidePages } from "./hooks/useWidePages";
 import { useSystemDark } from "./hooks/useSystemDark";
 import { hasConflictMarkers } from "./vault/conflicts";
 import { forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
@@ -58,6 +60,7 @@ import { Presenter } from "./presentation/Presenter";
 import { ticketInfo } from "./ticket/agenda";
 import { moveRecentPage, recordRecentPage } from "./dashboard/recents";
 import { countWords, readingMinutes } from "./markdown/wordCount";
+import { setMkdocsSyntax } from "./markdown/flavor";
 import { bookmarkedFiles } from "./dashboard/stats";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -162,10 +165,27 @@ export function App() {
   const openFind = (replace = false) =>
     setFindRequest((previous) => ({ query: selectedText() || previous?.query || "", replace, nonce: Date.now() }));
   const [settings, setSettings] = useState<Settings>(loadSettings);
+  // Read by the parser when a note is opened.
+  setMkdocsSyntax(settings.mkdocs);
   /** Toolbar switch: pauses the checker chosen in the settings without changing it. */
   const [spellingOn, toggleSpelling] = useSpellChecking(settings.spellChecker);
   const [pendingOpen, setPendingOpen] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
+  /** Words and characters of the text selected in the note, for the status pill. */
+  const [selectionCount, setSelectionCount] = useState<{ words: number; chars: number } | null>(null);
+  useEffect(() => {
+    setSelectionCount(null);
+    if (!editor) return;
+    const update = () => {
+      const { from, to, empty } = editor.state.selection;
+      const text = empty ? "" : editor.state.doc.textBetween(from, to, "\n", " ");
+      setSelectionCount(text.trim() ? { words: countWords(text), chars: [...text.replace(/\n/g, "")].length } : null);
+    };
+    editor.on("selectionUpdate", update);
+    return () => {
+      editor.off("selectionUpdate", update);
+    };
+  }, [editor]);
   const [drawingControls, setDrawingControls] = useState<DrawingControls | null>(null);
   const [drawingTool, setDrawingTool] = useState("selection");
   const [mindmapControls, setMindmapControls] = useState<MindmapControls | null>(null);
@@ -198,6 +218,10 @@ export function App() {
   };
   const [sidebarOpen, setSidebarOpen] = usePersistentFlag("flownote:sidebar", true, ["shown", "hidden"]);
   const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [setSidebarOpen]);
+  /** Focus mode: no sidebar, tabs and page bar faded until the pointer comes back. */
+  const [focusMode, setFocusMode] = useState(false);
+  const toggleFocus = useCallback(() => setFocusMode((on) => !on), []);
+  const [widePages, toggleWide] = useWidePages();
   /** Hidden sidebar shown over the page while the pointer is near the left edge, like Notion. */
   const [peek, setPeek] = useState(false);
   const peekTimer = useRef<number>(undefined);
@@ -527,6 +551,7 @@ export function App() {
     else if (key === "/") run(() => setModal("help"));
     else if (key === ",") run(() => void select(SETTINGS_VIEW, "push"));
     else if (key === "\\") run(toggleSidebar);
+    else if (key === "m" && event.shiftKey) run(toggleFocus);
     else if (key === "e" && event.shiftKey && noteRef.current) run(toggleRaw);
   };
   useEffect(() => {
@@ -1061,6 +1086,46 @@ export function App() {
       setStatus(`Export impossible : ${String(error)}`);
     }
   };
+  /** PDF of the open page through the print panel: a note as shown, slides one per page, a drawing or mind map as an image. */
+  const exportPdf = async () => {
+    const current = noteRef.current;
+    if (!vault || !current) return;
+    const title = noteTitle(current.path);
+    try {
+      const print = await import("./print");
+      if (drawing) {
+        if (!drawingControls) return;
+        const svg = await drawingControls.exportSvg();
+        await print.printImage(title, svg, svg.viewBox.baseVal.width, svg.viewBox.baseVal.height);
+      } else if (mindmap) {
+        if (!mindmapControls) return;
+        const { element, width, height } = mindmapControls.printable();
+        await print.printElement(title, element, width, height);
+      } else if (presentationPage) {
+        const { renderSlidesForExport } = await import("./presentation/exportHtml");
+        const rendered = await renderSlidesForExport(current.markdown, current.path, filesRef.current, (path) => vault.readBinary(path));
+        await print.printSlides(title, rendered.slides, rendered.css);
+      } else {
+        await print.printNote(title);
+      }
+    } catch (error) {
+      setStatus(`Export PDF impossible : ${String(error)}`);
+    }
+  };
+  /** Copies the open note as HTML (for a mail or a document), its Markdown as plain text. */
+  const copyAsHtml = async () => {
+    const current = noteRef.current;
+    if (!editor || !current) return;
+    try {
+      const { copyNoteAsHtml } = await import("./editor/copyHtml");
+      await copyNoteAsHtml(editor.state.doc, noteTitle(current.path), current.markdown);
+      notify("Note copiée en HTML");
+    } catch (error) {
+      setStatus(`Copie impossible : ${String(error)}`);
+    }
+  };
+  const [pageMenu, setPageMenu] = useState<DOMRect | null>(null);
+
   /** Sets or removes the page icon (the `icon` property of the open note). */
   const setPageIcon = (icon: string | null) => {
     const control = frontmatter.current;
@@ -1078,7 +1143,7 @@ export function App() {
     note || notice ? (
       <div className="status-pill-anchor" aria-live="polite">
         <div
-          className={["status-pill", typing && !notice ? "quiet" : "", notice ? "notice" : ""].filter(Boolean).join(" ")}
+          className={["status-pill", typing && !notice && !selectionCount ? "quiet" : "", notice ? "notice" : ""].filter(Boolean).join(" ")}
           title={words ? `${words} mot${words > 1 ? "s" : ""} · ${note!.markdown.length.toLocaleString("fr-FR")} caractères · environ ${readingMinutes(words)} min de lecture` : undefined}
         >
           {notice ? (
@@ -1086,7 +1151,11 @@ export function App() {
           ) : (
             <>
               <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : "Non enregistré") : "Enregistré"}</span>
-              {words ? (
+              {selectionCount ? (
+                <span className="selection-count">
+                  {selectionCount.words.toLocaleString("fr-FR")} mot{selectionCount.words > 1 ? "s" : ""} · {selectionCount.chars.toLocaleString("fr-FR")} caractère{selectionCount.chars > 1 ? "s" : ""} sélectionnés
+                </span>
+              ) : words ? (
                 <span>
                   {words.toLocaleString("fr-FR")} mot{words > 1 ? "s" : ""}
                 </span>
@@ -1149,7 +1218,7 @@ export function App() {
   );
 
   return (
-    <div className={`layout${sidebarOpen ? "" : " no-sidebar"}`}>
+    <div className={`layout${sidebarOpen && !focusMode ? "" : " no-sidebar"}${focusMode ? " focus-mode" : ""}`}>
       <header className="titlebar" data-tauri-drag-region>
         <div className="titlebar-controls">
           <button
@@ -1187,7 +1256,7 @@ export function App() {
         />
       </header>
       <div className="workspace">
-        {sidebarOpen ? (
+        {sidebarOpen && !focusMode ? (
           <div className="sidebar-dock">{sidebar}</div>
         ) : (
           <>
@@ -1249,11 +1318,28 @@ export function App() {
                 )}
                 {!drawing && !mindmap && !basePage && !ticketPage && !presentationPage && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
                 {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
+                  {!drawing && !mindmap && !basePage && !presentationPage && (
+                    <ToolButton icon="width" label={widePages.has(note.path) ? "Largeur normale" : "Pleine largeur"} onClick={() => toggleWide(note.path)} active={widePages.has(note.path)} />
+                  )}
+                  <ToolButton icon="focus" label={focusMode ? "Quitter le mode focus (⌘⇧M)" : "Mode focus (⌘⇧M)"} onClick={toggleFocus} active={focusMode} />
+                  {!basePage && !ticketPage && (
+                    <ToolButton icon="more" label="Exporter, copier…" onClick={(event) => setPageMenu(event.currentTarget.getBoundingClientRect())} active={pageMenu !== null} disabled={rawMode} />
+                  )}
                   <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : mindmap ? "Voir le fichier brut de la mind map (⌘⇧E)" : basePage ? "Voir le fichier .base (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
                 </div>
               )
             }
           />
+          {pageMenu && note && (
+            <PopoverMenu
+              anchor={pageMenu}
+              onClose={() => setPageMenu(null)}
+              items={[
+                { label: "Exporter en PDF…", icon: "export", run: () => void exportPdf() },
+                ...(!drawing && !mindmap && !presentationPage ? [{ label: "Copier en HTML", icon: "copy", run: () => void copyAsHtml() } satisfies MenuItem] : []),
+              ]}
+            />
+          )}
           {note ? (
             <>
               {findRequest && !rawMode && !drawing && !mindmap && !basePage && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
@@ -1301,7 +1387,7 @@ export function App() {
                     />
                   </div>
                 ) : (
-                <div className={presentationPage ? "page presentation-page" : "page"}>
+                <div className={presentationPage ? "page presentation-page" : widePages.has(note.path) ? "page wide" : "page"}>
                   {hasConflictMarkers(note.disk) && (
                     <div className="conflict-note-banner">
                       <span>Cette note contient un conflit de fusion : elle est en lecture seule jusqu'à sa résolution.</span>
@@ -1358,6 +1444,9 @@ export function App() {
                       }
                     />
                   )}
+                  {!rawMode && !ticketPage && !presentationPage && (
+                    <Backlinks vault={vault} files={files} path={note.path} iconOf={pageIconFor} onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)} onChanged={() => { notify("Lien ajouté"); void refreshGit(); }} />
+                  )}
                 </div>
                 )}
                 {showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && !basePage && <OutlinePanel editor={editor} onClose={toggleOutline} />}
@@ -1377,6 +1466,11 @@ export function App() {
                 onChange={(next) => {
                   setSettings(next);
                   saveSettings(next);
+                  // Notes are read again with or without the MkDocs syntax.
+                  if (next.mkdocs !== settings.mkdocs) {
+                    setMkdocsSyntax(next.mkdocs);
+                    setNote((n) => (n ? { ...n, loaded: n.markdown, reloads: (n.reloads ?? 0) + 1 } : n));
+                  }
                 }}
                 onChangeVault={changeVault}
               />

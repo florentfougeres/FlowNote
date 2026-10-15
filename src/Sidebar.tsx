@@ -61,7 +61,7 @@ export function PageIcon({ path, icon, ticket, presentation, size = 14 }: { path
   return <Icon name={name} size={size} />;
 }
 
-interface MenuItem {
+export interface MenuItem {
   label: string;
   icon: IconName;
   danger?: boolean;
@@ -73,7 +73,7 @@ interface MenuItem {
  * click), above it when there is no room below; closes on Escape or a click
  * outside.
  */
-function PopoverMenu({ anchor, items, onClose }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void }) {
+export function PopoverMenu({ anchor, items, onClose }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(anchor.bottom + 4);
   useLayoutEffect(() => {

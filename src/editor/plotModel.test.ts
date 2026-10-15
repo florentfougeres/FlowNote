@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyModel, parsePlot, PLOT_TEMPLATE, toModel } from "./plotModel";
+import { applyModel, csvToData, parsePlot, PLOT_TEMPLATE, toModel } from "./plotModel";
 
 const model = (source: string) => toModel(parsePlot(source).spec);
 
@@ -82,5 +82,32 @@ describe("plotly blocks", () => {
     const pie = applyModel(PLOT_TEMPLATE, { ...model(PLOT_TEMPLATE)!, kind: "pie" });
     expect(parsePlot(pie).spec.data).toEqual([{ labels: ["Jan", "Fév", "Mar", "Avr", "Mai"], values: [12, 18, 15, 22, 26], type: "pie", name: "Série 1" }]);
     expect(model(applyModel(pie, { ...model(pie)!, kind: "area" }))?.kind).toBe("area");
+  });
+});
+
+describe("csvToData", () => {
+  it("reads a French CSV: semicolons, decimal commas, header row", () => {
+    const csv = "﻿Mois;Ventes;Coûts\r\nJanvier;1 200,5;800\r\nFévrier;1 350;\r\n";
+    expect(csvToData(csv)).toEqual({
+      labels: ["Janvier", "Février"],
+      series: [
+        { name: "Ventes", values: [1200.5, 1350] },
+        { name: "Coûts", values: [800, null] },
+      ],
+    });
+  });
+
+  it("reads an English CSV with quotes and no header", () => {
+    expect(csvToData('"Q1, 2026",1,234.5\n"Q2",2,"3,000"\n')).toEqual({
+      labels: ["Q1, 2026", "Q2"],
+      series: [
+        { name: "Série 1", values: [1, 2] },
+        { name: "Série 2", values: [234.5, 3000] },
+      ],
+    });
+  });
+
+  it("refuses an empty file", () => {
+    expect(() => csvToData("\n\n")).toThrow("vide");
   });
 });

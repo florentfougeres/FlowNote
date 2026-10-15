@@ -230,3 +230,74 @@ export const PLOT_TEMPLATE = `data:
 layout:
   title: Mon graphique
 `;
+
+/** Cells of a CSV text (RFC 4180 quotes), with its delimiter: `;`, `,` or a tab, whichever the first line uses most. */
+function csvRows(text: string): string[][] {
+  const source = text.replace(/^﻿/, "");
+  const firstLine = source.split(/\r?\n/, 1)[0].replace(/"[^"]*"/g, "");
+  const delimiter = [";", "\t", ","].reduce((best, d) => (firstLine.split(d).length > firstLine.split(best).length ? d : best), ",");
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let i = 0; i < source.length; i++) {
+    const char = source[i];
+    if (quoted) {
+      if (char === '"' && source[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (char === '"') quoted = false;
+      else cell += char;
+    } else if (char === '"' && cell === "") quoted = true;
+    else if (char === delimiter) {
+      row.push(cell);
+      cell = "";
+    } else if (char === "\n" || char === "\r") {
+      if (char === "\r" && source[i + 1] === "\n") i++;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else cell += char;
+  }
+  if (cell !== "" || row.length > 0) rows.push([...row, cell]);
+  return rows.map((r) => r.map((c) => c.trim())).filter((r) => r.some((c) => c !== ""));
+}
+
+/** A number written in a CSV: `1 234,5`, `1.234,5`, `1,234.5`, `12 %`; null when it is not one. */
+function csvNumber(cell: string): number | null {
+  let text = cell.replace(/[\s  %€$£]/g, "");
+  if (text === "") return null;
+  if (text.includes(",") && text.includes(".")) text = text.lastIndexOf(",") > text.lastIndexOf(".") ? text.replace(/\./g, "").replace(",", ".") : text.replace(/,/g, "");
+  else if (text.includes(",")) text = /^-?\d{1,3}(,\d{3})+$/.test(text) ? text.replace(/,/g, "") : text.replace(",", ".");
+  const value = Number(text);
+  return Number.isFinite(value) ? value : null;
+}
+
+/**
+ * The data of a CSV file for the visual editor: the first column gives the
+ * labels (x values, or pie slices), each other column a series named by its
+ * header. Without a header row (the first row holding only numbers after its
+ * label), series are named "Série 1", "Série 2"…
+ */
+export function csvToData(text: string): Pick<PlotModel, "labels" | "series"> {
+  const rows = csvRows(text);
+  if (rows.length === 0) throw new Error("le fichier est vide");
+  const width = Math.max(...rows.map((r) => r.length));
+  if (width < 2) {
+    // One column: values only, numbered rows.
+    const values = rows.map((r) => csvNumber(r[0]));
+    const header = values[0] === null && rows.length > 1;
+    return { labels: (header ? rows.slice(1) : rows).map((_, i) => String(i + 1)), series: [{ name: header ? rows[0][0] : "Série 1", values: header ? values.slice(1) : values }] };
+  }
+  const header = rows[0].slice(1).some((c) => c !== "" && csvNumber(c) === null);
+  const body = header ? rows.slice(1) : rows;
+  if (body.length === 0) throw new Error("aucune ligne de données");
+  return {
+    labels: body.map((r) => r[0] ?? ""),
+    series: Array.from({ length: width - 1 }, (_, j) => ({
+      name: header ? rows[0][j + 1] || `Série ${j + 1}` : `Série ${j + 1}`,
+      values: body.map((r) => csvNumber(r[j + 1] ?? "")),
+    })),
+  };
+}

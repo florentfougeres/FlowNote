@@ -308,3 +308,42 @@ describe("click under the last block", () => {
     expect(save()).toBe(md);
   });
 });
+
+describe("table of contents ([TOC], HedgeDoc)", () => {
+  it("a [TOC] paragraph lists the headings and is written back as is", () => {
+    const source = "# Titre\n\n[TOC]\n\n## Partie A\n\nTexte\n\n### Détail\n";
+    const { editor, save } = open(source);
+    const toc = editor.view.dom.querySelector(".toc");
+    expect([...toc!.querySelectorAll(".toc-item")].map((b) => b.textContent)).toEqual(["Titre", "Partie A", "Détail"]);
+    expect(editor.view.dom.querySelector("p.toc-source")?.textContent).toBe("[TOC]");
+    expect(save()).toBe(source);
+  });
+
+  it("the cursor in the paragraph shows its text to edit it", () => {
+    const { editor } = open("[TOC]\n\n# Titre\n");
+    cursorAtStartOf(editor, "[TOC]");
+    expect(editor.view.dom.querySelector(".toc-source")).toBeNull();
+    expect(editor.view.dom.querySelector(".toc")).not.toBeNull();
+  });
+
+  it("the slash item writes [TOC] and moves to the line below", async () => {
+    const { editor, save } = open("");
+    type(editor, "/sommaire");
+    await new Promise((r) => setTimeout(r, 0));
+    press(editor, "Enter");
+    type(editor, "suite");
+    expect(save()).toBe("[TOC]\n\nsuite\n");
+  });
+});
+
+describe("moving blocks", () => {
+  it("⌥↑ and ⌥↓ move the block, like ⌘⇧↑ and ⌘⇧↓", () => {
+    const { editor, save } = open("un\n\ndeux\n\ntrois\n");
+    cursorAtStartOf(editor, "trois");
+    press(editor, "ArrowUp", { altKey: true });
+    expect(save()).toBe("un\n\ntrois\n\ndeux\n");
+    press(editor, "ArrowUp", { altKey: true });
+    press(editor, "ArrowDown", { altKey: true });
+    expect(save()).toBe("un\n\ntrois\n\ndeux\n");
+  });
+});

@@ -1,0 +1,225 @@
+/* ---- MkDocs Material syntax (setting "Syntaxe MkDocs Material") ---- */
+
+/* Content tabs: `=== "Title"`. */
+.note .content-tabs {
+  margin: 8px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.note .content-tabs-strip {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px 0;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.note .content-tabs-strip button {
+  margin-bottom: -1px;
+  padding: 6px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.note .content-tabs-strip .content-tab-name:hover {
+  color: var(--text);
+}
+
+.note .content-tabs-strip .content-tab-name.active {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+
+.note .content-tabs-strip .content-tab-action {
+  padding: 4px 8px;
+  border-radius: 5px;
+  color: var(--faint);
+}
+
+.note .content-tabs-strip .content-tab-action:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.note .content-tab-rename {
+  width: 140px;
+  margin: 2px 4px;
+  padding: 3px 6px;
+  border: 1px solid var(--accent-line);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.note .content-tabs-body {
+  padding: 4px 14px;
+}
+
+/* One tab shown at a time (the view sets data-active). */
+.note .content-tabs[data-active="0"] > .content-tabs-body > :not(:nth-child(1)),
+.note .content-tabs[data-active="1"] > .content-tabs-body > :not(:nth-child(2)),
+.note .content-tabs[data-active="2"] > .content-tabs-body > :not(:nth-child(3)),
+.note .content-tabs[data-active="3"] > .content-tabs-body > :not(:nth-child(4)),
+.note .content-tabs[data-active="4"] > .content-tabs-body > :not(:nth-child(5)),
+.note .content-tabs[data-active="5"] > .content-tabs-body > :not(:nth-child(6)),
+.note .content-tabs[data-active="6"] > .content-tabs-body > :not(:nth-child(7)),
+.note .content-tabs[data-active="7"] > .content-tabs-body > :not(:nth-child(8)),
+.note .content-tabs[data-active="8"] > .content-tabs-body > :not(:nth-child(9)),
+.note .content-tabs[data-active="9"] > .content-tabs-body > :not(:nth-child(10)),
+.note .content-tabs[data-active="10"] > .content-tabs-body > :not(:nth-child(11)),
+.note .content-tabs[data-active="11"] > .content-tabs-body > :not(:nth-child(12)),
+.note .content-tabs[data-active="12"] > .content-tabs-body > :not(:nth-child(13)),
+.note .content-tabs[data-active="13"] > .content-tabs-body > :not(:nth-child(14)),
+.note .content-tabs[data-active="14"] > .content-tabs-body > :not(:nth-child(15)),
+.note .content-tabs[data-active="15"] > .content-tabs-body > :not(:nth-child(16)),
+.note .content-tabs[data-active="16"] > .content-tabs-body > :not(:nth-child(17)),
+.note .content-tabs[data-active="17"] > .content-tabs-body > :not(:nth-child(18)),
+.note .content-tabs[data-active="18"] > .content-tabs-body > :not(:nth-child(19)),
+.note .content-tabs[data-active="19"] > .content-tabs-body > :not(:nth-child(20)) {
+  display: none;
+}
+
+/* Inline syntax: the Markdown markers hide unless the cursor is in the construct. */
+.note .mk-hidden {
+  display: none !important;
+}
+
+.note .mk-keys {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  color: var(--muted);
+}
+
+.note .mk-keys kbd {
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: 0.85em var(--font-ui);
+}
+
+.note .mk-keys-source,
+.note .mk-icon-source {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--muted);
+}
+
+.note .mk-ins {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.note .mk-sub {
+  vertical-align: sub;
+  font-size: 0.75em;
+}
+
+.note .mk-sup {
+  vertical-align: super;
+  font-size: 0.75em;
+}
+
+.note .mk-icon {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+}
+
+.note .mk-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.note .mk-icon.missing {
+  width: auto;
+  height: auto;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.note .mk-jinja {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: color-mix(in srgb, var(--accent) 80%, var(--text));
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.note .mk-attrs {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+}
+
+/* `[text](url){: .md-button }`: the whole link is drawn as a button. */
+.note a:has(.mk-button) {
+  display: inline-block;
+  padding: 2px 12px;
+  border: 1.5px solid var(--accent);
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.note a:has(.mk-button.primary) {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.note a:has(.mk-button) * {
+  text-decoration: none;
+}
+
+.note .mk-abbr {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.note .mk-abbr-definition {
+  color: var(--faint);
+  font-size: 0.85em;
+}
+
+/* Code block title (```py title="script.py"), in a bar on top of the code like on the site. */
+.note .code-block > .code-title {
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 4px 4px 0 0;
+  background: var(--code-bg);
+  color: var(--muted);
+  font: 600 12px var(--font-mono);
+}
+
+.note .code-block > .code-title:not([hidden]) + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.note .code-block:has(> .code-title:not([hidden])) > .code-header {
+  top: 2px;
+}

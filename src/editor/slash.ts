@@ -120,6 +120,17 @@ export const SLASH_ITEMS: SlashItem[] = [
       editor.chain().focus().deleteRange(range).insertContent(`${isoDay(now)} ${time}`).run();
     },
   },
+  {
+    key: "toc",
+    title: "Sommaire",
+    description: "Liste des titres de la note ([TOC], comme HedgeDoc)",
+    icon: "☰",
+    keywords: ["sommaire", "toc", "table des matières", "plan", "titres"],
+    run: (editor, range) => {
+      // The cursor goes to a new line below, so the table of contents shows at once.
+      editor.chain().focus().deleteRange(range).insertContent("[TOC]").splitBlock().run();
+    },
+  },
   { key: "divider", title: "Séparateur", description: "Ligne horizontale", icon: "—", keywords: ["séparateur", "divider", "ligne", "hr"], run: kind("divider") },
   {
     key: "table",

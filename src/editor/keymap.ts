@@ -88,6 +88,12 @@ export const BlockKeymap = Extension.create({
       return true;
     };
 
+    const moveByOne = (direction: -1 | 1): boolean => {
+      const tr = moveBlockByOne(editor.state, direction);
+      if (tr) dispatch(tr);
+      return true;
+    };
+
     return {
       Enter: () => {
         const { state } = editor;
@@ -194,16 +200,11 @@ export const BlockKeymap = Extension.create({
         if (editor.state.selection.$from.parent.type === types().codeBlock) return exitCode(editor.state, dispatch);
         return toggleTask();
       },
-      "Mod-Shift-ArrowUp": () => {
-        const tr = moveBlockByOne(editor.state, -1);
-        if (tr) dispatch(tr);
-        return true;
-      },
-      "Mod-Shift-ArrowDown": () => {
-        const tr = moveBlockByOne(editor.state, 1);
-        if (tr) dispatch(tr);
-        return true;
-      },
+      "Mod-Shift-ArrowUp": () => moveByOne(-1),
+      "Mod-Shift-ArrowDown": () => moveByOne(1),
+      // As in VS Code and Obsidian.
+      "Alt-ArrowUp": () => moveByOne(-1),
+      "Alt-ArrowDown": () => moveByOne(1),
       "Mod-d": () => {
         const block = blockAt(editor.state.doc, editor.state.selection.from);
         if (block) dispatch(duplicateBlock(editor.state, block));

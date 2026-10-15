@@ -17,7 +17,7 @@ export function ToolButton({
 }: {
   icon: IconName;
   label: string;
-  onClick: () => void;
+  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
   active?: boolean;
   disabled?: boolean;
   badge?: number;
