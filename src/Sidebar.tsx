@@ -139,6 +139,7 @@ function NavRow({
 interface DragItem {
   path: string;
   folder: boolean;
+  ticket?: boolean;
   label: string;
   icon: React.ReactNode;
 }
@@ -154,6 +155,8 @@ interface Props {
   selected?: string;
   /** What the active tab shows when it is not a page. */
   view: "home" | "tickets" | "graph" | "reading" | "settings" | null;
+  /** Folder of the tickets (a setting): numbered by the app, so it never moves nor receives drops. */
+  ticketsFolder: string;
   /** Live icon of the open page (its front matter may not be saved yet). */
   liveIcon?: { path: string; icon: string | null };
   /** Number of changed files, or null when the vault has no Git repository. */
@@ -237,8 +240,11 @@ export function Sidebar(props: Props) {
   ];
 
   /** Where an item may be dropped: a plain folder other than its own (and not inside itself), or the root. */
+  /** In the tickets folder (the vault root holds everything, so it does not count). */
+  const inTickets = (path: string) => props.ticketsFolder !== "" && (path === props.ticketsFolder || path.startsWith(`${props.ticketsFolder}/`));
+
   const dropTarget = (item: DragItem, target: string | null): string | null => {
-    if (target === null || target === dirname(item.path)) return null;
+    if (target === null || target === dirname(item.path) || inTickets(target)) return null;
     if (item.folder && (target === item.path || target.startsWith(`${item.path}/`))) return null;
     return target;
   };
@@ -258,6 +264,8 @@ export function Sidebar(props: Props) {
    */
   const startDrag = (event: React.PointerEvent, item: DragItem) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey) return;
+    // Tickets and their folder stay where the app numbers them.
+    if (item.ticket || inTickets(item.path)) return;
     const start = { x: event.clientX, y: event.clientY };
     let active = false;
     let hovered: string | null = null;
@@ -345,6 +353,7 @@ export function Sidebar(props: Props) {
                 startDrag(event, {
                   path: page.notePath ?? page.key,
                   folder: !page.notePath,
+                  ticket: page.ticket,
                   label: page.notePath ? noteTitle(page.notePath) : page.name,
                   icon: <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} presentation={page.presentation} />,
                 })

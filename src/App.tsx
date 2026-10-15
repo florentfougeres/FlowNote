@@ -1041,6 +1041,7 @@ export function App() {
     <Sidebar
       vaultName={vault.name}
       tree={tree}
+      ticketsFolder={settings.ticketsFolder}
       selected={note?.path}
       view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : null}
       liveIcon={note ? { path: note.path, icon: liveIcon } : undefined}
