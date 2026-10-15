@@ -19,7 +19,7 @@ import { agenda, dueLabel, ticketsOf, urgency, type AgendaItem, type TicketInfo 
  * commit activity, vault statistics and health, Obsidian bookmarks.
  */
 
-export type CreateKind = "note" | "drawing" | "mindmap" | "ticket" | "presentation";
+export type CreateKind = "note" | "base" | "drawing" | "mindmap" | "ticket" | "presentation";
 
 const folderOf = (path: string) => (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
@@ -184,6 +184,15 @@ export function Dashboard({
           <span>
             <strong>Nouvelle note</strong>
             <small>Texte, listes, tableaux, callouts</small>
+          </span>
+        </button>
+        <button onClick={() => onCreate("base")}>
+          <span className="dash-create-icon base">
+            <Icon name="database" size={20} />
+          </span>
+          <span>
+            <strong>Nouvelle base</strong>
+            <small>Tableau, kanban, galerie, calendrier</small>
           </span>
         </button>
         <button onClick={() => onCreate("drawing")}>

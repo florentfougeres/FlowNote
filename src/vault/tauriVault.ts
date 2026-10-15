@@ -34,6 +34,7 @@ export function tauriVault(root: string): Vault {
     remove: (path) => invoke("vault_trash", { root, path }),
     search: (query, caseSensitive, limit) => invoke("vault_search", { root, query, caseSensitive, limit }),
     readNotes: () => invoke<[string, string][]>("vault_read_notes", { root }),
+    stats: () => invoke<{ path: string; ctime: number; mtime: number }[]>("vault_stats", { root }),
     bookmarks: () => invoke<string>("vault_bookmarks", { root }),
   };
 }

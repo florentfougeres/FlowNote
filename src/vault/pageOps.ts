@@ -17,8 +17,8 @@ export async function renamePage(vault: Vault, oldPath: string, title: string): 
   const name = sanitizeName(title);
   if (!name) throw new Error("Le titre ne peut pas être vide.");
   const folder = dirname(oldPath);
-  // A drawing keeps its ".excalidraw.md" extension.
-  const extension = /\.excalidraw\.md$/i.test(oldPath) ? ".excalidraw.md" : ".md";
+  // Drawings, mind maps and bases keep their extension (".excalidraw.md", ".mindmap.md", ".base").
+  const extension = /\.(?:excalidraw|mindmap)\.md$|\.base$/i.exec(oldPath)?.[0] ?? ".md";
   const newPath = folder ? `${folder}/${name}${extension}` : `${name}${extension}`;
   if (newPath === oldPath) return { path: oldPath, updatedNotes: [] };
 
@@ -50,8 +50,21 @@ export function subpagesOf(path: string, files: string[]): string[] {
   return files.filter((f) => f.startsWith(folder) && f.endsWith(".md"));
 }
 
-/** Removes a page and its sub-pages folder (to the system trash in the desktop app). */
+/**
+ * Removes a page and its sub-pages folder (to the system trash in the desktop
+ * app). Both are attempted even if one fails, and what is already gone is not
+ * an error: deleting again finishes a deletion left halfway.
+ */
 export async function deletePage(vault: Vault, path: string, files: string[]): Promise<void> {
-  await vault.remove(path);
-  if (files.some((f) => f.startsWith(`${subpageFolder(path)}/`))) await vault.remove(subpageFolder(path));
+  const targets = [path];
+  if (files.some((f) => f.startsWith(`${subpageFolder(path)}/`))) targets.push(subpageFolder(path));
+  const errors: string[] = [];
+  for (const target of targets) {
+    try {
+      await vault.remove(target);
+    } catch (error) {
+      errors.push(`${target} : ${String(error)}`);
+    }
+  }
+  if (errors.length) throw new Error(`Suppression incomplète. ${errors.join(" ; ")}`);
 }

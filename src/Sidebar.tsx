@@ -3,6 +3,7 @@ import type { VaultEntry } from "./vault/vault";
 import { Icon, type IconName } from "./Icon";
 import { isDrawingPath } from "./drawing/format";
 import { isMindmapPath } from "./mindmap/format";
+import { isBasePath } from "./base/baseFile";
 import { noteTitle } from "./vault/links";
 import { keys } from "./keys";
 
@@ -56,7 +57,7 @@ export function PageIcon({ path, icon, ticket, presentation, size = 14 }: { path
       </span>
     );
   }
-  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : ticket ? "ticket" : presentation ? "slides" : "doc";
+  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isBasePath(path) ? "database" : ticket ? "ticket" : presentation ? "slides" : "doc";
   return <Icon name={name} size={size} />;
 }
 

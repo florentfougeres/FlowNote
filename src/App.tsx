@@ -8,6 +8,11 @@ import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
 import { DRAWING_TOOLS } from "./drawing/tools";
 import { isMindmapPath, MINDMAP_SUFFIX, newMindmapFile } from "./mindmap/format";
 import { MindmapEditor, type MindmapControls } from "./mindmap/MindmapEditor";
+import { BASE_SUFFIX, isBasePath, newBaseFile, parseBase, serializeBase, writeColumn, type SelectOption } from "./base/baseFile";
+import { BaseView } from "./base/BaseView";
+import { baseOfNote, baseProperties, RowProperties, type RowBase } from "./base/RowProperties";
+import { columnInfo } from "./base/columns";
+import { mountBase, type EmbedProps } from "./base/EmbeddedBase";
 import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
@@ -577,6 +582,12 @@ export function App() {
     try {
       await saveNow();
       const result = await renamePage(vault, path, title);
+      // A base follows its rows' folder, renamed with it.
+      if (isBasePath(path) && result.path !== path) {
+        const text = await vault.read(result.path);
+        const next = text.split(`file.inFolder(${JSON.stringify(subpageFolder(path))})`).join(`file.inFolder(${JSON.stringify(subpageFolder(result.path))})`);
+        if (next !== text) await vault.write(result.path, next, text);
+      }
       await refresh(vault);
       const oldFolder = `${subpageFolder(path)}/`;
       const moved = (p: string) => (p === path ? result.path : p.startsWith(oldFolder) ? `${subpageFolder(result.path)}/${p.slice(oldFolder.length)}` : p);
@@ -611,20 +622,27 @@ export function App() {
     const withChildren = children === 0 ? "" : children === 1 ? " et sa sous-page" : ` et ses ${children} sous-pages`;
     const message = `Supprimer « ${noteTitle(path)} »${withChildren} ? ${where}`;
     if (!(await askConfirm(message, "Supprimer"))) return;
+    let failure: unknown = null;
     try {
-      if (noteRef.current?.path === path) await saveNow();
+      if (noteRef.current?.path === path) await saveNow().catch(() => {});
       await deletePage(vault, path, filesRef.current);
-      await refresh(vault);
-      back.current = back.current.filter((p) => p !== path);
-      forward.current = forward.current.filter((p) => p !== path);
-      const gone = (p: string | null) => p !== null && (p === path || p.startsWith(`${subpageFolder(path)}/`));
-      setTabs((list) => list.map((t) => (gone(t.path) ? { ...t, path: null } : t)));
-      moveRecentPage(vault.name, path, null);
-      if (noteRef.current && (noteRef.current.path === path || noteRef.current.path.startsWith(`${subpageFolder(path)}/`))) setNote(null);
-      void refreshGit();
     } catch (error) {
-      setStatus(String(error));
+      failure = error;
     }
+    // Even after a partial failure: show what is left on disk, and leave the pages that are gone.
+    const files = await vault.files().catch(() => filesRef.current);
+    await refresh(vault);
+    const gone = (p: string | null) => p !== null && (p === path || p.startsWith(`${subpageFolder(path)}/`)) && !files.includes(p);
+    back.current = back.current.filter((p) => !gone(p));
+    forward.current = forward.current.filter((p) => !gone(p));
+    setTabs((list) => list.map((t) => (gone(t.path) ? { ...t, path: null } : t)));
+    if (!files.includes(path)) moveRecentPage(vault.name, path, null);
+    if (noteRef.current && gone(noteRef.current.path)) {
+      noteRef.current = null;
+      setNote(null);
+    }
+    void refreshGit();
+    setStatus(failure ? String(failure) : "");
   };
 
   const createFile = useCallback(
@@ -672,10 +690,11 @@ export function App() {
     const path =
       kind === "ticket"
         ? uniquePath(settings.ticketsFolder, `${ticketId} - ${title}.md`, filesRef.current)
-        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : ".md"}`, filesRef.current);
+        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : kind === "base" ? BASE_SUFFIX : ".md"}`, filesRef.current);
     try {
       await saveNow();
-      await createFile(path, kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : "");
+      // A base's rows are the notes of the folder named after it, next to it (like sub-pages).
+      await createFile(path, kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : "");
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";
@@ -710,6 +729,15 @@ export function App() {
     openPath: (path, newTabRequested) => void select(path, "push", newTabRequested),
     askName,
     createFile,
+    mountBase: (dom, path) => {
+      if (!embedProps.current) return () => {};
+      const mounted = mountBase(dom, path, embedProps.current);
+      embeds.current.add(mounted);
+      return () => {
+        embeds.current.delete(mounted);
+        mounted.unmount();
+      };
+    },
   };
 
   const onMarkdown = useCallback((markdown: string) => setNote((current) => (current ? { ...current, markdown } : current)), []);
@@ -719,10 +747,60 @@ export function App() {
   /** The open page is a ticket (front matter type: ticket), read from the loaded text. */
   /** The open page is a mind map (Name.mindmap.md). */
   const mindmap = note !== null && isMindmapPath(note.path);
-  const ticketPage = note !== null && !drawing && !mindmap && isTicketMarkdown(note.loaded);
+  /** The open page is a base (Name.base, Obsidian's format). */
+  const basePage = note !== null && isBasePath(note.path);
+  const ticketPage = note !== null && !drawing && !mindmap && !basePage && isTicketMarkdown(note.loaded);
   /** The open page is a presentation (`marp: true`), read from the current text so a conversion shows at once. */
-  const presentationPage = note !== null && !drawing && !mindmap && !ticketPage && isPresentationMarkdown(note.markdown);
+  const presentationPage = note !== null && !drawing && !mindmap && !basePage && !ticketPage && isPresentationMarkdown(note.markdown);
   const slides = useSlides(presentationPage ? note.markdown : "", note?.path ?? "", files, loadImage, presentationPage);
+  /** Bases embedded in the open note (`![[X.base]]`), rendered with the app's current files. */
+  const embeds = useRef(new Set<ReturnType<typeof mountBase>>());
+  const embedProps = useRef<EmbedProps | null>(null);
+  embedProps.current = vault
+    ? {
+        vault,
+        files,
+        editable: note !== null && !hasConflictMarkers(note.disk),
+        onOpen: (path, newTabRequested) => void select(path, "push", newTabRequested),
+        onRenameRow: renamePath,
+        onChanged: () => {
+          void refresh(vault);
+          void refreshGit();
+        },
+        loadImage,
+      }
+    : null;
+  useEffect(() => {
+    const props = embedProps.current;
+    if (props) for (const embed of embeds.current) embed.update(props);
+  }, [files, vault]);
+  /** The vault's bases, to show a row's properties like a database page. */
+  const [bases, setBases] = useState<RowBase[]>([]);
+  const baseFiles = useMemo(() => files.filter(isBasePath).join("\n"), [files]);
+  useEffect(() => {
+    if (!vault || !baseFiles) return setBases([]);
+    let live = true;
+    void Promise.all(baseFiles.split("\n").map(async (path) => ({ path, model: parseBase(await vault.read(path)).model })))
+      .then((list) => live && setBases(list))
+      .catch(() => live && setBases([]));
+    return () => {
+      live = false;
+    };
+  }, [vault, baseFiles, note?.path]);
+  const rowBase = note !== null && !drawing && !mindmap && !basePage && !ticketPage ? baseOfNote(note.path, bases) : null;
+  /** Saves a select's options in the base file of the open row. */
+  const setRowOptions = async (property: string, options: SelectOption[]) => {
+    if (!vault || !rowBase) return;
+    try {
+      const text = await vault.read(rowBase.path);
+      const file = parseBase(text);
+      writeColumn(file, property, { ...columnInfo(file.model, property, []).meta, options });
+      await vault.write(rowBase.path, serializeBase(file), text);
+      setBases((list) => list.map((b) => (b.path === rowBase.path ? { ...b, model: parseBase(serializeBase(file)).model } : b)));
+    } catch (error) {
+      setStatus(String(error));
+    }
+  };
   const activePath = tabs.find((t) => t.id === activeTab)?.path ?? null;
   const ticketPaths = useMemo(() => {
     const found = new Set<string>();
@@ -966,8 +1044,8 @@ export function App() {
                       <ToolButton icon="export" label="Exporter en image (PNG)" onClick={() => void exportMindmap()} disabled={!mindmapControls} />
                     </>
                   )}
-                  {!drawing && !mindmap && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
-                  {!drawing && !mindmap && settings.spellChecker !== "off" && (
+                  {!drawing && !mindmap && !basePage && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
+                  {!drawing && !mindmap && !basePage && settings.spellChecker !== "off" && (
                     <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={toggleSpelling} active={spellingOn} />
                   )}
                   {presentationPage && (
@@ -977,16 +1055,16 @@ export function App() {
                     <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportCurrent()} />
                   </>
                 )}
-                {!drawing && !mindmap && !ticketPage && !presentationPage && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
+                {!drawing && !mindmap && !basePage && !ticketPage && !presentationPage && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
                 {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
-                  <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : mindmap ? "Voir le fichier brut de la mind map (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
+                  <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : mindmap ? "Voir le fichier brut de la mind map (⌘⇧E)" : basePage ? "Voir le fichier .base (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
                 </div>
               )
             }
           />
           {note ? (
             <>
-              {findRequest && !rawMode && !drawing && !mindmap && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
+              {findRequest && !rawMode && !drawing && !mindmap && !basePage && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
               <div className="panes">
                 {drawing && !rawMode ? (
                   <div className="drawing-pane">
@@ -1001,6 +1079,23 @@ export function App() {
                       onToolChange={setDrawingTool}
                     />
                   </div>
+                ) : basePage && !rawMode ? (
+                  <BaseView
+                    key={`${note.path}#${note.reloads ?? 0}`}
+                    vault={vault}
+                    files={files}
+                    path={note.path}
+                    source={note.markdown}
+                    editable={!hasConflictMarkers(note.disk)}
+                    onSource={onMarkdown}
+                    onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
+                    onRenameRow={renamePath}
+                    loadImage={loadImage}
+                    onChanged={() => {
+                      void refresh(vault);
+                      void refreshGit();
+                    }}
+                  />
                 ) : mindmap && !rawMode ? (
                   <div className="drawing-pane">
                     <MindmapEditor
@@ -1053,12 +1148,27 @@ export function App() {
                       editable={!hasConflictMarkers(note.disk)}
                       onEditor={setEditor}
                       frontmatterControl={frontmatter}
-                      hiddenProperties={["icon"]}
+                      hiddenProperties={rowBase ? ["icon", ...baseProperties(rowBase.model)] : ["icon"]}
+                      header={
+                        rowBase
+                          ? (raw, set) => (
+                              <RowProperties
+                                base={rowBase}
+                                path={note.path}
+                                raw={raw}
+                                editable={!hasConflictMarkers(note.disk)}
+                                onChange={set}
+                                onOptions={(property, options) => void setRowOptions(property, options)}
+                                onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
+                              />
+                            )
+                          : undefined
+                      }
                     />
                   )}
                 </div>
                 )}
-                {showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && <OutlinePanel editor={editor} onClose={toggleOutline} />}
+                {showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && !basePage && <OutlinePanel editor={editor} onClose={toggleOutline} />}
               {presentationPage && showSlides && !rawMode && <SlidesPanel editor={editor} rendered={slides} onPresent={(index) => setPresenting(index)} onClose={() => setShowSlides(false)} />}
                 {showHistory && vault.git && (
                   <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />

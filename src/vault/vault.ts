@@ -43,6 +43,8 @@ export interface Vault {
   remove(path: string): Promise<void>;
   /** Every note with its content in one call (dashboard statistics); otherwise read one by one. */
   readNotes?(): Promise<[string, string][]>;
+  /** Creation and modification times of the notes (ms), when the vault knows them. */
+  stats?(): Promise<{ path: string; ctime: number; mtime: number }[]>;
   /** Obsidian's bookmarks (.obsidian/bookmarks.json, read only), "{}" when absent. */
   bookmarks?(): Promise<string>;
   /** Fast full-text search done by the backend; otherwise notes are read one by one. */
@@ -94,6 +96,8 @@ export async function openBrowserVault(): Promise<Vault> {
       if (handle.kind === "directory") {
         const children = await list(handle as DirectoryHandle, path);
         if (children.length > 0) entries.push({ path, name: handle.name, kind: "dir", children });
+      } else if (handle.name.endsWith(".base")) {
+        entries.push({ path, name: handle.name.slice(0, -5), kind: "file" });
       } else if (handle.name.endsWith(".md")) {
         // Only the beginning is read to recognise tickets and icons.
         const head = await (await (handle as FileSystemFileHandle).getFile()).slice(0, 4096).text();
@@ -185,9 +189,9 @@ export function createMemoryVault(name: string, files: Record<string, string | U
     name,
     git: memoryGit(contents, remote),
     tree: async () => {
-      const notes = [...contents.keys()].filter((p) => p.endsWith(".md"));
+      const notes = [...contents.keys()].filter((p) => p.endsWith(".md") || p.endsWith(".base"));
       const text = (v: string | Uint8Array | undefined) => (typeof v === "string" ? v : v ? new TextDecoder().decode(v) : "");
-      return buildTree(notes, (p) => noteMeta(text(contents.get(p))));
+      return buildTree(notes, (p) => (p.endsWith(".md") ? noteMeta(text(contents.get(p))) : {}));
     },
     readNotes: async () => [...contents.entries()].filter(([p]) => p.endsWith(".md")).map(([p, v]): [string, string] => [p, typeof v === "string" ? v : new TextDecoder().decode(v)]),
     read: async (path) => text(path),
@@ -230,7 +234,7 @@ export function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultE
     parts.forEach((part, i) => {
       const sub = parts.slice(0, i + 1).join("/");
       if (i === parts.length - 1) {
-        level.push({ path: sub, name: part.replace(/\.md$/, ""), kind: "file", ...metaOf(sub) });
+        level.push({ path: sub, name: part.replace(/\.(md|base)$/, ""), kind: "file", ...metaOf(sub) });
         return;
       }
       let dir = level.find((e) => e.kind === "dir" && e.path === sub);

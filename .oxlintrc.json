@@ -9,6 +9,7 @@
     "react/set-state-in-effect": "off",
     "react/purity": "off",
     "react/immutability": "off",
+    "react/incompatible-library": "off",
     "unicorn/no-new-array": "off"
   },
   "ignorePatterns": ["dist", "src-tauri", "node_modules"]

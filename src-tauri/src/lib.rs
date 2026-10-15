@@ -71,6 +71,7 @@ pub fn run() {
       web::open_export,
       startup_note,
       vault::vault_tree,
+      vault::vault_stats,
       vault::vault_read,
       vault::vault_write,
       vault::vault_files,

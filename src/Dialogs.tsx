@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
 
 /** Small modal asking for a page name (the webview has no reliable `prompt()`). */
-export type PageKind = "note" | "drawing" | "mindmap" | "ticket" | "presentation";
+export type PageKind = "note" | "base" | "drawing" | "mindmap" | "ticket" | "presentation";
 
 export interface NameResult {
   name: string;
@@ -56,6 +56,7 @@ export function NameDialog({
             {(
               [
                 ["note", "Note", "doc"],
+                ["base", "Base", "database"],
                 ["drawing", "Dessin", "drawing"],
                 ["mindmap", "Mind map", "mindmap"],
                 ["ticket", "Ticket", "ticket"],

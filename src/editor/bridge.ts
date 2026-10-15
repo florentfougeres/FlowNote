@@ -17,6 +17,8 @@ export interface VaultBridge {
   askName(title: string, initial: string): Promise<string | null>;
   /** Creates a file and adds it to `files`. */
   createFile(path: string, content: string | Uint8Array): Promise<void>;
+  /** Shows a base (`![[X.base]]`) in `dom`; returns how to remove it. */
+  mountBase?(dom: HTMLElement, path: string): () => void;
 }
 
 export interface BridgeRef {

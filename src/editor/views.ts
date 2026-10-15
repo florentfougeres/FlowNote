@@ -294,6 +294,7 @@ function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
     const dom = element("span");
     dom.contentEditable = "false";
     let rendered = "";
+    let unmount: (() => void) | null = null;
 
     const render = (n: PMNode) => {
       const { target, alias, embed } = n.attrs as { target: string; alias: string | null; embed: boolean };
@@ -301,9 +302,17 @@ function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
       const key = `${target}|${alias}|${embed}|${resolved}`;
       if (key === rendered) return;
       rendered = key;
+      unmount?.();
+      unmount = null;
       dom.replaceChildren();
       dom.dataset.target = target;
-      if (embed && resolved && isImage(resolved)) {
+      if (embed && resolved && /\.base$/i.test(resolved) && bridge.current.mountBase) {
+        // A base in the note: its views, live (rendered by the app).
+        dom.className = "embed-base";
+        const box = element("div");
+        dom.append(box);
+        unmount = bridge.current.mountBase(box, resolved);
+      } else if (embed && resolved && isImage(resolved)) {
         dom.className = "embed-image";
         const img = element("img");
         img.alt = basename(resolved);
@@ -331,7 +340,10 @@ function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
         render(n);
         return true;
       },
+      // Clicks and keys inside an embedded base belong to it, not to the editor.
+      stopEvent: () => dom.classList.contains("embed-base"),
       ignoreMutation: () => true,
+      destroy: () => unmount?.(),
     };
   };
 }

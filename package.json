@@ -2,7 +2,7 @@
   "name": "flownote",
   "private": true,
   "license": "MIT",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,7 @@
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",
     "@marp-team/marp-core": "^4.4.0",
+    "@tanstack/react-table": "^8.21.3",
     "@tauri-apps/api": "^2.12.3",
     "@tauri-apps/plugin-dialog": "^2.8.2",
     "@tiptap/core": "^3.32.0",
