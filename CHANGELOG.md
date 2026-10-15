@@ -2,6 +2,23 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.9.0] - 2026-10-15
+
+### Ajouté
+- **Bases**, comme les bases de données de Notion : un nouveau type de page (`Nom.base`, au format des Bases d'Obsidian), dont les lignes sont les notes d'un dossier.
+  - Vues Tableau, Kanban, Galerie et Calendrier, en onglets ; recherche, filtres et tris par vue.
+  - Propriétés typées : texte, nombre, sélection et multi-sélection colorées, date, case à cocher, lien. Les valeurs sont écrites dans les propriétés YAML des notes.
+  - Tableau : saisie au clavier (flèches, Tab, Entrée), colonnes redimensionnables et déplaçables, ordre manuel des lignes, groupes repliables, ligne de calcul (somme, moyenne, min, max, cochées…).
+  - Formules (un sous-ensemble du langage d'Obsidian) et propriétés du fichier en colonnes : création, modification, dossier, tags, liens.
+  - Kanban avec glisser-déposer entre colonnes et dans une colonne ; calendrier avec glisser-déposer d'un jour à l'autre et création sur un jour ; galerie avec image de couverture.
+  - La page d'une ligne montre les propriétés de sa base avec leurs éditeurs.
+  - Une base s'intègre dans une note avec `![[Nom.base]]`, modifiable sur place.
+  - Compatible Obsidian : tableau, galerie et kanban s'ouvrent dans Obsidian ; le calendrier y apparaît en galerie.
+
+### Corrigé
+- Renommer une mind map ne lui fait plus perdre son extension `.mindmap.md`.
+- Supprimer une page avec ses sous-pages va jusqu'au bout même si une partie échoue, et la barre latérale est toujours remise à jour.
+
 ## [0.8.0] - 2026-10-14
 
 ### Ajouté
@@ -132,6 +149,7 @@ Note : le fichier de cette release s'appelle `FlowNote_0.7.0_aarch64.dmg` (numé
 - Recherche, plan de la note, mode Markdown brut.
 - Gestionnaire Git : statut, diff, commit, pull/push, historique d'une note, résolution des conflits.
 
+[0.9.0]: https://github.com/florentfougeres/FlowNote/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/florentfougeres/FlowNote/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/florentfougeres/FlowNote/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/florentfougeres/FlowNote/compare/v0.7.0...v0.7.1
