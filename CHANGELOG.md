@@ -2,6 +2,35 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.13.0] - 2026-10-15
+
+### Ajouté
+- **Sommaire** : un paragraphe `[TOC]` (comme HedgeDoc) affiche les titres de la note, cliquables ; `/sommaire` l'insère. Le fichier garde `[TOC]`.
+- **Notes liées** sous chaque note : les pages qui pointent vers elle, avec la ligne du lien, et les mentions non liées (le titre cité sans lien), avec un bouton « Lier ».
+- **Export PDF** (menu « … » de la page) par le panneau d'impression : une note telle qu'affichée, une présentation (une diapo par page), un dessin ou une mind map ajustés à la page.
+- **Copier en HTML** (menu « … ») : la note mise en forme pour un mail ou un document, son Markdown en texte simple.
+- **Pleine largeur** par page et **mode focus** (`⌘⇧M`, Échap pour en sortir).
+- Import d'un **CSV** dans l'éditeur visuel des graphiques (`;`, `,` ou tabulation ; virgule décimale).
+- `⌥↑` / `⌥↓` déplacent le bloc.
+- Mots et caractères de la sélection dans la pastille d'état.
+
+### Modifié
+- Mind map : fond et police de l'app, texte net (la carte n'est plus posée entre deux pixels).
+- Recherche de page (`⌘P`), recherche dans le vault (`⌘⇧F`) et barre `⌘F` au style des autres fenêtres : icônes des pages, raccourcis en bas, champs sans cadre.
+- La recherche dans le vault ignore les données des dessins et des mind maps (JSON).
+- Les notes ne sont lues en entier qu'une fois pour l'accueil, le graphe, les tickets, les bases et les notes liées (relues au retour dans l'app).
+- Les emoji des présentations restent ceux du système (plus d'images téléchargées).
+
+### Corrigé
+- `⌫` sur une ligne vide en tête de note la supprime.
+- Renommer ou déplacer le dossier des tickets met à jour le réglage « Dossier des tickets ».
+- L'ordre manuel des lignes d'une base et la pleine largeur suivent une page renommée ou déplacée.
+- Un graphique Plotly ou un diagramme Mermaid prend les couleurs du nouveau thème.
+
+### Sécurité
+- L'app n'accède qu'aux vaults : un dossier avec `.obsidian` ou choisi dans « Ouvrir un vault » (un dossier choisi auparavant sans `.obsidian` est à rouvrir une fois par ce bouton).
+- git ne lance jamais de programme désigné par la configuration du dépôt (`core.fsmonitor`).
+
 ## [0.12.0] - 2026-10-15
 
 ### Ajouté

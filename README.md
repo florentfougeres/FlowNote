@@ -26,17 +26,20 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 - Pastille d'état en bas à droite de la page : enregistrement, nombre de mots, messages
 - Réglages dans un onglet (`⌘,`), rangés par catégorie
 - Barre latérale masquable (`⌘\`), qui réapparaît au survol du bord gauche
+- Pleine largeur par page et mode focus (`⌘⇧M`, Échap pour en sortir)
+- Menu « … » de la page : export en **PDF** (note, présentation, dessin, mind map) et copie de la note en HTML pour un mail ou un document
 - Icône de page : un emoji choisi au-dessus du titre (propriété `icon`)
 - Accueil : créer, récents, à faire, tickets, à lire, graphe, Git, activité et statistiques du vault
 
 **Éditeur de blocs**
 - Titres, listes, tâches, citations, callouts Obsidian (`> [!note]`), toggles (callouts repliables), séparateurs
 - Menu `/` pour insérer ou transformer un bloc, raccourcis Markdown à la frappe (`#`, `-`, `[]`, `>`, ```` ``` ````)
-- Poignée de bloc : glisser-déposer avec imbrication, dupliquer, transformer, supprimer
+- Poignée de bloc : glisser-déposer avec imbrication, dupliquer, transformer, supprimer ; `⌥↑` / `⌥↓` déplacent le bloc
+- Sommaire : `[TOC]` (comme HedgeDoc) affiche les titres de la note, `/sommaire` l'insère
 - Mise en forme en ligne : gras, italique, barré, surligné, code, liens (coller une URL sur du texte sélectionné en fait un lien)
 - Tableaux éditables avec poignées de lignes et de colonnes (insérer, déplacer, aligner, supprimer)
 - Blocs de code avec coloration syntaxique, diagrammes **Mermaid**, maths, emoji (`:calendrier`), date du jour (`/date`)
-- **Graphiques Plotly** (`/graphique`) au format du plugin Obsidian [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) : blocs ```` ```plotly ```` en YAML ou JSON, graphiques interactifs, éditeur visuel (type, titres, tableau des valeurs)
+- **Graphiques Plotly** (`/graphique`) au format du plugin Obsidian [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) : blocs ```` ```plotly ```` en YAML ou JSON, graphiques interactifs, éditeur visuel (type, titres, tableau des valeurs, import d'un CSV)
 - Propriétés YAML (frontmatter) éditables, tags, `[[wikilinks]]` et `![[embeds]]` avec autocomplétion
 - Sous-pages et arborescence dans la barre latérale
 
@@ -79,6 +82,8 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 **Navigation**
 - Recherche de page (`⌘P`), recherche et remplacement dans la note (`⌘F` / `⌘⌥F`), recherche dans tout le vault (`⌘⇧F`)
 - Fil d'Ariane cliquable, plan de la note, historique précédent/suivant
+- **Notes liées** sous chaque note (les pages qui pointent vers elle) et mentions non liées, avec un bouton pour en faire un lien
+- Mots et caractères de la sélection dans la pastille d'état
 - Mode Markdown brut (`⌘⇧E`) avec numéros de ligne
 
 **Git**
@@ -97,6 +102,7 @@ C'est le cœur du projet : **une note que FlowNote n'a pas modifiée est réécr
 - Exceptions assumées : les codes emoji (`:warning:`) et les dessins (`.excalidraw.md`) demandent un plugin Obsidian pour être rendus ; sans lui, on voit leur texte.
 - Les bases utilisent le format des Bases d'Obsidian : tableau, galerie et kanban s'y ouvrent tels quels. Le calendrier, qu'Obsidian n'a pas, y apparaît en galerie ; les couleurs et types des colonnes sont rangés sous une clé `flownote:` qu'Obsidian conserve.
 - Le dossier `.obsidian` n'est jamais modifié. FlowNote lit seulement ses réglages de liens et de pièces jointes.
+- FlowNote n'accède qu'au vault ouvert : un vault Obsidian (avec `.obsidian`) ou un dossier choisi dans « Ouvrir un vault ».
 - Une note modifiée ailleurs (Obsidian, git) n'est jamais écrasée : l'écriture est refusée et la différence est signalée.
 
 ## Installation

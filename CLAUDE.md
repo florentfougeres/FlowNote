@@ -27,7 +27,8 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 - `src-tauri/src/vault.rs` : fichiers du vault (lecture, écriture atomique avec contrôle de conflit, corbeille, arbre, `vault_stats`).
 - `src/markdown/` : moteur de fidélité (remark/mdast, re-sérialisation bloc par bloc).
 - `src/editor/` : Tiptap/ProseMirror. Les vues de nœuds sont dans `views.ts`, le pont vers l'app dans `bridge.ts`.
-- `src/vault/` : accès au vault, résolution des liens façon Obsidian (`links.ts`), opérations sur les pages (`pageOps.ts`).
+- `src/vault/` : accès au vault, résolution des liens façon Obsidian (`links.ts`), opérations sur les pages (`pageOps.ts`), notes liées (`backlinks.ts`), copie des notes en mémoire (`noteCache.ts` : le vault ouvert est enveloppé, ses écritures tiennent la copie à jour).
+- `src/print.ts` : export PDF par le panneau d'impression (styles dans `styles/print.css`).
 - Types de page, un dossier chacun : `base/` (`.base`), `drawing/` (`.excalidraw.md`), `mindmap/` (`.mindmap.md`), `ticket/` (`type: ticket`), `presentation/` (`marp: true`), plus `reading/` et `graph/`.
 - `src/App.tsx` : état global, onglets, choix du type de page. Les vues hors page sont des pseudo-chemins `flownote:tickets`, `flownote:graph`, `flownote:reading`.
 - Styles : `src/styles/*.css`, importés depuis `src/styles.css`.
@@ -56,13 +57,13 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 ## État actuel (15 octobre 2026)
 
-- v0.12.0 taguée (graphiques Plotly au format obsidian-plotly avec éditeur visuel, mode sombre réparé pour toute l'app). Le workflow de release crée un brouillon à publier.
+- v0.13.0 taguée (sommaire [TOC], notes liées, export PDF, copie HTML, pleine largeur, mode focus, import CSV, recherches harmonisées, durcissement sécurité). Le workflow de release crée un brouillon à publier.
+- Sécurité côté Rust : `check_root` limite toutes les commandes (vault et git) à un dossier avec `.obsidian` ou choisi par `vault_pick` (sélecteur natif, liste dans `trusted-vaults.json` des données de l'app). git tourne avec `core.fsmonitor=false`.
 - Pistes ouvertes :
-  - renommer ou supprimer le dossier des tickets par son menu ne met pas à jour le réglage « Dossier des tickets » ;
+  - `App.tsx` (~1 650 lignes) à découper en hooks (vault, onglets, raccourcis, export) ; aucun composant mémoïsé, toute l'app se redessine à chaque frappe ;
+  - CSP toujours désactivée (`csp: null`) : à activer après essais dans l'app de bureau (Excalidraw, Plotly, KaTeX) ;
   - branche `feature/notebooks` (notebooks Python marimo) jamais fusionnée, 41 commits de retard ;
   - suppression d'une base « en plusieurs fois » dans l'app de bureau : rendue robuste mais pas reproduite, à confirmer ;
   - kanban et calendrier des bases à vérifier dans Obsidian ;
-  - l'ordre manuel des lignes (`rowOrder`, par chemin) se perd quand on renomme une page ;
-  - nouveautés des 0.10 à 0.12 testées dans Chrome seulement, à vérifier dans l'app de bureau (⌘,, clic droit, glisser-déposer, Finder, défilement de la fenêtre, menu du fil d'Ariane, graphiques, thème de la fenêtre) ;
-  - un graphique Plotly déjà affiché garde ses couleurs si on change de thème, jusqu'à son prochain rendu.
+  - nouveautés des 0.10 à 0.13 testées dans Chrome seulement, à vérifier dans l'app de bureau (⌘,, clic droit, glisser-déposer, Finder, défilement de la fenêtre, menu du fil d'Ariane, graphiques, thème de la fenêtre, export PDF par le panneau d'impression, copie HTML, import CSV, mode focus).
 - L'historique détaillé des sessions est dans `.remember/` (à lire sur demande).
