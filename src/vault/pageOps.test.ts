@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createMemoryVault } from "./vault";
-import { deletePage, renamePage, subpagesOf } from "./pageOps";
+import { deletePage, moveFolder, movePage, renameFolder, renamePage, retargetBaseFolders, subpagesOf } from "./pageOps";
 
 function vault() {
   return createMemoryVault("Test", {
@@ -66,5 +66,80 @@ describe("renaming keeps compound extensions", () => {
     expect((await renamePage(vault, "Carte.mindmap.md", "Idées")).path).toBe("Idées.mindmap.md");
     expect((await renamePage(vault, "Projets.base", "Clients")).path).toBe("Clients.base");
     expect(await vault.files()).toContain("Clients/A.md");
+  });
+});
+
+describe("folders", () => {
+  it("renames a folder and updates links and base filters", async () => {
+    const v = createMemoryVault("Test", {
+      "Index.md": "[[Archives/Vieux/Note|note]] et [lien](Archives/Vieux/Note.md)\n",
+      "Archives/Vieux/Note.md": "Voir [[Index]]\n",
+      "Archives/Suivi.base": 'filters:\n  and:\n    - file.inFolder("Archives/Suivi")\n',
+      "Archives/Suivi/Ligne.md": "",
+    });
+    const result = await renameFolder(v, "Archives", "Classement");
+    expect(result.path).toBe("Classement");
+    expect((await v.files()).sort()).toEqual(["Classement/Suivi.base", "Classement/Suivi/Ligne.md", "Classement/Vieux/Note.md", "Index.md"]);
+    expect(await v.read("Index.md")).toBe("[[Note|note]] et [lien](Classement/Vieux/Note.md)\n");
+    expect(await v.read("Classement/Suivi.base")).toContain('file.inFolder("Classement/Suivi")');
+    expect(result.updatedNotes.sort()).toEqual(["Classement/Suivi.base", "Index.md"]);
+  });
+
+  it("refuses a taken name and creates empty folders shown in the tree", async () => {
+    const v = vault();
+    await expect(renameFolder(v, "Projets/Mon Notion", "mon notion")).resolves.toMatchObject({ path: "Projets/mon notion" });
+    await v.createFolder("Vide/Sous");
+    await expect(v.createFolder("Vide")).rejects.toThrow();
+    await expect(v.createFolder("Projets")).rejects.toThrow();
+    expect((await v.tree()).map((e) => [e.path, e.children?.map((c) => c.path)])).toContainEqual(["Vide", ["Vide/Sous"]]);
+    await v.createFolder("Autre");
+    await expect(renameFolder(v, "Autre", "vide")).rejects.toThrow("existe déjà");
+    await renameFolder(v, "Vide", "Rangé");
+    expect((await v.tree()).map((e) => e.path)).toContain("Rangé");
+    await v.remove("Rangé");
+    expect((await v.tree()).map((e) => e.path)).not.toContain("Rangé");
+  });
+
+  it("moves base filters of sub-folders only", () => {
+    expect(retargetBaseFolders('file.inFolder("A") or file.inFolder("A/B") or file.inFolder("AB")', "A", "C")).toBe('file.inFolder("C") or file.inFolder("C/B") or file.inFolder("AB")');
+  });
+});
+
+describe("moving", () => {
+  it("moves a page with its sub-pages into a folder; links follow", async () => {
+    const v = vault();
+    await v.createFolder("Archives");
+    const result = await movePage(v, "Projets/Mon Notion.md", "Archives");
+    expect(result.path).toBe("Archives/Mon Notion.md");
+    expect((await v.files()).sort()).toEqual(["Archives/Mon Notion.md", "Archives/Mon Notion/Stack.md", "Archives/Mon Notion/schema.png", "Index.md"]);
+    expect(await v.read("Archives/Mon Notion/Stack.md")).toBe("Retour : [parent](../Mon%20Notion.md)\n");
+    expect(await v.read("Index.md")).toBe("Voir [[Mon Notion]] et [[Stack|la stack]].\n");
+    await expect(movePage(v, "Archives/Mon Notion.md", "Archives")).resolves.toEqual({ path: "Archives/Mon Notion.md", updatedNotes: [] });
+    await v.create("Index/x.md", "");
+    await v.create("Archives/Index.md", "");
+    await expect(movePage(v, "Index.md", "Archives")).rejects.toThrow("existe déjà");
+  });
+
+  it("moves a base with its rows, and its folder filter", async () => {
+    const v = createMemoryVault("Test", {
+      "Suivi.base": 'filters:\n  and:\n    - file.inFolder("Suivi")\n',
+      "Suivi/Ligne.md": "",
+      "Classement/Note.md": "",
+    });
+    await movePage(v, "Suivi.base", "Classement");
+    expect((await v.files()).sort()).toEqual(["Classement/Note.md", "Classement/Suivi.base", "Classement/Suivi/Ligne.md"]);
+    expect(await v.read("Classement/Suivi.base")).toContain('file.inFolder("Classement/Suivi")');
+  });
+
+  it("moves a folder, never into itself", async () => {
+    const v = vault();
+    await v.createFolder("Archives");
+    await expect(moveFolder(v, "Projets", "Projets/Mon Notion")).rejects.toThrow("lui-même");
+    const result = await moveFolder(v, "Projets", "Archives");
+    expect(result.path).toBe("Archives/Projets");
+    expect(await v.read("Index.md")).toBe("Voir [[Mon Notion]] et [[Stack|la stack]].\n");
+    expect((await v.files()).sort()).toContain("Archives/Projets/Mon Notion/Stack.md");
+    await moveFolder(v, "Archives/Projets", "");
+    expect((await v.files()).sort()).toContain("Projets/Mon Notion.md");
   });
 });

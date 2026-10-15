@@ -35,6 +35,8 @@ export interface Vault {
   readBinary(path: string): Promise<Uint8Array>;
   /** Creates a new file; fails if the path already exists. */
   create(path: string, content: string | Uint8Array): Promise<void>;
+  /** Creates an empty folder; fails if the path already exists. */
+  createFolder(path: string): Promise<void>;
   /** Content of `.obsidian/app.json` (read only), "{}" when absent. */
   obsidianConfig(): Promise<string>;
   /** Renames a note or a folder; fails if the target exists. */
@@ -95,7 +97,8 @@ export async function openBrowserVault(): Promise<Vault> {
       const path = prefix ? `${prefix}/${handle.name}` : handle.name;
       if (handle.kind === "directory") {
         const children = await list(handle as DirectoryHandle, path);
-        if (children.length > 0) entries.push({ path, name: handle.name, kind: "dir", children });
+        // An empty folder is shown (just created); one holding only attachments is not.
+        if (children.length > 0 || (await isEmptyDir(handle as DirectoryHandle))) entries.push({ path, name: handle.name, kind: "dir", children });
       } else if (handle.name.endsWith(".base")) {
         entries.push({ path, name: handle.name.slice(0, -5), kind: "file" });
       } else if (handle.name.endsWith(".md")) {
@@ -105,6 +108,17 @@ export async function openBrowserVault(): Promise<Vault> {
       }
     }
     return entries.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name, "fr") : a.kind === "dir" ? -1 : 1));
+  }
+
+  async function isEmptyDir(dir: DirectoryHandle): Promise<boolean> {
+    for await (const handle of dir.values()) if (!isHiddenName(handle.name)) return false;
+    return true;
+  }
+
+  async function dirHandle(path: string, create = false): Promise<FileSystemDirectoryHandle> {
+    let dir: FileSystemDirectoryHandle = root;
+    for (const part of path.split("/")) dir = await dir.getDirectoryHandle(part, { create });
+    return dir;
   }
 
   async function fileHandle(path: string, create = false): Promise<FileSystemFileHandle> {
@@ -155,6 +169,17 @@ export async function openBrowserVault(): Promise<Vault> {
       await writable.write(typeof content === "string" ? content : new Blob([content as BlobPart]));
       await writable.close();
     },
+    createFolder: async (path) => {
+      const exists = await dirHandle(path).then(
+        () => true,
+        () => fileHandle(path).then(
+          () => true,
+          () => false,
+        ),
+      );
+      if (exists) throw new Error(`${path} existe déjà.`);
+      await dirHandle(path, true);
+    },
     rename: async (from, to) => {
       const source = await fileHandle(from).catch(() => null);
       if (!source) throw new Error("Le renommage de dossiers n'est disponible que dans l'application de bureau.");
@@ -181,6 +206,9 @@ export async function openBrowserVault(): Promise<Vault> {
 /** `remote`: content of the simulated remote branch, merged by "pull" (demo of conflicts). */
 export function createMemoryVault(name: string, files: Record<string, string | Uint8Array>, remote: Record<string, string> = {}): Vault {
   const contents = new Map<string, string | Uint8Array>(Object.entries(files));
+  /** Folders created empty (a folder exists otherwise through its files). */
+  const folders = new Set<string>();
+  const inside = (path: string, folder: string) => path === folder || path.startsWith(`${folder}/`);
   const text = (path: string) => {
     const value = contents.get(path) ?? "";
     return typeof value === "string" ? value : new TextDecoder().decode(value);
@@ -191,7 +219,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
     tree: async () => {
       const notes = [...contents.keys()].filter((p) => p.endsWith(".md") || p.endsWith(".base"));
       const text = (v: string | Uint8Array | undefined) => (typeof v === "string" ? v : v ? new TextDecoder().decode(v) : "");
-      return buildTree(notes, (p) => (p.endsWith(".md") ? noteMeta(text(contents.get(p))) : {}));
+      return buildTree(notes, (p) => (p.endsWith(".md") ? noteMeta(text(contents.get(p))) : {}), [...folders]);
     },
     readNotes: async () => [...contents.entries()].filter(([p]) => p.endsWith(".md")).map(([p, v]): [string, string] => [p, typeof v === "string" ? v : new TextDecoder().decode(v)]),
     read: async (path) => text(path),
@@ -208,32 +236,46 @@ export function createMemoryVault(name: string, files: Record<string, string | U
       if (contents.has(path)) throw new Error(`${path} existe déjà.`);
       contents.set(path, content);
     },
+    createFolder: async (path) => {
+      if ([...contents.keys(), ...folders].some((k) => inside(k, path))) throw new Error(`${path} existe déjà.`);
+      folders.add(path);
+    },
     obsidianConfig: async () => "{}",
     rename: async (from, to) => {
-      const moved = [...contents.keys()].filter((k) => k === from || k.startsWith(`${from}/`));
-      if (moved.length === 0) throw new Error(`${from} n'existe pas.`);
-      if (contents.has(to)) throw new Error(`${to} existe déjà.`);
+      const moved = [...contents.keys()].filter((k) => inside(k, from));
+      const movedFolders = [...folders].filter((f) => inside(f, from));
+      if (moved.length === 0 && movedFolders.length === 0) throw new Error(`${from} n'existe pas.`);
+      // Case-insensitive like macOS, except to change only the case.
+      const taken = (k: string) => inside(k.toLowerCase(), to.toLowerCase()) && !inside(k, from);
+      if ([...contents.keys(), ...folders].some(taken)) throw new Error(`${to} existe déjà.`);
       for (const key of moved) {
         contents.set(to + key.slice(from.length), contents.get(key)!);
         contents.delete(key);
       }
+      for (const folder of movedFolders) {
+        folders.delete(folder);
+        folders.add(to + folder.slice(from.length));
+      }
     },
     remove: async (path) => {
       // Deleting entries while iterating a Map is well defined.
-      for (const key of contents.keys()) if (key === path || key.startsWith(`${path}/`)) contents.delete(key);
+      for (const key of contents.keys()) if (inside(key, path)) contents.delete(key);
+      for (const folder of folders) if (inside(folder, path)) folders.delete(folder);
     },
   };
 }
 
-/** Builds the sidebar tree from a flat list of note paths. */
-export function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultEntry, "ticket" | "icon" | "presentation"> = () => ({})): VaultEntry[] {
+/** Builds the sidebar tree from a flat list of note paths, plus `folders` shown even when empty. */
+export function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultEntry, "ticket" | "icon" | "presentation"> = () => ({}), folders: string[] = []): VaultEntry[] {
   const root: VaultEntry[] = [];
-  for (const path of paths) {
+  // A folder is walked like the path of a note inside it, without the note.
+  for (const path of [...paths, ...folders.map((f) => `${f}/`)]) {
     const parts = path.split("/");
     let level = root;
     parts.forEach((part, i) => {
       const sub = parts.slice(0, i + 1).join("/");
       if (i === parts.length - 1) {
+        if (part === "") return;
         level.push({ path: sub, name: part.replace(/\.(md|base)$/, ""), kind: "file", ...metaOf(sub) });
         return;
       }

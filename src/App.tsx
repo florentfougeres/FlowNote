@@ -17,7 +17,7 @@ import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { applyTheme, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
-import { deletePage, renamePage, subpagesOf } from "./vault/pageOps";
+import { deletePage, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "./vault/pageOps";
 import { PageIcon, Sidebar } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
 import { GraphPage } from "./graph/GraphPage";
@@ -574,6 +574,9 @@ export function App() {
       const parts = file.split("/").slice(0, -1);
       parts.forEach((_, i) => folders.add(parts.slice(0, i + 1).join("/")));
     }
+    // Empty folders are only in the tree.
+    const walk = (entries: VaultEntry[]) => entries.forEach((e) => e.kind === "dir" && (folders.add(e.path), walk(e.children ?? [])));
+    walk(tree);
     return [...folders].sort((a, b) => a.localeCompare(b, "fr"));
   };
   const askConfirm = (message: string, confirmLabel: string) => new Promise<boolean>((resolve) => setConfirm({ message, confirmLabel, resolve }));
@@ -593,21 +596,9 @@ export function App() {
         const next = text.split(`file.inFolder(${JSON.stringify(subpageFolder(path))})`).join(`file.inFolder(${JSON.stringify(subpageFolder(result.path))})`);
         if (next !== text) await vault.write(result.path, next, text);
       }
-      await refresh(vault);
       const oldFolder = `${subpageFolder(path)}/`;
-      const moved = (p: string) => (p === path ? result.path : p.startsWith(oldFolder) ? `${subpageFolder(result.path)}/${p.slice(oldFolder.length)}` : p);
-      back.current = back.current.map(moved);
-      forward.current = forward.current.map(moved);
-      setTabs((list) => list.map((t) => (t.path && !isView(t.path) ? { ...t, path: moved(t.path) } : t)));
+      await followMoves((p) => (p === path ? result.path : p.startsWith(oldFolder) ? `${subpageFolder(result.path)}/${p.slice(oldFolder.length)}` : p), result.updatedNotes);
       moveRecentPage(vault.name, path, result.path);
-      const current = noteRef.current;
-      if (current && (moved(current.path) !== current.path || result.updatedNotes.includes(current.path))) {
-        const openPath = moved(current.path);
-        const disk = await vault.read(openPath);
-        const reloaded = { path: openPath, loaded: disk, disk, markdown: disk, reloads: (current.reloads ?? 0) + 1 };
-        noteRef.current = reloaded;
-        setNote(reloaded);
-      }
       const others = result.updatedNotes.filter((p) => p !== result.path).length;
       setStatus(others > 0 ? `Page renommée ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}.` : "Page renommée.");
       void refreshGit();
@@ -617,6 +608,100 @@ export function App() {
       return false;
     }
   };
+  /**
+   * After files moved (`moved` maps old paths to new ones): the tree, tabs,
+   * history and the open note follow, and the open note is read again if its
+   * links were rewritten.
+   */
+  const followMoves = async (moved: (path: string) => string, updatedNotes: string[]) => {
+    if (!vault) return;
+    await refresh(vault);
+    back.current = back.current.map(moved);
+    forward.current = forward.current.map(moved);
+    setTabs((list) => list.map((t) => (t.path && !isView(t.path) ? { ...t, path: moved(t.path) } : t)));
+    const current = noteRef.current;
+    if (current && (moved(current.path) !== current.path || updatedNotes.includes(moved(current.path)))) {
+      const openPath = moved(current.path);
+      const disk = await vault.read(openPath);
+      const reloaded = { path: openPath, loaded: disk, disk, markdown: disk, reloads: (current.reloads ?? 0) + 1 };
+      noteRef.current = reloaded;
+      setNote(reloaded);
+    }
+  };
+
+  /** "Nouveau dossier": an empty folder in `parent` ("" is the vault root). */
+  const newFolder = async (parent: string) => {
+    if (!vault) return;
+    const name = sanitizeName((await askName(parent ? "Nouveau sous-dossier" : "Nouveau dossier", "Sans titre")) ?? "");
+    if (!name) return;
+    try {
+      await vault.createFolder(parent ? `${parent}/${name}` : name);
+      await refresh(vault);
+      setStatus("");
+    } catch (error) {
+      setStatus(String(error));
+    }
+  };
+
+  /** Renames a folder; links to its pages and bases' folder filters follow. */
+  const renameFolderPath = async (folder: string) => {
+    if (!vault) return;
+    const title = await askName("Renommer le dossier", folder.slice(folder.lastIndexOf("/") + 1));
+    if (!title) return;
+    try {
+      await saveNow();
+      const result = await renameFolder(vault, folder, title);
+      if (result.path === folder) return;
+      await followMoves((p) => (p.startsWith(`${folder}/`) ? result.path + p.slice(folder.length) : p), result.updatedNotes);
+      moveRecentPage(vault.name, folder, result.path);
+      const others = result.updatedNotes.filter((p) => !p.startsWith(`${result.path}/`)).length;
+      setStatus(others > 0 ? `Dossier renommé ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}.` : "Dossier renommé.");
+      void refreshGit();
+    } catch (error) {
+      setStatus(String(error));
+    }
+  };
+
+  /** Drag and drop in the tree: a page (with its sub-pages) or a folder goes into `target` ("" is the root). */
+  const moveItem = async (item: { path: string; folder: boolean }, target: string) => {
+    if (!vault) return;
+    try {
+      await saveNow();
+      const result = item.folder ? await moveFolder(vault, item.path, target) : await movePage(vault, item.path, target);
+      if (result.path === item.path) return;
+      const from = item.folder ? item.path : subpageFolder(item.path);
+      const to = item.folder ? result.path : subpageFolder(result.path);
+      await followMoves((p) => (p === item.path ? result.path : p.startsWith(`${from}/`) ? to + p.slice(from.length) : p), result.updatedNotes);
+      moveRecentPage(vault.name, item.path, result.path);
+      const where = target ? `« ${target.slice(target.lastIndexOf("/") + 1)} »` : "la racine";
+      const others = result.updatedNotes.filter((p) => p !== result.path && !p.startsWith(`${to}/`)).length;
+      setStatus(`${item.folder ? "Dossier déplacé" : "Page déplacée"} dans ${where}${others > 0 ? ` ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}` : ""}.`);
+      void refreshGit();
+    } catch (error) {
+      setStatus(String(error));
+    }
+  };
+
+  /** Removes a folder and everything in it, after confirmation. */
+  const removeFolder = async (folder: string) => {
+    if (!vault) return;
+    const pages = filesRef.current.filter((f) => f.startsWith(`${folder}/`) && (f.endsWith(".md") || f.endsWith(".base"))).length;
+    const others = filesRef.current.filter((f) => f.startsWith(`${folder}/`)).length - pages;
+    const content = [pages ? `${pages} page${pages > 1 ? "s" : ""}` : "", others ? `${others} autre${others > 1 ? "s" : ""} fichier${others > 1 ? "s" : ""}` : ""].filter(Boolean).join(" et ");
+    const where = isTauri() ? "Il ira dans la corbeille." : "Cette suppression est définitive.";
+    const message = `Supprimer le dossier « ${folder.slice(folder.lastIndexOf("/") + 1)} »${content ? ` et son contenu (${content})` : ""} ? ${where}`;
+    if (!(await askConfirm(message, "Supprimer"))) return;
+    if (noteRef.current?.path.startsWith(`${folder}/`)) await saveNow().catch(() => {});
+    try {
+      await vault.remove(folder);
+      setStatus("");
+    } catch (error) {
+      setStatus(String(error));
+    }
+    await forgetRemoved((p) => p.startsWith(`${folder}/`));
+    moveRecentPage(vault.name, folder, null);
+  };
+
   /** Renames the open page from its title. */
   const renameCurrent = (title: string) => (noteRef.current ? renamePath(noteRef.current.path, title) : Promise.resolve(false));
 
@@ -635,19 +720,29 @@ export function App() {
       failure = error;
     }
     // Even after a partial failure: show what is left on disk, and leave the pages that are gone.
+    const files = await forgetRemoved((p) => p === path || p.startsWith(`${subpageFolder(path)}/`));
+    if (!files.includes(path)) moveRecentPage(vault.name, path, null);
+    setStatus(failure ? String(failure) : "");
+  };
+
+  /**
+   * After a deletion: the tree is read again, and tabs, history and the open
+   * note leave the pages matching `removed` that are no longer on disk.
+   */
+  const forgetRemoved = async (removed: (path: string) => boolean): Promise<string[]> => {
+    if (!vault) return [];
     const files = await vault.files().catch(() => filesRef.current);
     await refresh(vault);
-    const gone = (p: string | null) => p !== null && (p === path || p.startsWith(`${subpageFolder(path)}/`)) && !files.includes(p);
+    const gone = (p: string | null) => p !== null && !isView(p) && removed(p) && !files.includes(p);
     back.current = back.current.filter((p) => !gone(p));
     forward.current = forward.current.filter((p) => !gone(p));
     setTabs((list) => list.map((t) => (gone(t.path) ? { ...t, path: null } : t)));
-    if (!files.includes(path)) moveRecentPage(vault.name, path, null);
     if (noteRef.current && gone(noteRef.current.path)) {
       noteRef.current = null;
       setNote(null);
     }
     void refreshGit();
-    setStatus(failure ? String(failure) : "");
+    return files;
   };
 
   const createFile = useCallback(
@@ -955,6 +1050,10 @@ export function App() {
       onNewPage={(parent) => void newPage(parent)}
       onNewPageInFolder={(folder) => void newPage(null, undefined, folder)}
       onDelete={(path) => void removePage(path)}
+      onNewFolder={(parent) => void newFolder(parent)}
+      onRenameFolder={(folder) => void renameFolderPath(folder)}
+      onDeleteFolder={(folder) => void removeFolder(folder)}
+      onMove={(item, target) => void moveItem(item, target)}
       onRename={(path) => void askName("Renommer la page", noteTitle(path)).then((name) => (name ? renamePath(path, name) : false))}
       onSearch={() => setModal("switcher")}
       onVaultSearch={() => setModal("search")}

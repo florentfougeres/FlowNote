@@ -79,6 +79,11 @@ fn resolve(root: &str, relative: &str) -> Result<PathBuf, String> {
     Ok(Path::new(root).join(rel))
 }
 
+/// A folder with nothing visible in it (hidden files such as `.DS_Store` aside).
+fn is_empty_dir(dir: &Path) -> bool {
+    fs::read_dir(dir).is_ok_and(|read| read.flatten().all(|e| is_hidden(&e.file_name().to_string_lossy())))
+}
+
 fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
     let mut entries = Vec::new();
     let read = fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
@@ -91,7 +96,8 @@ fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
         let Ok(file_type) = entry.file_type() else { continue };
         if file_type.is_dir() {
             let children = list(&entry.path(), &path)?;
-            if !children.is_empty() {
+            // An empty folder is shown (just created); one holding only attachments is not.
+            if !children.is_empty() || is_empty_dir(&entry.path()) {
                 entries.push(VaultEntry { path, name, kind: "dir", children: Some(children), ticket: false, presentation: false, icon: None });
             }
         } else if let Some(stem) = name.strip_suffix(".md") {
@@ -233,6 +239,16 @@ pub fn vault_create(root: String, path: String, content: Vec<u8>) -> Result<(), 
         .open(&file)
         .map_err(|e| format!("{path}: {e}"))?;
     handle.write_all(&content).map_err(|e| e.to_string())
+}
+
+/// Creates an empty folder; never takes the place of an existing file or folder.
+#[tauri::command]
+pub fn vault_create_dir(root: String, path: String) -> Result<(), String> {
+    let dir = resolve(&root, &path)?;
+    if dir.exists() {
+        return Err(format!("{path} existe déjà."));
+    }
+    fs::create_dir_all(&dir).map_err(|e| format!("{path}: {e}"))
 }
 
 /// Obsidian settings (`.obsidian/app.json`), read only; "{}" when absent.
@@ -411,6 +427,23 @@ mod tests {
         assert_eq!(fs::read(dir.join("a/b.png")).unwrap(), vec![1, 2, 3]);
         assert_eq!(vault_files(root.clone()), vec!["a/b.png".to_string()]);
         assert_eq!(vault_config(root), "{}");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn empty_folders_are_created_and_shown() {
+        let dir = std::env::temp_dir().join(format!("flownote-dir-{}", std::process::id()));
+        fs::create_dir_all(dir.join("images")).unwrap();
+        fs::write(dir.join("images/a.png"), [0]).unwrap();
+        let root = dir.to_string_lossy().into_owned();
+        vault_create_dir(root.clone(), "Projets/2026".into()).unwrap();
+        assert!(vault_create_dir(root.clone(), "Projets".into()).is_err());
+        assert!(vault_create_dir(root.clone(), ".cache".into()).is_err());
+        fs::write(dir.join("Projets/2026/.DS_Store"), [0]).unwrap();
+        let tree = vault_tree(root).unwrap();
+        // The attachments folder stays hidden; the new folders are shown.
+        assert_eq!(tree.iter().map(|e| e.path.as_str()).collect::<Vec<_>>(), vec!["Projets"]);
+        assert_eq!(tree[0].children.as_ref().unwrap()[0].path, "Projets/2026");
         fs::remove_dir_all(&dir).unwrap();
     }
 }

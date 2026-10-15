@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { VaultEntry } from "./vault/vault";
 import { Icon, type IconName } from "./Icon";
 import { isDrawingPath } from "./drawing/format";
 import { isMindmapPath } from "./mindmap/format";
 import { isBasePath } from "./base/baseFile";
-import { noteTitle } from "./vault/links";
+import { dirname, noteTitle } from "./vault/links";
 import { keys } from "./keys";
 
 /**
@@ -68,9 +68,18 @@ interface MenuItem {
   run: () => void;
 }
 
-/** A small menu under the button that opened it; closes on Escape or a click outside. */
+/**
+ * A small menu under the button that opened it (or the pointer, for a right
+ * click), above it when there is no room below; closes on Escape or a click
+ * outside.
+ */
 function PopoverMenu({ anchor, items, onClose }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [top, setTop] = useState(anchor.bottom + 4);
+  useLayoutEffect(() => {
+    const height = ref.current?.offsetHeight ?? 0;
+    setTop(anchor.bottom + 4 + height > window.innerHeight - 8 ? Math.max(8, anchor.top - 4 - height) : anchor.bottom + 4);
+  }, [anchor]);
   useEffect(() => {
     const down = (event: MouseEvent) => !ref.current?.contains(event.target as Node) && onClose();
     const key = (event: KeyboardEvent) => event.key === "Escape" && onClose();
@@ -82,7 +91,7 @@ function PopoverMenu({ anchor, items, onClose }: { anchor: DOMRect; items: MenuI
     };
   }, [onClose]);
   return (
-    <div ref={ref} className="sidebar-menu" role="menu" style={{ top: anchor.bottom + 4, left: Math.max(8, Math.min(anchor.left, window.innerWidth - 240)) }}>
+    <div ref={ref} className="sidebar-menu" role="menu" style={{ top, left: Math.max(8, Math.min(anchor.left, window.innerWidth - 240)) }}>
       {items.map((item) => (
         <button
           key={item.label}
@@ -126,6 +135,19 @@ function NavRow({
   );
 }
 
+/** What is dragged in the tree: a page (its note) or a plain folder. */
+interface DragItem {
+  path: string;
+  folder: boolean;
+  label: string;
+  icon: React.ReactNode;
+}
+
+/** Distance (px) the pointer must travel before a press becomes a drag. */
+const DRAG_THRESHOLD = 4;
+/** A collapsed folder hovered this long (ms) during a drag opens. */
+const OPEN_DELAY = 600;
+
 interface Props {
   vaultName: string;
   tree: VaultEntry[];
@@ -142,6 +164,12 @@ interface Props {
   onNewPage: (parentNote: string | null) => void;
   onNewPageInFolder: (folder: string) => void;
   onDelete: (notePath: string) => void;
+  /** New empty folder in `parent` ("" is the vault root). */
+  onNewFolder: (parent: string) => void;
+  onRenameFolder: (folder: string) => void;
+  onDeleteFolder: (folder: string) => void;
+  /** Moves a page (with its sub-pages) or a folder into `target` ("" is the vault root). */
+  onMove: (item: { path: string; folder: boolean }, target: string) => void;
   onRename: (notePath: string) => void;
   onSearch: () => void;
   onVaultSearch: () => void;
@@ -160,6 +188,11 @@ export function Sidebar(props: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ anchor: DOMRect; items: MenuItem[] } | null>(null);
   const pages = toPages(tree);
+  /** The dragged item, the pointer, and where it would land (null: nowhere valid). */
+  const [drag, setDrag] = useState<{ item: DragItem; x: number; y: number; target: string | null } | null>(null);
+  /** A drag just ended: the click that follows the release must not open the page. */
+  const dragged = useRef(false);
+  const treeRef = useRef<HTMLDivElement>(null);
 
   // Reveal the selected page.
   useEffect(() => {
@@ -189,11 +222,105 @@ export function Sidebar(props: Props) {
     setMenu({ anchor: (event.currentTarget as HTMLElement).getBoundingClientRect(), items });
   };
 
+  /** Right click on a row: the same menu as its "…" button, at the pointer. */
+  const openContextMenu = (event: React.MouseEvent, items: MenuItem[]) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setMenu({ anchor: new DOMRect(event.clientX, event.clientY - 4, 0, 0), items });
+  };
+
   const pageMenu = (path: string): MenuItem[] => [
     { label: "Ouvrir dans un nouvel onglet", icon: "open", run: () => props.onSelect(path, true) },
     { label: "Ajouter une sous-page", icon: "plus", run: () => props.onNewPage(path) },
     { label: "Renommer", icon: "pencil", run: () => props.onRename(path) },
     { label: "Supprimer", icon: "trash", danger: true, run: () => props.onDelete(path) },
+  ];
+
+  /** Where an item may be dropped: a plain folder other than its own (and not inside itself), or the root. */
+  const dropTarget = (item: DragItem, target: string | null): string | null => {
+    if (target === null || target === dirname(item.path)) return null;
+    if (item.folder && (target === item.path || target.startsWith(`${item.path}/`))) return null;
+    return target;
+  };
+
+  /** The folder under the pointer: a folder row, the tree's empty space or the "Pages" title (root), else null. */
+  const folderAt = (x: number, y: number): string | null => {
+    const element = document.elementFromPoint(x, y);
+    const row = element?.closest<HTMLElement>(".page-row");
+    if (row) return row.dataset.folder ?? null;
+    return element?.closest(".sidebar-tree, .sidebar-section") ? "" : null;
+  };
+
+  /**
+   * Drag with pointer events (WebKit refuses HTML5 drag on buttons): a press
+   * becomes a drag past a few pixels; collapsed folders open when hovered;
+   * the tree scrolls near its edges; Escape cancels.
+   */
+  const startDrag = (event: React.PointerEvent, item: DragItem) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey) return;
+    const start = { x: event.clientX, y: event.clientY };
+    let active = false;
+    let hovered: string | null = null;
+    let timer = 0;
+    const finish = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("keydown", key, true);
+      window.clearTimeout(timer);
+      document.body.classList.remove("tree-dragging");
+      setDrag(null);
+    };
+    const move = (ev: PointerEvent) => {
+      if (!active) {
+        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < DRAG_THRESHOLD) return;
+        active = true;
+        window.getSelection()?.removeAllRanges();
+        document.body.classList.add("tree-dragging");
+      }
+      const over = folderAt(ev.clientX, ev.clientY);
+      if (over !== hovered) {
+        hovered = over;
+        window.clearTimeout(timer);
+        if (over) timer = window.setTimeout(() => setExpanded((open) => new Set(open).add(over)), OPEN_DELAY);
+      }
+      const box = treeRef.current?.getBoundingClientRect();
+      if (box && ev.clientX >= box.left && ev.clientX <= box.right) {
+        if (ev.clientY < box.top + 24) treeRef.current!.scrollTop -= 8;
+        else if (ev.clientY > box.bottom - 24) treeRef.current!.scrollTop += 8;
+      }
+      setDrag({ item, x: ev.clientX, y: ev.clientY, target: dropTarget(item, over) });
+    };
+    const up = (ev: PointerEvent) => {
+      finish();
+      if (!active) return;
+      dragged.current = true;
+      window.setTimeout(() => (dragged.current = false), 0);
+      const target = dropTarget(item, folderAt(ev.clientX, ev.clientY));
+      if (target !== null) props.onMove({ path: item.path, folder: item.folder }, target);
+    };
+    const key = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape" || !active) return;
+      ev.stopPropagation();
+      active = false;
+      finish();
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("keydown", key, true);
+  };
+
+  const folderMenu = (folder: string): MenuItem[] => [
+    { label: "Nouvelle page dans ce dossier", icon: "plus", run: () => props.onNewPageInFolder(folder) },
+    {
+      label: "Nouveau sous-dossier",
+      icon: "folderAdd",
+      run: () => {
+        setExpanded((open) => new Set(open).add(folder));
+        props.onNewFolder(folder);
+      },
+    },
+    { label: "Renommer", icon: "pencil", run: () => props.onRenameFolder(folder) },
+    { label: "Supprimer", icon: "trash", danger: true, run: () => props.onDeleteFolder(folder) },
   ];
 
   const render = (list: Page[], depth: number) => (
@@ -203,7 +330,27 @@ export function Sidebar(props: Props) {
         const icon = page.notePath && liveIcon?.path === page.notePath ? liveIcon.icon : page.icon;
         return (
           <li key={page.key}>
-            <div className={page.notePath === selected && view === null ? "page-row selected" : "page-row"} style={{ paddingLeft: depth * 14 + 4 }}>
+            <div
+              className={[
+                "page-row",
+                page.notePath === selected && view === null ? "selected" : "",
+                drag?.item.path === (page.notePath ?? page.key) ? "dragging" : "",
+                drag && !page.notePath && drag.target === page.key ? "drop-target" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={{ paddingLeft: depth * 14 + 4 }}
+              data-folder={page.notePath ? undefined : page.key}
+              onPointerDown={(event) =>
+                startDrag(event, {
+                  path: page.notePath ?? page.key,
+                  folder: !page.notePath,
+                  label: page.notePath ? noteTitle(page.notePath) : page.name,
+                  icon: <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} presentation={page.presentation} />,
+                })
+              }
+              onContextMenu={(event) => openContextMenu(event, page.notePath ? pageMenu(page.notePath) : folderMenu(page.key))}
+            >
               <button className="page-toggle" onClick={() => toggle(page.key)} aria-label={open ? "Replier" : "Déplier"} disabled={page.children.length === 0}>
                 {page.children.length > 0 && <Icon name={open ? "chevronDown" : "chevronRight"} size={12} />}
               </button>
@@ -217,11 +364,14 @@ export function Sidebar(props: Props) {
                 </span>
                 <span className="page-label">{page.notePath ? noteTitle(page.notePath) : page.name}</span>
               </button>
-              {page.notePath && (
-                <button className="page-add" title="Renommer, supprimer…" aria-label="Plus d'actions" onClick={(event) => openMenu(event, pageMenu(page.notePath!))}>
-                  <Icon name="more" size={14} />
-                </button>
-              )}
+              <button
+                className="page-add"
+                title="Renommer, supprimer…"
+                aria-label="Plus d'actions"
+                onClick={(event) => openMenu(event, page.notePath ? pageMenu(page.notePath) : folderMenu(page.key))}
+              >
+                <Icon name="more" size={14} />
+              </button>
               <button
                 className="page-add"
                 title={page.notePath ? "Ajouter une sous-page" : "Nouvelle page dans ce dossier"}
@@ -268,13 +418,41 @@ export function Sidebar(props: Props) {
         <NavRow icon="bookmark" label="Lectures" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
         <NavRow icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />
       </nav>
-      <div className="sidebar-section">Pages</div>
-      <div className="sidebar-tree">{render(pages, 0)}</div>
+      <div className="sidebar-section">
+        Pages
+        <button className="sidebar-section-add" onClick={() => props.onNewFolder("")} aria-label="Nouveau dossier" title="Nouveau dossier">
+          <Icon name="folderAdd" size={14} />
+        </button>
+      </div>
+      <div
+        ref={treeRef}
+        className={drag?.target === "" ? "sidebar-tree drop-root" : "sidebar-tree"}
+        onClickCapture={(event) => {
+          if (!dragged.current) return;
+          event.stopPropagation();
+          event.preventDefault();
+        }}
+        onContextMenu={(event) =>
+          // Right click in the empty space of the tree: create at the vault root.
+          openContextMenu(event, [
+            { label: "Nouvelle page", icon: "plus", run: () => props.onNewPageInFolder("") },
+            { label: "Nouveau dossier", icon: "folderAdd", run: () => props.onNewFolder("") },
+          ])
+        }
+      >
+        {render(pages, 0)}
+      </div>
       <div className="sidebar-footer">
         {gitChanges !== null && <NavRow icon="branch" label="Git" shortcut="⌘⇧G" active={gitOpen} badge={gitChanges} onClick={props.onGit} />}
         <NavRow icon="sliders" label="Réglages" shortcut="⌘," active={view === "settings"} onClick={(event) => props.onSettings(event.metaKey || event.ctrlKey)} />
         <NavRow icon="question" label="Aide et raccourcis" shortcut="⌘/" onClick={props.onHelp} />
       </div>
+      {drag && (
+        <div className={drag.target === null ? "tree-drag-ghost refused" : "tree-drag-ghost"} style={{ left: drag.x + 12, top: drag.y + 8 }} aria-hidden="true">
+          {drag.item.icon}
+          <span>{drag.item.label}</span>
+        </div>
+      )}
       {menu && <PopoverMenu anchor={menu.anchor} items={menu.items} onClose={() => setMenu(null)} />}
     </aside>
   );

@@ -77,6 +77,7 @@ pub fn run() {
       vault::vault_files,
       vault::vault_read_binary,
       vault::vault_create,
+      vault::vault_create_dir,
       vault::vault_config,
       vault::vault_rename,
       vault::vault_trash,
