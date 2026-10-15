@@ -94,6 +94,17 @@ describe("block keyboard behaviour", () => {
     expect(save()).toBe("- un\n\ndeux\n");
   });
 
+  it("Backspace in an empty first line removes it", () => {
+    const { editor, save } = open("texte\n");
+    editor.commands.setTextSelection(1);
+    press(editor, "Enter");
+    editor.commands.setTextSelection(1);
+    press(editor, "Backspace");
+    expect(save()).toBe("texte\n");
+    type(editor, "dé");
+    expect(save()).toBe("détexte\n");
+  });
+
   it("Tab nests a list item and Shift-Tab brings it back", () => {
     const { editor, save } = open("- un\n- deux\n");
     cursorAtStartOf(editor, "deux");

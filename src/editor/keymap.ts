@@ -152,6 +152,14 @@ export const BlockKeymap = Extension.create({
         if (container?.type === types().listItem && $from.index(-1) === 0) return liftListItem(types().listItem)(state, dispatch);
         if (container?.type === types().blockquote && $from.index(-1) === 0) return lift(state, dispatch);
 
+        // Empty first line of the note: nothing to join with, so it is removed.
+        if ($from.depth === 1 && $from.index(0) === 0 && parent.type === types().paragraph && parent.content.size === 0 && state.doc.childCount > 1) {
+          const tr = state.tr.delete($from.before(), $from.after());
+          tr.setSelection(TextSelection.near(tr.doc.resolve(0)));
+          dispatch(tr);
+          return true;
+        }
+
         // Start of a callout title: the callout becomes plain blocks.
         if (parent.type === types().calloutTitle && container) {
           const children: PMNode[] = [types().paragraph.create(null, parent.content)];
