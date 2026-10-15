@@ -23,7 +23,7 @@ import { Icon, type IconName } from "./Icon";
 import { GraphPage } from "./graph/GraphPage";
 import { ReadingView } from "./reading/ReadingView";
 import { AddLinkDialog } from "./reading/AddLinkDialog";
-import { addLink, newReadingList, parseReadingList } from "./reading/readingList";
+import { addLink, newReadingList, parseReadingList, readingTagsOf } from "./reading/readingList";
 import { noteIcon } from "./vault/icon";
 import { setProperty } from "./markdown/frontmatter";
 import type { FrontmatterControl } from "./editor/NoteEditor";
@@ -129,6 +129,7 @@ export function App() {
   /** Bumped when a link is added, so the reading list views read it again. */
   const [readingVersion, setReadingVersion] = useState(0);
   const [readingThemes, setReadingThemes] = useState<string[]>([]);
+  const [readingTags, setReadingTags] = useState<string[]>([]);
   const [findRequest, setFindRequest] = useState<FindRequest | null>(null);
   /** Selected text (one line) used to prefill the find fields. */
   const selectedText = () => {
@@ -810,23 +811,25 @@ export function App() {
   }, [tree]);
 
   const readingPath = settings.readingList || "Lectures.md";
-  /** "Ajouter un lien": the dialog lists the themes of the reading list. */
+  /** "Ajouter un lien": the dialog lists the themes and tags of the reading list. */
   const openAddLink = async () => {
     if (!vault) return;
     const text = await vault.read(readingPath).catch(() => "");
-    setReadingThemes(parseReadingList(text).flatMap((s) => (s.title ? [s.title] : [])));
+    const sections = parseReadingList(text);
+    setReadingThemes(sections.flatMap((s) => (s.title ? [s.title] : [])));
+    setReadingTags(readingTagsOf(sections));
     setModal("addLink");
   };
   /** Adds a link to the reading list note (created with its first link). */
-  const addReading = async (theme: string | null, title: string, url: string) => {
+  const addReading = async (theme: string | null, title: string, url: string, tags: string[]) => {
     if (!vault) return;
     const open = noteRef.current?.path === readingPath;
     if (open) await saveNow();
     // Created with its first link (a missing file may read as "" in some vaults).
-    if (!filesRef.current.includes(readingPath)) await createFile(readingPath, newReadingList(theme, title, url));
+    if (!filesRef.current.includes(readingPath)) await createFile(readingPath, newReadingList(theme, title, url, tags));
     else {
       const text = await vault.read(readingPath);
-      await vault.write(readingPath, addLink(text, theme, title, url), text);
+      await vault.write(readingPath, addLink(text, theme, title, url, tags), text);
     }
     if (open) await reloadFromDisk();
     setReadingVersion((v) => v + 1);
@@ -1275,7 +1278,7 @@ export function App() {
       )}
       {presenting !== null && slides && presentationPage && <Presenter rendered={slides} start={presenting} onClose={() => setPresenting(null)} />}
       {modal === "help" && <ShortcutsHelp onClose={() => setModal(null)} />}
-      {modal === "addLink" && <AddLinkDialog themes={readingThemes} fetchTitles={settings.fetchTitles} onAdd={addReading} onClose={() => setModal(null)} />}
+      {modal === "addLink" && <AddLinkDialog themes={readingThemes} tags={readingTags} fetchTitles={settings.fetchTitles} onAdd={addReading} onClose={() => setModal(null)} />}
       {modal === "settings" && (
         <SettingsDialog
           settings={settings}

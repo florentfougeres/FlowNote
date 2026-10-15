@@ -1,21 +1,25 @@
 import { useEffect, useRef, useState } from "react";
+import { TagInput } from "./TagInput";
 import { fetchTitle, urlIn } from "./web";
 
 const THEME_KEY = "flownote:reading-theme";
 
 /**
  * "Ajouter un lien" (⌘⇧L): the URL, its title (read from the page when
- * allowed, unless typed) and the theme, existing or new.
+ * allowed, unless typed), the theme, existing or new, and its tags.
  */
 export function AddLinkDialog({
   themes,
+  tags: knownTags,
   fetchTitles,
   onAdd,
   onClose,
 }: {
   themes: string[];
+  /** Tags already used in the list, suggested. */
+  tags: string[];
   fetchTitles: boolean;
-  onAdd: (theme: string | null, title: string, url: string) => Promise<void>;
+  onAdd: (theme: string | null, title: string, url: string, tags: string[]) => Promise<void>;
   onClose: () => void;
 }) {
   const [url, setUrl] = useState("");
@@ -27,6 +31,7 @@ export function AddLinkDialog({
       return "";
     }
   });
+  const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   /** The title was typed: never replace it with the page's. */
@@ -59,7 +64,7 @@ export function AddLinkDialog({
       // not remembered
     }
     try {
-      await onAdd(theme.trim() || null, title.trim(), link);
+      await onAdd(theme.trim() || null, title.trim(), link, tags);
       onClose();
     } catch (e) {
       setError(String(e));
@@ -94,6 +99,10 @@ export function AddLinkDialog({
             ))}
           </datalist>
         </label>
+        <div className="add-link-field">
+          Tags
+          <TagInput tags={tags} suggestions={knownTags} onChange={setTags} />
+        </div>
         {error && <p className="status warning">{error}</p>}
         <div className="modal-actions">
           <button type="button" onClick={onClose}>

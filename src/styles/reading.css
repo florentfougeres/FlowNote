@@ -130,7 +130,192 @@
   text-decoration: line-through;
 }
 
+/* Tags: chips on each link, a filter in the toolbar. */
+.reading-item-tags {
+  flex: none;
+  display: flex;
+  gap: 4px;
+  max-width: 40%;
+  overflow: hidden;
+}
+
+.reading-item-tags .chip {
+  padding: 1px 8px;
+  border: none;
+  box-shadow: none;
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.reading-item-tags .chip:hover,
+.reading-item-tags .chip.active {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+}
+
+.reading-item.read .reading-item-tags .chip {
+  opacity: 0.6;
+}
+
+.reading-tag-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+  visibility: hidden;
+}
+
+.reading-item:hover .reading-tag-edit,
+.reading-tag-edit.open,
+.reading-tag-edit:focus-visible {
+  visibility: visible;
+}
+
+.reading-tag-edit:hover,
+.reading-tag-edit.open {
+  background: var(--selected);
+  color: var(--text);
+}
+
+.reading-tag-editor {
+  width: 280px;
+  box-sizing: border-box;
+}
+
+.reading-tags-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reading-tags-button.active {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--accent);
+}
+
+.reading-tags-count {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.reading-tags-menu {
+  width: 240px;
+  max-height: 320px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.reading-tags-menu > button span:nth-child(2) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.reading-tags-menu > button.selected svg {
+  color: var(--accent);
+}
+
+.reading-tags-menu-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.reading-tags-empty {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--muted);
+}
+
+.reading-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.reading-filter .dash-muted {
+  margin-left: 4px;
+}
+
+/* Tag field: chips and a field, with suggestions under it. */
+.tag-input {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 3px 6px;
+  box-sizing: border-box;
+  border: 0.5px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 13px;
+  cursor: text;
+}
+
+.tag-input:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.modal .tag-input input,
+.tag-input input,
+.tag-input input:focus {
+  flex: 1;
+  min-width: 90px;
+  padding: 2px 2px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tag-input .chip {
+  font-size: 12.5px;
+}
+
+.tag-input-menu {
+  left: -1px;
+  right: -1px;
+  min-width: 0;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.tag-input-menu > button.active {
+  background: var(--hover);
+}
+
+.tag-input-menu > button svg {
+  flex: none;
+  color: var(--muted);
+}
+
 /* "Ajouter un lien" */
+.add-link-field,
 .add-link label {
   display: flex;
   flex-direction: column;

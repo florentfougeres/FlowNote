@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addLink, linkMarkdown, newReadingList, parseReadingList, setChecked, siteOf } from "./readingList";
+import { addLink, linkMarkdown, newReadingList, normalizeTag, parseReadingList, setChecked, setTags, siteOf } from "./readingList";
 
 const LIST = `# Lectures
 
@@ -62,5 +62,42 @@ describe("reading list", () => {
   it("writes links Obsidian reads", () => {
     expect(linkMarkdown("Un [crochet]", "https://a.fr/x(1)")).toBe("[Un \\[crochet\\]](https://a.fr/x%281%29)");
     expect(siteOf("https://www.example.com/a")).toBe("example.com");
+  });
+
+  it("reads tags outside the link, not in it nor in the title", () => {
+    const md = [
+      "- [ ] [C# #1 en #pratique](https://a.fr/page#ancre) #dev #Vidéo/longue",
+      "- [ ] #avant Rust async https://b.fr/x#y #rust",
+      "- [x] https://c.fr #2024 #a",
+    ].join("\n");
+    expect(parseReadingList(md)[0].items.map((i) => [i.title, i.url, i.tags])).toEqual([
+      ["C# #1 en #pratique", "https://a.fr/page#ancre", ["dev", "Vidéo/longue"]],
+      ["Rust async", "https://b.fr/x#y", ["avant", "rust"]],
+      ["#2024", "https://c.fr", ["a"]],
+    ]);
+    expect(parseReadingList(LIST)[1].items[1].tags).toEqual(["ia"]);
+  });
+
+  it("tags a link by touching only its tags", () => {
+    const md = "# Lectures\n\n- [ ] [A](https://a.fr) #un et du texte #deux\n- [ ] https://b.fr\n";
+    expect(setTags(md, 2, ["un", "deux"])).toBe(md);
+    expect(setTags(md, 2, ["UN", "deux"])).toBe(md);
+    expect(setTags(md, 2, ["deux", "trois"])).toBe("# Lectures\n\n- [ ] [A](https://a.fr) et du texte #deux #trois\n- [ ] https://b.fr\n");
+    expect(setTags(md, 2, [])).toBe("# Lectures\n\n- [ ] [A](https://a.fr) et du texte\n- [ ] https://b.fr\n");
+    expect(setTags(md, 3, ["lu"])).toBe("# Lectures\n\n- [ ] [A](https://a.fr) #un et du texte #deux\n- [ ] https://b.fr #lu\n");
+    expect(setTags("- [ ] #a https://b.fr #a\r\n", 0, ["a"])).toBe("- [ ] #a https://b.fr\r\n");
+    expect(setTags(md, 0, ["x"])).toBe(md);
+  });
+
+  it("adds a link with its tags", () => {
+    expect(addLink("# Lectures\n", "IA", "T", "https://t.fr", ["llm", "video"])).toBe("# Lectures\n\n## IA\n\n- [ ] [T](https://t.fr) #llm #video\n");
+    expect(newReadingList(null, "", "https://t.fr", ["a"])).toBe("# Lectures\n\n- [ ] https://t.fr #a\n");
+  });
+
+  it("normalizes typed tags", () => {
+    expect(normalizeTag("#Machine learning")).toBe("Machine-learning");
+    expect(normalizeTag(" vidéo/longue! ")).toBe("vidéo/longue");
+    expect(normalizeTag("2024")).toBeNull();
+    expect(normalizeTag("#")).toBeNull();
   });
 });
