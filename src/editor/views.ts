@@ -169,7 +169,8 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   diagram.contentEditable = "false";
   const panel = element("div", "plot-editor-host");
   panel.contentEditable = "false";
-  dom.append(header, pre, diagram, panel);
+  // The source or the visual editor, above the chart (one at a time).
+  dom.append(header, pre, panel, diagram);
 
   let current = node;
   let rendered: string | null = null;
@@ -282,6 +283,8 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
     const { from, to } = editor.state.selection;
     const inside = from > pos && to < pos + current.nodeSize && editor.isFocused;
     dom.classList.toggle("editing", inside || document.activeElement === language);
+    // The cursor went elsewhere in the note: the visual editor closes.
+    if (editorOpen && editor.isFocused && !inside) closeEditor();
   };
   editor.on("selectionUpdate", syncEditing);
   editor.on("focus", syncEditing);

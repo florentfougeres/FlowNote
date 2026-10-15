@@ -288,3 +288,12 @@ describe("callout types", () => {
     expect(save()).toBe("Avant  \n\n> [!example]- Titre\n> Corps\n");
   });
 });
+
+describe("click under the last block", () => {
+  it("an empty line added at the end leaves the file as it was", () => {
+    const md = "Texte\n\n```plotly\ndata: []\n```\n";
+    const { editor, save } = open(md);
+    editor.view.dispatch(editor.state.tr.insert(editor.state.doc.content.size, editor.schema.nodes.paragraph.create()));
+    expect(save()).toBe(md);
+  });
+});

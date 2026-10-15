@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { MutableRefObject, ReactNode } from "react";
 import type { Editor } from "@tiptap/core";
-import { EditorState } from "@tiptap/pm/state";
+import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { defaultWiring, editorExtensions } from "./extensions";
 import { SuggestionMenu } from "./SuggestionMenu";
 import { BlockHandle } from "./BlockHandle";
@@ -70,6 +70,24 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         if (!path || (node.attrs.embed && !path.endsWith(".md"))) return false;
         current.openPath(path, event.metaKey || event.ctrlKey);
         return true;
+      },
+      handleDOMEvents: {
+        // A click in the empty space under the last block: the cursor goes to an
+        // empty line at the end (added when needed), like in Notion.
+        mousedown: (view, event) => {
+          if (event.button !== 0 || event.target !== view.dom || !view.editable) return false;
+          const last = view.dom.lastElementChild;
+          if (!last || event.clientY <= last.getBoundingClientRect().bottom) return false;
+          event.preventDefault();
+          const { doc, schema } = view.state;
+          const end = doc.lastChild;
+          const tr = view.state.tr;
+          if (!(end?.type === schema.nodes.paragraph && end.content.size === 0)) tr.insert(doc.content.size, schema.nodes.paragraph.create());
+          tr.setSelection(TextSelection.create(tr.doc, tr.doc.content.size - 1)).scrollIntoView();
+          view.dispatch(tr);
+          view.focus();
+          return true;
+        },
       },
       handleDrop: (view, event, _slice, moved) => {
         if (moved || !event.dataTransfer?.files.length) return false;

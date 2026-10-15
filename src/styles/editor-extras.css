@@ -204,8 +204,12 @@
   min-height: 320px;
 }
 
-/* The visual editor, under the chart. */
+/* The visual editor, above the chart, instead of the text. */
 .plot-editor-host:empty {
+  display: none;
+}
+
+.code-block.visual-editing pre {
   display: none;
 }
 
@@ -213,7 +217,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin: 6px 0 4px;
+  margin: 2px 0 8px;
   padding: 12px 14px;
   border-radius: 12px;
   border: 0.5px solid var(--border);
