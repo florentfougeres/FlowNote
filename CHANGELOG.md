@@ -2,6 +2,20 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.12.0] - 2026-10-15
+
+### Ajouté
+- **Graphiques Plotly**, au format du plugin Obsidian [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) : un bloc ```` ```plotly ```` (YAML ou JSON) s'affiche en graphique interactif (survol, zoom, export en image), aux couleurs de l'app.
+  - « Graphique » dans le menu `/`.
+  - Éditeur visuel : type (lignes, barres, aire, points, camembert), titres, tableau des valeurs par série. Le bloc est réécrit dans son format, commentaires et réglages inconnus gardés.
+  - L'éditeur visuel ou le texte s'affiche au-dessus du graphique, l'un ou l'autre.
+  - Le mode `dataviewjs` du plugin (JavaScript) n'est pas exécuté.
+- Un clic dans le vide sous la dernière ligne d'une note place le curseur sur une ligne vide en fin de note.
+
+### Corrigé
+- Le mode sombre choisi dans les réglages s'applique à toute l'app (bande des onglets, barre latérale, fenêtre), pas seulement à la page.
+- Les titres de graphique écrits en texte simple s'affichent (Plotly 3+).
+
 ## [0.11.0] - 2026-10-15
 
 ### Ajouté

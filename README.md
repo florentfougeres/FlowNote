@@ -36,6 +36,7 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 - Mise en forme en ligne : gras, italique, barré, surligné, code, liens (coller une URL sur du texte sélectionné en fait un lien)
 - Tableaux éditables avec poignées de lignes et de colonnes (insérer, déplacer, aligner, supprimer)
 - Blocs de code avec coloration syntaxique, diagrammes **Mermaid**, maths, emoji (`:calendrier`), date du jour (`/date`)
+- **Graphiques Plotly** (`/graphique`) au format du plugin Obsidian [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) : blocs ```` ```plotly ```` en YAML ou JSON, graphiques interactifs, éditeur visuel (type, titres, tableau des valeurs)
 - Propriétés YAML (frontmatter) éditables, tags, `[[wikilinks]]` et `![[embeds]]` avec autocomplétion
 - Sous-pages et arborescence dans la barre latérale
 

@@ -36,6 +36,8 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 - **Glisser-déposer** : utiliser des pointer events, pas le drag HTML5 (WebKit le refuse sur les `<button>`). Ajouter `user-select: none` et `-webkit-user-select: none` pour qu'aucun texte ne reste sélectionné.
 - **Versions figées** : TanStack Table en v8 (la v9 change d'API), mind-elixir 5.15.x. Marp avec `inlineSVG: false` (WebKit dessine mal `foreignObject`).
+- **Plotly 3+** n'affiche plus les titres écrits en texte simple (`title: Ventes`) : `src/editor/plotly.ts` les convertit en `{ text }` au dessin.
+- **Thème sombre écrit deux fois** dans `base.css` (sombre du système et sombre choisi) : garder les deux listes identiques.
 - **Format des bases** (vérifié dans le code d'Obsidian 1.14.4) :
   - types de vue natifs : `table`, `cards`, `list`, `kanban` ;
   - `groupBy` exige `property` **et** `direction` ;
@@ -53,7 +55,7 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 ## État actuel (15 octobre 2026)
 
-- v0.11.0 taguée (favoris, dupliquer, copier le lien, Finder, pastille d'état, dates, lien au collage, menu du fil d'Ariane, correctif du défilement de la fenêtre). Le workflow de release crée un brouillon à publier.
+- v0.12.0 taguée (graphiques Plotly au format obsidian-plotly avec éditeur visuel, mode sombre réparé pour toute l'app). Le workflow de release crée un brouillon à publier.
 - Pistes ouvertes :
   - alerte Dependabot `glib` (Rust) : compilé seulement pour Linux, sans correctif possible côté Tauri ; à fermer comme « non utilisé » ;
   - renommer ou supprimer le dossier des tickets par son menu ne met pas à jour le réglage « Dossier des tickets » ;
@@ -61,5 +63,6 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
   - suppression d'une base « en plusieurs fois » dans l'app de bureau : rendue robuste mais pas reproduite, à confirmer ;
   - kanban et calendrier des bases à vérifier dans Obsidian ;
   - l'ordre manuel des lignes (`rowOrder`, par chemin) se perd quand on renomme une page ;
-  - nouveautés des 0.10 et 0.11 testées dans Chrome seulement, à vérifier dans l'app de bureau (⌘,, clic droit, glisser-déposer, Finder, défilement de la fenêtre, menu du fil d'Ariane).
+  - nouveautés des 0.10 à 0.12 testées dans Chrome seulement, à vérifier dans l'app de bureau (⌘,, clic droit, glisser-déposer, Finder, défilement de la fenêtre, menu du fil d'Ariane, graphiques, thème de la fenêtre) ;
+  - un graphique Plotly déjà affiché garde ses couleurs si on change de thème, jusqu'à son prochain rendu.
 - L'historique détaillé des sessions est dans `.remember/` (à lire sur demande).
