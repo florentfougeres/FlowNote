@@ -265,12 +265,3 @@
   color: var(--on-accent);
 }
 
-/* A setting whose control sits under its label, with an explanation below. */
-.setting.setting-column {
-  flex-wrap: wrap;
-}
-
-.setting.setting-column > small {
-  flex-basis: 100%;
-  margin-top: -2px;
-}

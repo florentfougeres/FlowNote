@@ -826,23 +826,3 @@ button.danger {
   text-align: right;
 }
 
-.setting {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  border-top: 1px solid var(--border);
-}
-
-label.setting {
-  justify-content: flex-start;
-  align-items: flex-start;
-  cursor: pointer;
-}
-
-.setting small {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-}

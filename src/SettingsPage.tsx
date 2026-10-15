@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { DEFAULT_COLUMNS, normalizeColumns, statusFor, type TicketColumn } from "./ticket/board";
-import { Icon } from "./Icon";
+import { Icon, type IconName } from "./Icon";
 import { keys } from "./keys";
 
 export type Theme = "system" | "light" | "dark";
@@ -97,21 +97,75 @@ const THEMES: [Theme, string][] = [
   ["dark", "Sombre"],
 ];
 
-export function SettingsDialog({
+type Category = "general" | "editor" | "tickets" | "reading" | "vault";
+
+const CATEGORIES: { id: Category; label: string; icon: IconName }[] = [
+  { id: "general", label: "Général", icon: "sliders" },
+  { id: "editor", label: "Éditeur", icon: "spelling" },
+  { id: "tickets", label: "Tickets", icon: "ticket" },
+  { id: "reading", label: "Lectures", icon: "bookmark" },
+  { id: "vault", label: "Vault", icon: "folder" },
+];
+
+const CATEGORY_KEY = "flownote:settings-category";
+
+function readCategory(): Category {
+  try {
+    const saved = localStorage.getItem(CATEGORY_KEY);
+    return CATEGORIES.find((c) => c.id === saved)?.id ?? "general";
+  } catch {
+    return "general";
+  }
+}
+
+/** A row of a settings card: its label and explanation, its control on the right. */
+function Row({ label, help, children, column = false }: { label: string; help?: ReactNode; children: ReactNode; column?: boolean }) {
+  return (
+    <div className={column ? "settings-row column" : "settings-row"}>
+      <div className="settings-row-text">
+        <span>{label}</span>
+        {help && <small>{help}</small>}
+      </div>
+      <div className="settings-row-control">{children}</div>
+    </div>
+  );
+}
+
+/** An on/off switch, like macOS's. */
+function Switch({ checked, label, onChange }: { checked: boolean; label: string; onChange: (checked: boolean) => void }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} className={checked ? "switch on" : "switch"} onClick={() => onChange(!checked)}>
+      <span />
+    </button>
+  );
+}
+
+/**
+ * The settings as a page in a tab: categories on the left, their settings
+ * in cards on the right. Every change applies and is saved at once.
+ */
+export function SettingsPage({
   settings,
   vaultName,
   grammarAvailable,
   onChange,
   onChangeVault,
-  onClose,
 }: {
   settings: Settings;
   vaultName: string;
   grammarAvailable: boolean;
   onChange: (s: Settings) => void;
   onChangeVault: () => void;
-  onClose: () => void;
 }) {
+  const [category, setCategory] = useState<Category>(readCategory);
+  const choose = (id: Category) => {
+    setCategory(id);
+    try {
+      localStorage.setItem(CATEGORY_KEY, id);
+    } catch {
+      // not remembered
+    }
+  };
   const spellCheckers: [SpellChecker, string][] = [
     ...(grammarAvailable ? ([["grammalecte", "Grammalecte"]] as [SpellChecker, string][]) : []),
     ["system", grammarAvailable ? "macOS" : "Navigateur"],
@@ -119,82 +173,92 @@ export function SettingsDialog({
   ];
   // Grammalecte needs the desktop app: elsewhere its choice falls back to the system checker.
   const current: SpellChecker = !grammarAvailable && settings.spellChecker === "grammalecte" ? "system" : settings.spellChecker;
+  const title = CATEGORIES.find((c) => c.id === category)?.label;
+
   return (
-    <div className="modal-backdrop" onMouseDown={onClose} onKeyDown={(e) => e.key === "Escape" && onClose()}>
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
-        <header className="modal-header">
-          <strong>Réglages</strong>
-          <button autoFocus onClick={onClose} aria-label="Fermer">
-            ✕
+    <div className="settings-page">
+      <nav className="settings-nav" aria-label="Catégories de réglages">
+        <h1>Réglages</h1>
+        {CATEGORIES.map((c) => (
+          <button key={c.id} className={category === c.id ? "selected" : ""} aria-current={category === c.id ? "page" : undefined} onClick={() => choose(c.id)}>
+            <Icon name={c.icon} size={15} />
+            {c.label}
           </button>
-        </header>
-        <label className="setting">
-          <input type="checkbox" checked={settings.autosave} onChange={(e) => onChange({ ...settings, autosave: e.target.checked })} />
-          <span>
-            Enregistrement automatique
-            <small>{keys("Sinon, enregistrez avec ⌘S. Les modifications en attente sont enregistrées avant de changer de page.")}</small>
-          </span>
-        </label>
-        <div className="setting setting-column">
-          <span>Correcteur</span>
-          <div className="segmented" role="radiogroup" aria-label="Correcteur">
-            {spellCheckers.map(([value, label]) => (
-              <button key={value} role="radio" aria-checked={current === value} className={current === value ? "selected" : ""} onClick={() => onChange({ ...settings, spellChecker: value })}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <small>{SPELL_HELP[current]}</small>
-        </div>
-        <label className="setting">
-          <span>
-            Dossier des tickets
-            <small>Les nouveaux tickets y sont créés et numérotés (« 12 - Titre.md »).</small>
-          </span>
-          <input
-            className="setting-text"
-            value={settings.ticketsFolder}
-            placeholder="Racine du vault"
-            onChange={(e) => onChange({ ...settings, ticketsFolder: e.target.value.trim().replace(/^\/+|\/+$/g, "") })}
-          />
-        </label>
-        <label className="setting">
-          <span>
-            Liste de lectures
-            <small>La note où sont rangés les liens à lire, par thème (une section par thème).</small>
-          </span>
-          <input
-            className="setting-text"
-            value={settings.readingList}
-            placeholder="Lectures.md"
-            onChange={(e) => onChange({ ...settings, readingList: e.target.value.trim().replace(/^\/+/, "") })}
-            onBlur={() => !settings.readingList.endsWith(".md") && settings.readingList && onChange({ ...settings, readingList: `${settings.readingList}.md` })}
-          />
-        </label>
-        <label className="setting">
-          <input type="checkbox" checked={settings.fetchTitles} onChange={(e) => onChange({ ...settings, fetchTitles: e.target.checked })} />
-          <span>
-            Titre automatique des liens
-            <small>En ajoutant un lien, l'app lit le titre de la page (une seule requête vers ce site). Sinon, le lien reste tel quel.</small>
-          </span>
-        </label>
-        <ColumnsSetting columns={settings.ticketColumns} onChange={(ticketColumns) => onChange({ ...settings, ticketColumns })} />
-        <div className="setting">
-          <span>Apparence</span>
-          <div className="segmented" role="radiogroup" aria-label="Apparence">
-            {THEMES.map(([value, label]) => (
-              <button key={value} role="radio" aria-checked={settings.theme === value} className={settings.theme === value ? "selected" : ""} onClick={() => onChange({ ...settings, theme: value })}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="setting">
-          <span>
-            Vault ouvert : <strong>{vaultName}</strong>
-          </span>
-          <button onClick={onChangeVault}>Changer de vault…</button>
-        </div>
+        ))}
+      </nav>
+      <div className="settings-content">
+        <h2>{title}</h2>
+        {category === "general" && (
+          <section className="settings-card">
+            <Row label="Apparence" help="Système suit le mode clair ou sombre de macOS.">
+              <div className="segmented" role="radiogroup" aria-label="Apparence">
+                {THEMES.map(([value, label]) => (
+                  <button key={value} role="radio" aria-checked={settings.theme === value} className={settings.theme === value ? "selected" : ""} onClick={() => onChange({ ...settings, theme: value })}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </Row>
+            <Row label="Enregistrement automatique" help={keys("Sinon, enregistrez avec ⌘S. Les modifications en attente sont enregistrées avant de changer de page.")}>
+              <Switch checked={settings.autosave} label="Enregistrement automatique" onChange={(autosave) => onChange({ ...settings, autosave })} />
+            </Row>
+          </section>
+        )}
+        {category === "editor" && (
+          <section className="settings-card">
+            <Row label="Correcteur" help={SPELL_HELP[current]}>
+              <div className="segmented" role="radiogroup" aria-label="Correcteur">
+                {spellCheckers.map(([value, label]) => (
+                  <button key={value} role="radio" aria-checked={current === value} className={current === value ? "selected" : ""} onClick={() => onChange({ ...settings, spellChecker: value })}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </Row>
+          </section>
+        )}
+        {category === "tickets" && (
+          <>
+            <section className="settings-card">
+              <Row label="Dossier des tickets" help="Les nouveaux tickets y sont créés et numérotés (« 12 - Titre.md »).">
+                <input
+                  className="setting-text"
+                  value={settings.ticketsFolder}
+                  placeholder="Racine du vault"
+                  aria-label="Dossier des tickets"
+                  onChange={(e) => onChange({ ...settings, ticketsFolder: e.target.value.trim().replace(/^\/+|\/+$/g, "") })}
+                />
+              </Row>
+            </section>
+            <section className="settings-card">
+              <ColumnsSetting columns={settings.ticketColumns} onChange={(ticketColumns) => onChange({ ...settings, ticketColumns })} />
+            </section>
+          </>
+        )}
+        {category === "reading" && (
+          <section className="settings-card">
+            <Row label="Liste de lectures" help="La note où sont rangés les liens à lire, par thème (une section par thème).">
+              <input
+                className="setting-text"
+                value={settings.readingList}
+                placeholder="Lectures.md"
+                aria-label="Liste de lectures"
+                onChange={(e) => onChange({ ...settings, readingList: e.target.value.trim().replace(/^\/+/, "") })}
+                onBlur={() => !settings.readingList.endsWith(".md") && settings.readingList && onChange({ ...settings, readingList: `${settings.readingList}.md` })}
+              />
+            </Row>
+            <Row label="Titre automatique des liens" help="En ajoutant un lien, l'app lit le titre de la page (une seule requête vers ce site). Sinon, le lien reste tel quel.">
+              <Switch checked={settings.fetchTitles} label="Titre automatique des liens" onChange={(fetchTitles) => onChange({ ...settings, fetchTitles })} />
+            </Row>
+          </section>
+        )}
+        {category === "vault" && (
+          <section className="settings-card">
+            <Row label="Vault ouvert" help={vaultName}>
+              <button onClick={onChangeVault}>Changer de vault…</button>
+            </Row>
+          </section>
+        )}
       </div>
     </div>
   );
@@ -222,11 +286,7 @@ function ColumnsSetting({ columns, onChange }: { columns: TicketColumn[]; onChan
     setDraft("");
   };
   return (
-    <div className="setting setting-column">
-      <span>
-        Colonnes du tableau des tickets
-        <small>La première ouvre le ticket, la dernière le ferme. La valeur entre crochets est écrite dans « status » du ticket.</small>
-      </span>
+    <Row label="Colonnes du tableau" help="La première ouvre le ticket, la dernière le ferme. La valeur entre crochets est écrite dans « status » du ticket." column>
       <ol className="columns-setting">
         {columns.map((c, i) => {
           const fixed = i === 0 || i === columns.length - 1;
@@ -253,6 +313,6 @@ function ColumnsSetting({ columns, onChange }: { columns: TicketColumn[]; onChan
           Ajouter
         </button>
       </div>
-    </div>
+    </Row>
   );
 }

@@ -16,7 +16,7 @@ import { mountBase, type EmbedProps } from "./base/EmbeddedBase";
 import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
-import { applyTheme, loadSettings, saveSettings, SettingsDialog, type Settings } from "./SettingsDialog";
+import { applyTheme, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
 import { deletePage, renamePage, subpagesOf } from "./vault/pageOps";
 import { PageIcon, Sidebar } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
@@ -77,11 +77,14 @@ const TICKETS_VIEW = "flownote:tickets";
 const GRAPH_VIEW = "flownote:graph";
 /** Pseudo-path of the reading list view. */
 const READING_VIEW = "flownote:reading";
+/** Pseudo-path of the settings page. */
+const SETTINGS_VIEW = "flownote:settings";
 /** Views shown in a tab instead of a page. */
 const VIEWS: Record<string, { title: string; icon: IconName }> = {
   [TICKETS_VIEW]: { title: "Tickets", icon: "ticket" },
   [GRAPH_VIEW]: { title: "Graphe", icon: "graph" },
   [READING_VIEW]: { title: "Lectures", icon: "bookmark" },
+  [SETTINGS_VIEW]: { title: "Réglages", icon: "sliders" },
 };
 const isView = (path: string | null) => path !== null && path in VIEWS;
 
@@ -125,7 +128,7 @@ export function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [gitChanges, setGitChanges] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
-  const [modal, setModal] = useState<"switcher" | "help" | "settings" | "search" | "addLink" | null>(null);
+  const [modal, setModal] = useState<"switcher" | "help" | "search" | "addLink" | null>(null);
   /** Bumped when a link is added, so the reading list views read it again. */
   const [readingVersion, setReadingVersion] = useState(0);
   const [readingThemes, setReadingThemes] = useState<string[]>([]);
@@ -504,6 +507,7 @@ export function App() {
     else if (key === "g" && event.shiftKey) run(() => toggleGit());
     else if (key === "l" && event.shiftKey) run(() => void openAddLink());
     else if (key === "/") run(() => setModal("help"));
+    else if (key === ",") run(() => void select(SETTINGS_VIEW, "push"));
     else if (key === "\\") run(toggleSidebar);
     else if (key === "e" && event.shiftKey && noteRef.current) run(toggleRaw);
   };
@@ -943,7 +947,7 @@ export function App() {
       vaultName={vault.name}
       tree={tree}
       selected={note?.path}
-      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : null}
+      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : null}
       liveIcon={note ? { path: note.path, icon: liveIcon } : undefined}
       gitChanges={vault.git ? gitChanges : null}
       gitOpen={gitOpen}
@@ -959,7 +963,7 @@ export function App() {
       onGraph={(newTabRequested) => void select(GRAPH_VIEW, "push", newTabRequested)}
       onReading={(newTabRequested) => void select(READING_VIEW, "push", newTabRequested)}
       onGit={() => toggleGit()}
-      onSettings={() => setModal("settings")}
+      onSettings={(newTabRequested) => void select(SETTINGS_VIEW, "push", newTabRequested)}
       onHelp={() => setModal("help")}
       onChangeVault={changeVault}
     />
@@ -1179,7 +1183,19 @@ export function App() {
               </div>
             </>
           ) : (
-            activePath === READING_VIEW ? (
+            activePath === SETTINGS_VIEW ? (
+              <SettingsPage
+                key={activeTab}
+                settings={settings}
+                vaultName={vault.name}
+                grammarAvailable={isTauri()}
+                onChange={(next) => {
+                  setSettings(next);
+                  saveSettings(next);
+                }}
+                onChangeVault={changeVault}
+              />
+            ) : activePath === READING_VIEW ? (
               <ReadingView
                 key={activeTab}
                 vault={vault}
@@ -1279,19 +1295,6 @@ export function App() {
       {presenting !== null && slides && presentationPage && <Presenter rendered={slides} start={presenting} onClose={() => setPresenting(null)} />}
       {modal === "help" && <ShortcutsHelp onClose={() => setModal(null)} />}
       {modal === "addLink" && <AddLinkDialog themes={readingThemes} tags={readingTags} fetchTitles={settings.fetchTitles} onAdd={addReading} onClose={() => setModal(null)} />}
-      {modal === "settings" && (
-        <SettingsDialog
-          settings={settings}
-          vaultName={vault.name}
-          grammarAvailable={isTauri()}
-          onChange={(next) => {
-            setSettings(next);
-            saveSettings(next);
-          }}
-          onChangeVault={changeVault}
-          onClose={() => setModal(null)}
-        />
-      )}
       {dialog && (
         <NameDialog
           title={dialog.title}

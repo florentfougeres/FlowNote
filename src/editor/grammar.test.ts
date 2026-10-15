@@ -85,7 +85,7 @@ describe("spell checker choice", () => {
   });
 
   it("settings keep the former Grammalecte choice", async () => {
-    const { loadSettings } = await import("../SettingsDialog");
+    const { loadSettings } = await import("../SettingsPage");
     expect(loadSettings().spellChecker).toBe("grammalecte");
     localStorage.setItem("flownote:grammar", "false");
     expect(loadSettings().spellChecker).toBe("system");

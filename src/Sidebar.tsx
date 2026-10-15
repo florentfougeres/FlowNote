@@ -131,7 +131,7 @@ interface Props {
   tree: VaultEntry[];
   selected?: string;
   /** What the active tab shows when it is not a page. */
-  view: "home" | "tickets" | "graph" | "reading" | null;
+  view: "home" | "tickets" | "graph" | "reading" | "settings" | null;
   /** Live icon of the open page (its front matter may not be saved yet). */
   liveIcon?: { path: string; icon: string | null };
   /** Number of changed files, or null when the vault has no Git repository. */
@@ -150,7 +150,7 @@ interface Props {
   onGraph: (newTab: boolean) => void;
   onReading: (newTab: boolean) => void;
   onGit: () => void;
-  onSettings: () => void;
+  onSettings: (newTab: boolean) => void;
   onHelp: () => void;
   onChangeVault: () => void;
 }
@@ -248,7 +248,7 @@ export function Sidebar(props: Props) {
           onClick={(event) =>
             openMenu(event, [
               { label: "Changer de vault…", icon: "folder", run: props.onChangeVault },
-              { label: "Réglages", icon: "sliders", run: props.onSettings },
+              { label: "Réglages", icon: "sliders", run: () => props.onSettings(false) },
             ])
           }
         >
@@ -272,7 +272,7 @@ export function Sidebar(props: Props) {
       <div className="sidebar-tree">{render(pages, 0)}</div>
       <div className="sidebar-footer">
         {gitChanges !== null && <NavRow icon="branch" label="Git" shortcut="⌘⇧G" active={gitOpen} badge={gitChanges} onClick={props.onGit} />}
-        <NavRow icon="sliders" label="Réglages" onClick={props.onSettings} />
+        <NavRow icon="sliders" label="Réglages" shortcut="⌘," active={view === "settings"} onClick={(event) => props.onSettings(event.metaKey || event.ctrlKey)} />
         <NavRow icon="question" label="Aide et raccourcis" shortcut="⌘/" onClick={props.onHelp} />
       </div>
       {menu && <PopoverMenu anchor={menu.anchor} items={menu.items} onClose={() => setMenu(null)} />}

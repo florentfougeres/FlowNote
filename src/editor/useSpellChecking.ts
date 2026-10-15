@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { setGrammarChecker, setSystemSpellcheck, type ParagraphResult } from "./grammar";
 import { isTauri } from "../vault/tauriVault";
 import { usePersistentFlag } from "../hooks/usePersistentFlag";
-import type { SpellChecker } from "../SettingsDialog";
+import type { SpellChecker } from "../SettingsPage";
 
 /**
  * Applies the spell checker chosen in the settings. The returned switch (toolbar
