@@ -4,6 +4,7 @@ import { Extension, type Editor, type Range } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";
 import { insertRawBlock, turnInto, type BlockKind } from "./blocks";
+import { PLOT_TEMPLATE } from "./plotModel";
 import type { BridgeRef, VaultBridge } from "./bridge";
 import { menuRenderer, MenuStore, normalizeText, type MenuItem } from "./menu";
 import { linkTextFor, sanitizeName, subpageFolder, uniquePath } from "../vault/links";
@@ -73,6 +74,18 @@ export const SLASH_ITEMS: SlashItem[] = [
       turnInto(editor, "code", range);
       editor.commands.updateAttributes("codeBlock", { language: "mermaid" });
       editor.commands.insertContent("graph TD\n  A[Début] --> B[Fin]");
+    },
+  },
+  {
+    key: "plotly",
+    title: "Graphique",
+    description: "Courbes, barres, camembert (plugin Obsidian Plotly)",
+    icon: "📈",
+    keywords: ["graphique", "plotly", "courbe", "barres", "camembert", "chart", "plot"],
+    run: (editor, range) => {
+      turnInto(editor, "code", range);
+      editor.commands.updateAttributes("codeBlock", { language: "plotly" });
+      editor.commands.insertContent(PLOT_TEMPLATE.trimEnd());
     },
   },
   {
