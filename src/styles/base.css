@@ -95,8 +95,6 @@
     --callout-warning: #ff9f0a;
     --callout-danger: #ff453a;
     --sidebar-material: rgba(38, 38, 40, 0.8);
-  --chrome: #202020;
-  --chrome-edge: rgba(255, 255, 255, 0.06);
     --chrome: #202020;
     --chrome-edge: rgba(255, 255, 255, 0.06);
     --glass-sheen: rgba(255, 255, 255, 0.07);
@@ -112,6 +110,7 @@
   }
 }
 
+/* The same palette, chosen in the settings (keep both blocks in step). */
 :root[data-theme="dark"] {
   --bg: #1e1e1e;
   --bg-elevated: #2a2a2c;
@@ -142,6 +141,8 @@
   --callout-warning: #ff9f0a;
   --callout-danger: #ff453a;
   --sidebar-material: rgba(38, 38, 40, 0.8);
+  --chrome: #202020;
+  --chrome-edge: rgba(255, 255, 255, 0.06);
   --glass-sheen: rgba(255, 255, 255, 0.07);
   --glass-edge: rgba(255, 255, 255, 0.1);
   --glass-highlight: rgba(255, 255, 255, 0.16);

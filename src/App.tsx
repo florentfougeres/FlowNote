@@ -210,7 +210,7 @@ export function App() {
     peekTimer.current = window.setTimeout(() => setPeek(false), 250);
   };
   const frontmatter = useRef<FrontmatterControl | null>(null);
-  useEffect(() => applyTheme(settings.theme), [settings.theme]);
+  useEffect(() => applyTheme(settings.theme, isTauri()), [settings.theme]);
   // The desktop window is transparent so the sidebar can show the native macOS material.
   useEffect(() => {
     document.documentElement.classList.toggle("native-vibrancy", isTauri());

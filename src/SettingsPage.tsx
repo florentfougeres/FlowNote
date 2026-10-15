@@ -78,11 +78,20 @@ export function saveSettings(settings: Settings) {
   }
 }
 
-/** "system" follows macOS; otherwise the chosen palette is forced. */
-export function applyTheme(theme: Theme) {
+/**
+ * "system" follows macOS; otherwise the chosen palette is forced. In the
+ * desktop app the window follows too: its native material (under the
+ * sidebar and the tabs) takes the window's appearance, not the page's.
+ */
+export function applyTheme(theme: Theme, desktop = false) {
   const root = document.documentElement;
   if (theme === "system") delete root.dataset.theme;
   else root.dataset.theme = theme;
+  if (desktop) {
+    void import("@tauri-apps/api/window")
+      .then(({ getCurrentWindow }) => getCurrentWindow().setTheme(theme === "system" ? null : theme))
+      .catch(() => {});
+  }
 }
 
 const SPELL_HELP: Record<SpellChecker, string> = {
