@@ -2,6 +2,22 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.10.0] - 2026-10-15
+
+### Ajouté
+- **Dossiers dans l'arborescence** : créer un dossier (bouton à côté de « Pages », sous-dossier, ou clic droit dans le vide de l'arbre), le renommer ou le supprimer. Renommer un dossier met à jour les liens vers ses pages et le filtre des bases qu'il contient. Les dossiers vides sont affichés.
+- **Glisser-déposer dans l'arborescence** : une page (avec ses sous-pages) ou un dossier se dépose dans un dossier ou à la racine ; les liens suivent. Un dossier replié s'ouvre au survol, Échap annule.
+- **Clic droit** sur une page ou un dossier : le même menu que son bouton « … ».
+- **Tags des lectures** : des `#tags` Obsidian sur chaque lien, posés à l'ajout (`⌘⇧L`) ou sur un lien existant, avec suggestions ; filtre par tags dans la vue Lectures.
+- **Réglages dans un onglet** (`⌘,`), avec les catégories à gauche (Général, Éditeur, Tickets, Lectures, Vault) et des interrupteurs façon macOS.
+
+### Modifié
+- Fenêtre « Nouvelle page » refaite : les types de page en cartes avec les icônes de l'accueil, et le dossier choisi dans un menu filtrable.
+- Aucun clic ne sélectionne de texte dans la barre latérale.
+
+### Sécurité
+- Dépendances mises à jour : `@xmldom/xmldom` (via Marp) et `braces` (via Excalidraw, en forçant une version récente de `sass`).
+
 ## [0.9.0] - 2026-10-15
 
 ### Ajouté

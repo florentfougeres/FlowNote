@@ -20,7 +20,9 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 ## Fonctionnalités
 
 **Interface façon Notion**
-- Onglets en haut de la fenêtre, barre latérale avec le vault, Rechercher, Accueil, Tickets, Lectures, Graphe et l'arbre des pages (menu « … » : renommer, supprimer, sous-page)
+- Onglets en haut de la fenêtre, barre latérale avec le vault, Rechercher, Accueil, Tickets, Lectures, Graphe et l'arbre des pages
+- Arbre des pages : menu « … » ou clic droit (renommer, supprimer, sous-page, nouveau dossier), glisser-déposer des pages et des dossiers, liens mis à jour à chaque déplacement
+- Réglages dans un onglet (`⌘,`), rangés par catégorie
 - Barre latérale masquable (`⌘\`), qui réapparaît au survol du bord gauche
 - Icône de page : un emoji choisi au-dessus du titre (propriété `icon`)
 - Accueil : créer, récents, à faire, tickets, à lire, graphe, Git, activité et statistiques du vault
@@ -46,6 +48,7 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 
 **Lectures**
 - Une note `Lectures.md` : une section par thème, une case à cocher par lien, cochée une fois lu
+- Tags Obsidian (`#tag`) sur chaque lien, et filtre par tags dans la vue Lectures
 - Ajout rapide (`⌘⇧L`) avec le titre de la page lu automatiquement, vue dédiée et carte « À lire » sur l'accueil
 
 **Présentations**

@@ -53,15 +53,12 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 ## État actuel (15 octobre 2026)
 
-- v0.9.0 (bases) est publiée. Depuis, dans `main` mais pas encore en release :
-  - alertes Dependabot npm corrigées (xmldom, `sass` forcé en ^1.105 dans `overrides` pour se passer de `braces`) ;
-  - fenêtre « Nouvelle page » refaite (types en cartes, `src/pageKinds.ts`) ;
-  - tags `#tag` sur les lectures et filtre par tags ;
-  - Réglages en page dans un onglet (`flownote:settings`, `src/SettingsPage.tsx`), raccourci ⌘,.
+- v0.10.0 taguée (dossiers et glisser-déposer dans l'arborescence, tags des lectures, Réglages en onglet, fenêtre « Nouvelle page », correctifs de sécurité). Le workflow de release crée un brouillon à publier.
 - Pistes ouvertes :
   - alerte Dependabot `glib` (Rust) : compilé seulement pour Linux, sans correctif possible côté Tauri ; à fermer comme « non utilisé » ;
+  - déplacer le dossier des tickets ne met pas à jour le réglage « Dossier des tickets » ;
   - suppression d'une base « en plusieurs fois » dans l'app de bureau : rendue robuste mais pas reproduite, à confirmer ;
   - kanban et calendrier des bases à vérifier dans Obsidian ;
   - l'ordre manuel des lignes (`rowOrder`, par chemin) se perd quand on renomme une page ;
-  - nouveautés ci-dessus testées dans Chrome seulement, à vérifier dans l'app de bureau (dont ⌘,).
+  - nouveautés de la 0.10.0 testées dans Chrome seulement, à vérifier dans l'app de bureau (⌘,, clic droit, glisser-déposer).
 - L'historique détaillé des sessions est dans `.remember/` (à lire sur demande).
