@@ -128,6 +128,19 @@ export function App() {
     setRawMode(!rawMode);
   };
   const [status, setStatus] = useState("");
+  /** A passing message ("Lien copié"…), shown a few seconds in the status pill; errors stay in `status`. */
+  const [notice, setNotice] = useState<{ text: string; id: number } | null>(null);
+  const notify = useCallback((text: string) => {
+    setStatus("");
+    setNotice({ text, id: Date.now() });
+  }, []);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+  /** Typing: the status pill fades until the pointer moves. */
+  const [typing, setTyping] = useState(false);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [gitChanges, setGitChanges] = useState<number | null>(null);
@@ -561,7 +574,7 @@ export function App() {
       await vault.write(current.path, content, noteRef.current?.disk ?? current.disk);
       await reloadFromDisk();
       void refreshGit();
-      setStatus("Version restaurée : elle apparaît comme une modification à commiter.");
+      notify("Version restaurée : elle apparaît comme une modification à commiter.");
     } catch (error) {
       setStatus(String(error));
     }
@@ -605,7 +618,7 @@ export function App() {
       await followMoves((p) => (p === path ? result.path : p.startsWith(oldFolder) ? `${subpageFolder(result.path)}/${p.slice(oldFolder.length)}` : p), result.updatedNotes);
       moveRecentPage(vault.name, path, result.path);
       const others = result.updatedNotes.filter((p) => p !== result.path).length;
-      setStatus(others > 0 ? `Page renommée ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}.` : "Page renommée.");
+      notify(others > 0 ? `Page renommée ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}.` : "Page renommée.");
       void refreshGit();
       return true;
     } catch (error) {
@@ -660,7 +673,7 @@ export function App() {
       await followMoves((p) => (p.startsWith(`${folder}/`) ? result.path + p.slice(folder.length) : p), result.updatedNotes);
       moveRecentPage(vault.name, folder, result.path);
       const others = result.updatedNotes.filter((p) => !p.startsWith(`${result.path}/`)).length;
-      setStatus(others > 0 ? `Dossier renommé ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}.` : "Dossier renommé.");
+      notify(others > 0 ? `Dossier renommé ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}.` : "Dossier renommé.");
       void refreshGit();
     } catch (error) {
       setStatus(String(error));
@@ -680,7 +693,7 @@ export function App() {
       moveRecentPage(vault.name, item.path, result.path);
       const where = target ? `« ${target.slice(target.lastIndexOf("/") + 1)} »` : "la racine";
       const others = result.updatedNotes.filter((p) => p !== result.path && !p.startsWith(`${to}/`)).length;
-      setStatus(`${item.folder ? "Dossier déplacé" : "Page déplacée"} dans ${where}${others > 0 ? ` ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}` : ""}.`);
+      notify(`${item.folder ? "Dossier déplacé" : "Page déplacée"} dans ${where}${others > 0 ? ` ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}` : ""}.`);
       void refreshGit();
     } catch (error) {
       setStatus(String(error));
@@ -708,7 +721,7 @@ export function App() {
     const link = `[[${linkTextFor(path, filesRef.current)}]]`;
     try {
       await navigator.clipboard.writeText(link);
-      setStatus(`Lien copié : ${link}`);
+      notify(`Lien copié : ${link}`);
     } catch (error) {
       setStatus(`Copie impossible : ${String(error)}`);
     }
@@ -1032,7 +1045,7 @@ export function App() {
       if (!blob) return setStatus("Export impossible : image vide.");
       const { saveExport } = await import("./presentation/exportHtml");
       const where = await saveExport(blob, `${noteTitle(current.path)}.png`, "Image PNG", "png");
-      if (where) setStatus(`Mind map exportée : ${where}`);
+      if (where) notify(`Mind map exportée : ${where}`);
     } catch (error) {
       setStatus(`Export impossible : ${String(error)}`);
     }
@@ -1043,7 +1056,7 @@ export function App() {
     try {
       const { exportPresentation } = await import("./presentation/exportHtml");
       const where = await exportPresentation(current.markdown, noteTitle(current.path), current.path, filesRef.current, (path) => vault.readBinary(path));
-      if (where) setStatus(`Présentation exportée : ${where}`);
+      if (where) notify(`Présentation exportée : ${where}`);
     } catch (error) {
       setStatus(`Export impossible : ${String(error)}`);
     }
@@ -1056,13 +1069,35 @@ export function App() {
 
   // Words and reading time of a plain note (not a drawing, mind map nor base).
   const words = note && !drawing && !mindmap && !basePage ? countWords(note.markdown) : null;
-  const wordStats =
-    words !== null && words > 0 ? (
-      <span className="word-count" title={`${words} mot${words > 1 ? "s" : ""}, environ ${readingMinutes(words)} min de lecture`}>
-        {words.toLocaleString("fr-FR")} mot{words > 1 ? "s" : ""} · {readingMinutes(words)} min
-      </span>
+  /**
+   * Status pill, at the bottom right of the page like Obsidian's status bar:
+   * the save state and the words, or a passing message. It takes no room and
+   * fades while typing.
+   */
+  const statusPill =
+    note || notice ? (
+      <div className="status-pill-anchor" aria-live="polite">
+        <div
+          className={["status-pill", typing && !notice ? "quiet" : "", notice ? "notice" : ""].filter(Boolean).join(" ")}
+          title={words ? `${words} mot${words > 1 ? "s" : ""} · ${note!.markdown.length.toLocaleString("fr-FR")} caractères · environ ${readingMinutes(words)} min de lecture` : undefined}
+        >
+          {notice ? (
+            <span key={notice.id}>{notice.text}</span>
+          ) : (
+            <>
+              <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : "Non enregistré") : "Enregistré"}</span>
+              {words ? (
+                <span>
+                  {words.toLocaleString("fr-FR")} mot{words > 1 ? "s" : ""}
+                </span>
+              ) : null}
+            </>
+          )}
+        </div>
+      </div>
     ) : null;
-  const saveState = <span className={dirty ? "save-state dirty" : "save-state"}>{dirty ? (settings.autosave ? "Enregistrement…" : keys("Non enregistré · ⌘S")) : "Enregistré"}</span>;
+  /** Without autosave, unsaved changes stay in sight at the top. */
+  const saveState = dirty && !settings.autosave ? <span className="save-state dirty">{keys("Non enregistré · ⌘S")}</span> : null;
 
   if (!vault) {
     return (
@@ -1164,14 +1199,19 @@ export function App() {
             )}
           </>
         )}
-        <main className="content" ref={contentRef}>
+        <main
+          className="content"
+          ref={contentRef}
+          onKeyDown={(event) => !event.metaKey && !event.ctrlKey && !typing && setTyping(true)}
+          onMouseMove={() => typing && setTyping(false)}
+        >
+          {statusPill}
           <Toolbar
             left={
               note ? (
                 <>
                   <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} />
                   {saveState}
-                  {wordStats}
                   {status && <span className="status warning">{status}</span>}
                 </>
               ) : (
