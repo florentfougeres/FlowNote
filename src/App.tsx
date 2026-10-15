@@ -17,7 +17,7 @@ import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { applyTheme, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
-import { deletePage, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "./vault/pageOps";
+import { deletePage, followFolder, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "./vault/pageOps";
 import { PageIcon, PopoverMenu, Sidebar, type MenuItem } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
 import { GraphPage } from "./graph/GraphPage";
@@ -30,6 +30,8 @@ import type { FrontmatterControl } from "./editor/NoteEditor";
 import { GitPanel } from "./GitPanel";
 import { ToolButton, ToolGroup, Toolbar } from "./Toolbar";
 import { Backlinks } from "./Backlinks";
+import { withNoteCache, type CachedVault } from "./vault/noteCache";
+import { copyNoteAsHtml } from "./editor/copyHtml";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { OutlinePanel } from "./OutlinePanel";
 import { RawEditor } from "./RawEditor";
@@ -60,7 +62,6 @@ import { Presenter } from "./presentation/Presenter";
 import { ticketInfo } from "./ticket/agenda";
 import { moveRecentPage, recordRecentPage } from "./dashboard/recents";
 import { countWords, readingMinutes } from "./markdown/wordCount";
-import { setMkdocsSyntax } from "./markdown/flavor";
 import { bookmarkedFiles } from "./dashboard/stats";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -165,8 +166,6 @@ export function App() {
   const openFind = (replace = false) =>
     setFindRequest((previous) => ({ query: selectedText() || previous?.query || "", replace, nonce: Date.now() }));
   const [settings, setSettings] = useState<Settings>(loadSettings);
-  // Read by the parser when a note is opened.
-  setMkdocsSyntax(settings.mkdocs);
   /** Toolbar switch: pauses the checker chosen in the settings without changing it. */
   const [spellingOn, toggleSpelling] = useSpellChecking(settings.spellChecker);
   const [pendingOpen, setPendingOpen] = useState<string | null>(null);
@@ -221,7 +220,18 @@ export function App() {
   /** Focus mode: no sidebar, tabs and page bar faded until the pointer comes back. */
   const [focusMode, setFocusMode] = useState(false);
   const toggleFocus = useCallback(() => setFocusMode((on) => !on), []);
-  const [widePages, toggleWide] = useWidePages();
+  // Escape leaves focus mode, unless it is closing something (a menu, a dialog, a suggestion list).
+  useEffect(() => {
+    if (!focusMode) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (document.querySelector(".modal-backdrop, .block-menu, .sidebar-menu, .slash-menu, .grammar-popover, .find-bar, .name-dialog")) return;
+      setFocusMode(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [focusMode]);
+  const [widePages, toggleWide, followWide] = useWidePages();
   /** Hidden sidebar shown over the page while the pointer is near the left edge, like Notion. */
   const [peek, setPeek] = useState(false);
   const peekTimer = useRef<number>(undefined);
@@ -274,8 +284,10 @@ export function App() {
   }, []);
 
   const open = async (pending: Vault | null | Promise<Vault | null>) => {
-    const opened = await pending;
-    if (!opened) return;
+    const picked = await pending;
+    if (!picked) return;
+    // The views reading every note (dashboard, graph, tickets, bases, backlinks) share one copy of them.
+    const opened = withNoteCache(picked);
     try {
       await refresh(opened);
       setConfig(parseObsidianConfig(await opened.obsidianConfig()));
@@ -584,6 +596,8 @@ export function App() {
   // Back to the window: pick up changes made in Obsidian or by git (note content and page tree).
   useEffect(() => {
     const onFocus = () => {
+      // Files may have changed in Obsidian or through git: the notes are read again when needed.
+      (vault as CachedVault | null)?.clearNoteCache?.();
       void reloadFromDisk();
       if (vault) void refresh(vault);
     };
@@ -661,6 +675,7 @@ export function App() {
     await refresh(vault);
     back.current = back.current.map(moved);
     forward.current = forward.current.map(moved);
+    followWide(moved);
     setTabs((list) => list.map((t) => (t.path && !isView(t.path) ? { ...t, path: moved(t.path) } : t)));
     const current = noteRef.current;
     if (current && (moved(current.path) !== current.path || updatedNotes.includes(moved(current.path)))) {
@@ -687,6 +702,14 @@ export function App() {
   };
 
   /** Renames a folder; links to its pages and bases' folder filters follow. */
+  /** The tickets folder setting follows its folder (or a parent) when it moves, and is back to "Tickets" when it is deleted. */
+  const followTicketsFolder = (from: string, to: string | null) => {
+    const ticketsFolder = followFolder(settings.ticketsFolder, from, to, "Tickets");
+    if (ticketsFolder === settings.ticketsFolder) return;
+    const next = { ...settings, ticketsFolder };
+    setSettings(next);
+    saveSettings(next);
+  };
   const renameFolderPath = async (folder: string) => {
     if (!vault) return;
     const title = await askName("Renommer le dossier", folder.slice(folder.lastIndexOf("/") + 1));
@@ -695,6 +718,7 @@ export function App() {
       await saveNow();
       const result = await renameFolder(vault, folder, title);
       if (result.path === folder) return;
+      followTicketsFolder(folder, result.path);
       await followMoves((p) => (p.startsWith(`${folder}/`) ? result.path + p.slice(folder.length) : p), result.updatedNotes);
       moveRecentPage(vault.name, folder, result.path);
       const others = result.updatedNotes.filter((p) => !p.startsWith(`${result.path}/`)).length;
@@ -712,6 +736,7 @@ export function App() {
       await saveNow();
       const result = item.folder ? await moveFolder(vault, item.path, target) : await movePage(vault, item.path, target);
       if (result.path === item.path) return;
+      if (item.folder) followTicketsFolder(item.path, result.path);
       const from = item.folder ? item.path : subpageFolder(item.path);
       const to = item.folder ? result.path : subpageFolder(result.path);
       await followMoves((p) => (p === item.path ? result.path : p.startsWith(`${from}/`) ? to + p.slice(from.length) : p), result.updatedNotes);
@@ -764,6 +789,7 @@ export function App() {
     if (noteRef.current?.path.startsWith(`${folder}/`)) await saveNow().catch(() => {});
     try {
       await vault.remove(folder);
+      followTicketsFolder(folder, null);
       setStatus("");
     } catch (error) {
       setStatus(String(error));
@@ -1112,12 +1138,15 @@ export function App() {
       setStatus(`Export PDF impossible : ${String(error)}`);
     }
   };
-  /** Copies the open note as HTML (for a mail or a document), its Markdown as plain text. */
+  /**
+   * Copies the open note as HTML (for a mail or a document), its Markdown as
+   * plain text. The clipboard is written right in the click: WebKit refuses a
+   * write that comes after an await.
+   */
   const copyAsHtml = async () => {
     const current = noteRef.current;
     if (!editor || !current) return;
     try {
-      const { copyNoteAsHtml } = await import("./editor/copyHtml");
       await copyNoteAsHtml(editor.state.doc, noteTitle(current.path), current.markdown);
       notify("Note copiée en HTML");
     } catch (error) {
@@ -1466,11 +1495,6 @@ export function App() {
                 onChange={(next) => {
                   setSettings(next);
                   saveSettings(next);
-                  // Notes are read again with or without the MkDocs syntax.
-                  if (next.mkdocs !== settings.mkdocs) {
-                    setMkdocsSyntax(next.mkdocs);
-                    setNote((n) => (n ? { ...n, loaded: n.markdown, reloads: (n.reloads ?? 0) + 1 } : n));
-                  }
                 }}
                 onChangeVault={changeVault}
               />
@@ -1564,6 +1588,7 @@ export function App() {
         <VaultSearch
           vault={vault}
           initialQuery={findRequest?.query ?? selectedText()}
+          iconOf={pageIconFor}
           onOpen={(hit, occurrence, query) => {
             setRawMode(false);
             void select(hit.path).then(() => setFindRequest({ query, occurrence, nonce: Date.now() }));

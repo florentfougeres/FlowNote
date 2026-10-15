@@ -39,16 +39,21 @@ fn git_binary() -> &'static str {
         .unwrap_or("git")
 }
 
-fn git(root: &str) -> Command {
+/// A git command in the vault `root` (checked: a folder holding `.obsidian`).
+fn git(root: &str) -> Result<Command, String> {
+    crate::vault::check_root(root)?;
     let mut cmd = Command::new(git_binary());
     cmd.arg("-C")
         .arg(root)
+        // A vault received with its .git folder could name a program to run on
+        // every `git status` (core.fsmonitor): never run it.
+        .args(["-c", "core.fsmonitor=false"])
         // Never wait for a credential prompt nobody can see.
         .env("GIT_TERMINAL_PROMPT", "0")
         // Read-only commands must not take the index lock (Obsidian Git may be running).
         .env("GIT_OPTIONAL_LOCKS", "0")
         .stdin(Stdio::null());
-    cmd
+    Ok(cmd)
 }
 
 fn run(mut cmd: Command, input: Option<&[u8]>, accepted_codes: &[i32]) -> Result<Output, String> {
@@ -124,13 +129,13 @@ pub fn parse_status(raw: &str, prefix: &str) -> GitStatus {
 }
 
 fn prefix(root: &str) -> Result<String, String> {
-    let mut cmd = git(root);
+    let mut cmd = git(root)?;
     cmd.args(["rev-parse", "--show-prefix"]);
     Ok(String::from_utf8_lossy(&run(cmd, None, &[])?.stdout).trim().to_string())
 }
 
 fn has_head(root: &str) -> bool {
-    let mut cmd = git(root);
+    let Ok(mut cmd) = git(root) else { return false };
     cmd.args(["rev-parse", "--verify", "-q", "HEAD"]);
     run(cmd, None, &[]).is_ok()
 }
@@ -138,11 +143,11 @@ fn has_head(root: &str) -> bool {
 #[tauri::command]
 pub fn git_status(root: String) -> Result<GitStatus, String> {
     let Ok(prefix) = prefix(&root) else { return Ok(GitStatus::default()) };
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     cmd.args(["status", "--porcelain=v2", "--branch", "-z", "--untracked-files=all"]);
     let output = run(cmd, None, &[])?;
     let mut status = parse_status(&String::from_utf8_lossy(&output.stdout), &prefix);
-    let mut merge_head = git(&root);
+    let mut merge_head = git(&root)?;
     merge_head.args(["rev-parse", "-q", "--verify", "MERGE_HEAD"]);
     status.merging = run(merge_head, None, &[]).is_ok();
     Ok(status)
@@ -153,7 +158,7 @@ pub fn git_status(root: String) -> Result<GitStatus, String> {
 #[tauri::command]
 pub fn git_diff(root: String, path: String, staged: bool, untracked: bool) -> Result<String, String> {
     check_path(&path)?;
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     if untracked {
         // Exit code 1 only means "files differ".
         cmd.args(["diff", "--no-color", "--no-ext-diff", "--no-index", "--", "/dev/null", &path]);
@@ -170,7 +175,7 @@ pub fn git_diff(root: String, path: String, staged: bool, untracked: bool) -> Re
 #[tauri::command]
 pub fn git_stage(root: String, paths: Vec<String>) -> Result<(), String> {
     paths.iter().try_for_each(|p| check_path(p))?;
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     cmd.args(["add", "-A", "--"]).args(&paths);
     run(cmd, None, &[]).map(|_| ())
 }
@@ -178,7 +183,7 @@ pub fn git_stage(root: String, paths: Vec<String>) -> Result<(), String> {
 #[tauri::command]
 pub fn git_unstage(root: String, paths: Vec<String>) -> Result<(), String> {
     paths.iter().try_for_each(|p| check_path(p))?;
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     if has_head(&root) {
         cmd.args(["restore", "--staged", "--"]).args(&paths);
     } else {
@@ -203,7 +208,7 @@ pub fn git_discard(root: String, paths: Vec<String>) -> Result<(), String> {
         status.files.iter().any(|f| &f.path == *p && f.index == "?")
     });
     if !tracked.is_empty() {
-        let mut cmd = git(&root);
+        let mut cmd = git(&root)?;
         cmd.args(["restore", "--worktree", "--"]).args(&tracked);
         run(cmd, None, &[])?;
     }
@@ -222,7 +227,7 @@ pub fn git_commit(root: String, message: String) -> Result<String, String> {
     if message.trim().is_empty() {
         return Err("Le message de commit est vide.".into());
     }
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     cmd.args(["commit", "-F", "-"]);
     let output = run(cmd, Some(message.as_bytes()), &[])?;
     Ok(String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").to_string())
@@ -273,7 +278,7 @@ pub fn parse_log(raw: &str, prefix: &str) -> Vec<GitCommit> {
 pub fn git_log(root: String, path: String, limit: Option<u32>) -> Result<Vec<GitCommit>, String> {
     check_path(&path)?;
     let prefix = prefix(&root)?;
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     cmd.args(["-c", "core.quotePath=false", "log", "--follow", "--name-status", "--no-color"])
         .arg(format!("-n{}", limit.unwrap_or(200)))
         .arg(format!("--format={RECORD}%H{FIELD}%h{FIELD}%an{FIELD}%aI{FIELD}%s"))
@@ -285,7 +290,7 @@ pub fn git_log(root: String, path: String, limit: Option<u32>) -> Result<Vec<Git
 /// Commits per day over the last `days` days (author dates), for the dashboard.
 #[tauri::command]
 pub fn git_activity(root: String, days: u32) -> Result<Vec<(String, u32)>, String> {
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     cmd.args(["log", "--no-color", "--date=short", "--format=%ad"]).arg(format!("--since={days} days ago"));
     let output = run(cmd, None, &[128])?;
     let mut counts: std::collections::BTreeMap<String, u32> = std::collections::BTreeMap::new();
@@ -304,7 +309,7 @@ pub fn git_last_commit(root: String) -> Result<Option<GitCommit>, String> {
     if !has_head(&root) {
         return Ok(None);
     }
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     cmd.args(["log", "-1", "--no-color"]).arg(format!("--format=%H{FIELD}%h{FIELD}%an{FIELD}%aI{FIELD}%s"));
     let output = run(cmd, None, &[])?;
     let text = String::from_utf8_lossy(&output.stdout);
@@ -322,7 +327,7 @@ pub fn git_show(root: String, hash: String, path: String) -> Result<String, Stri
     if !hash.chars().all(|c| c.is_ascii_hexdigit()) {
         return Err("Identifiant de commit invalide.".into());
     }
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     cmd.arg("show").arg(format!("{hash}:./{path}"));
     Ok(String::from_utf8_lossy(&run(cmd, None, &[])?.stdout).into_owned())
 }
@@ -335,7 +340,7 @@ fn combined_output(output: &Output) -> String {
 /// Updates the remote-tracking branches (for the behind counter).
 #[tauri::command]
 pub fn git_fetch(root: String) -> Result<(), String> {
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     cmd.args(["fetch", "--quiet"]);
     run(cmd, None, &[]).map(|_| ())
 }
@@ -344,7 +349,7 @@ pub fn git_fetch(root: String) -> Result<(), String> {
 /// starting with "CONFLICT:" and leaves the merge in progress.
 #[tauri::command]
 pub fn git_pull(root: String) -> Result<String, String> {
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     cmd.args(["pull", "--no-rebase", "--no-edit"]);
     match run(cmd, None, &[]) {
         Ok(output) => Ok(combined_output(&output)),
@@ -363,7 +368,7 @@ pub fn git_pull(root: String) -> Result<String, String> {
 #[tauri::command]
 pub fn git_push(root: String) -> Result<String, String> {
     let status = git_status(root.clone())?;
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     if status.upstream.is_some() {
         cmd.arg("push");
     } else {
@@ -389,7 +394,7 @@ pub struct ConflictVersions {
 }
 
 fn stage_content(root: &str, stage: u8, path: &str) -> Option<String> {
-    let mut cmd = git(root);
+    let mut cmd = git(root).ok()?;
     cmd.arg("show").arg(format!(":{stage}:./{path}"));
     run(cmd, None, &[]).ok().map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
 }
@@ -421,7 +426,7 @@ pub fn git_conflict(root: String, path: String) -> Result<ConflictVersions, Stri
 pub fn git_resolve(root: String, path: String, content: Option<String>) -> Result<(), String> {
     ensure_conflicted(&root, &path)?;
     let file = Path::new(&root).join(&path);
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     match content {
         Some(text) => {
             if let Some(parent) = file.parent() {
@@ -448,7 +453,7 @@ pub fn git_merge_continue(root: String) -> Result<String, String> {
     if remaining > 0 {
         return Err(format!("Il reste {remaining} fichier(s) en conflit."));
     }
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     cmd.args(["commit", "--no-edit"]);
     let output = run(cmd, None, &[])?;
     Ok(String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").to_string())
@@ -457,7 +462,7 @@ pub fn git_merge_continue(root: String) -> Result<String, String> {
 /// Abandons the merge and restores the state before it.
 #[tauri::command]
 pub fn git_merge_abort(root: String) -> Result<(), String> {
-    let mut cmd = git(&root);
+    let mut cmd = git(&root)?;
     cmd.args(["merge", "--abort"]);
     run(cmd, None, &[]).map(|_| ())
 }
@@ -467,12 +472,19 @@ mod tests {
     use super::*;
     use std::fs;
 
+    /// Git in a test folder, without the vault check (bare remotes have no `.obsidian`).
+    fn test_git(root: &str) -> Command {
+        let mut cmd = Command::new(git_binary());
+        cmd.arg("-C").arg(root).env("GIT_TERMINAL_PROMPT", "0").stdin(Stdio::null());
+        cmd
+    }
+
     fn repo(name: &str) -> (std::path::PathBuf, String) {
         let dir = std::env::temp_dir().join(format!("flownote-git-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
+        fs::create_dir_all(dir.join(".obsidian")).unwrap();
         let root = dir.to_string_lossy().into_owned();
-        let mut cmd = git(&root);
+        let mut cmd = test_git(&root);
         cmd.args(["init", "-q", "-b", "main"]);
         run(cmd, None, &[]).unwrap();
         configure(&root);
@@ -483,7 +495,7 @@ mod tests {
     /// sign with GPG, which fails when tests commit in parallel.
     fn configure(root: &str) {
         for args in [["config", "user.email", "test@example.com"], ["config", "user.name", "Test"], ["config", "commit.gpgsign", "false"], ["config", "tag.gpgsign", "false"]] {
-            let mut cmd = git(root);
+            let mut cmd = test_git(root);
             cmd.args(args);
             run(cmd, None, &[]).unwrap();
         }
@@ -574,7 +586,7 @@ mod tests {
     }
 
     fn commit_all(root: &str, message: &str) {
-        let mut cmd = git(root);
+        let mut cmd = test_git(root);
         cmd.args(["add", "-A"]);
         run(cmd, None, &[]).unwrap();
         git_commit(root.into(), message.into()).unwrap();
@@ -587,7 +599,7 @@ mod tests {
         commit_all(&root, "Création");
         fs::write(dir.join("Brouillon.md"), "v2\n").unwrap();
         commit_all(&root, "Deuxième version");
-        let mut cmd = git(&root);
+        let mut cmd = test_git(&root);
         cmd.args(["mv", "Brouillon.md", "Idées é.md"]);
         run(cmd, None, &[]).unwrap();
         git_commit(root.clone(), "Renommage".into()).unwrap();
@@ -611,10 +623,11 @@ mod tests {
         let mut cmd = Command::new(git_binary());
         cmd.args(["clone", "-q", &remote, clone_dir.to_str().unwrap()]);
         run(cmd, None, &[]).unwrap();
+        fs::create_dir_all(clone_dir.join(".obsidian")).unwrap();
         let clone = clone_dir.to_string_lossy().into_owned();
         configure(&clone);
         // Accept pushes to the checked-out branch of the non-bare test remote.
-        let mut cmd = git(&remote);
+        let mut cmd = test_git(&remote);
         cmd.args(["config", "receive.denyCurrentBranch", "updateInstead"]);
         run(cmd, None, &[]).unwrap();
 
@@ -653,18 +666,18 @@ mod tests {
         fs::write(dir.join("autre.md"), "x\n").unwrap();
         commit_all(&root, "Base");
         for args in [vec!["checkout", "-q", "-b", "eux"]] {
-            let mut cmd = git(&root);
+            let mut cmd = test_git(&root);
             cmd.args(args);
             run(cmd, None, &[]).unwrap();
         }
         fs::write(dir.join("note.md"), "titre\nleur ligne\nfin\n").unwrap();
         commit_all(&root, "Eux");
-        let mut cmd = git(&root);
+        let mut cmd = test_git(&root);
         cmd.args(["checkout", "-q", "main"]);
         run(cmd, None, &[]).unwrap();
         fs::write(dir.join("note.md"), "titre\nma ligne\nfin\n").unwrap();
         commit_all(&root, "Moi");
-        let mut cmd = git(&root);
+        let mut cmd = test_git(&root);
         cmd.args(["merge", "eux"]);
         assert!(run(cmd, None, &[]).is_err());
         (dir, root)

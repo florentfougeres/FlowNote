@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { reportError } from "./errors";
 import { keys } from "./keys";
 import { Icon } from "./Icon";
 import { PAGE_KINDS, kindIconClass, type PageKind } from "./pageKinds";
@@ -149,7 +150,7 @@ export function Dashboard({
       setStats(computeStats(notes, files));
       setTodo(agenda(notes));
       setTickets(ticketsOf(notes));
-    })().catch(() => {});
+    })().catch(reportError);
     return () => {
       cancelled = true;
     };

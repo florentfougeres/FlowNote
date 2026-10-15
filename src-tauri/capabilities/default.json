@@ -7,7 +7,6 @@
   ],
   "permissions": [
     "core:default",
-    "dialog:allow-open",
     "dialog:allow-save",
     "core:window:allow-start-dragging",
     "core:window:allow-set-fullscreen",

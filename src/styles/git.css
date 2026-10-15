@@ -757,61 +757,6 @@ button.danger {
   color: var(--muted);
 }
 
-.switcher {
-  width: 560px;
-  padding: 8px;
-}
-
-.switcher input {
-  font-size: 16px;
-  padding: 10px 12px;
-  border: none;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  outline: none;
-}
-
-.switcher-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: 50vh;
-  overflow: auto;
-}
-
-.switcher-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-/* Page icons (emoji or line icon) in one centered column. */
-.switcher-icon {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  color: var(--muted);
-}
-
-.switcher-list li.active {
-  background: var(--hover);
-}
-
-.switcher-folder {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.switcher-empty {
-  color: var(--muted);
-}
-
 .shortcuts table {
   border-collapse: collapse;
   font-size: 14px;

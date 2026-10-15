@@ -18,4 +18,12 @@ describe("vault search", () => {
   it("matches accents literally", () => {
     expect(matchesIn("Idées et idees", "idées", false)).toEqual([[0, 5]]);
   });
+
+  it("finds the words of a drawing, not its data", async () => {
+    const vault = createMemoryVault("Test", {
+      "Croquis.excalidraw.md": '---\nexcalidraw-plugin: parsed\n---\n==⚠ Dessin FlowNote / Excalidraw ==\n\n## Text Elements\nUne note ^abc\n\n%%\n```json\n{\n  "text": "Une note",\n  "id": "note"\n}\n```\n%%\n',
+    });
+    const hits = await searchVault(vault, "note");
+    expect(hits.map((h) => h.text)).toEqual(["Une note ^abc"]);
+  });
 });

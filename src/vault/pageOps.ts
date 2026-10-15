@@ -1,3 +1,4 @@
+import { isMap, isScalar, isSeq, parseDocument } from "yaml";
 import { dirname, renamePlan, rewriteLinks, sanitizeName, subpageFolder } from "./links";
 import type { Vault } from "./vault";
 
@@ -32,7 +33,9 @@ export async function renamePage(vault: Vault, oldPath: string, title: string): 
   const oldFolder = subpageFolder(oldPath);
   if (filesBefore.some((f) => f.startsWith(`${oldFolder}/`))) await vault.rename(oldFolder, subpageFolder(newPath));
 
-  return { path: newPath, updatedNotes: await updateLinks(vault, filesBefore, filesAfter, renames) };
+  const updatedNotes = await updateLinks(vault, filesBefore, filesAfter, renames);
+  updatedNotes.push(...(await retargetRowOrders(vault, filesAfter, renames)));
+  return { path: newPath, updatedNotes: [...new Set(updatedNotes)] };
 }
 
 /** Rewrites the links of every note after `renames`; returns the notes changed. */
@@ -77,7 +80,8 @@ async function relocateFolder(vault: Vault, folder: string, newFolder: string): 
   await vault.rename(folder, newFolder);
   const updatedNotes = await updateLinks(vault, filesBefore, filesAfter, renames);
   updatedNotes.push(...(await retargetBases(vault, filesAfter, folder, newFolder)));
-  return { path: newFolder, updatedNotes };
+  updatedNotes.push(...(await retargetRowOrders(vault, filesAfter, renames)));
+  return { path: newFolder, updatedNotes: [...new Set(updatedNotes)] };
 }
 
 /**
@@ -100,7 +104,8 @@ export async function movePage(vault: Vault, path: string, target: string): Prom
   if (hasSubpages) await vault.rename(oldFolder, subpageFolder(newPath));
   const updatedNotes = await updateLinks(vault, filesBefore, filesAfter, renames);
   updatedNotes.push(...(await retargetBases(vault, filesAfter, oldFolder, subpageFolder(newPath))));
-  return { path: newPath, updatedNotes };
+  updatedNotes.push(...(await retargetRowOrders(vault, filesAfter, renames)));
+  return { path: newPath, updatedNotes: [...new Set(updatedNotes)] };
 }
 
 /** Bases whose folder filter pointed into `folder`, pointed to `newFolder`; returns them. */
@@ -128,6 +133,44 @@ export function retargetBaseFolders(content: string, folder: string, newFolder: 
     .join(`file.inFolder(${quoted(newFolder)}/`);
 }
 
+/**
+ * A base's manual row order (`rowOrder` of its views, a list of note paths)
+ * after `renames`; edited through the YAML document, so keys and comments
+ * FlowNote does not know are kept.
+ */
+export function retargetRowOrder(content: string, renames: Map<string, string>): string {
+  if (!content.includes("rowOrder")) return content;
+  const doc = parseDocument(content);
+  const views = doc.get("views");
+  if (!isSeq(views)) return content;
+  let changed = false;
+  for (const view of views.items) {
+    const order = isMap(view) ? view.get("rowOrder") : null;
+    if (!isSeq(order)) continue;
+    order.items.forEach((item, i) => {
+      const value = isScalar(item) ? item.value : item;
+      const moved = typeof value === "string" ? renames.get(value) : undefined;
+      if (moved === undefined) return;
+      order.set(i, moved);
+      changed = true;
+    });
+  }
+  return changed ? doc.toString() : content;
+}
+
+/** Bases whose manual row order named moved notes, rewritten; returns them. */
+async function retargetRowOrders(vault: Vault, files: string[], renames: Map<string, string>): Promise<string[]> {
+  const changed: string[] = [];
+  for (const base of files.filter((f) => f.endsWith(".base"))) {
+    const content = await vault.read(base);
+    const next = retargetRowOrder(content, renames);
+    if (next === content) continue;
+    await vault.write(base, next, content);
+    changed.push(base);
+  }
+  return changed;
+}
+
 /** Sub-pages that would be deleted with a page. */
 export function subpagesOf(path: string, files: string[]): string[] {
   const folder = `${subpageFolder(path)}/`;
@@ -151,4 +194,14 @@ export async function deletePage(vault: Vault, path: string, files: string[]): P
     }
   }
   if (errors.length) throw new Error(`Suppression incomplète. ${errors.join(" ; ")}`);
+}
+
+/**
+ * Where a folder setting (the tickets folder) points after `from` moved to
+ * `to` (null: deleted, back to `fallback`); unchanged when `from` is neither
+ * the folder nor one of its parents.
+ */
+export function followFolder(setting: string, from: string, to: string | null, fallback: string): string {
+  if (!setting || !(setting === from || setting.startsWith(`${from}/`))) return setting;
+  return to === null ? fallback : to + setting.slice(from.length);
 }

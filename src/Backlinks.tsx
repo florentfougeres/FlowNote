@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { reportError } from "./errors";
 import { Icon } from "./Icon";
 import { backlinksTo, linkMention, unlinkedMentions, type Backlink, type Mention } from "./vault/backlinks";
 import { linkTextFor, noteTitle } from "./vault/links";
@@ -54,7 +55,7 @@ export function Backlinks({
     setError(null);
     void load()
       .then((result) => !cancelled && setFound(result))
-      .catch(() => {});
+      .catch(reportError);
     return () => {
       cancelled = true;
     };

@@ -1,10 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Icon } from "./Icon";
 import type { Vault } from "./vault/vault";
 import { matchesIn, searchVault, SEARCH_LIMIT, type SearchHit } from "./vault/search";
 import { noteTitle } from "./vault/links";
 
 /** ⌘⇧F: full-text search in every note of the vault. */
-export function VaultSearch({ vault, initialQuery, onOpen, onClose }: { vault: Vault; initialQuery: string; onOpen: (hit: SearchHit, occurrence: number, query: string) => void; onClose: () => void }) {
+export function VaultSearch({
+  vault,
+  initialQuery,
+  iconOf,
+  onOpen,
+  onClose,
+}: {
+  vault: Vault;
+  initialQuery: string;
+  /** Icon of a page: its emoji, or the icon of its kind. */
+  iconOf: (path: string) => ReactNode;
+  onOpen: (hit: SearchHit, occurrence: number, query: string) => void;
+  onClose: () => void;
+}) {
   const [query, setQuery] = useState(initialQuery);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [hits, setHits] = useState<SearchHit[]>([]);
@@ -54,7 +68,8 @@ export function VaultSearch({ vault, initialQuery, onOpen, onClose }: { vault: V
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal switcher vault-search" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="vault-search-field">
+        <div className="switcher-field">
+          <Icon name="search" size={16} />
           <input
             autoFocus
             placeholder="Rechercher dans toutes les notes…"
@@ -71,17 +86,15 @@ export function VaultSearch({ vault, initialQuery, onOpen, onClose }: { vault: V
             }}
             spellCheck={false}
           />
-          <button className={caseSensitive ? "find-option active" : "find-option"} onClick={() => setCaseSensitive(!caseSensitive)} title="Respecter la casse" aria-pressed={caseSensitive}>
+          <button className={caseSensitive ? "switcher-option active" : "switcher-option"} onClick={() => setCaseSensitive(!caseSensitive)} title="Respecter la casse" aria-pressed={caseSensitive}>
             Aa
           </button>
-        </div>
-        <div className="search-summary">
-          {searching ? "Recherche…" : query.trim() ? `${hits.length >= SEARCH_LIMIT ? `${SEARCH_LIMIT}+` : hits.length} résultat${hits.length > 1 ? "s" : ""} dans ${groups.length} note${groups.length > 1 ? "s" : ""}` : ""}
         </div>
         <div ref={list} className="switcher-list search-results">
           {groups.map(([path, entries]) => (
             <section key={path}>
               <header>
+                <span className="switcher-icon">{iconOf(path)}</span>
                 <span className="switcher-title">{noteTitle(path)}</span>
                 <span className="switcher-folder">{path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : ""}</span>
               </header>
@@ -95,6 +108,18 @@ export function VaultSearch({ vault, initialQuery, onOpen, onClose }: { vault: V
           ))}
           {!searching && query.trim() && hits.length === 0 && <div className="switcher-empty">Aucun résultat.</div>}
         </div>
+        <footer className="switcher-footer">
+          <span className="name-dialog-hint">
+            <kbd>↑↓</kbd> naviguer <kbd>↵</kbd> ouvrir <kbd>esc</kbd> fermer
+          </span>
+          <span>
+            {searching
+              ? "Recherche…"
+              : query.trim()
+                ? `${hits.length >= SEARCH_LIMIT ? `${SEARCH_LIMIT}+` : hits.length} résultat${hits.length > 1 ? "s" : ""} dans ${groups.length} note${groups.length > 1 ? "s" : ""}`
+                : ""}
+          </span>
+        </footer>
       </div>
     </div>
   );

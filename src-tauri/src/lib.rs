@@ -70,6 +70,7 @@ pub fn run() {
       web::save_export,
       web::open_export,
       startup_note,
+      vault::vault_pick,
       vault::vault_tree,
       vault::vault_stats,
       vault::vault_read,
@@ -105,6 +106,10 @@ pub fn run() {
       git::git_last_commit
     ])
     .setup(|app| {
+      use tauri::Manager;
+      if let Ok(dir) = app.path().app_data_dir() {
+        vault::load_trusted(dir.join("trusted-vaults.json"));
+      }
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()

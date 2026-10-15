@@ -39,8 +39,7 @@
 
 /* Borderless editors keep no focus ring. */
 .raw-editor textarea:focus,
-.switcher input:focus,
-.vault-search-field input:focus {
+.switcher-field input:focus {
   box-shadow: none;
 }
 

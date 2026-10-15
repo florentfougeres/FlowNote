@@ -128,7 +128,9 @@ let marp: Marp | null = null;
  * (scaled by SlideFrame in the app, by a script in the HTML export).
  */
 export function renderSlides(markdown: string): RenderedSlides {
-  marp ??= new Marp({ inlineSVG: false, script: false, math: "katex" }).use(calloutsPlugin as never);
+  // Emoji stay the system's: Marp's default turns them into Twemoji images
+  // fetched from a CDN (network at each display, missing offline).
+  marp ??= new Marp({ inlineSVG: false, script: false, math: "katex", emoji: { shortcode: true, unicode: false } }).use(calloutsPlugin as never);
   const { html, css, comments } = marp.render(forMarp(markdown), { htmlAsArray: true });
   return { slides: html, css: css + CALLOUT_CSS, notes: comments.map((list) => list.join("\n\n").trim()) };
 }

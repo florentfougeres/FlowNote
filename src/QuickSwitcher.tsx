@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { linkItems, type LinkItem } from "./editor/wikilinks";
+import { Icon } from "./Icon";
+import { keys } from "./keys";
 
 /** Cmd+P / Cmd+K: open a note by name, or create it. */
 export function QuickSwitcher({
@@ -36,20 +38,23 @@ export function QuickSwitcher({
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal switcher" onMouseDown={(e) => e.stopPropagation()}>
-        <input
-          autoFocus
-          placeholder="Rechercher une page…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowDown") setIndex((i) => Math.min(i + 1, items.length - 1));
-            else if (e.key === "ArrowUp") setIndex((i) => Math.max(i - 1, 0));
-            else if (e.key === "Enter") choose(items[index]);
-            else if (e.key === "Escape") onClose();
-            else return;
-            e.preventDefault();
-          }}
-        />
+        <div className="switcher-field">
+          <Icon name="search" size={16} />
+          <input
+            autoFocus
+            placeholder="Rechercher une page…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown") setIndex((i) => Math.min(i + 1, items.length - 1));
+              else if (e.key === "ArrowUp") setIndex((i) => Math.max(i - 1, 0));
+              else if (e.key === "Enter") choose(items[index]);
+              else if (e.key === "Escape") onClose();
+              else return;
+              e.preventDefault();
+            }}
+          />
+        </div>
         <ul ref={list} className="switcher-list">
           {items.map((item, i) => (
             <li key={item.key} className={i === index ? "active" : ""} onMouseEnter={() => setIndex(i)} onMouseDown={() => choose(item)}>
@@ -60,6 +65,12 @@ export function QuickSwitcher({
           ))}
           {items.length === 0 && <li className="switcher-empty">Aucune page.</li>}
         </ul>
+        <footer className="switcher-footer">
+          <span className="name-dialog-hint">
+            <kbd>↑↓</kbd> naviguer <kbd>↵</kbd> ouvrir <kbd>esc</kbd> fermer
+          </span>
+          <span>{keys("⌘⇧F")} : chercher dans le texte</span>
+        </footer>
       </div>
     </div>
   );

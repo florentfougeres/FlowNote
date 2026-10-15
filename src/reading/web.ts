@@ -1,9 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
+import { reportError } from "../errors";
 import { isTauri } from "../vault/tauriVault";
 
 /** Opens a web link in the default browser. */
 export function openUrl(url: string) {
-  if (isTauri()) void invoke("open_url", { url }).catch(() => {});
+  if (isTauri()) void invoke("open_url", { url }).catch(reportError);
   else window.open(url, "_blank", "noopener,noreferrer");
 }
 

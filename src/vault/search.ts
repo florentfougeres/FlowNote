@@ -1,3 +1,5 @@
+import { isDrawingPath } from "../drawing/format";
+import { isMindmapPath } from "../mindmap/format";
 import type { Vault } from "./vault";
 
 /** One occurrence of the query in a note. */
@@ -25,8 +27,18 @@ export function matchesIn(text: string, query: string, caseSensitive: boolean): 
   return found;
 }
 
+/**
+ * In a drawing or a mind map, the data (JSON lines, the warning shown to
+ * Obsidian without the plugin) is not text to find: only their words are.
+ */
+function isDataLine(path: string, text: string): boolean {
+  if (!isDrawingPath(path) && !isMindmapPath(path)) return false;
+  const line = text.trim();
+  return /^["{}[\]]/.test(line) || line.startsWith("==⚠") || line.startsWith("```");
+}
+
 function hitsOf(path: string, lines: [number, string][], query: string, caseSensitive: boolean): SearchHit[] {
-  return lines.flatMap(([line, text]) => matchesIn(text, query, caseSensitive).map(([from, to]) => ({ path, line, text, from, to })));
+  return lines.filter(([, text]) => !isDataLine(path, text)).flatMap(([line, text]) => matchesIn(text, query, caseSensitive).map(([from, to]) => ({ path, line, text, from, to })));
 }
 
 /** Searches every note of the vault; results grouped by file, in path order. */

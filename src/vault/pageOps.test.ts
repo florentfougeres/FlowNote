@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createMemoryVault } from "./vault";
-import { deletePage, moveFolder, movePage, renameFolder, renamePage, retargetBaseFolders, subpagesOf } from "./pageOps";
+import { deletePage, followFolder, moveFolder, movePage, renameFolder, renamePage, retargetBaseFolders, retargetRowOrder, subpagesOf } from "./pageOps";
 
 function vault() {
   return createMemoryVault("Test", {
@@ -141,5 +141,34 @@ describe("moving", () => {
     expect((await v.files()).sort()).toContain("Archives/Projets/Mon Notion/Stack.md");
     await moveFolder(v, "Archives/Projets", "");
     expect((await v.files()).sort()).toContain("Projets/Mon Notion.md");
+  });
+});
+
+describe("followFolder", () => {
+  it("follows the folder or a parent, and falls back when it is deleted", () => {
+    expect(followFolder("Tickets", "Tickets", "Suivi", "Tickets")).toBe("Suivi");
+    expect(followFolder("Projets/Tickets", "Projets", "Archives/Projets", "Tickets")).toBe("Archives/Projets/Tickets");
+    expect(followFolder("Projets/Tickets", "Proj", "X", "Tickets")).toBe("Projets/Tickets");
+    expect(followFolder("Suivi", "Suivi", null, "Tickets")).toBe("Tickets");
+    expect(followFolder("", "Suivi", "X", "Tickets")).toBe("");
+  });
+});
+
+describe("retargetRowOrder", () => {
+  const base = 'filters:\n  and:\n    - file.inFolder("Projets")\nviews:\n  - type: table\n    name: Tableau\n    # ordre choisi à la main\n    rowOrder:\n      - Projets/B.md\n      - Projets/A.md\n';
+
+  it("renames the moved notes in the manual order, comments kept", () => {
+    const next = retargetRowOrder(base, new Map([["Projets/A.md", "Projets/Alpha.md"]]));
+    expect(next).toContain("# ordre choisi à la main");
+    expect(next).toContain("- Projets/Alpha.md");
+    expect(next).not.toContain("Projets/A.md");
+    expect(retargetRowOrder(base, new Map([["Autre.md", "X.md"]]))).toBe(base);
+  });
+
+  it("follows a page rename in the vault", async () => {
+    const v = createMemoryVault("Test", { "Projets.base": base, "Projets/A.md": "", "Projets/B.md": "" });
+    const result = await renamePage(v, "Projets/A.md", "Alpha");
+    expect(await v.read("Projets.base")).toContain("- Projets/Alpha.md");
+    expect(result.updatedNotes).toContain("Projets.base");
   });
 });

@@ -73,33 +73,13 @@ const Callout = Node.create({
   group: "block",
   content: "calloutTitle block*",
   defining: true,
-  // `syntax: "mkdocs"`: a MkDocs Material admonition (`!!! type "Title"`), written back as such.
-  addAttributes: attrs({ calloutType: "note", fold: "", compact: false, syntax: "", modifiers: "", explicitTitle: false, spaced: false }),
+  addAttributes: attrs({ calloutType: "note", fold: "", compact: false }),
   parseHTML: () => [{ tag: "div.callout" }],
   renderHTML: ({ node }) => [
     "div",
     { class: "callout", "data-callout": String(node.attrs.calloutType).toLowerCase(), "data-fold": node.attrs.fold || null },
     0,
   ],
-});
-
-/** MkDocs Material content tabs: `=== "Title"` blocks, each with an indented body. */
-const Tabs = Node.create({
-  name: "tabs",
-  group: "block",
-  content: "tab+",
-  defining: true,
-  parseHTML: () => [{ tag: "div.content-tabs" }],
-  renderHTML: () => ["div", { class: "content-tabs" }, 0],
-});
-
-const Tab = Node.create({
-  name: "tab",
-  content: "block+",
-  defining: true,
-  addAttributes: attrs({ title: "", marker: "===", spaced: true }),
-  parseHTML: () => [{ tag: "div.content-tab" }],
-  renderHTML: ({ node }) => ["div", { class: "content-tab", "data-title": node.attrs.title }, 0],
 });
 
 const CalloutTitle = Node.create({
@@ -282,8 +262,6 @@ export const documentExtensions: AnyExtension[] = [
   Blockquote,
   Callout,
   CalloutTitle,
-  Tabs,
-  Tab,
   List,
   ListItem,
   RawBlock,

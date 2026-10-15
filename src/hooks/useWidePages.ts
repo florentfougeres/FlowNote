@@ -11,6 +11,14 @@ function read(): Set<string> {
   }
 }
 
+function save(paths: Set<string>) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify([...paths]));
+  } catch {
+    // not remembered
+  }
+}
+
 /**
  * Pages shown at full width, like Notion's "Full width": remembered by FlowNote
  * (by path), the notes themselves are not changed.
@@ -21,13 +29,18 @@ export function useWidePages() {
     setWide((current) => {
       const next = new Set(current);
       if (!next.delete(path)) next.add(path);
-      try {
-        localStorage.setItem(KEY, JSON.stringify([...next]));
-      } catch {
-        // not remembered
-      }
+      save(next);
       return next;
     });
   }, []);
-  return [wide, toggle] as const;
+  /** After a rename or a move: the pages keep their width at their new path. */
+  const follow = useCallback((moved: (path: string) => string) => {
+    setWide((current) => {
+      const next = new Set([...current].map(moved));
+      if ([...next].every((p) => current.has(p))) return current;
+      save(next);
+      return next;
+    });
+  }, []);
+  return [wide, toggle, follow] as const;
 }

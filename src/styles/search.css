@@ -43,24 +43,25 @@
   gap: 2px;
 }
 
+/* Soft fields, like the search dialogs: no frame, a light ring when focused. */
 .find-row input {
   flex: 1;
   min-width: 0;
   font-size: 13px;
-  padding: 4px 8px;
-  border: 1px solid var(--border);
+  padding: 5px 8px;
+  border: none;
   border-radius: 6px;
-  background: var(--bg);
+  background: var(--hover);
+  color: var(--text);
   outline: none;
 }
 
 .find-row input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 2px var(--accent-line);
 }
 
-.find-row button,
-.vault-search-field button {
+.find-row button {
   border: none;
   background: transparent;
   box-shadow: none;
@@ -75,8 +76,7 @@
   font-size: 14px;
 }
 
-.find-row button:hover:not(:disabled),
-.vault-search-field button:hover {
+.find-row button:hover:not(:disabled) {
   background: var(--hover);
   color: var(--text);
 }
@@ -85,19 +85,24 @@
   opacity: 0.35;
 }
 
-.find-row .find-text {
-  font-size: 12px;
+/* "Remplacer", "Tout" and "Aa": small framed buttons, like the search dialogs' option. */
+.find-row .find-text,
+.find-row .find-option {
+  margin-left: 4px;
   padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
 }
 
-.find-option {
-  font-size: 12px !important;
+.find-row .find-option {
   font-weight: 600;
 }
 
-.find-option.active {
-  background: var(--accent-soft) !important;
-  color: var(--accent) !important;
+.find-row .find-option.active {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .find-toggle-spacer {
@@ -114,73 +119,177 @@
   padding-right: 4px;
 }
 
-/* ---- Vault search (⌘⇧F) ---- */
+/* ---- Search dialogs: pages (⌘P) and text (⌘⇧F) ---- */
 
-.vault-search {
-  width: min(680px, 92vw);
+/*
+ * Same material as the other dialogs and menus: the field sits on the dialog
+ * itself (no second card), results below, keyboard hints at the bottom like
+ * the "Nouvelle page" dialog.
+ */
+.modal.switcher {
+  width: min(600px, calc(100vw - 32px));
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
 }
 
-.vault-search-field {
+.modal.switcher.vault-search {
+  width: min(680px, calc(100vw - 32px));
+}
+
+.switcher-field {
   display: flex;
   align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
-}
-
-.vault-search-field input {
-  flex: 1;
-  border-bottom: none !important;
-}
-
-.search-summary {
-  font-size: 12px;
   color: var(--muted);
-  padding: 0 10px;
-  min-height: 16px;
 }
 
-.search-results {
-  max-height: 60vh;
+.modal .switcher-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
 }
 
+.switcher-field input::placeholder {
+  color: var(--faint);
+}
+
+.switcher-option {
+  flex: none;
+  height: 24px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font: 600 12px var(--font-ui);
+  cursor: pointer;
+}
+
+.switcher-option:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.switcher-option.active {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.switcher-list {
+  margin: 0;
+  padding: 6px;
+  max-height: min(52vh, 460px);
+  overflow: auto;
+  list-style: none;
+}
+
+.switcher-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.switcher-list li.active,
+.search-hit.active {
+  background: var(--selected);
+}
+
+/* Page icons (emoji or line icon) in one centered column. */
+.switcher-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  color: var(--muted);
+}
+
+.switcher-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.switcher-folder {
+  flex: none;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.switcher-empty {
+  padding: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.switcher-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 18px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+/* Text search: results grouped by note, each line under its page. */
 .search-results section > header {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 8px 10px 2px;
-  font-weight: 600;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 3px;
   font-size: 13px;
+  font-weight: 600;
+}
+
+.search-results section + section {
+  margin-top: 4px;
 }
 
 .search-hit {
   display: flex;
   gap: 10px;
-  padding: 4px 10px;
+  padding: 4px 10px 4px 38px;
   border-radius: 6px;
-  cursor: pointer;
   font-size: 13px;
-}
-
-.search-hit.active {
-  background: var(--hover);
+  cursor: pointer;
 }
 
 .search-line {
   flex: none;
-  min-width: 28px;
-  text-align: right;
+  min-width: 24px;
   color: var(--faint);
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
 .search-excerpt {
-  color: var(--muted);
-  white-space: nowrap;
   overflow: hidden;
+  color: var(--muted);
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .search-excerpt mark {
+  border-radius: 2px;
   background: var(--highlight);
   color: var(--text);
-  border-radius: 2px;
 }

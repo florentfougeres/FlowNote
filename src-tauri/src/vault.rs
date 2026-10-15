@@ -4,7 +4,9 @@
 
 use serde::Serialize;
 use std::fs;
+use std::collections::HashSet;
 use std::path::{Component, Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 #[derive(Serialize)]
 pub struct VaultEntry {
@@ -66,9 +68,71 @@ fn is_hidden(name: &str) -> bool {
     name.starts_with('.') || name == "node_modules"
 }
 
+/// Folders chosen by the user in the folder picker (`vault_pick`), kept in the
+/// app's data folder: a new vault (no `.obsidian` yet) opens again later.
+struct Trusted {
+    file: Option<PathBuf>,
+    roots: HashSet<String>,
+}
+
+fn trusted() -> &'static Mutex<Trusted> {
+    static TRUSTED: OnceLock<Mutex<Trusted>> = OnceLock::new();
+    TRUSTED.get_or_init(|| Mutex::new(Trusted { file: None, roots: HashSet::new() }))
+}
+
+/// Reads the folders trusted in an earlier session (called at startup).
+pub fn load_trusted(file: PathBuf) {
+    let roots: Vec<String> = fs::read_to_string(&file).ok().and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default();
+    let mut state = trusted().lock().unwrap_or_else(|e| e.into_inner());
+    state.roots.extend(roots);
+    state.file = Some(file);
+}
+
+fn trust(root: &str) {
+    let mut state = trusted().lock().unwrap_or_else(|e| e.into_inner());
+    if !state.roots.insert(root.to_string()) {
+        return;
+    }
+    if let Some(file) = &state.file {
+        let mut roots: Vec<&String> = state.roots.iter().collect();
+        roots.sort();
+        if let Some(parent) = file.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        let _ = fs::write(file, serde_json::to_string_pretty(&roots).unwrap_or_default());
+    }
+}
+
+/// The root of a vault the app works in: an absolute folder that is an
+/// Obsidian vault (it holds `.obsidian`) or that the user chose in the folder
+/// picker. Every command checks it, so that the commands only reach inside a
+/// vault (never the home folder), whatever the page asks for.
+pub fn check_root(root: &str) -> Result<&Path, String> {
+    let path = Path::new(root);
+    let known = path.join(".obsidian").is_dir() || trusted().lock().map(|t| t.roots.contains(root)).unwrap_or(false);
+    if path.is_absolute() && path.is_dir() && known {
+        Ok(path)
+    } else {
+        Err(format!("Dossier non autorisé : {root}. Choisissez-le avec « Ouvrir un vault »."))
+    }
+}
+
+/// The folder picker for a vault. The chosen folder is trusted: it opens even
+/// when it is not an Obsidian vault yet. Picked natively here, so the page
+/// cannot add a folder of its choice.
+#[tauri::command]
+pub async fn vault_pick(app: tauri::AppHandle) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+    let picked = app.dialog().file().set_title("Choisir un vault Obsidian").blocking_pick_folder()?;
+    let root = picked.into_path().ok()?.to_string_lossy().into_owned();
+    trust(&root);
+    Some(root)
+}
+
 /// Resolves a vault-relative path, refusing anything that escapes the root or
 /// goes through a hidden folder.
 fn resolve(root: &str, relative: &str) -> Result<PathBuf, String> {
+    let base = check_root(root)?;
     let rel = Path::new(relative);
     for component in rel.components() {
         match component {
@@ -76,7 +140,7 @@ fn resolve(root: &str, relative: &str) -> Result<PathBuf, String> {
             _ => return Err(format!("Chemin refusé : {relative}")),
         }
     }
-    Ok(Path::new(root).join(rel))
+    Ok(base.join(rel))
 }
 
 /// A folder with nothing visible in it (hidden files such as `.DS_Store` aside).
@@ -121,7 +185,7 @@ fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
 
 #[tauri::command]
 pub fn vault_tree(root: String) -> Result<Vec<VaultEntry>, String> {
-    list(Path::new(&root), "")
+    list(check_root(&root)?, "")
 }
 
 #[tauri::command]
@@ -172,8 +236,9 @@ fn collect_files(dir: &Path, prefix: &str, out: &mut Vec<String>) {
 /// Every non-hidden file of the vault (notes and attachments), for link resolution.
 #[tauri::command]
 pub fn vault_files(root: String) -> Vec<String> {
+    let Ok(base) = check_root(&root) else { return Vec::new() };
     let mut files = Vec::new();
-    collect_files(Path::new(&root), "", &mut files);
+    collect_files(base, "", &mut files);
     files.sort();
     files
 }
@@ -189,8 +254,9 @@ pub struct SearchFile {
 /// at most `limit` lines in total. Positions within lines are computed by the frontend.
 #[tauri::command]
 pub fn vault_search(root: String, query: String, case_sensitive: bool, limit: usize) -> Vec<SearchFile> {
+    let Ok(base) = check_root(&root) else { return Vec::new() };
     let mut files = Vec::new();
-    collect_files(Path::new(&root), "", &mut files);
+    collect_files(base, "", &mut files);
     files.sort();
     let needle = if case_sensitive { query.clone() } else { query.to_lowercase() };
     let mut results = Vec::new();
@@ -199,7 +265,7 @@ pub fn vault_search(root: String, query: String, case_sensitive: bool, limit: us
         return results;
     }
     for path in files.into_iter().filter(|p| p.ends_with(".md")) {
-        let Ok(text) = fs::read_to_string(Path::new(&root).join(&path)) else { continue };
+        let Ok(text) = fs::read_to_string(base.join(&path)) else { continue };
         let lines: Vec<(usize, String)> = text
             .lines()
             .enumerate()
@@ -264,20 +330,22 @@ pub fn vault_reveal(root: String, path: String) -> Result<(), String> {
 /// Obsidian settings (`.obsidian/app.json`), read only; "{}" when absent.
 #[tauri::command]
 pub fn vault_config(root: String) -> String {
-    fs::read_to_string(Path::new(&root).join(".obsidian").join("app.json")).unwrap_or_else(|_| "{}".into())
+    let Ok(base) = check_root(&root) else { return "{}".into() };
+    fs::read_to_string(base.join(".obsidian").join("app.json")).unwrap_or_else(|_| "{}".into())
 }
 
 /// Every note of the vault with its content, in one call (dashboard statistics).
 /// Notes over 1 MB are skipped.
 #[tauri::command]
 pub fn vault_read_notes(root: String) -> Vec<(String, String)> {
+    let Ok(base) = check_root(&root) else { return Vec::new() };
     let mut files = Vec::new();
-    collect_files(Path::new(&root), "", &mut files);
+    collect_files(base, "", &mut files);
     files
         .into_iter()
         .filter(|p| p.ends_with(".md"))
         .filter_map(|p| {
-            let full = Path::new(&root).join(&p);
+            let full = base.join(&p);
             let size = fs::metadata(&full).map(|m| m.len()).unwrap_or(u64::MAX);
             if size > 1_000_000 {
                 return None;
@@ -302,13 +370,14 @@ fn millis(time: std::io::Result<std::time::SystemTime>) -> f64 {
 
 #[tauri::command]
 pub fn vault_stats(root: String) -> Vec<FileStat> {
+    let Ok(base) = check_root(&root) else { return Vec::new() };
     let mut files = Vec::new();
-    collect_files(Path::new(&root), "", &mut files);
+    collect_files(base, "", &mut files);
     files
         .into_iter()
         .filter(|p| p.ends_with(".md"))
         .filter_map(|path| {
-            let meta = fs::metadata(Path::new(&root).join(&path)).ok()?;
+            let meta = fs::metadata(base.join(&path)).ok()?;
             let mtime = millis(meta.modified());
             let ctime = millis(meta.created()).max(0.0);
             Some(FileStat { path, ctime: if ctime > 0.0 { ctime } else { mtime }, mtime })
@@ -319,7 +388,8 @@ pub fn vault_stats(root: String) -> Vec<FileStat> {
 /// Obsidian's bookmarks (.obsidian/bookmarks.json), read only; "{}" when absent.
 #[tauri::command]
 pub fn vault_bookmarks(root: String) -> String {
-    fs::read_to_string(Path::new(&root).join(".obsidian").join("bookmarks.json")).unwrap_or_else(|_| "{}".into())
+    let Ok(base) = check_root(&root) else { return "{}".into() };
+    fs::read_to_string(base.join(".obsidian").join("bookmarks.json")).unwrap_or_else(|_| "{}".into())
 }
 
 /// Renames a note or a folder; never overwrites an existing path.
@@ -389,18 +459,40 @@ mod tests {
 
     #[test]
     fn hidden_and_escaping_paths_are_refused() {
-        assert!(resolve("/vault", "note.md").is_ok());
-        assert!(resolve("/vault", "dossier/note.md").is_ok());
-        assert!(resolve("/vault", ".obsidian/app.json").is_err());
-        assert!(resolve("/vault", "a/.git/config").is_err());
-        assert!(resolve("/vault", "../hors.md").is_err());
-        assert!(resolve("/vault", "/etc/passwd").is_err());
+        let dir = std::env::temp_dir().join(format!("flownote-paths-{}", std::process::id()));
+        fs::create_dir_all(dir.join(".obsidian")).unwrap();
+        let vault = dir.to_string_lossy().into_owned();
+        assert!(resolve(&vault, "note.md").is_ok());
+        assert!(resolve(&vault, "dossier/note.md").is_ok());
+        assert!(resolve(&vault, ".obsidian/app.json").is_err());
+        assert!(resolve(&vault, "a/.git/config").is_err());
+        assert!(resolve(&vault, "../hors.md").is_err());
+        assert!(resolve(&vault, "/etc/passwd").is_err());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn only_obsidian_vaults_are_reachable() {
+        let dir = std::env::temp_dir().join(format!("flownote-notvault-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let root = dir.to_string_lossy().into_owned();
+        // A folder without .obsidian (the home folder…) is refused, and so is a relative root.
+        // (A folder chosen in the picker is trusted: see `trust`.)
+        assert!(resolve(&root, "note.md").is_err());
+        assert!(vault_write(root.clone(), "x.md".into(), "x".into(), None).is_err());
+        assert!(!dir.join("x.md").exists());
+        assert!(vault_files(root.clone()).is_empty());
+        assert!(check_root("relatif").is_err());
+        // Once chosen in the picker, the same folder opens.
+        trust(&root);
+        assert!(vault_write(root.clone(), "x.md".into(), "x".into(), None).is_ok());
+        fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
     fn write_refuses_when_file_changed() {
         let dir = std::env::temp_dir().join(format!("flownote-test-{}", std::process::id()));
-        fs::create_dir_all(&dir).unwrap();
+        fs::create_dir_all(dir.join(".obsidian")).unwrap();
         let root = dir.to_string_lossy().into_owned();
         fs::write(dir.join("n.md"), "disque").unwrap();
         let err = vault_write(root.clone(), "n.md".into(), "nouveau".into(), Some("ancien".into())).unwrap_err();
@@ -414,6 +506,7 @@ mod tests {
     fn rename_refuses_to_overwrite() {
         let dir = std::env::temp_dir().join(format!("flownote-rename-{}", std::process::id()));
         fs::create_dir_all(dir.join("A")).unwrap();
+        fs::create_dir_all(dir.join(".obsidian")).unwrap();
         fs::write(dir.join("A.md"), "a").unwrap();
         fs::write(dir.join("A/sous.md"), "s").unwrap();
         fs::write(dir.join("B.md"), "b").unwrap();
@@ -444,6 +537,7 @@ mod tests {
     fn empty_folders_are_created_and_shown() {
         let dir = std::env::temp_dir().join(format!("flownote-dir-{}", std::process::id()));
         fs::create_dir_all(dir.join("images")).unwrap();
+        fs::create_dir_all(dir.join(".obsidian")).unwrap();
         fs::write(dir.join("images/a.png"), [0]).unwrap();
         let root = dir.to_string_lossy().into_owned();
         vault_create_dir(root.clone(), "Projets/2026".into()).unwrap();

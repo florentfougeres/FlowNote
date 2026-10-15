@@ -6,7 +6,6 @@ import type { BridgeRef } from "./bridge";
 import { isImage } from "./bridge";
 import { basename, dirname, noteTitle, resolveLink } from "../vault/links";
 import { calloutIconSvg, calloutInfo, calloutPicker } from "./callouts";
-import { mkdocsSyntax } from "../markdown/flavor";
 
 /**
  * Node views for blocks that need controls outside the editable text. None of
@@ -18,6 +17,22 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, className?: stri
   const el = document.createElement(tag);
   if (className) el.className = className;
   return el;
+}
+
+/**
+ * Calls `listener` when the app's palette changes: the theme chosen in the
+ * settings (`data-theme` on the root) or the system's while it is followed.
+ * Returns the unsubscribe function.
+ */
+function onThemeChange(listener: () => void): () => void {
+  const observer = new MutationObserver(listener);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+  media?.addEventListener("change", listener);
+  return () => {
+    observer.disconnect();
+    media?.removeEventListener("change", listener);
+  };
 }
 
 function updateAttrs(editor: Editor, getPos: () => number | undefined, attrs: Record<string, unknown>) {
@@ -134,124 +149,6 @@ export const calloutView: NodeViewRenderer = ({ node, editor, getPos }) => {
 };
 
 /**
- * MkDocs Material content tabs: a strip of tab names above the body, one tab
- * shown at a time (`===+` marks the one shown first). A double click renames
- * a tab; "+" adds one after the last, "×" removes the shown one.
- */
-export const tabsView: NodeViewRenderer = ({ node, editor, getPos }) => {
-  const dom = element("div", "content-tabs");
-  const strip = element("div", "content-tabs-strip");
-  strip.contentEditable = "false";
-  const body = element("div", "content-tabs-body");
-  dom.append(strip, body);
-  let current = node;
-  let active = Math.max(0, findIndex(node, (tab) => tab.attrs.marker === "===+"));
-
-  // The shown tab is an attribute of this view's own element (styles hide the
-  // others): the tabs' elements belong to ProseMirror and must not be touched.
-  const showActive = () => {
-    dom.dataset.active = String(active);
-    [...strip.querySelectorAll<HTMLElement>(".content-tab-name")].forEach((button, i) => button.classList.toggle("active", i === active));
-  };
-  const tabPos = (index: number): number | null => {
-    const pos = getPos();
-    if (typeof pos !== "number") return null;
-    let at = pos + 1;
-    for (let i = 0; i < index; i++) at += current.child(i).nodeSize;
-    return at;
-  };
-  const rename = (index: number, button: HTMLElement) => {
-    if (!editor.isEditable) return;
-    const input = element("input", "content-tab-rename");
-    input.value = String(current.child(index).attrs.title);
-    button.replaceWith(input);
-    input.focus();
-    input.select();
-    let done = false;
-    const finish = (save: boolean) => {
-      if (done) return;
-      done = true;
-      const at = tabPos(index);
-      if (save && at !== null && input.value !== current.child(index).attrs.title) {
-        editor.view.dispatch(editor.state.tr.setNodeMarkup(at, undefined, { ...current.child(index).attrs, title: input.value }));
-      } else render(current);
-      editor.view.focus();
-    };
-    input.addEventListener("keydown", (event) => {
-      event.stopPropagation();
-      if (event.key === "Enter") finish(true);
-      if (event.key === "Escape") finish(false);
-    });
-    input.addEventListener("blur", () => finish(true));
-  };
-  const render = (n: PMNode) => {
-    current = n;
-    active = Math.min(active, n.childCount - 1);
-    strip.replaceChildren();
-    n.forEach((tab, _offset, i) => {
-      const button = element("button", "content-tab-name");
-      button.textContent = String(tab.attrs.title) || "Sans titre";
-      button.title = "Double-clic pour renommer";
-      button.addEventListener("mousedown", (event) => {
-        event.preventDefault();
-        active = i;
-        showActive();
-      });
-      button.addEventListener("dblclick", () => rename(i, button));
-      strip.append(button);
-    });
-    if (editor.isEditable) {
-      const add = element("button", "content-tab-action");
-      add.textContent = "+";
-      add.title = "Ajouter un onglet";
-      add.addEventListener("mousedown", (event) => {
-        event.preventDefault();
-        const pos = getPos();
-        if (typeof pos !== "number") return;
-        const { schema } = editor.state;
-        const tab = schema.nodes.tab.create({ title: `Onglet ${current.childCount + 1}` }, schema.nodes.paragraph.create());
-        const at = pos + current.nodeSize - 1;
-        active = current.childCount;
-        editor.view.dispatch(editor.state.tr.insert(at, tab));
-        editor.chain().focus().setTextSelection(at + 2).run();
-      });
-      strip.append(add);
-      if (n.childCount > 1) {
-        const remove = element("button", "content-tab-action");
-        remove.textContent = "×";
-        remove.title = "Supprimer cet onglet";
-        remove.addEventListener("mousedown", (event) => {
-          event.preventDefault();
-          const at = tabPos(active);
-          if (at === null) return;
-          editor.view.dispatch(editor.state.tr.delete(at, at + current.child(active).nodeSize));
-          active = Math.max(0, active - 1);
-        });
-        strip.append(remove);
-      }
-    }
-    showActive();
-  };
-  render(node);
-  return {
-    dom,
-    contentDOM: body,
-    update: (n) => {
-      if (n.type !== node.type) return false;
-      render(n);
-      return true;
-    },
-    stopEvent: (event) => strip.contains(event.target as Node),
-    ignoreMutation: (mutation) => strip.contains(mutation.target as Node) || (mutation.type === "attributes" && mutation.target === dom),
-  };
-};
-
-function findIndex(node: PMNode, test: (child: PMNode) => boolean): number {
-  for (let i = 0; i < node.childCount; i++) if (test(node.child(i))) return i;
-  return -1;
-}
-
-/**
  * Code blocks with an editable language label. Mermaid blocks also show their
  * diagram, and plotly blocks their chart (format of the Obsidian plugin
  * "obsidian-plotly"). A diagram's source shows only while the cursor is in
@@ -280,15 +177,6 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   const textButton = element("button", "code-action");
   textButton.type = "button";
   textButton.textContent = "Texte";
-  // MkDocs Material: the file name of ```py title="script.py".
-  const title = element("div", "code-title");
-  title.contentEditable = "false";
-  const showTitle = (n: PMNode) => {
-    const found = mkdocsSyntax() ? /(?:^|\s)title="([^"]*)"/.exec(String(n.attrs.meta ?? "")) : null;
-    title.textContent = found?.[1] ?? "";
-    title.hidden = !found;
-  };
-  showTitle(node);
   header.append(language, visualButton, textButton);
   const pre = element("pre");
   const code = element("code");
@@ -298,7 +186,7 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   const panel = element("div", "plot-editor-host");
   panel.contentEditable = "false";
   // The source or the visual editor, above the chart (one at a time).
-  dom.append(header, title, pre, panel, diagram);
+  dom.append(header, pre, panel, diagram);
 
   let current = node;
   let rendered: string | null = null;
@@ -417,6 +305,12 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   editor.on("selectionUpdate", syncEditing);
   editor.on("focus", syncEditing);
   editor.on("blur", syncEditing);
+  // Charts and diagrams take the palette's colours when drawn: drawn again when it changes.
+  const stopThemeWatch = onThemeChange(() => {
+    if (!renderedKind) return;
+    rendered = null;
+    render();
+  });
   language.addEventListener("focus", syncEditing);
   language.addEventListener("blur", syncEditing);
 
@@ -444,7 +338,6 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
       if (n.type !== node.type) return false;
       current = n;
       if (document.activeElement !== language) language.value = n.attrs.language;
-      showTitle(n);
       syncKind();
       render();
       plotEditor?.update(editorProps());
@@ -455,7 +348,6 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
     ignoreMutation: (mutation) =>
       (mutation.type === "attributes" && mutation.target === dom) ||
       header.contains(mutation.target as Node) ||
-      title.contains(mutation.target as Node) ||
       diagram.contains(mutation.target as Node) ||
       panel.contains(mutation.target as Node),
     destroy: () => {
@@ -465,6 +357,7 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
       editor.off("selectionUpdate", syncEditing);
       editor.off("focus", syncEditing);
       editor.off("blur", syncEditing);
+      stopThemeWatch();
     },
   };
 };
@@ -619,7 +512,6 @@ export function createNodeViews(bridge: BridgeRef): Record<string, NodeViewRende
   return {
     listItem: listItemView,
     callout: calloutView,
-    tabs: tabsView,
     codeBlock: codeBlockView,
     rawBlock: rawBlockView,
     wikilink: wikilinkView(bridge),

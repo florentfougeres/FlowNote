@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
 import { ConflictError, encodeText, type Vault, type VaultEntry } from "./vault";
 import { tauriGit } from "./git";
 
@@ -43,8 +42,9 @@ export function tauriVault(root: string): Vault {
 
 /** Asks for a vault folder; resolves to null if the dialog is cancelled. */
 export async function pickTauriVault(): Promise<Vault | null> {
-  const root = await open({ directory: true, multiple: false, title: "Choisir un vault Obsidian" });
-  if (typeof root !== "string") return null;
+  // Picked by the app's backend, which then trusts the folder (a new vault has no .obsidian yet).
+  const root = await invoke<string | null>("vault_pick");
+  if (!root) return null;
   return openTauriVault(root);
 }
 

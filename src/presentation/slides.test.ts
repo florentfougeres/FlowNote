@@ -45,4 +45,12 @@ describe("presentations", () => {
     expect(css).toContain(".callout-warning");
   });
 
+
+  it("keeps emoji as text, without images from a CDN", () => {
+    const html = renderSlides("---\nmarp: true\n---\n\n# Bonjour 🎉 :rocket:\n").slides.join("");
+    expect(html).toContain("🎉");
+    expect(html).toContain("🚀");
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("cdn.jsdelivr.net");
+  });
 });
