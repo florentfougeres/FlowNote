@@ -100,6 +100,9 @@ fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
             let presentation = yaml.as_deref().is_some_and(is_presentation);
             let icon = yaml.as_deref().and_then(icon_of);
             entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket, presentation, icon });
+        } else if let Some(stem) = name.strip_suffix(".base") {
+            // A base (Obsidian's format): shown as a page whose rows are its folder's notes.
+            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket: false, presentation: false, icon: None });
         }
     }
     entries.sort_by(|a, b| {
@@ -258,6 +261,35 @@ pub fn vault_read_notes(root: String) -> Vec<(String, String)> {
         .collect()
 }
 
+/// Creation and modification times of the notes (ms since 1970), for the
+/// file properties of bases (file.ctime, file.mtime).
+#[derive(Serialize)]
+pub struct FileStat {
+    path: String,
+    ctime: f64,
+    mtime: f64,
+}
+
+fn millis(time: std::io::Result<std::time::SystemTime>) -> f64 {
+    time.ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0.0, |d| d.as_millis() as f64)
+}
+
+#[tauri::command]
+pub fn vault_stats(root: String) -> Vec<FileStat> {
+    let mut files = Vec::new();
+    collect_files(Path::new(&root), "", &mut files);
+    files
+        .into_iter()
+        .filter(|p| p.ends_with(".md"))
+        .filter_map(|path| {
+            let meta = fs::metadata(Path::new(&root).join(&path)).ok()?;
+            let mtime = millis(meta.modified());
+            let ctime = millis(meta.created()).max(0.0);
+            Some(FileStat { path, ctime: if ctime > 0.0 { ctime } else { mtime }, mtime })
+        })
+        .collect()
+}
+
 /// Obsidian's bookmarks (.obsidian/bookmarks.json), read only; "{}" when absent.
 #[tauri::command]
 pub fn vault_bookmarks(root: String) -> String {
@@ -286,8 +318,9 @@ pub fn vault_rename(root: String, from: String, to: String) -> Result<(), String
 #[tauri::command]
 pub fn vault_trash(root: String, path: String) -> Result<(), String> {
     let target = resolve(&root, &path)?;
+    // Already gone (deleted elsewhere, or a deletion done halfway): nothing to do.
     if !target.exists() {
-        return Err(format!("{path} n'existe pas."));
+        return Ok(());
     }
     trash::delete(&target).map_err(|e| e.to_string())
 }

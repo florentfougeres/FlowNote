@@ -45,4 +45,26 @@ describe("deletePage", () => {
     await deletePage(v, "Projets/Mon Notion.md", files);
     expect(await v.files()).toEqual(["Index.md"]);
   });
+
+  it("removes a base and its rows, and still removes the rows when the base file fails", async () => {
+    const v = createMemoryVault("t", { "Livres.base": "filters:\n", "Livres/Dune.md": "a", "Autre.md": "b" });
+    await deletePage(v, "Livres.base", await v.files());
+    expect(await v.files()).toEqual(["Autre.md"]);
+
+    const w = createMemoryVault("t", { "Livres.base": "filters:\n", "Livres/Dune.md": "a" });
+    const files = await w.files();
+    const remove = w.remove.bind(w);
+    w.remove = async (path) => (path === "Livres.base" ? Promise.reject(new Error("occupé")) : remove(path));
+    await expect(deletePage(w, "Livres.base", files)).rejects.toThrow("Livres.base : Error: occupé");
+    expect(await w.files()).toEqual(["Livres.base"]);
+  });
+});
+
+describe("renaming keeps compound extensions", () => {
+  it("mind maps and bases keep theirs", async () => {
+    const vault = createMemoryVault("t", { "Carte.mindmap.md": "x", "Projets.base": "filters:\n", "Projets/A.md": "a" });
+    expect((await renamePage(vault, "Carte.mindmap.md", "Idées")).path).toBe("Idées.mindmap.md");
+    expect((await renamePage(vault, "Projets.base", "Clients")).path).toBe("Clients.base");
+    expect(await vault.files()).toContain("Clients/A.md");
+  });
 });

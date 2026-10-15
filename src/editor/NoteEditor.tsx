@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
-import type { MutableRefObject } from "react";
+import type { MutableRefObject, ReactNode } from "react";
 import type { Editor } from "@tiptap/core";
 import { EditorState } from "@tiptap/pm/state";
 import { defaultWiring, editorExtensions } from "./extensions";
@@ -26,6 +26,8 @@ interface Props {
   onEditor?: (editor: Editor | null) => void;
   /** Front matter keys managed by the app, not shown in the properties panel. */
   hiddenProperties?: string[];
+  /** Shown above the properties, with the front matter and a way to change it (a base's row properties). */
+  header?: (frontmatter: string | null, setFrontmatter: (raw: string | null) => void) => ReactNode;
   /** Lets the app read and change the front matter through the editor's session. */
   frontmatterControl?: MutableRefObject<FrontmatterControl | null>;
   /** False for text without front matter (ticket comments): no properties panel. */
@@ -48,7 +50,7 @@ async function readFiles(list: FileList | null | undefined): Promise<{ name: str
   );
 }
 
-export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEditor, hiddenProperties, frontmatterControl, properties = true }: Props) {
+export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEditor, hiddenProperties, header, frontmatterControl, properties = true }: Props) {
   const session = useRef<NoteSession | null>(null);
   const shell = useRef<HTMLDivElement>(null);
   const [wiring] = useState(defaultWiring);
@@ -125,6 +127,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
 
   return (
     <div className="note-editor" ref={shell}>
+      {header?.(frontmatter, changeFrontmatter)}
       {properties && <PropertiesPanel raw={frontmatter} readOnly={!editable} onChange={changeFrontmatter} hidden={hiddenProperties} />}
       <EditorContent editor={editor} />
       <BlockHandle editor={editor} shell={shell} />

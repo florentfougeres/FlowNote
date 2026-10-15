@@ -56,7 +56,7 @@ const fileStem = (path: string) => basename(path).replace(/\.md$/i, "");
 
 /** Title shown for a page: file name without ".md" (drawings and mind maps: without ".excalidraw.md", ".mindmap.md"). */
 export function noteTitle(path: string): string {
-  return basename(path).replace(/\.(?:excalidraw|mindmap)\.md$/i, "").replace(/\.md$/i, "");
+  return basename(path).replace(/\.(?:excalidraw|mindmap)\.md$/i, "").replace(/\.(?:md|base)$/i, "");
 }
 
 function join(folder: string, name: string): string {
@@ -117,7 +117,8 @@ export function newNoteFolder(notePath: string, config: ObsidianConfig): string 
 
 /** Sub-pages live in a folder named after their parent note (folder-note convention). */
 export function subpageFolder(parentPath: string): string {
-  return join(dirname(parentPath), fileStem(parentPath));
+  // A base's rows live in the folder named after it ("Projets.base" → "Projets/").
+  return join(dirname(parentPath), basename(parentPath).replace(/\.(md|base)$/i, ""));
 }
 
 /** Characters Obsidian refuses in file names. */
