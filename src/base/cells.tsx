@@ -3,6 +3,7 @@ import type { PropertyValue } from "../markdown/frontmatter";
 import { Icon, type IconName } from "../Icon";
 import { openUrl } from "../reading/web";
 import { OPTION_COLORS, type ColumnMeta, type ColumnType, type OptionColor, type SelectOption } from "./baseFile";
+import { DatePicker } from "../DatePicker";
 
 export const TYPE_ICONS: Record<ColumnType | "name", IconName> = {
   name: "doc",
@@ -109,9 +110,8 @@ function InputEditor({ type, value, onDone }: { type: ColumnType; value: Propert
     <input
       autoFocus
       className="db-input"
-      type={type === "date" ? "date" : type === "number" ? "text" : "text"}
       inputMode={type === "number" ? "decimal" : undefined}
-      value={type === "date" ? text.slice(0, 10) : text}
+      value={text}
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
@@ -264,11 +264,20 @@ export function Cell({
   }
   return (
     <div ref={box} className={editing ? "db-cell editing" : "db-cell"} onClick={() => editable && !editing && setEditing(true)}>
-      {!editing || type === "select" || type === "multi" ? <CellDisplay type={type} value={value} options={options} /> : null}
+      {!editing || type === "select" || type === "multi" || type === "date" ? <CellDisplay type={type} value={value} options={options} /> : null}
+      {editing && type === "date" && box.current && (
+        <DatePicker
+          value={typeof value === "string" ? value : null}
+          withTime={typeof value === "string" && /[T ]\d{2}:\d{2}/.test(value)}
+          anchor={box.current.getBoundingClientRect()}
+          onChange={(next) => next !== value && onChange(next ?? undefined)}
+          onClose={done}
+        />
+      )}
       {editing && (type === "select" || type === "multi") && (
         <SelectEditor multi={type === "multi"} value={value} options={options} onChange={onChange} onOptions={onOptions} onClose={done} />
       )}
-      {editing && type !== "select" && type !== "multi" && (
+      {editing && type !== "select" && type !== "multi" && type !== "date" && (
         <InputEditor
           type={type}
           value={value}

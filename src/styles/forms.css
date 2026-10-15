@@ -43,23 +43,11 @@
   box-shadow: none;
 }
 
-/* Due date of a ticket: a chip like the tags; the date input itself stays hidden. */
+/* Due date of a ticket: a chip like the tags, opening the date picker. */
 .due-field {
   position: relative;
   display: inline-flex;
   align-items: center;
-}
-
-.due-field-input {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .due-field-open {

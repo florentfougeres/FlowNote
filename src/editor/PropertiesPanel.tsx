@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Icon, type IconName } from "../Icon";
+import { DateField } from "../DatePicker";
 import { addProperty, readProperties, renameProperty, setProperty, type Property, type PropertyType, type PropertyValue } from "../markdown/frontmatter";
 
 const TYPE_ICONS: Record<PropertyType, IconName> = {
@@ -88,9 +89,12 @@ function ValueEditor({ property, onChange }: { property: Property; onChange: (v:
     case "number":
       return <CommitInput className="property-value" type="number" value={String(value ?? "")} onCommit={(v) => onChange(v === "" ? null : Number(v))} />;
     case "date":
-      return <CommitInput className="property-value" type="date" value={String(value ?? "")} onCommit={(v) => onChange(v || null)} />;
-    case "datetime":
-      return <CommitInput className="property-value" type="datetime-local" value={String(value ?? "").replace(" ", "T")} onCommit={(v) => onChange(v || null)} />;
+      return <DateField className="property-value" value={value ? String(value) : null} onChange={onChange} />;
+    case "datetime": {
+      // The separator already written (Obsidian writes "T") is kept.
+      const separator = / \d{2}:\d{2}/.test(String(value ?? "")) ? " " : "T";
+      return <DateField className="property-value" withTime value={value ? String(value) : null} onChange={(v) => onChange(v && v.replace("T", separator))} />;
+    }
     case "list":
       return <ListEditor values={(value as string[]) ?? []} isTags={key === "tags" || key === "tag"} onChange={onChange} />;
     case "other":

@@ -8,6 +8,7 @@ import { setProperty } from "../markdown/frontmatter";
 import { commentDate, isoMinute, joinTicket, serializeComments, splitTicket, ticketTitle, type TicketComment } from "./format";
 import { dueLabel, ticketInfo, urgency } from "./agenda";
 import type { TicketColumn } from "./board";
+import { DatePicker } from "../DatePicker";
 
 /**
  * A ticket page, like a GitHub / GitLab issue: header (number, title, state,
@@ -78,22 +79,12 @@ function Composer({ placeholder, initial = "", submitLabel, bridge, onSubmit, on
   );
 }
 
-/** The due date as a chip (like the tags); a click opens the system date picker. */
+/** The due date as a chip (like the tags); a click opens the date picker. */
 function DueField({ value, urgent, editable, onChange }: { value: string | null; urgent: string | null; editable: boolean; onChange: (due: string | null) => void }) {
-  const input = useRef<HTMLInputElement>(null);
-  const pick = () => {
-    const el = input.current;
-    if (!el || !editable) return;
-    try {
-      el.showPicker();
-    } catch {
-      el.focus();
-      el.click();
-    }
-  };
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const pick = (event: React.MouseEvent) => editable && setAnchor(event.currentTarget.getBoundingClientRect());
   return (
     <span className="due-field">
-      <input ref={input} type="date" className="due-field-input" value={value ?? ""} tabIndex={-1} aria-hidden="true" onChange={(e) => onChange(e.target.value || null)} />
       {value ? (
         <span className={`ticket-tag due-chip-field${urgent ? ` ${urgent}` : ""}`}>
           <button className="due-field-open" onClick={pick} disabled={!editable} title="Changer l'échéance">
@@ -113,6 +104,7 @@ function DueField({ value, urgent, editable, onChange }: { value: string | null;
           </button>
         )
       )}
+      {anchor && <DatePicker value={value} anchor={anchor} onChange={onChange} onClose={() => setAnchor(null)} />}
     </span>
   );
 }
