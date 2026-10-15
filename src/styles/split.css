@@ -1,0 +1,128 @@
+/* ---- Split view: the active tab on the left, a second page on the right ---- */
+
+.main-area {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.main-area > .content {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.split-host {
+  flex: 0 0 50%;
+  min-width: 0;
+  display: flex;
+}
+
+.split-resizer {
+  flex: none;
+  width: 5px;
+  margin: 0 -2px;
+  z-index: 5;
+  cursor: col-resize;
+  background: linear-gradient(to right, transparent 2px, var(--border) 2px, var(--border) 3px, transparent 3px);
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+
+.split-resizer:hover,
+body.split-resizing .split-resizer {
+  background: linear-gradient(to right, transparent 1px, var(--accent) 1px, var(--accent) 4px, transparent 4px);
+}
+
+body.split-resizing {
+  cursor: col-resize;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.split-pane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.split-pane-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--pagebar-height);
+  padding: 0 8px 0 16px;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+
+.split-pane-icon {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.split-pane-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.split-pane-bar .status {
+  max-width: 40%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.split-pane-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}
+
+.split-pane-body .drawing-pane {
+  height: 100%;
+}
+
+.split-heading {
+  margin-top: 24px;
+}
+
+.split-heading .page-title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.split-notice {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* The tab shown on the right: a small marker next to its icon. */
+.tab-split {
+  flex: none;
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.tab.split:not(.active) {
+  background: color-mix(in srgb, var(--hover) 60%, transparent);
+}
+
+@media print {
+  .split-resizer,
+  .split-host {
+    display: none !important;
+  }
+}

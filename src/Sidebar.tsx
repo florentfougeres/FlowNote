@@ -174,6 +174,8 @@ interface Props {
   gitOpen: boolean;
   /** Opens a page; `newTab` with ⌘-click. */
   onSelect: (path: string, newTab: boolean) => void;
+  /** Opens a page on the right of the split view (⌥-click). */
+  onOpenRight: (path: string) => void;
   onNewPage: (parentNote: string | null) => void;
   onNewPageInFolder: (folder: string) => void;
   onDelete: (notePath: string) => void;
@@ -264,6 +266,7 @@ export function Sidebar(props: Props) {
   /** Tickets are numbered and bases share their rows' folder: neither is duplicated. */
   const pageMenu = (path: string, ticket = false): MenuItem[] => [
     { label: "Ouvrir dans un nouvel onglet", icon: "open", run: () => props.onSelect(path, true) },
+    { label: "Ouvrir à droite", icon: "split", run: () => props.onOpenRight(path) },
     { label: "Ajouter une sous-page", icon: "plus", run: () => props.onNewPage(path) },
     { label: "Copier le lien", icon: "link", run: () => props.onCopyLink(path) },
     ...(ticket || isBasePath(path) ? [] : [{ label: "Dupliquer", icon: "copy" as IconName, run: () => props.onDuplicate(path) }]),
@@ -399,7 +402,7 @@ export function Sidebar(props: Props) {
               </button>
               <button
                 className="page-name"
-                onClick={(event) => (page.notePath ? props.onSelect(page.notePath, event.metaKey || event.ctrlKey) : toggle(page.key))}
+                onClick={(event) => (page.notePath ? (event.altKey ? props.onOpenRight(page.notePath) : props.onSelect(page.notePath, event.metaKey || event.ctrlKey)) : toggle(page.key))}
                 onAuxClick={(event) => event.button === 1 && page.notePath && props.onSelect(page.notePath, true)}
               >
                 <span className="page-icon">
@@ -475,7 +478,7 @@ export function Sidebar(props: Props) {
                   onContextMenu={(event) => openContextMenu(event, pageMenu(path, entries.get(path)?.ticket))}
                 >
                   <span className="page-toggle" aria-hidden="true" />
-                  <button className="page-name" onClick={(event) => props.onSelect(path, event.metaKey || event.ctrlKey)} onAuxClick={(event) => event.button === 1 && props.onSelect(path, true)}>
+                  <button className="page-name" onClick={(event) => (event.altKey ? props.onOpenRight(path) : props.onSelect(path, event.metaKey || event.ctrlKey))} onAuxClick={(event) => event.button === 1 && props.onSelect(path, true)}>
                     <span className="page-icon">
                       <PageIcon
                         path={path}
