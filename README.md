@@ -21,7 +21,9 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 
 **Interface façon Notion**
 - Onglets en haut de la fenêtre, barre latérale avec le vault, Rechercher, Accueil, Tickets, Lectures, Graphe et l'arbre des pages
-- Arbre des pages : menu « … » ou clic droit (renommer, supprimer, sous-page, nouveau dossier), glisser-déposer des pages et des dossiers, liens mis à jour à chaque déplacement
+- Arbre des pages : menu « … » ou clic droit (renommer, supprimer, dupliquer, copier le lien, afficher dans le Finder, sous-page, nouveau dossier), glisser-déposer des pages et des dossiers, liens mis à jour à chaque déplacement
+- Favoris d'Obsidian en haut de la barre latérale
+- Pastille d'état en bas à droite de la page : enregistrement, nombre de mots, messages
 - Réglages dans un onglet (`⌘,`), rangés par catégorie
 - Barre latérale masquable (`⌘\`), qui réapparaît au survol du bord gauche
 - Icône de page : un emoji choisi au-dessus du titre (propriété `icon`)
@@ -31,9 +33,9 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 - Titres, listes, tâches, citations, callouts Obsidian (`> [!note]`), toggles (callouts repliables), séparateurs
 - Menu `/` pour insérer ou transformer un bloc, raccourcis Markdown à la frappe (`#`, `-`, `[]`, `>`, ```` ``` ````)
 - Poignée de bloc : glisser-déposer avec imbrication, dupliquer, transformer, supprimer
-- Mise en forme en ligne : gras, italique, barré, surligné, code, liens
+- Mise en forme en ligne : gras, italique, barré, surligné, code, liens (coller une URL sur du texte sélectionné en fait un lien)
 - Tableaux éditables avec poignées de lignes et de colonnes (insérer, déplacer, aligner, supprimer)
-- Blocs de code avec coloration syntaxique, diagrammes **Mermaid**, maths, emoji (`:calendrier`)
+- Blocs de code avec coloration syntaxique, diagrammes **Mermaid**, maths, emoji (`:calendrier`), date du jour (`/date`)
 - Propriétés YAML (frontmatter) éditables, tags, `[[wikilinks]]` et `![[embeds]]` avec autocomplétion
 - Sous-pages et arborescence dans la barre latérale
 

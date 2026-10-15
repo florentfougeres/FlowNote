@@ -2,6 +2,22 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.11.0] - 2026-10-15
+
+### Ajouté
+- **Favoris** : les fichiers mis en favoris dans Obsidian apparaissent en haut de la barre latérale.
+- Menu des pages (« … » et clic droit) : **Dupliquer**, **Copier le lien** (`[[…]]`) et **Afficher dans le Finder** (aussi pour les dossiers).
+- **Pastille d'état** en bas à droite de la page : enregistrement et nombre de mots (temps de lecture au survol), et les messages comme « Lien copié » pendant quelques secondes. Elle s'estompe pendant la frappe.
+- Coller une URL sur du texte sélectionné en fait un lien.
+- « Date du jour » et « Date et heure » dans le menu `/`.
+
+### Modifié
+- Le menu des dossiers du fil d'Ariane est opaque et au style des autres menus, avec les icônes des pages ; il liste aussi les bases.
+- Les tickets et leur dossier ne se déplacent plus par glisser-déposer, et rien ne se dépose dans ce dossier.
+
+### Corrigé
+- L'interface ne glisse plus sous les boutons de la fenêtre : le tiroir Git dépassait de la fenêtre, qui devenait défilable avec la barre latérale.
+
 ## [0.10.0] - 2026-10-15
 
 ### Ajouté

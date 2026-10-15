@@ -53,12 +53,13 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 ## État actuel (15 octobre 2026)
 
-- v0.10.0 taguée (dossiers et glisser-déposer dans l'arborescence, tags des lectures, Réglages en onglet, fenêtre « Nouvelle page », correctifs de sécurité). Le workflow de release crée un brouillon à publier.
+- v0.11.0 taguée (favoris, dupliquer, copier le lien, Finder, pastille d'état, dates, lien au collage, menu du fil d'Ariane, correctif du défilement de la fenêtre). Le workflow de release crée un brouillon à publier.
 - Pistes ouvertes :
   - alerte Dependabot `glib` (Rust) : compilé seulement pour Linux, sans correctif possible côté Tauri ; à fermer comme « non utilisé » ;
-  - déplacer le dossier des tickets ne met pas à jour le réglage « Dossier des tickets » ;
+  - renommer ou supprimer le dossier des tickets par son menu ne met pas à jour le réglage « Dossier des tickets » ;
+  - branche `feature/notebooks` (notebooks Python marimo) jamais fusionnée, 41 commits de retard ;
   - suppression d'une base « en plusieurs fois » dans l'app de bureau : rendue robuste mais pas reproduite, à confirmer ;
   - kanban et calendrier des bases à vérifier dans Obsidian ;
   - l'ordre manuel des lignes (`rowOrder`, par chemin) se perd quand on renomme une page ;
-  - nouveautés de la 0.10.0 testées dans Chrome seulement, à vérifier dans l'app de bureau (⌘,, clic droit, glisser-déposer).
+  - nouveautés des 0.10 et 0.11 testées dans Chrome seulement, à vérifier dans l'app de bureau (⌘,, clic droit, glisser-déposer, Finder, défilement de la fenêtre, menu du fil d'Ariane).
 - L'historique détaillé des sessions est dans `.remember/` (à lire sur demande).
