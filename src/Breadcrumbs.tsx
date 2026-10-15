@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { dirname, noteTitle } from "./vault/links";
+import { Icon } from "./Icon";
+import type { ReactNode } from "react";
+import { PageIcon } from "./Sidebar";
 
 /**
  * Location of the open page, navigable: a folder opens its folder note
@@ -12,6 +15,7 @@ export function Breadcrumbs({
   files,
   onOpen,
   onRename,
+  iconOf,
 }: {
   vaultName: string;
   path: string;
@@ -19,6 +23,8 @@ export function Breadcrumbs({
   onOpen: (path: string) => void;
   /** Double-click on the page name renames it (resolves to false when refused). */
   onRename?: (title: string) => Promise<boolean>;
+  /** Icon of a page (its emoji, ticket…), for the folder menus. */
+  iconOf?: (path: string) => ReactNode;
 }) {
   const [menu, setMenu] = useState<{ folder: string; left: number } | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
@@ -46,7 +52,8 @@ export function Breadcrumbs({
     setMenu({ folder, left: element.getBoundingClientRect().left - box.left });
   };
 
-  const pagesIn = (folder: string) => files.filter((f) => f.endsWith(".md") && dirname(f) === folder).sort((a, b) => a.localeCompare(b, "fr"));
+  const pagesIn = (folder: string) =>
+    files.filter((f) => (f.endsWith(".md") || f.endsWith(".base")) && dirname(f) === folder).sort((a, b) => noteTitle(a).localeCompare(noteTitle(b), "fr"));
 
   return (
     <div className="breadcrumbs" ref={ref}>
@@ -89,18 +96,22 @@ export function Breadcrumbs({
         </span>
       )}
       {menu && (
-        <div className="crumb-menu" style={{ left: menu.left }}>
-          {pagesIn(menu.folder).length === 0 && <span className="git-none">Aucune page dans ce dossier.</span>}
+        <div className="crumb-menu" role="menu" style={{ left: menu.left }}>
+          <div className="crumb-menu-title">{menu.folder === "" ? vaultName : menu.folder.split("/").pop()}</div>
+          {pagesIn(menu.folder).length === 0 && <span className="crumb-menu-empty">Aucune page dans ce dossier.</span>}
           {pagesIn(menu.folder).map((page) => (
             <button
               key={page}
+              role="menuitem"
               className={page === path ? "crumb-menu-item current" : "crumb-menu-item"}
               onClick={() => {
                 setMenu(null);
                 onOpen(page);
               }}
             >
-              {noteTitle(page)}
+              {iconOf ? iconOf(page) : <PageIcon path={page} />}
+              <span>{noteTitle(page)}</span>
+              {page === path && <Icon name="check" size={13} />}
             </button>
           ))}
         </div>

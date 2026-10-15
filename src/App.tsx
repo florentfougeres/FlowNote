@@ -1210,7 +1210,7 @@ export function App() {
             left={
               note ? (
                 <>
-                  <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} />
+                  <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} iconOf={pageIconFor} />
                   {saveState}
                   {status && <span className="status warning">{status}</span>}
                 </>
