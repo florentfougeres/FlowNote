@@ -15,6 +15,39 @@
   outline: none;
 }
 
+/*
+ * Topics in the app's typography: system font, the page text size, a bolder
+ * root and first-level branches instead of Mind Elixir's 25px / 16px.
+ */
+.mindmap-page .map-container {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mindmap-page .map-container me-root me-tpc {
+  padding: 9px 22px;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.mindmap-page .map-container me-main > me-wrapper > me-parent > me-tpc {
+  padding: 6px 14px;
+  font-weight: 500;
+}
+
+.mindmap-page .map-container #input-box {
+  border-radius: 6px;
+  outline: 2px solid var(--accent-line);
+}
+
+/* Above the page's status badge, which sits in the bottom-right corner. */
+.mindmap-page .map-container .mind-elixir-toolbar.rb {
+  bottom: 48px;
+}
+
 .dash-create-icon.mindmap {
   color: #16a085;
   background: color-mix(in srgb, #16a085 14%, transparent);

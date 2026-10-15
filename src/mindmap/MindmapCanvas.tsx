@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import MindElixir, { type MindElixirData, type MindElixirInstance } from "mind-elixir";
+import MindElixir, { type MindElixirData, type MindElixirInstance, type Theme } from "mind-elixir";
 import "mind-elixir/style.css";
 import { parseMindmap, serializeMindmap, type MindMapData } from "./format";
 
@@ -40,6 +40,59 @@ const FR = {
 };
 
 /**
+ * Mind Elixir themes in the app's colours: the page background (white, or the
+ * dark page grey), system label colours and accent. Values are plain colours,
+ * not CSS variables, because the PNG export paints the background from them.
+ */
+const LIGHT_THEME: Theme = {
+  name: "FlowNote",
+  type: "light",
+  palette: ["#007aff", "#ff9500", "#34c759", "#af52de", "#ff2d55", "#5ac8fa", "#ffcc00", "#5856d6", "#a2845e", "#00c7be"],
+  cssVar: {
+    ...MindElixir.THEME.cssVar,
+    "--root-radius": "12px",
+    "--main-radius": "8px",
+    "--root-color": "#ffffff",
+    "--root-bgcolor": "#1d1d1f",
+    "--root-border-color": "transparent",
+    "--main-color": "#1d1d1f",
+    "--main-bgcolor": "#ffffff",
+    "--main-bgcolor-transparent": "rgba(255, 255, 255, 0.85)",
+    "--color": "#3c3c43",
+    "--bgcolor": "#ffffff",
+    "--selected": "#007aff",
+    "--accent-color": "#007aff",
+    "--panel-color": "#1d1d1f",
+    "--panel-bgcolor": "#ffffff",
+    "--panel-border-color": "rgba(0, 0, 0, 0.1)",
+  },
+};
+
+const DARK_THEME: Theme = {
+  name: "FlowNote sombre",
+  type: "dark",
+  palette: ["#0a84ff", "#ff9f0a", "#30d158", "#bf5af2", "#ff375f", "#64d2ff", "#ffd60a", "#5e5ce6", "#ac8e68", "#63e6e2"],
+  cssVar: {
+    ...MindElixir.DARK_THEME.cssVar,
+    "--root-radius": "12px",
+    "--main-radius": "8px",
+    "--root-color": "#1d1d1f",
+    "--root-bgcolor": "#f5f5f7",
+    "--root-border-color": "transparent",
+    "--main-color": "#f5f5f7",
+    "--main-bgcolor": "#2a2a2c",
+    "--main-bgcolor-transparent": "rgba(42, 42, 44, 0.85)",
+    "--color": "#d1d1d6",
+    "--bgcolor": "#1e1e1e",
+    "--selected": "#0a84ff",
+    "--accent-color": "#0a84ff",
+    "--panel-color": "#f5f5f7",
+    "--panel-bgcolor": "#2a2a2c",
+    "--panel-border-color": "rgba(255, 255, 255, 0.1)",
+  },
+};
+
+/**
  * A mind map edited with Mind Elixir: Tab adds a child, Enter a sibling,
  * double-click (or F2) renames, drag moves a branch, right-click for more.
  * Each change rewrites the file a moment later.
@@ -66,7 +119,7 @@ export default function MindmapCanvas({ source, onMarkdown, title, theme, editab
       keypress: editable,
       allowUndo: true,
       newTopicName: "Nouvelle idée",
-      theme: theme === "dark" ? MindElixir.DARK_THEME : MindElixir.THEME,
+      theme: theme === "dark" ? DARK_THEME : LIGHT_THEME,
     });
     instance.init(file.data as unknown as MindElixirData);
     mind.current = instance;
@@ -100,7 +153,7 @@ export default function MindmapCanvas({ source, onMarkdown, title, theme, editab
   }, [source, editable, title]);
 
   useEffect(() => {
-    mind.current?.changeTheme(theme === "dark" ? MindElixir.DARK_THEME : MindElixir.THEME);
+    mind.current?.changeTheme(theme === "dark" ? DARK_THEME : LIGHT_THEME);
   }, [theme]);
 
   return <div ref={box} className="mindmap-canvas" />;
