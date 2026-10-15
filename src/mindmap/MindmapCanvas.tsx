@@ -93,6 +93,26 @@ const DARK_THEME: Theme = {
 };
 
 /**
+ * Mind Elixir moves the map with `translate3d(…)`, often by half pixels
+ * (centring divides by two). The map is then a composited layer drawn off the
+ * pixel grid, and its text looks blurry. The offsets are rounded after each
+ * move; the 3D form is kept because Mind Elixir reads the position back from it.
+ */
+function keepOnPixels(map: HTMLElement): MutationObserver {
+  const round = () => {
+    const transform = map.style.transform;
+    const rounded = transform.replace(/translate3d\(([^,]+),\s*([^,]+),/, (_all, x: string, y: string) =>
+      `translate3d(${Math.round(parseFloat(x))}px, ${Math.round(parseFloat(y))}px,`,
+    );
+    if (rounded !== transform) map.style.transform = rounded;
+  };
+  const observer = new MutationObserver(round);
+  observer.observe(map, { attributes: true, attributeFilter: ["style"] });
+  round();
+  return observer;
+}
+
+/**
  * A mind map edited with Mind Elixir: Tab adds a child, Enter a sibling,
  * double-click (or F2) renames, drag moves a branch, right-click for more.
  * Each change rewrites the file a moment later.
@@ -123,6 +143,7 @@ export default function MindmapCanvas({ source, onMarkdown, title, theme, editab
     });
     instance.init(file.data as unknown as MindElixirData);
     mind.current = instance;
+    const sharp = keepOnPixels(instance.map);
 
     let timer = 0;
     const save = () => {
@@ -145,6 +166,7 @@ export default function MindmapCanvas({ source, onMarkdown, title, theme, editab
       instance.bus.removeListener("operation", save);
       instance.bus.removeListener("changeDirection", save);
       controls.current?.(null);
+      sharp.disconnect();
       instance.destroy();
       mind.current = null;
     };
