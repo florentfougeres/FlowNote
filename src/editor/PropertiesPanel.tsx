@@ -139,8 +139,8 @@ export function PropertiesPanel({ raw, readOnly, onChange, hidden = [] }: Props)
   }
 
   if (parsed.properties.length === 0) {
-    // A page whose front matter the app manages (ticket, notebook) has no empty panel.
-    if (readOnly || hidden.length > 0) return null;
+    // A page whose front matter the app manages (base row, ticket) has no empty panel; the icon is not one of those keys.
+    if (readOnly || hidden.some((key) => key !== "icon")) return null;
     return (
       <div className="properties properties-empty">
         <button className="property-add" onClick={() => apply(() => addProperty(raw, "tags").raw)}>

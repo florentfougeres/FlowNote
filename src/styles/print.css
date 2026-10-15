@@ -42,6 +42,7 @@
   html[data-print="note"] .find-bar-anchor,
   html[data-print="note"] .outline-panel,
   html[data-print="note"] .history-panel,
+  html[data-print="note"] .side-column,
   html[data-print="note"] .git-drawer,
   html[data-print="note"] .conflict-note-banner,
   html[data-print="note"] .backlinks,

@@ -29,6 +29,7 @@ export const CALLOUT_TYPES: CalloutType[] = [
   { type: "danger", label: "Danger", aliases: ["error"], color: "233, 49, 71", icon: "M9 1.5L3 9h4.5L7 14.5 13 7H8.5z" },
   { type: "bug", label: "Bug", aliases: [], color: "233, 49, 71", icon: "M5.5 5.5h5v5a2.5 2.5 0 0 1-5 0z M8 5.5V13 M5.5 8H3 M13 8h-2.5 M6 3.5l1 1.5 M10 3.5L9 5" },
   { type: "example", label: "Exemple", aliases: [], color: "120, 82, 238", icon: "M6 4h7 M6 8h7 M6 12h7 M3 4h.01 M3 8h.01 M3 12h.01" },
+  { type: "spoiler", label: "Spoiler", aliases: ["details"], color: "158, 158, 158", icon: "M6 3.5l4.5 4.5L6 12.5" },
   { type: "quote", label: "Citation", aliases: ["cite"], color: "158, 158, 158", icon: "M3.5 9.5h3v3.5h-3z M3.5 9.5C3.5 7 4.5 5 6.5 4 M9.5 9.5h3v3.5h-3z M9.5 9.5c0-2.5 1-4.5 3-5.5" },
 ];
 

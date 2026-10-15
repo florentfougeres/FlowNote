@@ -2,9 +2,50 @@ import { Extension } from "@tiptap/core";
 import { exitCode, lift, setBlockType } from "@tiptap/pm/commands";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { liftListItem, sinkListItem, splitListItem } from "@tiptap/pm/schema-list";
-import { TextSelection } from "@tiptap/pm/state";
+import { NodeSelection, TextSelection, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { isInTable, TableMap } from "@tiptap/pm/tables";
 import { blockAt, duplicateBlock, moveBlockByOne } from "./blocks";
+
+/** The last text line inside `node` (itself when it is one), with its position. */
+function lastTextblock(node: PMNode, pos: number): { node: PMNode; pos: number } | null {
+  if (node.isTextblock) return { node, pos };
+  if (node.isAtom || !node.lastChild) return null;
+  return lastTextblock(node.lastChild, pos + node.nodeSize - 1 - node.lastChild.nodeSize);
+}
+
+/**
+ * Backspace at the start of a top-level line whose previous block is a
+ * container or an atom (ProseMirror would pull the line into the list or
+ * quote as a new item, or delete the atom):
+ * - list, quote, callout: the line's text joins the end of the last line in it
+ *   (an empty line is removed), the cursor at the junction;
+ * - table: the cursor goes to the end of the last cell (an empty line is removed);
+ * - atom (divider, HTML, math…): an empty line is removed, otherwise the block
+ *   is selected, a second Backspace deleting it.
+ * Null for the other cases, left to the default behaviour.
+ */
+export function backspaceIntoAbove(state: EditorState): Transaction | null {
+  const { $from } = state.selection;
+  const index = $from.index(0);
+  const above = state.doc.child(index - 1);
+  const line = $from.parent;
+  const lineStart = $from.before(1);
+  const aboveStart = lineStart - above.nodeSize;
+  const empty = line.content.size === 0;
+  const tr = state.tr;
+  if (above.isAtom) {
+    if (empty) return null;
+    return tr.setSelection(NodeSelection.create(state.doc, aboveStart));
+  }
+  const table = above.type.spec.tableRole === "table";
+  if (!table && !["list", "blockquote", "callout"].includes(above.type.name)) return null;
+  const target = lastTextblock(above, aboveStart);
+  if (!target || target.node.type.spec.code) return null;
+  const end = target.pos + target.node.nodeSize - 1;
+  if (empty || !table) tr.delete(lineStart, $from.after(1));
+  if (!empty && !table) tr.insert(end, line.content);
+  return tr.setSelection(TextSelection.create(tr.doc, end));
+}
 
 /**
  * Block-level keyboard behaviour modelled on Notion: Enter and Backspace
@@ -164,6 +205,16 @@ export const BlockKeymap = Extension.create({
           tr.setSelection(TextSelection.near(tr.doc.resolve(0)));
           dispatch(tr);
           return true;
+        }
+
+        // Start of a line under a list, quote, callout, table or atom block:
+        // go up to the end of the line above, like Notion (see `backspaceIntoAbove`).
+        if ($from.depth === 1 && $from.index(0) > 0 && parent.isTextblock && parent.type !== types().codeBlock) {
+          const tr = backspaceIntoAbove(state);
+          if (tr) {
+            dispatch(tr);
+            return true;
+          }
         }
 
         // Start of a callout title: the callout becomes plain blocks.

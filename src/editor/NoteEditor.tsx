@@ -8,6 +8,7 @@ import { SuggestionMenu } from "./SuggestionMenu";
 import { BlockHandle } from "./BlockHandle";
 import { TableHandles } from "./TableHandles";
 import { CalloutPicker } from "./CalloutPicker";
+import { applyLink, LinkPrompt, linkTarget, type LinkRequest } from "./LinkPrompt";
 import { GrammarPopover } from "./GrammarPopover";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { insertAttachments, type VaultBridge } from "./bridge";
@@ -58,6 +59,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
   const markdownCallback = useRef(onMarkdown);
   markdownCallback.current = onMarkdown;
   const [frontmatter, setFrontmatter] = useState<string | null>(null);
+  const [linkRequest, setLinkRequest] = useState<LinkRequest | null>(null);
 
   const editor = useEditor({
     extensions: editorExtensions(wiring),
@@ -69,6 +71,15 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         const path = resolveLink(node.attrs.target, current.files, current.notePath);
         if (!path || (node.attrs.embed && !path.endsWith(".md"))) return false;
         current.openPath(path, event.metaKey || event.ctrlKey);
+        return true;
+      },
+      handleKeyDown: (view, event) => {
+        // ⌘K on selected text (or in a link): its address, like in Notion.
+        if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "k" || !view.editable) return false;
+        const target = linkTarget(view.state);
+        if (!target) return false;
+        const start = view.coordsAtPos(target.from);
+        setLinkRequest({ ...target, x: start.left, y: view.coordsAtPos(target.to).bottom });
         return true;
       },
       handleDOMEvents: {
@@ -159,6 +170,16 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
       <BlockHandle editor={editor} shell={shell} />
       <TableHandles editor={editor} />
       <CalloutPicker />
+      {linkRequest && editor && (
+        <LinkPrompt
+          request={linkRequest}
+          onDone={(href) => {
+            setLinkRequest(null);
+            if (href !== null) applyLink(editor, linkRequest.from, linkRequest.to, href);
+            editor.commands.focus();
+          }}
+        />
+      )}
       <GrammarPopover />
       <SuggestionMenu store={wiring.slashStore} />
       <SuggestionMenu store={wiring.linkStore} />

@@ -50,6 +50,12 @@ export function serializeBlock(n: PMJSON, v: Variant): string {
     case "callout": {
       const [title, ...body] = n.content ?? [];
       const titleText = serializeInline(title?.content ?? [], v).replace(/\n/g, " ");
+      if (attr<string>(n, "syntax", "obsidian") === "hedgedoc") {
+        const marker = attr(n, "marker", ":::");
+        const header = `${marker}${attr(n, "calloutType", "info")}${attr(n, "extra", "")}${titleText ? ` ${titleText}` : ""}`;
+        const inner = joinBlocks(body, v, false);
+        return `${header}\n${inner ? `${inner}\n` : ""}${marker.trim()}`;
+      }
       const header = `[!${attr(n, "calloutType", "note")}]${attr(n, "fold", "")}${titleText ? ` ${titleText}` : ""}`;
       const inner = joinBlocks(body, v, attr(n, "compact", false));
       return prefixLines(inner ? `${header}\n${inner}` : header);
@@ -86,6 +92,26 @@ export function joinBlocks(children: PMJSON[], v: Variant, tight: boolean): stri
     out += serializeBlock(child, v);
   });
   return out;
+}
+
+const isEdge = (n: PMJSON) => n.type === "hardBreak" || n.type === "softBreak" || (n.type === "text" && !/\S/.test(n.text ?? ""));
+
+/**
+ * Line breaks (and blank text) at the start or end of a paragraph or heading
+ * are dropped: Markdown cannot hold them, and a break at the end would be
+ * written as a lone `\` that shows as text. They are left behind when the
+ * text around a break is erased.
+ */
+export function withoutEdgeBreaks(n: PMJSON): PMJSON {
+  if (!n.content) return n;
+  if (n.type === "paragraph" || n.type === "heading") {
+    let start = 0;
+    let end = n.content.length;
+    while (start < end && isEdge(n.content[start])) start++;
+    while (end > start && isEdge(n.content[end - 1])) end--;
+    return start === 0 && end === n.content.length ? n : { ...n, content: n.content.slice(start, end) };
+  }
+  return { ...n, content: n.content.map(withoutEdgeBreaks) };
 }
 
 export function isEmptyParagraph(n: PMJSON): boolean {

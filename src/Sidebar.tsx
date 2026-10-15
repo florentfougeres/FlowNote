@@ -44,6 +44,11 @@ export function toPages(entries: VaultEntry[]): Page[] {
   return [...folders, ...pages];
 }
 
+/** The tree without the entries the app shows elsewhere (tickets folder, reading list). */
+export function withoutPaths(entries: VaultEntry[], hidden: Set<string>): VaultEntry[] {
+  return entries.filter((e) => !hidden.has(e.path)).map((e) => (e.kind === "dir" && e.children ? { ...e, children: withoutPaths(e.children, hidden) } : e));
+}
+
 function containsPath(page: Page, path: string): boolean {
   return page.notePath === path || page.children.some((child) => containsPath(child, path));
 }
@@ -157,6 +162,8 @@ interface Props {
   view: "home" | "tickets" | "graph" | "reading" | "settings" | null;
   /** Folder of the tickets (a setting): numbered by the app, so it never moves nor receives drops. */
   ticketsFolder: string;
+  /** Paths left out of the tree: the tickets folder and the reading list have their own views. */
+  hidden: string[];
   /** Live icon of the open page (its front matter may not be saved yet). */
   liveIcon?: { path: string; icon: string | null };
   /** Number of changed files, or null when the vault has no Git repository. */
@@ -198,7 +205,7 @@ export function Sidebar(props: Props) {
   const { vaultName, tree, selected, view, liveIcon, gitChanges, gitOpen } = props;
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ anchor: DOMRect; items: MenuItem[] } | null>(null);
-  const pages = toPages(tree);
+  const pages = toPages(withoutPaths(tree, new Set(props.hidden)));
   /** What the tree knows of each note (icon, ticket, presentation), for the favorites. */
   const entries = new Map<string, VaultEntry>();
   const index = (list: VaultEntry[]) => list.forEach((e) => (e.kind === "file" ? entries.set(e.path, e) : index(e.children ?? [])));
@@ -439,9 +446,9 @@ export function Sidebar(props: Props) {
         </button>
       </div>
       <nav className="sidebar-nav" aria-label="Navigation">
-        <NavRow icon="search" label="Rechercher" shortcut="⌘P" onClick={props.onSearch} />
-        <NavRow icon="replace" label="Rechercher dans les notes" shortcut="⌘⇧F" onClick={props.onVaultSearch} />
         <NavRow icon="home" label="Accueil" active={view === "home"} onClick={(event) => props.onHome(event.metaKey || event.ctrlKey)} />
+        <NavRow icon="search" label="Rechercher" shortcut="⌘P" onClick={props.onSearch} />
+        <NavRow icon="searchText" label="Rechercher dans les notes" shortcut="⌘⇧F" onClick={props.onVaultSearch} />
         <NavRow icon="ticket" label="Tickets" active={view === "tickets"} onClick={(event) => props.onTickets(event.metaKey || event.ctrlKey)} />
         <NavRow icon="bookmark" label="Lectures" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
         <NavRow icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />

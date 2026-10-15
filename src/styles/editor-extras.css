@@ -537,3 +537,26 @@
   color: var(--on-accent);
 }
 
+
+/* ---- Link address (⌘K) ---- */
+
+.link-prompt {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+.link-prompt input {
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+
+.link-prompt-remove {
+  margin-top: 4px;
+  color: var(--danger) !important;
+}

@@ -73,7 +73,8 @@ const Callout = Node.create({
   group: "block",
   content: "calloutTitle block*",
   defining: true,
-  addAttributes: attrs({ calloutType: "note", fold: "", compact: false }),
+  // syntax "hedgedoc": a `:::type` container (marker: its colons, extra: its `{attributes}`).
+  addAttributes: attrs({ calloutType: "note", fold: "", compact: false, syntax: "obsidian", marker: ":::", extra: "" }),
   parseHTML: () => [{ tag: "div.callout" }],
   renderHTML: ({ node }) => [
     "div",

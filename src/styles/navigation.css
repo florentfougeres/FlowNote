@@ -124,7 +124,36 @@ button.crumb:hover {
   font-size: 12.5px;
 }
 
-/* ---- Outline ---- */
+/* ---- Outline (and history, in the same column) ---- */
+
+.side-column {
+  position: sticky;
+  top: var(--pagebar-height);
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - var(--titlebar-height) - var(--pagebar-height));
+  min-width: 0;
+}
+
+.side-column.with-history {
+  flex-basis: 300px;
+  max-width: 35%;
+  border-left: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.side-column .outline-panel {
+  position: static;
+  flex: 0 1 auto;
+  max-height: none;
+}
+
+.side-column.with-history .outline-panel {
+  max-height: 40%;
+  padding: 12px 12px 12px 6px;
+  border-bottom: 1px solid var(--border);
+}
 
 .outline-panel {
   position: sticky;

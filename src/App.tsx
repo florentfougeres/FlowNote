@@ -16,7 +16,7 @@ import { mountBase, type EmbedProps } from "./base/EmbeddedBase";
 import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
-import { applyTheme, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
+import { applyTheme, applyScale, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
 import { deletePage, followFolder, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "./vault/pageOps";
 import { PageIcon, PopoverMenu, Sidebar, type MenuItem } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
@@ -245,6 +245,7 @@ export function App() {
   };
   const frontmatter = useRef<FrontmatterControl | null>(null);
   useEffect(() => applyTheme(settings.theme, isTauri()), [settings.theme]);
+  useEffect(() => applyScale(settings.uiScale, isTauri()), [settings.uiScale]);
   // The desktop window is transparent so the sidebar can show the native macOS material.
   useEffect(() => {
     document.documentElement.classList.toggle("native-vibrancy", isTauri());
@@ -545,6 +546,8 @@ export function App() {
     if (key === "s") run(() => void saveNow().catch(() => {}));
     else if (!vault) return;
     else if (key === "p" && event.shiftKey && presentationPageRef.current) run(() => present());
+    // ⌘K in the editor links the selected text (handled there first).
+    else if (key === "k" && event.defaultPrevented) return;
     else if (key === "p" || key === "k" || key === "o") run(() => setModal("switcher"));
     else if (key === "n" && !event.shiftKey) run(() => void newPage(null));
     else if (event.code === "BracketLeft" && event.shiftKey) run(() => cycleTab(-1));
@@ -948,6 +951,8 @@ export function App() {
   const ticketPage = note !== null && !drawing && !mindmap && !basePage && isTicketMarkdown(note.loaded);
   /** The open page is a presentation (`marp: true`), read from the current text so a conversion shows at once. */
   const presentationPage = note !== null && !drawing && !mindmap && !basePage && !ticketPage && isPresentationMarkdown(note.markdown);
+  const outlineShown = showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && !basePage;
+  const historyShown = showHistory && Boolean(vault?.git);
   const slides = useSlides(presentationPage ? note.markdown : "", note?.path ?? "", files, loadImage, presentationPage);
   /** Bases embedded in the open note (`![[X.base]]`), rendered with the app's current files. */
   const embeds = useRef(new Set<ReturnType<typeof mountBase>>());
@@ -1055,6 +1060,19 @@ export function App() {
       back.current.push(previous);
       forward.current = [];
     }
+  };
+
+  /**
+   * Opens the dashboard or a view from the sidebar: in the tab already showing
+   * it, else in place when the active tab shows a view, else in a new tab (the
+   * open page stays where it is).
+   */
+  const openView = (path: string | null, newTabRequested: boolean) => {
+    const existing = tabsRef.current.find((t) => t.path === path);
+    if (existing && !newTabRequested) return switchTab(existing.id);
+    const current = tabsRef.current.find((t) => t.id === activeRef.current)?.path ?? null;
+    if (newTabRequested || (current !== null && !isView(current))) return newTab(path);
+    return path === null ? showHome() : select(path, "push");
   };
 
   /** Icon of the open page, live from its text (the tree is read from disk). */
@@ -1215,6 +1233,7 @@ export function App() {
       vaultName={vault.name}
       tree={tree}
       ticketsFolder={settings.ticketsFolder}
+      hidden={[settings.ticketsFolder, readingPath].filter(Boolean)}
       selected={note?.path}
       view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : null}
       liveIcon={note ? { path: note.path, icon: liveIcon } : undefined}
@@ -1235,10 +1254,10 @@ export function App() {
       onRename={(path) => void askName("Renommer la page", noteTitle(path)).then((name) => (name ? renamePath(path, name) : false))}
       onSearch={() => setModal("switcher")}
       onVaultSearch={() => setModal("search")}
-      onHome={(newTabRequested) => void (newTabRequested ? newTab(null) : showHome())}
-      onTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
-      onGraph={(newTabRequested) => void select(GRAPH_VIEW, "push", newTabRequested)}
-      onReading={(newTabRequested) => void select(READING_VIEW, "push", newTabRequested)}
+      onHome={(newTabRequested) => void openView(null, newTabRequested)}
+      onTickets={(newTabRequested) => void openView(TICKETS_VIEW, newTabRequested)}
+      onGraph={(newTabRequested) => void openView(GRAPH_VIEW, newTabRequested)}
+      onReading={(newTabRequested) => void openView(READING_VIEW, newTabRequested)}
       onGit={() => toggleGit()}
       onSettings={(newTabRequested) => void select(SETTINGS_VIEW, "push", newTabRequested)}
       onHelp={() => setModal("help")}
@@ -1478,10 +1497,15 @@ export function App() {
                   )}
                 </div>
                 )}
-                {showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && !basePage && <OutlinePanel editor={editor} onClose={toggleOutline} />}
-              {presentationPage && showSlides && !rawMode && <SlidesPanel editor={editor} rendered={slides} onPresent={(index) => setPresenting(index)} onClose={() => setShowSlides(false)} />}
-                {showHistory && vault.git && (
-                  <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
+                {presentationPage && showSlides && !rawMode && <SlidesPanel editor={editor} rendered={slides} onPresent={(index) => setPresenting(index)} onClose={() => setShowSlides(false)} />}
+                {(outlineShown || historyShown) && (
+                  // Outline and history share one column, the outline on top.
+                  <div className={historyShown ? "side-column with-history" : "side-column"}>
+                    {outlineShown && <OutlinePanel editor={editor} onClose={toggleOutline} />}
+                    {historyShown && vault.git && (
+                      <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
+                    )}
+                  </div>
                 )}
               </div>
             </>

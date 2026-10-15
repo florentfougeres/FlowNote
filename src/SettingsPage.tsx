@@ -19,6 +19,8 @@ export interface Settings {
   readingList: string;
   /** Read the title of the pages added to the reading list. */
   fetchTitles: boolean;
+  /** Size of the whole interface (1: the default size). */
+  uiScale: number;
 }
 
 const AUTOSAVE_KEY = "flownote:autosave";
@@ -28,6 +30,20 @@ const TICKETS_KEY = "flownote:tickets-folder";
 const COLUMNS_KEY = "flownote:ticket-columns";
 const READING_KEY = "flownote:reading-list";
 const TITLES_KEY = "flownote:fetch-titles";
+const SCALE_KEY = "flownote:ui-scale";
+
+/** Sizes offered for the interface: text, buttons and spacing grow together. */
+export const UI_SCALES: [number, string][] = [
+  [0.9, "Petite"],
+  [1, "Normale"],
+  [1.1, "Grande"],
+  [1.25, "Très grande"],
+];
+
+function readScale(): number {
+  const value = Number(localStorage.getItem(SCALE_KEY));
+  return UI_SCALES.some(([scale]) => scale === value) ? value : 1;
+}
 
 function readColumns(): TicketColumn[] {
   try {
@@ -58,9 +74,10 @@ export function loadSettings(): Settings {
       ticketColumns: readColumns(),
       readingList: localStorage.getItem(READING_KEY) || "Lectures.md",
       fetchTitles: localStorage.getItem(TITLES_KEY) !== "false",
+      uiScale: readScale(),
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true, uiScale: 1 };
   }
 }
 
@@ -73,6 +90,7 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(COLUMNS_KEY, JSON.stringify(settings.ticketColumns));
     localStorage.setItem(READING_KEY, settings.readingList);
     localStorage.setItem(TITLES_KEY, String(settings.fetchTitles));
+    localStorage.setItem(SCALE_KEY, String(settings.uiScale));
   } catch {
     // Settings simply won't persist.
   }
@@ -92,6 +110,21 @@ export function applyTheme(theme: Theme, desktop = false) {
       .then(({ getCurrentWindow }) => getCurrentWindow().setTheme(theme === "system" ? null : theme))
       .catch(() => {});
   }
+}
+
+/**
+ * Size of the interface. The desktop app zooms its web view, like ⌘+ in a
+ * browser, so that positions measured by the menus stay right; elsewhere the
+ * page is zoomed with CSS.
+ */
+export function applyScale(scale: number, desktop = false) {
+  if (desktop) {
+    void import("@tauri-apps/api/webview")
+      .then(({ getCurrentWebview }) => getCurrentWebview().setZoom(scale))
+      .catch(() => {});
+    return;
+  }
+  document.documentElement.style.zoom = scale === 1 ? "" : String(scale);
 }
 
 const SPELL_HELP: Record<SpellChecker, string> = {
@@ -208,6 +241,15 @@ export function SettingsPage({
                 ))}
               </div>
             </Row>
+            <Row label="Taille de l'interface" help="Agrandit ou réduit le texte, les boutons et les marges de toute l'app.">
+              <div className="segmented" role="radiogroup" aria-label="Taille de l'interface">
+                {UI_SCALES.map(([value, label]) => (
+                  <button key={value} role="radio" aria-checked={settings.uiScale === value} className={settings.uiScale === value ? "selected" : ""} onClick={() => onChange({ ...settings, uiScale: value })}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </Row>
             <Row label="Enregistrement automatique" help={keys("Sinon, enregistrez avec ⌘S. Les modifications en attente sont enregistrées avant de changer de page.")}>
               <Switch checked={settings.autosave} label="Enregistrement automatique" onChange={(autosave) => onChange({ ...settings, autosave })} />
             </Row>
@@ -279,7 +321,7 @@ export function SettingsPage({
  * renamed, moved and removed. Renaming keeps the `status` value already
  * written in the tickets.
  */
-function ColumnsSetting({ columns, onChange }: { columns: TicketColumn[]; onChange: (columns: TicketColumn[]) => void }) {
+export function ColumnsSetting({ columns, onChange }: { columns: TicketColumn[]; onChange: (columns: TicketColumn[]) => void }) {
   const [draft, setDraft] = useState("");
   const update = (next: TicketColumn[]) => onChange(normalizeColumns(next));
   const rename = (i: number, label: string) => onChange(columns.map((c, j) => (j === i ? { ...c, label } : c)));
