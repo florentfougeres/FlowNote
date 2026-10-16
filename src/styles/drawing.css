@@ -51,6 +51,90 @@
   --island-bg-color: var(--bg-elevated);
 }
 
+/* The library (and its "browse libraries" site) is not offered: it has no place in the vault. */
+.drawing-pane .excalidraw .default-sidebar-trigger,
+.drawing-pane .excalidraw .sidebar-trigger,
+.drawing-pane .excalidraw .context-menu li[data-testid="addToLibrary"],
+.drawing-pane .excalidraw .context-menu li[data-testid="wrapSelectionInFrame"],
+.drawing-pane .excalidraw .context-menu li[data-testid="copyElementLink"] {
+  display: none !important;
+}
+
+/* Right-click menu like the app's menus: translucent material, rounded rows, muted shortcuts. */
+.drawing-pane .excalidraw .context-menu {
+  min-width: 230px;
+  padding: 5px;
+  border: none;
+  border-radius: 10px;
+  background: var(--menu-material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow: var(--shadow-menu);
+  font-family: var(--font-ui);
+  animation: materialize 140ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.drawing-pane .excalidraw .context-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.drawing-pane .excalidraw .context-menu-item:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.drawing-pane .excalidraw .context-menu-item.dangerous,
+.drawing-pane .excalidraw .context-menu-item.dangerous:hover {
+  color: var(--danger);
+  background: transparent;
+}
+
+.drawing-pane .excalidraw .context-menu-item.dangerous:hover {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+.drawing-pane .excalidraw .context-menu-item__label {
+  justify-self: start;
+}
+
+/* Excalidraw's style sheet loads after the app's: one class more so the app's type wins. */
+.drawing-pane .excalidraw .context-menu .context-menu-item,
+.drawing-pane .excalidraw .context-menu .context-menu-item .context-menu-item__label {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  letter-spacing: normal;
+}
+
+.drawing-pane .excalidraw .context-menu .context-menu-item .context-menu-item__shortcut {
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  opacity: 1;
+}
+
+/* The separator after a hidden entry would double the one before it. */
+.drawing-pane .excalidraw .context-menu li[data-testid="addToLibrary"] + hr,
+.drawing-pane .excalidraw .context-menu li[data-testid="wrapSelectionInFrame"] + hr {
+  display: none;
+}
+
+.drawing-pane .excalidraw .context-menu-item-separator {
+  margin: 4px 6px;
+  border: none;
+  border-top: 0.5px solid var(--border);
+}
+
 .crumb-rename {
   font: inherit;
   font-weight: 600;

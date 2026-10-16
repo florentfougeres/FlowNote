@@ -63,6 +63,27 @@ export const MarkdownShortcuts = Extension.create({
       },
     });
 
+    // `:::info ` typed at the start of a line: a HedgeDoc admonition (`:::spoiler ` folds).
+    const containerRule = new InputRule({
+      find: /^(:{3,})([A-Za-z][\w-]*)\s$/,
+      handler: ({ state, range, match }) => {
+        const { tr } = state;
+        const $from = tr.doc.resolve(range.from);
+        if ($from.parent.type !== nodes.paragraph || range.from !== $from.start()) return null;
+        const spoiler = match[2].toLowerCase() === "spoiler";
+        tr.delete(range.from, range.to);
+        const paragraph = tr.doc.resolve(range.from).parent;
+        const start = $from.before();
+        const callout = nodes.callout.create({ calloutType: match[2], fold: spoiler ? "-" : "", syntax: "hedgedoc", marker: match[1] }, [
+          nodes.calloutTitle.create(),
+          nodes.paragraph.create(null, paragraph.content),
+        ]);
+        tr.replaceWith(start, start + paragraph.nodeSize, callout);
+        // The title of a spoiler is shown; the other admonitions start with their text.
+        tr.setSelection(TextSelection.create(tr.doc, spoiler ? start + 2 : start + 4));
+      },
+    });
+
     // `---`, `***` or `___` typed alone in a paragraph inserts a divider.
     const dividerRule = new InputRule({
       find: /^(---|\*\*\*|___)$/,
@@ -101,6 +122,7 @@ export const MarkdownShortcuts = Extension.create({
       }),
       wrappingInputRule({ find: /^\s*>\s$/, type: nodes.blockquote }),
       calloutRule,
+      containerRule,
       dividerRule,
       // Delimiters may follow punctuation (l'*italique*) but not a letter (snake_case).
       mark(/(?<=^|[^\p{L}\p{N}*])(\*\*(?!\s)([^*]+?)\*\*)$/u, marks.bold, "**"),

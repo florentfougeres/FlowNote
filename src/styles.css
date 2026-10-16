@@ -28,4 +28,6 @@
 @import "./styles/dialogs.css";
 @import "./styles/settings.css";
 @import "./styles/forms.css";
+@import "./styles/datepicker.css";
+@import "./styles/split.css";
 @import "./styles/print.css";

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { getCoreRowModel, useReactTable, type ColumnDef, type ColumnSizingState } from "@tanstack/react-table";
 import type { PropertyValue } from "../markdown/frontmatter";
 import { Icon, type IconName } from "../Icon";
@@ -258,15 +259,45 @@ function NameCell({ row, editable, autoEdit, actions }: { row: BaseRow; editable
   );
 }
 
+/** Where the menu of a summary goes: under its button, or above when there is more room there; never off screen. */
+function summaryMenuPlace(anchor: DOMRect): React.CSSProperties {
+  const below = window.innerHeight - anchor.bottom - 12;
+  const above = anchor.top - 12;
+  const left = Math.max(8, Math.min(anchor.left, window.innerWidth - 228));
+  return below >= 280 || below >= above ? { left, top: anchor.bottom + 4, maxHeight: below } : { left, bottom: window.innerHeight - anchor.top + 4, maxHeight: above };
+}
+
 function SummaryCell({ column, rows, kind, formulas, editable, onSummary }: { column: ColumnInfo; rows: BaseRow[]; kind: string | undefined; formulas: Record<string, string>; editable: boolean; onSummary: (kind: string | null) => void }) {
-  const [open, setOpen] = useState(false);
-  const box = useOutside(() => setOpen(false));
+  const [place, setPlace] = useState<React.CSSProperties | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!place) return;
+    const down = (e: MouseEvent) => !box.current?.contains(e.target as Node) && !menu.current?.contains(e.target as Node) && setPlace(null);
+    const close = () => setPlace(null);
+    window.addEventListener("mousedown", down);
+    window.addEventListener("resize", close);
+    document.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("mousedown", down);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("scroll", close, true);
+    };
+  }, [place]);
   const type = column.meta.type;
   const choices = SUMMARIES.filter((s) => s.types === "all" || (s.types === "number" && (type === "number" || column.kind === "formula")) || (s.types === "checkbox" && type === "checkbox") || (s.types === "date" && type === "date"));
   const label = SUMMARIES.find((s) => s.id === kind)?.label;
+  const choose = (id: string | null) => {
+    onSummary(id);
+    setPlace(null);
+  };
   return (
     <div ref={box} className="db-summary">
-      <button className={kind ? "db-summary-button set" : "db-summary-button"} disabled={!editable} onClick={() => setOpen(!open)}>
+      <button
+        className={kind ? "db-summary-button set" : "db-summary-button"}
+        disabled={!editable}
+        onClick={(e) => setPlace(place ? null : summaryMenuPlace(e.currentTarget.getBoundingClientRect()))}
+      >
         {kind ? (
           <>
             <span>{label}</span> <strong>{summarize(rows, column.property, kind, formulas)}</strong>
@@ -275,16 +306,19 @@ function SummaryCell({ column, rows, kind, formulas, editable, onSummary }: { co
           <span>Calculer</span>
         )}
       </button>
-      {open && (
-        <div className="db-popover db-menu db-menu-up" onMouseDown={(e) => e.stopPropagation()}>
-          <button onClick={() => (onSummary(null), setOpen(false))}>Aucun calcul</button>
-          {choices.map((s) => (
-            <button key={s.id} className={kind === s.id ? "selected" : undefined} onClick={() => (onSummary(s.id), setOpen(false))}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {place &&
+        // In the page's body, over the view tabs and outside the table's scrolling box.
+        createPortal(
+          <div ref={menu} className="db-popover db-menu db-summary-menu" style={place} onMouseDown={(e) => e.stopPropagation()}>
+            <button onClick={() => choose(null)}>Aucun calcul</button>
+            {choices.map((s) => (
+              <button key={s.id} className={kind === s.id ? "selected" : undefined} onClick={() => choose(s.id)}>
+                {s.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

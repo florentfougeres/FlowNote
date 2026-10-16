@@ -20,11 +20,13 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 ## Fonctionnalités
 
 **Interface façon Notion**
-- Onglets en haut de la fenêtre, barre latérale avec le vault, Rechercher, Accueil, Tickets, Lectures, Graphe et l'arbre des pages
+- Onglets en haut de la fenêtre, barre latérale avec le vault (et ses vaults récents), Accueil, Rechercher, Tickets, Lectures, Graphe, Documentation et l'arbre des pages
+- **Split view** : deux pages côte à côte (`⌥-clic` sur une page, `⌘⌥\` pour fermer le panneau)
+- Documentation intégrée de toutes les fonctionnalités
 - Arbre des pages : menu « … » ou clic droit (renommer, supprimer, dupliquer, copier le lien, afficher dans le Finder, sous-page, nouveau dossier), glisser-déposer des pages et des dossiers, liens mis à jour à chaque déplacement
 - Favoris d'Obsidian en haut de la barre latérale
 - Pastille d'état en bas à droite de la page : enregistrement, nombre de mots, messages
-- Réglages dans un onglet (`⌘,`), rangés par catégorie
+- Réglages dans un onglet (`⌘,`), rangés par catégorie, dont la taille de l'interface
 - Barre latérale masquable (`⌘\`), qui réapparaît au survol du bord gauche
 - Pleine largeur par page et mode focus (`⌘⇧M`, Échap pour en sortir)
 - Menu « … » de la page : export en **PDF** (note, présentation, dessin, mind map) et copie de la note en HTML pour un mail ou un document
@@ -32,11 +34,11 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 - Accueil : créer, récents, à faire, tickets, à lire, graphe, Git, activité et statistiques du vault
 
 **Éditeur de blocs**
-- Titres, listes, tâches, citations, callouts Obsidian (`> [!note]`), toggles (callouts repliables), séparateurs
+- Titres, listes, tâches, citations, callouts Obsidian (`> [!note]`), admonitions HedgeDoc (`:::info`), toggles (callouts repliables), séparateurs
 - Menu `/` pour insérer ou transformer un bloc, raccourcis Markdown à la frappe (`#`, `-`, `[]`, `>`, ```` ``` ````)
 - Poignée de bloc : glisser-déposer avec imbrication, dupliquer, transformer, supprimer ; `⌥↑` / `⌥↓` déplacent le bloc
 - Sommaire : `[TOC]` (comme HedgeDoc) affiche les titres de la note, `/sommaire` l'insère
-- Mise en forme en ligne : gras, italique, barré, surligné, code, liens (coller une URL sur du texte sélectionné en fait un lien)
+- Mise en forme en ligne : gras, italique, barré, surligné, code, liens (`⌘K` sur une sélection, ou coller une URL sur du texte sélectionné)
 - Tableaux éditables avec poignées de lignes et de colonnes (insérer, déplacer, aligner, supprimer)
 - Blocs de code avec coloration syntaxique, diagrammes **Mermaid**, maths, emoji (`:calendrier`), date du jour (`/date`)
 - **Graphiques Plotly** (`/graphique`) au format du plugin Obsidian [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) : blocs ```` ```plotly ```` en YAML ou JSON, graphiques interactifs, éditeur visuel (type, titres, tableau des valeurs, import d'un CSV)
@@ -50,7 +52,7 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 
 **Tickets**
 - Comme les issues GitHub : un ticket est une note de `Tickets/` (« 12 - Titre.md ») avec état, tags, échéance (`📅` du plugin Tasks) et fil de commentaires en callouts `[!comment]`
-- Vue liste (ouverts / fermés, tri, recherche, tags) ou **tableau kanban** avec glisser-déposer ; colonnes personnalisables dans les réglages
+- Vue liste (ouverts / fermés, tri, recherche, tags) ou **tableau kanban** avec glisser-déposer ; colonnes personnalisables depuis le tableau ou les réglages
 
 **Lectures**
 - Une note `Lectures.md` : une section par thème, une case à cocher par lien, cochée une fois lu

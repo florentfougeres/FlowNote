@@ -59,6 +59,15 @@ export function openTauriVault(root: string): Vault {
   return tauriVault(root);
 }
 
+/** Folder of the vault opened last (the open one). */
+export function currentTauriVault(): string | null {
+  try {
+    return localStorage.getItem(LAST_VAULT_KEY);
+  } catch {
+    return null;
+  }
+}
+
 /** Folders of the vaults opened recently, most recent first. */
 export function recentTauriVaults(): string[] {
   try {

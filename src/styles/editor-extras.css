@@ -537,3 +537,60 @@
   color: var(--on-accent);
 }
 
+
+/* ---- Link address (⌘K) ---- */
+
+.link-prompt {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+.link-prompt input {
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+
+.link-prompt-remove {
+  margin-top: 4px;
+  color: var(--danger) !important;
+}
+
+/* Bar over a hovered link (LinkHover). */
+.link-hover {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 360px;
+  padding: 4px 4px 4px 10px;
+}
+
+.link-hover-href {
+  flex: 1;
+  min-width: 0;
+  margin-right: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.link-hover button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.link-hover button:hover {
+  color: var(--text);
+}

@@ -52,7 +52,8 @@ export const NO_CONTEXT: ParseContext = { definitions: "", definitionCount: 0 };
 const DEFINITION_TYPES = new Set(["definition", "footnoteDefinition"]);
 
 export function parseDocument(src: string): ParsedDocument {
-  const root = documentProcessor.parse(src) as Root;
+  const { masked, containers } = maskContainers(src);
+  const root = documentProcessor.parse(masked) as Root;
   const definitions = root.children.filter((c) => DEFINITION_TYPES.has(c.type)).map((c) => src.slice(...span(c)));
   const context: ParseContext = { definitions: definitions.join("\n\n"), definitionCount: definitions.length };
   let frontmatterEnd: number | null = null;
@@ -63,24 +64,108 @@ export function parseDocument(src: string): ParsedDocument {
       frontmatterEnd = end;
       continue;
     }
-    blocks.push({ json: convertBlock(child, src, context), start, end });
+    blocks.push({ json: convertTopLevel(child, src, context, containers), start, end });
   }
   return { frontmatterEnd, blocks, context };
 }
 
 /** Parses Markdown that is not a whole file (container content, serializer output). */
 export function parseFragment(md: string, context: ParseContext = NO_CONTEXT): PMJSON[] {
+  const { masked, containers } = maskContainers(md);
   if (context.definitionCount > 0) {
-    const root = fragmentProcessor.parse(`${md}\n\n${context.definitions}`) as Root;
+    const root = fragmentProcessor.parse(`${masked}\n\n${context.definitions}`) as Root;
     const own = root.children.slice(0, root.children.length - context.definitionCount);
     const appended = root.children.slice(own.length);
     // If the fragment swallowed the appended definitions (e.g. an unclosed fence), parse it alone.
     if (appended.length === context.definitionCount && appended.every((c) => DEFINITION_TYPES.has(c.type) && span(c)[0] >= md.length)) {
-      return own.map((child) => convertBlock(child, md, context));
+      return own.map((child) => convertTopLevel(child, md, context, containers));
     }
   }
-  const root = fragmentProcessor.parse(md) as Root;
-  return root.children.map((child) => convertBlock(child, md, context));
+  const root = fragmentProcessor.parse(masked) as Root;
+  return root.children.map((child) => convertTopLevel(child, md, context, containers));
+}
+
+// ---------------------------------------------------------------------------
+// HedgeDoc admonitions (`:::info` … `:::`)
+
+/** Opening line: colons, a name, optional `{attributes}` and a title (`:::spoiler {state="open"} Détails`). */
+const CONTAINER_OPEN = /^ {0,3}(:{3,}[ \t]*)([A-Za-z][\w-]*)((?:[ \t]*\{[^}\n]*\})?)[ \t]*(.*)$/;
+const CONTAINER_CLOSE = /^ {0,3}(:{3,})[ \t]*$/;
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+
+/**
+ * Finds the `:::name` containers of HedgeDoc (markdown-it-container) and hides
+ * them from remark behind an HTML comment of the same length, so that each one
+ * becomes a single block whose source is then parsed on its own. As in
+ * markdown-it, a container closes at the first line of at least as many colons;
+ * one never closed stays plain text. Lines inside code fences are skipped.
+ */
+export function maskContainers(src: string): { masked: string; containers: Map<number, number> } {
+  const containers = new Map<number, number>();
+  if (!src.includes(":::")) return { masked: src, containers };
+  const lines = src.split("\n");
+  const starts: number[] = [];
+  let offset = 0;
+  for (const line of lines) {
+    starts.push(offset);
+    offset += line.length + 1;
+  }
+  let fence: string | null = null;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const fenceMatch = FENCE.exec(line);
+    if (fence) {
+      if (fenceMatch && fenceMatch[1][0] === fence[0] && fenceMatch[1].length >= fence.length && line.trim() === fenceMatch[1]) fence = null;
+      continue;
+    }
+    if (fenceMatch) {
+      fence = fenceMatch[1];
+      continue;
+    }
+    const open = CONTAINER_OPEN.exec(line);
+    if (!open) continue;
+    const colons = open[1].trim().length;
+    let close = -1;
+    for (let j = i + 1; j < lines.length; j++) {
+      const closing = CONTAINER_CLOSE.exec(lines[j]);
+      if (closing && closing[1].length >= colons) {
+        close = j;
+        break;
+      }
+    }
+    if (close < 0) continue;
+    containers.set(starts[i], starts[close] + lines[close].length);
+    i = close;
+  }
+  if (containers.size === 0) return { masked: src, containers };
+  let masked = "";
+  let last = 0;
+  for (const [start, end] of containers) {
+    const inner = src.slice(start + 4, end - 3).replace(/[^\n]/g, " ");
+    masked += `${src.slice(last, start)}<!--${inner}-->`;
+    last = end;
+  }
+  return { masked: masked + src.slice(last), containers };
+}
+
+function convertTopLevel(n: RootContent, src: string, ctx: ParseContext, containers: Map<number, number>): PMJSON {
+  if (n.type === "html") {
+    const [start, end] = span(n);
+    if (containers.get(start) === end) return convertContainer(src.slice(start, end), ctx);
+  }
+  return convertBlock(n, src, ctx);
+}
+
+/** A HedgeDoc container as a callout: the name is its type, `spoiler` folds (open with `{state="open"}`). */
+function convertContainer(raw: string, ctx: ParseContext): PMJSON {
+  const lines = raw.split("\n");
+  const [, marker, name, extra, title] = CONTAINER_OPEN.exec(lines[0])!;
+  const body = parseFragment(lines.slice(1, -1).join("\n"), ctx);
+  const fold = name.toLowerCase() === "spoiler" ? (/state\s*=\s*["']?open/.test(extra) ? "+" : "-") : "";
+  return node("callout", { calloutType: name, fold, compact: false, syntax: "hedgedoc", marker: marker.replace(/^ +/, ""), extra }, [
+    node("calloutTitle", undefined, parseInlineText(title, ctx)),
+    ...body,
+  ]);
 }
 
 function span(node: Nodes): [number, number] {

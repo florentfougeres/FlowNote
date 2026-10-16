@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { keys } from "./keys";
 import { NoteEditor } from "./editor/NoteEditor";
-import { imageMime, type VaultBridge } from "./editor/bridge";
+import { imageMime, NULL_BRIDGE, type VaultBridge } from "./editor/bridge";
+import DOCUMENTATION from "./docs/documentation.md?raw";
 import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
 import { DRAWING_SUFFIX, isDrawingPath, newDrawingFile } from "./drawing/format";
 import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
@@ -16,7 +17,7 @@ import { mountBase, type EmbedProps } from "./base/EmbeddedBase";
 import { PageTitle } from "./PageTitle";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
-import { applyTheme, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
+import { applyTheme, applyScale, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
 import { deletePage, followFolder, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "./vault/pageOps";
 import { PageIcon, PopoverMenu, Sidebar, type MenuItem } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
@@ -41,14 +42,14 @@ import { useSpellChecking } from "./editor/useSpellChecking";
 import type { Editor } from "@tiptap/core";
 import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
-import { DEFAULT_CONFIG, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
+import { DEFAULT_CONFIG, dirname, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
 import { DEMO_FILES, DEMO_REMOTE } from "./demo";
 import { GitDrawer, useGitDrawer } from "./GitDrawer";
 import { usePersistentFlag } from "./hooks/usePersistentFlag";
 import { useWidePages } from "./hooks/useWidePages";
 import { useSystemDark } from "./hooks/useSystemDark";
 import { hasConflictMarkers } from "./vault/conflicts";
-import { forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
+import { currentTauriVault, forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
 import { Welcome } from "./Welcome";
 import { TabBar, type Tab } from "./TabBar";
 import { Dashboard } from "./Dashboard";
@@ -59,6 +60,7 @@ import { isPresentationMarkdown, newPresentationFile } from "./presentation/form
 import { slideAt, useSlides } from "./presentation/useSlides";
 import { SlidesPanel } from "./presentation/SlidesPanel";
 import { Presenter } from "./presentation/Presenter";
+import { SplitPane } from "./SplitPane";
 import { ticketInfo } from "./ticket/agenda";
 import { moveRecentPage, recordRecentPage } from "./dashboard/recents";
 import { countWords, readingMinutes } from "./markdown/wordCount";
@@ -85,12 +87,15 @@ const GRAPH_VIEW = "flownote:graph";
 const READING_VIEW = "flownote:reading";
 /** Pseudo-path of the settings page. */
 const SETTINGS_VIEW = "flownote:settings";
+/** Pseudo-path of the documentation (a read-only note shipped with the app). */
+const DOCS_VIEW = "flownote:docs";
 /** Views shown in a tab instead of a page. */
 const VIEWS: Record<string, { title: string; icon: IconName }> = {
   [TICKETS_VIEW]: { title: "Tickets", icon: "ticket" },
   [GRAPH_VIEW]: { title: "Graphe", icon: "graph" },
   [READING_VIEW]: { title: "Lectures", icon: "bookmark" },
   [SETTINGS_VIEW]: { title: "Réglages", icon: "sliders" },
+  [DOCS_VIEW]: { title: "Documentation", icon: "book" },
 };
 const isView = (path: string | null) => path !== null && path in VIEWS;
 
@@ -245,6 +250,7 @@ export function App() {
   };
   const frontmatter = useRef<FrontmatterControl | null>(null);
   useEffect(() => applyTheme(settings.theme, isTauri()), [settings.theme]);
+  useEffect(() => applyScale(settings.uiScale, isTauri()), [settings.uiScale]);
   // The desktop window is transparent so the sidebar can show the native macOS material.
   useEffect(() => {
     document.documentElement.classList.toggle("native-vibrancy", isTauri());
@@ -263,7 +269,25 @@ export function App() {
   /** Back/forward history and scroll position of the inactive tabs. */
   const tabState = useRef(new Map<string, { back: string[]; forward: string[]; scroll: number }>());
   const contentRef = useRef<HTMLElement>(null);
+  /** Page on the right of the split view: part of the active tab (one tab for the pair). */
+  const splitOf = (id: string) => tabsRef.current.find((t) => t.id === id)?.split ?? null;
+  /** Writes the right side's pending changes. */
+  const splitSaver = useRef<(() => Promise<void>) | null>(null);
+  const [tabMenu, setTabMenu] = useState<{ id: string; anchor: DOMRect } | null>(null);
+  const [splitWidth, setSplitWidth] = useState(() => {
+    try {
+      return Math.min(0.75, Math.max(0.25, Number(localStorage.getItem("flownote:split-width")) || 0.5));
+    } catch {
+      return 0.5;
+    }
+  });
   const setTabPath = (id: string, path: string | null) => setTabs((list) => list.map((t) => (t.id === id ? { ...t, path } : t)));
+  /** Sets (or, with null, closes) the page on the right of a tab. */
+  const setTabSplit = (id: string, split: string | null) => {
+    const next = tabsRef.current.map((t) => (t.id === id ? { ...t, split } : t));
+    tabsRef.current = next;
+    setTabs(next);
+  };
 
   // Latest values for async callbacks.
   const noteRef = useRef(note);
@@ -450,6 +474,7 @@ export function App() {
       if (closingActive) {
         try {
           await saveNow();
+          await splitSaver.current?.();
         } catch {
           return;
         }
@@ -530,6 +555,11 @@ export function App() {
   const shortcuts = useRef<(event: KeyboardEvent) => void>(() => {});
   shortcuts.current = (event: KeyboardEvent) => {
     if (!(event.metaKey || event.ctrlKey)) return;
+    if (event.altKey && event.code === "Backslash" && vault) {
+      event.preventDefault();
+      toggleSplit();
+      return;
+    }
     if (event.code === "KeyF" && vault) {
       event.preventDefault();
       if (event.shiftKey) setModal("search");
@@ -545,6 +575,8 @@ export function App() {
     if (key === "s") run(() => void saveNow().catch(() => {}));
     else if (!vault) return;
     else if (key === "p" && event.shiftKey && presentationPageRef.current) run(() => present());
+    // ⌘K in the editor links the selected text (handled there first).
+    else if (key === "k" && event.defaultPrevented) return;
     else if (key === "p" || key === "k" || key === "o") run(() => setModal("switcher"));
     else if (key === "n" && !event.shiftKey) run(() => void newPage(null));
     else if (event.code === "BracketLeft" && event.shiftKey) run(() => cycleTab(-1));
@@ -676,7 +708,7 @@ export function App() {
     back.current = back.current.map(moved);
     forward.current = forward.current.map(moved);
     followWide(moved);
-    setTabs((list) => list.map((t) => (t.path && !isView(t.path) ? { ...t, path: moved(t.path) } : t)));
+    setTabs((list) => list.map((t) => ({ ...t, path: t.path && !isView(t.path) ? moved(t.path) : t.path, split: t.split ? moved(t.split) : t.split })));
     const current = noteRef.current;
     if (current && (moved(current.path) !== current.path || updatedNotes.includes(moved(current.path)))) {
       const openPath = moved(current.path);
@@ -832,7 +864,7 @@ export function App() {
     const gone = (p: string | null) => p !== null && !isView(p) && removed(p) && !files.includes(p);
     back.current = back.current.filter((p) => !gone(p));
     forward.current = forward.current.filter((p) => !gone(p));
-    setTabs((list) => list.map((t) => (gone(t.path) ? { ...t, path: null } : t)));
+    setTabs((list) => list.map((t) => ({ ...t, path: gone(t.path) ? null : t.path, split: gone(t.split ?? null) ? null : t.split })));
     if (noteRef.current && gone(noteRef.current.path)) {
       noteRef.current = null;
       setNote(null);
@@ -936,6 +968,42 @@ export function App() {
     },
   };
 
+  /** The page on the right of the split view (only pages are shown there). */
+  const splitPath = tabs.find((t) => t.id === activeTab)?.split ?? null;
+  const splitBridge: VaultBridge = {
+    ...bridge,
+    notePath: splitPath ?? "",
+    get files() {
+      return filesRef.current;
+    },
+    // Links followed on the right stay on the right (⌘-click: a new tab).
+    openPath: (path, newTabRequested) => (newTabRequested ? void newTab(path) : isView(path) ? void select(path) : setTabSplit(activeRef.current, path)),
+  };
+
+  /** Drag of the split view's separator: the right side's share of the width, kept for next time. */
+  const startSplitResize = (event: React.PointerEvent) => {
+    event.preventDefault();
+    const area = (event.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();
+    document.body.classList.add("split-resizing");
+    let share = splitWidth;
+    const move = (ev: PointerEvent) => {
+      share = Math.min(0.75, Math.max(0.25, (area.right - ev.clientX) / area.width));
+      setSplitWidth(share);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.classList.remove("split-resizing");
+      try {
+        localStorage.setItem("flownote:split-width", String(share));
+      } catch {
+        // not remembered
+      }
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
   const onMarkdown = useCallback((markdown: string) => setNote((current) => (current ? { ...current, markdown } : current)), []);
 
   /** The open page is a drawing (Name.excalidraw.md). */
@@ -948,6 +1016,8 @@ export function App() {
   const ticketPage = note !== null && !drawing && !mindmap && !basePage && isTicketMarkdown(note.loaded);
   /** The open page is a presentation (`marp: true`), read from the current text so a conversion shows at once. */
   const presentationPage = note !== null && !drawing && !mindmap && !basePage && !ticketPage && isPresentationMarkdown(note.markdown);
+  const outlineShown = showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && !basePage;
+  const historyShown = showHistory && Boolean(vault?.git);
   const slides = useSlides(presentationPage ? note.markdown : "", note?.path ?? "", files, loadImage, presentationPage);
   /** Bases embedded in the open note (`![[X.base]]`), rendered with the app's current files. */
   const embeds = useRef(new Set<ReturnType<typeof mountBase>>());
@@ -1057,6 +1127,79 @@ export function App() {
     }
   };
 
+  /**
+   * Opens the dashboard or a view from the sidebar: in the tab already showing
+   * it, else in place when the active tab shows a view, else in a new tab (the
+   * open page stays where it is).
+   */
+  const openView = (path: string | null, newTabRequested: boolean) => {
+    const existing = tabsRef.current.find((t) => t.path === path);
+    if (existing && !newTabRequested) return switchTab(existing.id);
+    const current = tabsRef.current.find((t) => t.id === activeRef.current)?.path ?? null;
+    if (newTabRequested || (current !== null && !isView(current))) return newTab(path);
+    return path === null ? showHome() : select(path, "push");
+  };
+
+  /** Shows a page on the right of the active tab (replacing the one there). */
+  const openRight = (path: string) => {
+    if (!isView(path)) setTabSplit(activeRef.current, path);
+  };
+
+  /**
+   * Puts the page of another tab on the right of the active one: the two make
+   * one tab. A page already on the right goes back to a tab of its own, in
+   * place of the one joined.
+   */
+  const joinTab = (id: string) => {
+    const other = tabsRef.current.find((t) => t.id === id);
+    if (!other?.path || isView(other.path) || id === activeRef.current) return;
+    const previous = splitOf(activeRef.current);
+    const next = tabsRef.current.flatMap((t) => {
+      if (t.id === activeRef.current) return [{ ...t, split: other.path }];
+      if (t.id !== id) return [t];
+      return previous ? [{ id: newTabId(), path: previous }] : [];
+    });
+    tabState.current.delete(id);
+    tabsRef.current = next;
+    setTabs(next);
+  };
+
+  /** The page on the right of a tab goes to a tab of its own, after it. */
+  const separateTab = async (id: string) => {
+    const split = splitOf(id);
+    if (!split) return;
+    if (id === activeRef.current) await splitSaver.current?.();
+    const next = tabsRef.current.flatMap((t) => (t.id === id ? [{ ...t, split: null }, { id: newTabId(), path: split }] : [t]));
+    tabsRef.current = next;
+    setTabs(next);
+  };
+
+  /** ⌘⌥\: closes the right side, or joins the next tab holding a page. */
+  const toggleSplit = () => {
+    if (splitOf(activeRef.current)) return setTabSplit(activeRef.current, null);
+    const list = tabsRef.current;
+    const index = list.findIndex((t) => t.id === activeRef.current);
+    const candidates = [...list.slice(index + 1), ...list.slice(0, index)];
+    const other = candidates.find((t) => t.path !== null && !isView(t.path));
+    if (other) joinTab(other.id);
+    else notify("⌥-clic sur une page de la barre latérale pour l'ouvrir à droite");
+  };
+
+  /** Swaps the two sides of the active tab. */
+  const swapSplit = async () => {
+    const right = splitOf(activeRef.current);
+    const left = noteRef.current?.path ?? null;
+    if (!right || !left) return;
+    try {
+      await saveNow();
+      await splitSaver.current?.();
+    } catch {
+      return;
+    }
+    setTabSplit(activeRef.current, left);
+    await select(right, "history");
+  };
+
   /** Icon of the open page, live from its text (the tree is read from disk). */
   const liveIcon = note ? noteIcon(note.markdown) : null;
   const treeIcons = useMemo(() => {
@@ -1074,7 +1217,9 @@ export function App() {
     return found;
   }, [tree]);
   const isPresentation = (path: string) => (note?.path === path ? presentationPage : presentationPaths.has(path));
-  const pageIconFor = (path: string) => <PageIcon path={path} icon={iconOf(path)} ticket={ticketPaths.has(path)} presentation={isPresentation(path)} />;
+  /** A note of the folder next to a base (`X/` and `X.base`) is one of its rows. */
+  const isBaseRow = (path: string) => path.endsWith(".md") && path.includes("/") && files.includes(`${dirname(path)}.base`);
+  const pageIconFor = (path: string) => <PageIcon path={path} icon={iconOf(path)} ticket={ticketPaths.has(path)} presentation={isPresentation(path)} row={isBaseRow(path)} />;
   /** Presents from the slide under the cursor. */
   const present = () => {
     const current = editorRef.current;
@@ -1215,12 +1360,14 @@ export function App() {
       vaultName={vault.name}
       tree={tree}
       ticketsFolder={settings.ticketsFolder}
+      hidden={[settings.ticketsFolder, readingPath].filter(Boolean)}
       selected={note?.path}
-      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : null}
+      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
       liveIcon={note ? { path: note.path, icon: liveIcon } : undefined}
       gitChanges={vault.git ? gitChanges : null}
       gitOpen={gitOpen}
       onSelect={(path, newTabRequested) => void select(path, "push", newTabRequested)}
+      onOpenRight={openRight}
       onNewPage={(parent) => void newPage(parent)}
       onNewPageInFolder={(folder) => void newPage(null, undefined, folder)}
       onDelete={(path) => void removePage(path)}
@@ -1235,14 +1382,18 @@ export function App() {
       onRename={(path) => void askName("Renommer la page", noteTitle(path)).then((name) => (name ? renamePath(path, name) : false))}
       onSearch={() => setModal("switcher")}
       onVaultSearch={() => setModal("search")}
-      onHome={(newTabRequested) => void (newTabRequested ? newTab(null) : showHome())}
-      onTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
-      onGraph={(newTabRequested) => void select(GRAPH_VIEW, "push", newTabRequested)}
-      onReading={(newTabRequested) => void select(READING_VIEW, "push", newTabRequested)}
+      onHome={(newTabRequested) => void openView(null, newTabRequested)}
+      onTickets={(newTabRequested) => void openView(TICKETS_VIEW, newTabRequested)}
+      onGraph={(newTabRequested) => void openView(GRAPH_VIEW, newTabRequested)}
+      onReading={(newTabRequested) => void openView(READING_VIEW, newTabRequested)}
+      onDocs={(newTabRequested) => void openView(DOCS_VIEW, newTabRequested)}
       onGit={() => toggleGit()}
       onSettings={(newTabRequested) => void select(SETTINGS_VIEW, "push", newTabRequested)}
       onHelp={() => setModal("help")}
       onChangeVault={changeVault}
+      otherVaults={isTauri() ? recentTauriVaults().filter((root) => root !== currentTauriVault()).map((root) => ({ root, name: root.split("/").filter(Boolean).pop() ?? root })) : []}
+      onSwitchVault={(root) => void saveNow().catch(() => {}).then(() => open(openTauriVault(root)))}
+      onPickVault={isTauri() ? () => void saveNow().catch(() => {}).then(() => open(pickTauriVault())) : undefined}
     />
   );
 
@@ -1282,7 +1433,32 @@ export function App() {
           onClose={(id) => void closeTab(id)}
           onNew={() => void newTab(null)}
           onReorder={reorderTab}
+          onMenu={(id, anchor) => setTabMenu({ id, anchor })}
         />
+        {tabMenu && (
+          <PopoverMenu
+            anchor={tabMenu.anchor}
+            onClose={() => setTabMenu(null)}
+            items={(() => {
+              const tab = tabs.find((t) => t.id === tabMenu.id);
+              const page = tab?.path !== null && tab?.path !== undefined && !isView(tab.path);
+              const isActive = tabMenu.id === activeTab;
+              const items: MenuItem[] = [];
+              if (tab?.split) {
+                if (isActive) items.push({ label: "Échanger les côtés", icon: "replace", run: () => void swapSplit() });
+                items.push({ label: "Séparer en deux onglets", icon: "split", run: () => void separateTab(tabMenu.id) });
+                items.push({ label: "Fermer la page de droite", icon: "close", run: () => setTabSplit(tabMenu.id, null) });
+              } else if (page && !isActive) {
+                const activeTitle = activePath === null ? "Accueil" : (VIEWS[activePath]?.title ?? noteTitle(activePath));
+                items.push({ label: `Afficher à droite de « ${activeTitle} »`, icon: "split", run: () => joinTab(tabMenu.id) });
+              } else if (isActive && tabs.some((t) => t.id !== activeTab && t.path !== null && !isView(t.path))) {
+                items.push({ label: "Diviser avec l'onglet suivant", icon: "split", run: toggleSplit });
+              }
+              items.push({ label: "Fermer l'onglet", icon: "close", run: () => void closeTab(tabMenu.id) });
+              return items;
+            })()}
+          />
+        )}
       </header>
       <div className="workspace">
         {sidebarOpen && !focusMode ? (
@@ -1297,6 +1473,7 @@ export function App() {
             )}
           </>
         )}
+        <div className="main-area">
         <main
           className="content"
           ref={contentRef}
@@ -1478,15 +1655,24 @@ export function App() {
                   )}
                 </div>
                 )}
-                {showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && !basePage && <OutlinePanel editor={editor} onClose={toggleOutline} />}
-              {presentationPage && showSlides && !rawMode && <SlidesPanel editor={editor} rendered={slides} onPresent={(index) => setPresenting(index)} onClose={() => setShowSlides(false)} />}
-                {showHistory && vault.git && (
-                  <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
+                {presentationPage && showSlides && !rawMode && <SlidesPanel editor={editor} rendered={slides} onPresent={(index) => setPresenting(index)} onClose={() => setShowSlides(false)} />}
+                {(outlineShown || historyShown) && (
+                  // Outline and history share one column, the outline on top.
+                  <div className={historyShown ? "side-column with-history" : "side-column"}>
+                    {outlineShown && <OutlinePanel editor={editor} onClose={toggleOutline} />}
+                    {historyShown && vault.git && (
+                      <HistoryPanel git={vault.git} path={note.path} current={note.disk} onRestore={restoreVersion} onClose={() => setShowHistory(false)} />
+                    )}
+                  </div>
                 )}
               </div>
             </>
           ) : (
-            activePath === SETTINGS_VIEW ? (
+            activePath === DOCS_VIEW ? (
+              <div className="page docs-page">
+                <NoteEditor key="docs" source={DOCUMENTATION} onMarkdown={() => {}} bridge={NULL_BRIDGE} editable={false} properties={false} />
+              </div>
+            ) : activePath === SETTINGS_VIEW ? (
               <SettingsPage
                 key={activeTab}
                 settings={settings}
@@ -1516,6 +1702,11 @@ export function App() {
                 vault={vault}
                 files={files}
                 columns={settings.ticketColumns}
+                onColumns={(ticketColumns) => {
+                  const next = { ...settings, ticketColumns };
+                  setSettings(next);
+                  saveSettings(next);
+                }}
                 onChanged={() => {
                   void refreshGit();
                   void refresh(vault);
@@ -1543,6 +1734,49 @@ export function App() {
             )
           )}
         </main>
+        {splitPath && (
+          <>
+            <div
+              className="split-resizer"
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Largeur du panneau de droite"
+              onPointerDown={startSplitResize}
+            />
+            <div className="split-host" style={{ flexBasis: `${splitWidth * 100}%` }}>
+              <SplitPane
+                key={activeTab}
+                vault={vault}
+                path={splitPath}
+                files={files}
+                bridge={splitBridge}
+                theme={settings.theme === "dark" || (settings.theme === "system" && systemDark) ? "dark" : "light"}
+                ticketColumns={settings.ticketColumns}
+                openOnLeft={note?.path === splitPath}
+                autosave={settings.autosave}
+                iconOf={pageIconFor}
+                onOpen={(path, newTabRequested) => (newTabRequested ? void newTab(path) : setTabSplit(activeTab, path))}
+                onRenameRow={renamePath}
+                onSwap={() => void swapSplit()}
+                onSeparate={() => void separateTab(activeTab)}
+                saver={splitSaver}
+                tools={{
+                  spelling: settings.spellChecker !== "off" ? { on: spellingOn, toggle: toggleSpelling } : null,
+                  focus: { on: focusMode, toggle: toggleFocus },
+                  wide: { has: (path) => widePages.has(path), toggle: toggleWide },
+                  git: vault.git ?? null,
+                  notify,
+                }}
+                onClose={() => setTabSplit(activeTab, null)}
+                onSaved={() => {
+                  void refreshGit();
+                  void refresh(vault);
+                }}
+              />
+            </div>
+          </>
+        )}
+        </div>
         {vault.git && (
           <GitDrawer drawer={gitDrawer}>
             <GitPanel

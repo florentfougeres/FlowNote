@@ -34,38 +34,39 @@
   }
 
   /* A note: the page alone, running over as many sheets as needed. */
-  html[data-print="note"] .titlebar,
-  html[data-print="note"] .sidebar-dock,
-  html[data-print="note"] .sidebar-hotzone,
-  html[data-print="note"] .toolbar,
-  html[data-print="note"] .status-pill-anchor,
-  html[data-print="note"] .find-bar-anchor,
-  html[data-print="note"] .outline-panel,
-  html[data-print="note"] .history-panel,
-  html[data-print="note"] .git-drawer,
-  html[data-print="note"] .conflict-note-banner,
-  html[data-print="note"] .backlinks,
-  html[data-print="note"] .block-handle,
-  html[data-print="note"] .table-handles,
-  html[data-print="note"] .page-heading-actions,
-  html[data-print="note"] .property-add,
-  html[data-print="note"] .property-remove,
-  html[data-print="note"] .chip > button,
-  html[data-print="note"] .chip-input,
-  html[data-print="note"] .code-header,
-  html[data-print="note"] .plot-editor-host,
-  html[data-print="note"] .ProseMirror-gapcursor,
-  html[data-print="note"] #print-root {
+  html[data-print^="note"] .titlebar,
+  html[data-print^="note"] .sidebar-dock,
+  html[data-print^="note"] .sidebar-hotzone,
+  html[data-print^="note"] .toolbar,
+  html[data-print^="note"] .status-pill-anchor,
+  html[data-print^="note"] .find-bar-anchor,
+  html[data-print^="note"] .outline-panel,
+  html[data-print^="note"] .history-panel,
+  html[data-print^="note"] .side-column,
+  html[data-print^="note"] .git-drawer,
+  html[data-print^="note"] .conflict-note-banner,
+  html[data-print^="note"] .backlinks,
+  html[data-print^="note"] .block-handle,
+  html[data-print^="note"] .table-handles,
+  html[data-print^="note"] .page-heading-actions,
+  html[data-print^="note"] .property-add,
+  html[data-print^="note"] .property-remove,
+  html[data-print^="note"] .chip > button,
+  html[data-print^="note"] .chip-input,
+  html[data-print^="note"] .code-header,
+  html[data-print^="note"] .plot-editor-host,
+  html[data-print^="note"] .ProseMirror-gapcursor,
+  html[data-print^="note"] #print-root {
     display: none !important;
   }
 
-  html[data-print="note"] body,
-  html[data-print="note"] #root,
-  html[data-print="note"] .layout,
-  html[data-print="note"] .workspace,
-  html[data-print="note"] .content,
-  html[data-print="note"] .panes,
-  html[data-print="note"] .page {
+  html[data-print^="note"] body,
+  html[data-print^="note"] #root,
+  html[data-print^="note"] .layout,
+  html[data-print^="note"] .workspace,
+  html[data-print^="note"] .content,
+  html[data-print^="note"] .panes,
+  html[data-print^="note"] .page {
     display: block !important;
     position: static !important;
     width: auto !important;
@@ -75,10 +76,10 @@
     background: #ffffff !important;
   }
 
-  html[data-print="note"] .page-heading,
-  html[data-print="note"] .page-title,
-  html[data-print="note"] .properties,
-  html[data-print="note"] .note {
+  html[data-print^="note"] .page-heading,
+  html[data-print^="note"] .page-title,
+  html[data-print^="note"] .properties,
+  html[data-print^="note"] .note {
     max-width: none !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
@@ -86,31 +87,31 @@
     padding-right: 0 !important;
   }
 
-  html[data-print="note"] .page-title {
+  html[data-print^="note"] .page-title {
     width: 100% !important;
     margin-top: 0 !important;
   }
 
-  html[data-print="note"] .note {
+  html[data-print^="note"] .note {
     padding-bottom: 0 !important;
   }
 
-  html[data-print="note"] .property-value::-webkit-calendar-picker-indicator {
+  html[data-print^="note"] .property-value::-webkit-calendar-picker-indicator {
     display: none;
   }
 
-  html[data-print="note"] .note h1,
-  html[data-print="note"] .note h2,
-  html[data-print="note"] .note h3 {
+  html[data-print^="note"] .note h1,
+  html[data-print^="note"] .note h2,
+  html[data-print^="note"] .note h3 {
     break-after: avoid;
   }
 
-  html[data-print="note"] .note pre,
-  html[data-print="note"] .note table,
-  html[data-print="note"] .note img,
-  html[data-print="note"] .note .callout,
-  html[data-print="note"] .note .plotly-chart,
-  html[data-print="note"] .note .mermaid-preview {
+  html[data-print^="note"] .note pre,
+  html[data-print^="note"] .note table,
+  html[data-print^="note"] .note img,
+  html[data-print^="note"] .note .callout,
+  html[data-print^="note"] .note .plotly-chart,
+  html[data-print^="note"] .note .mermaid-preview {
     break-inside: avoid;
   }
 
@@ -149,5 +150,28 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+  }
+}
+
+/* The page on the right of the split view, printed alone. */
+@media print {
+  html[data-print="note-right"] .main-area > .content,
+  html[data-print="note-right"] .split-resizer,
+  html[data-print="note-right"] .split-pane-bar,
+  html[data-print="note-right"] .split-outline,
+  html[data-print="note-right"] .slides-panel {
+    display: none !important;
+  }
+
+  html[data-print="note-right"] .split-host {
+    display: flex !important;
+    flex-basis: 100% !important;
+  }
+
+  html[data-print="note-right"] .split-pane-main,
+  html[data-print="note-right"] .split-pane-body {
+    display: block;
+    overflow: visible !important;
+    height: auto !important;
   }
 }

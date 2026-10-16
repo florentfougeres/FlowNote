@@ -62,6 +62,24 @@ export const SLASH_ITEMS: SlashItem[] = [
       calloutPicker.open({ x: coords.left, y: coords.bottom + 6, onPick: (type) => turnInto(editor, "callout", undefined, type) });
     },
   },
+  {
+    key: "admonition",
+    title: "Admonition HedgeDoc",
+    description: "Encadré :::info … :::",
+    icon: "ⓘ",
+    keywords: ["admonition", "hedgedoc", "encadré", "info", "success", "warning", "danger", "spoiler", ":::"],
+    run: (editor, range) => {
+      if (!turnInto(editor, "callout", range, "info")) return;
+      // The callout just created is written as a HedgeDoc container.
+      const { $from } = editor.state.selection;
+      for (let depth = $from.depth; depth > 0; depth--) {
+        const node = $from.node(depth);
+        if (node.type.name !== "callout") continue;
+        editor.view.dispatch(editor.state.tr.setNodeMarkup($from.before(depth), undefined, { ...node.attrs, syntax: "hedgedoc", marker: ":::", extra: "" }));
+        return;
+      }
+    },
+  },
   { key: "subpage", title: "Sous-page", description: "Nouvelle note liée, rangée sous celle-ci", icon: "📄", keywords: ["page", "sous-page", "note", "subpage"], run: (e, r, b) => void createSubpage(e, r, b) },
   { key: "code", title: "Code", description: "Bloc de code", icon: "</>", keywords: ["code", "snippet"], run: kind("code") },
   {

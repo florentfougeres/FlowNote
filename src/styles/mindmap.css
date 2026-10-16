@@ -10,6 +10,11 @@
   height: 100%;
 }
 
+/* The map's move and zoom as a 2D transform, painted sharp at any zoom (see keepSharp). */
+.mindmap-page .map-container .map-canvas {
+  transform: var(--map-transform, none) !important;
+}
+
 /* Mind Elixir's own canvas fills the page; its toolbars keep their place. */
 .mindmap-canvas .map-container {
   outline: none;

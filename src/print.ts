@@ -58,10 +58,10 @@ async function print(title: string) {
   }
 }
 
-/** Prints the open note as shown on screen. */
-export async function printNote(title: string) {
+/** Prints the open note as shown on screen (the one on the right of the split view with `side`). */
+export async function printNote(title: string, side: "left" | "right" = "left") {
   sheetRoot().replaceChildren();
-  document.documentElement.dataset.print = "note";
+  document.documentElement.dataset.print = side === "right" ? "note-right" : "note";
   setPageRule("@page { size: A4; margin: 16mm 18mm; }");
   await print(title);
 }

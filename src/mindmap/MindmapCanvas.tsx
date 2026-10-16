@@ -95,22 +95,25 @@ const DARK_THEME: Theme = {
 };
 
 /**
- * Mind Elixir moves the map with `translate3d(…)`, often by half pixels
- * (centring divides by two). The map is then a composited layer drawn off the
- * pixel grid, and its text looks blurry. The offsets are rounded after each
- * move; the 3D form is kept because Mind Elixir reads the position back from it.
+ * Mind Elixir moves and zooms the map with `translate3d(…) scale(…)`. The 3D
+ * form makes the map a composited layer, drawn once and then scaled: after a
+ * zoom (+ / −) the text is blurry, and half-pixel offsets (centring divides
+ * by two) blur it too. The map is shown with the same move as a 2D transform,
+ * on whole pixels, which the browser paints at the final size; Mind Elixir
+ * keeps writing and reading its own inline `translate3d`, overridden in the
+ * style sheet by `--map-transform`.
  */
-function keepOnPixels(map: HTMLElement): MutationObserver {
-  const round = () => {
+function keepSharp(map: HTMLElement): MutationObserver {
+  const update = () => {
     const transform = map.style.transform;
-    const rounded = transform.replace(/translate3d\(([^,]+),\s*([^,]+),/, (_all, x: string, y: string) =>
-      `translate3d(${Math.round(parseFloat(x))}px, ${Math.round(parseFloat(y))}px,`,
-    );
-    if (rounded !== transform) map.style.transform = rounded;
+    const move = /translate3d\(([^,]+),\s*([^,]+),[^)]*\)/.exec(transform);
+    const scale = /scale\(([^)]+)\)/.exec(transform)?.[1] ?? "1";
+    const flat = move ? `translate(${Math.round(parseFloat(move[1]))}px, ${Math.round(parseFloat(move[2]))}px) scale(${scale})` : transform || "none";
+    if (map.style.getPropertyValue("--map-transform") !== flat) map.style.setProperty("--map-transform", flat);
   };
-  const observer = new MutationObserver(round);
+  const observer = new MutationObserver(update);
   observer.observe(map, { attributes: true, attributeFilter: ["style"] });
-  round();
+  update();
   return observer;
 }
 
@@ -145,7 +148,7 @@ export default function MindmapCanvas({ source, onMarkdown, title, theme, editab
     });
     instance.init(file.data as unknown as MindElixirData);
     mind.current = instance;
-    const sharp = keepOnPixels(instance.map);
+    const sharp = keepSharp(instance.map);
 
     let timer = 0;
     const save = () => {
@@ -170,7 +173,10 @@ export default function MindmapCanvas({ source, onMarkdown, title, theme, editab
         copy.querySelectorAll(".selected").forEach((e) => e.classList.remove("selected"));
         for (const [name, value] of Object.entries(LIGHT_THEME.cssVar ?? {})) if (value) copy.style.setProperty(name, value);
         const canvas = copy.querySelector<HTMLElement>(".map-canvas");
-        if (canvas) canvas.style.transform = "none";
+        if (canvas) {
+          canvas.style.transform = "none";
+          canvas.style.setProperty("--map-transform", "none");
+        }
         const width = instance.nodes.offsetWidth;
         const height = instance.nodes.offsetHeight;
         Object.assign(copy.style, { width: `${width}px`, height: `${height}px`, overflow: "visible" });

@@ -1,6 +1,6 @@
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { NO_CONTEXT, parseDocument, parseFragment, type ParseContext } from "./parse";
-import { isEmptyParagraph, serializeBlock, VARIANTS } from "./serialize";
+import { isEmptyParagraph, serializeBlock, VARIANTS, withoutEdgeBreaks } from "./serialize";
 import { equivalent } from "./normalize";
 import type { PMJSON } from "./types";
 
@@ -181,7 +181,8 @@ export interface SerializeReport {
 }
 
 /** Serializes one top-level block with the least escaping that preserves its meaning. */
-export function serializeTopLevelBlockWithReport(json: PMJSON, context: ParseContext = NO_CONTEXT): SerializeReport {
+export function serializeTopLevelBlockWithReport(edited: PMJSON, context: ParseContext = NO_CONTEXT): SerializeReport {
+  const json = withoutEdgeBreaks(edited);
   if (isEmptyParagraph(json)) return { markdown: "", exact: true };
   let markdown = "";
   for (const variant of VARIANTS) {
