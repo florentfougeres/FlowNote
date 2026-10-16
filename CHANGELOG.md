@@ -4,6 +4,8 @@ Les changements notables de FlowNote, version par version. Le format suit [Keep 
 
 ## [Non publié]
 
+## [0.14.1] - 2026-10-16
+
 ### Sécurité
 - **Politique de sécurité du contenu (CSP)** activée : la fenêtre n'exécute que les scripts de l'app ; une note piégée ne peut plus charger de script ni envoyer de données vers un site extérieur.
 
@@ -273,6 +275,7 @@ Note : le fichier de cette release s'appelle `FlowNote_0.7.0_aarch64.dmg` (numé
 - Recherche, plan de la note, mode Markdown brut.
 - Gestionnaire Git : statut, diff, commit, pull/push, historique d'une note, résolution des conflits.
 
+[0.14.1]: https://github.com/florentfougeres/FlowNote/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/florentfougeres/FlowNote/compare/v0.13.0...v0.14.0
 [0.9.0]: https://github.com/florentfougeres/FlowNote/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/florentfougeres/FlowNote/compare/v0.7.2...v0.8.0

@@ -67,11 +67,12 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 ## État actuel (16 octobre 2026)
 
-- v0.14.0 taguée (split view en un onglet avec barre d'outils complète, marques # et ` pour titres et code, liens cliquables, copie en Markdown, documentation illustrée de 18 captures, démo enrichie). Le workflow de release crée un brouillon à publier.
+- v0.14.1 taguée (CSP activée, barre latérale et panneau de droite mémoïsés, `tabs.ts` et `pageExport.ts` sortis d'`App.tsx`). La 0.14.0 a apporté le split view en un onglet, les marques # et `, les liens cliquables, la copie en Markdown et la documentation illustrée. Le workflow de release crée un brouillon à publier.
 - Sécurité côté Rust : `check_root` limite toutes les commandes (vault et git) à un dossier avec `.obsidian` ou choisi par `vault_pick` (sélecteur natif, liste dans `trusted-vaults.json` des données de l'app). git tourne avec `core.fsmonitor=false`.
 - Pistes ouvertes :
   - `App.tsx` (~1 830 lignes) à continuer de découper au fil des modifications (déjà sortis : `useSplitWidth`, `useSidebarPeek`, `tabs.ts`, `pageExport.ts`) ;
   - CSP active depuis octobre 2026, validée dans Chrome : à vérifier dans l'app de bureau (protocoles `ipc:` et `asset:`) ;
+  - **iPad / app native (idée pour plus tard)** : piste retenue, l'**hybride**. Une coquille Swift native (barre latérale, onglets, fichiers, iCloud, réglages) qui affiche l'éditeur et les vues lourdes (Excalidraw, Plotly, Mermaid, KaTeX, Marp, mind maps) dans une WKWebView. Ressenti plus natif que Tauri, pour un effort intermédiaire. Chemin prévu : d'abord Tauri 2 sur iPad (cible iOS, vault par le sélecteur de dossiers et signets de sécurité, Git par libgit2, Grammalecte en version JS), puis remplacer les morceaux par du natif un par un. Une réécriture tout en Swift est écartée : pas d'équivalent natif à ProseMirror ni au moteur de fidélité remark ;
   - branche `feature/notebooks` (notebooks Python marimo) jamais fusionnée, 41 commits de retard ;
   - suppression d'une base « en plusieurs fois » dans l'app de bureau : rendue robuste mais pas reproduite, à confirmer ;
   - kanban et calendrier des bases à vérifier dans Obsidian ;
