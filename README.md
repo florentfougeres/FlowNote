@@ -17,6 +17,20 @@ Autour de l'éditeur : des bases façon Notion (tableau, kanban, galerie, calend
 
 Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/editeur.dark.webp">
+  <img src="src/docs/images/editeur.light.webp" alt="Une note dans FlowNote : propriétés, callout, tâches, tableau">
+</picture>
+
+| | |
+| --- | --- |
+| <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/split-view.dark.webp">  <img src="src/docs/images/split-view.light.webp" alt="Deux pages côte à côte"></picture> | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/base-kanban.dark.webp">  <img src="src/docs/images/base-kanban.light.webp" alt="Une base en kanban"></picture> |
+| **Split view** : deux pages dans un onglet | **Bases** : tableau, kanban, galerie, calendrier |
+| <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/croquis.dark.webp">  <img src="src/docs/images/croquis.light.webp" alt="Un dessin Excalidraw"></picture> | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/tickets-tableau.dark.webp">  <img src="src/docs/images/tickets-tableau.light.webp" alt="Les tickets en tableau kanban"></picture> |
+| **Dessins** Excalidraw | **Tickets** façon GitHub |
+
+La documentation complète, illustrée, est dans l'app (« Documentation » dans la barre latérale) et dans [`src/docs/documentation.md`](src/docs/documentation.md).
+
 ## Fonctionnalités
 
 **Interface façon Notion**

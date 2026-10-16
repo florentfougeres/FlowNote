@@ -5,11 +5,14 @@ Les changements notables de FlowNote, version par version. Le format suit [Keep 
 ## [Non publié]
 
 ### Ajouté
+- **Documentation illustrée** : prise en main pas à pas, exemples de ce qui est écrit dans les fichiers, 18 captures d'écran en clair et en sombre (celles du thème de l'app). Quelques captures aussi dans le README.
+- Vault de démonstration plus complet : une base de voyages (tableau, kanban, calendrier), cinq tickets, une mind map, une présentation et une liste de lectures.
 - **Split view** : deux pages côte à côte dans un seul onglet. `⌥-clic` sur une page (ou « Ouvrir à droite ») l'affiche à droite ; clic droit sur un onglet : « Afficher à droite de… », échanger les côtés, séparer en deux onglets. La page de droite a la même barre d'outils que la gauche (plus : onglet propre, échange, fermeture), le séparateur se déplace, `⌘⌥\` ouvre ou ferme le panneau.
 - **Niveau des titres** sans la vue brute : les `#` s'affichent dans la marge, `⌫` au début du titre en retire un, `#` en ajoute un.
 - **Code en ligne** : ses `` ` `` s'affichent autour du curseur ; `→` puis `⌫` (ou `⌘E`) retire le code.
 - **Liens** : bien visibles, ouverts d'un clic ; au survol, une barre pour modifier, copier ou retirer le lien.
 - Copier depuis une note met son Markdown dans le presse-papiers (texte brut).
+- Les `#` des titres et les `` ` `` du code ne s'affichent que pendant l'écriture (éditeur actif).
 - **Documentation** de toutes les fonctionnalités, en lecture seule, sous « Graphe » dans la barre latérale.
 - **Admonitions HedgeDoc** (`:::info` … `:::`, `success`, `warning`, `danger`, `spoiler`) affichées comme des callouts ; le fichier garde leur syntaxe. `:::type` suivi d'un espace en crée une, « Admonition HedgeDoc » dans le menu `/`.
 - `⌘K` sur un texte sélectionné : adresse du lien (sur un lien : le modifier ou le retirer).
@@ -28,6 +31,9 @@ Les changements notables de FlowNote, version par version. Le format suit [Keep 
 - Bases : les lignes d'une base ont leur propre icône dans la barre latérale.
 
 ### Corrigé
+- Bases : les colonnes prennent une largeur selon leur type (nombre, date, texte…) ; quelques colonnes tiennent dans la page.
+- Bases dans le panneau de droite : la barre (recherche, filtres, Nouveau) passe à la ligne au lieu de déborder.
+- Croquis : la pastille « Enregistré » ne passe plus sous le bouton d'aide d'Excalidraw.
 - `` ` `` posé devant puis derrière un mot (ou l'inverse) le met en code quelle que soit la façon dont il arrive (touche, touche morte suivie d'un autre caractère, saisie que WebKit ne signale pas) ; un `` ` `` collé reste du texte.
 - Réglages : plus de barre de défilement quand tout tient dans la fenêtre.
 - Plan et historique affichés ensemble : une seule barre verticale.

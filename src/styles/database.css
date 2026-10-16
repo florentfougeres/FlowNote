@@ -127,8 +127,10 @@
 
 .db-tabs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px;
+  min-width: 0;
 }
 
 .db-tab {
@@ -180,13 +182,18 @@
 
 .db-tools {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
+  min-width: 0;
   padding-bottom: 6px;
 }
 
+/* In a narrow page (split view), the search shrinks before the buttons wrap. */
 .db-search {
   width: 180px;
+  min-width: 110px;
+  flex: 0 1 180px;
 }
 
 .db-tool {

@@ -45,6 +45,25 @@ function useOutside(onClose: () => void) {
 
 const iconOf = (column: ColumnInfo): IconName => (column.kind === "name" ? "doc" : column.kind === "formula" ? "formula" : column.kind === "file" ? "info" : TYPE_ICONS[column.meta.type]);
 
+/**
+ * Width of a column not resized yet, after its content: numbers and boxes are
+ * narrow, text wider, so that a few columns fit the page.
+ */
+function defaultWidth(column: ColumnInfo): number {
+  if (column.kind === "name") return 220;
+  if (column.kind === "formula") return 160;
+  switch (column.meta.type) {
+    case "number":
+    case "checkbox":
+      return 110;
+    case "date":
+    case "select":
+      return 140;
+    default:
+      return 170;
+  }
+}
+
 /** Header menu of a column: rename, type or formula, sort, hide, delete. */
 function HeaderMenu({ column, actions, onClose }: { column: ColumnInfo; actions: TableActions; onClose: () => void }) {
   const [name, setName] = useState(column.kind === "formula" ? column.property.slice(8) : column.property);
@@ -375,7 +394,7 @@ export function TableView({
   const actionsRef = useRef(actions);
   actionsRef.current = actions;
 
-  const defs = useMemo<ColumnDef<BaseRow>[]>(() => columns.map((c) => ({ id: c.property, size: c.kind === "name" ? 280 : 180, minSize: 80 })), [columns]);
+  const defs = useMemo<ColumnDef<BaseRow>[]>(() => columns.map((c) => ({ id: c.property, size: defaultWidth(c), minSize: 80 })), [columns]);
   const table = useReactTable({ data: rows, columns: defs, getCoreRowModel: getCoreRowModel(), getRowId: (r) => r.path, columnResizeMode: "onChange", state: { columnSizing: sizing }, onColumnSizingChange: setSizing });
   const resizing = table.getState().columnSizingInfo.isResizingColumn;
   const wasResizing = useRef<string | false>(false);

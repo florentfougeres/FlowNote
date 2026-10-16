@@ -223,3 +223,26 @@
   color: var(--faint);
   font-size: 14px;
 }
+
+/* Screenshots of the documentation: framed like a window, at their 2x size. */
+.docs-page .note .embed-image {
+  display: block;
+  margin: 8px 0 4px;
+}
+
+.docs-page .note .embed-image img {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 0.5px solid var(--border);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Detail captures (a menu, a handle) stay at their real size. */
+.docs-page .note .embed-image img[alt="menu-slash.webp"] {
+  width: 450px;
+}
+
+.docs-page .note .embed-image img[alt="poignee.webp"] {
+  width: 400px;
+}

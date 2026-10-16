@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { keys } from "./keys";
 import { NoteEditor } from "./editor/NoteEditor";
-import { imageMime, NULL_BRIDGE, type VaultBridge } from "./editor/bridge";
+import { imageMime, type VaultBridge } from "./editor/bridge";
 import DOCUMENTATION from "./docs/documentation.md?raw";
+import { docsBridge } from "./docs/docsBridge";
 import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
 import { DRAWING_SUFFIX, isDrawingPath, newDrawingFile } from "./drawing/format";
 import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
@@ -195,6 +196,7 @@ export function App() {
   const [mindmapControls, setMindmapControls] = useState<MindmapControls | null>(null);
   /** Light or dark, as displayed (the "system" setting follows macOS). */
   const systemDark = useSystemDark();
+  const dark = settings.theme === "dark" || (settings.theme === "system" && systemDark);
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
   const [showOutline, setShowOutline] = usePersistentFlag("flownote:outline", false, ["shown", "hidden"]);
@@ -1315,7 +1317,7 @@ export function App() {
    */
   const statusPill =
     note || notice ? (
-      <div className="status-pill-anchor" aria-live="polite">
+      <div className={drawing && !rawMode ? "status-pill-anchor over-drawing" : "status-pill-anchor"} aria-live="polite">
         <div
           className={["status-pill", typing && !notice && !selectionCount ? "quiet" : "", notice ? "notice" : ""].filter(Boolean).join(" ")}
           title={words ? `${words} mot${words > 1 ? "s" : ""} · ${note!.markdown.length.toLocaleString("fr-FR")} caractères · environ ${readingMinutes(words)} min de lecture` : undefined}
@@ -1670,7 +1672,7 @@ export function App() {
           ) : (
             activePath === DOCS_VIEW ? (
               <div className="page docs-page">
-                <NoteEditor key="docs" source={DOCUMENTATION} onMarkdown={() => {}} bridge={NULL_BRIDGE} editable={false} properties={false} />
+                <NoteEditor key={`docs-${dark}`} source={DOCUMENTATION} onMarkdown={() => {}} bridge={docsBridge(dark)} editable={false} properties={false} />
               </div>
             ) : activePath === SETTINGS_VIEW ? (
               <SettingsPage

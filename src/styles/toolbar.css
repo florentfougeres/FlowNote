@@ -630,6 +630,11 @@ body.tree-dragging * {
   pointer-events: none;
 }
 
+/* On a drawing, left of Excalidraw's help button. */
+.over-drawing .status-pill {
+  right: 66px;
+}
+
 .status-pill {
   position: absolute;
   right: 14px;

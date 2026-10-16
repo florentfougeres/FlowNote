@@ -465,6 +465,11 @@
   -webkit-user-select: none;
 }
 
+/* Only while writing in the note. */
+.note:not(.ProseMirror-focused) .syntax-mark {
+  display: none;
+}
+
 /* A heading's #, in the margin: the text does not move. */
 .note .heading-mark {
   position: absolute;
