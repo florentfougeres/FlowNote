@@ -167,6 +167,8 @@ Le fichier est créé dans `src-tauri/target/release/bundle/dmg/FlowNote_x.y.z_a
 
 ### Architecture
 
+Le fonctionnement interne (bibliothèques, moteur de fidélité Markdown, formats des types de page, backend Rust) est détaillé dans [docs/sous-le-capot.md](docs/sous-le-capot.md).
+
 - **`src-tauri/`** : backend Rust (Tauri 2). Il gère l'accès aux fichiers du vault, le Git système, la recherche plein texte, l'ouverture des liens et la lecture du titre des pages web.
 - **`src/markdown/`** : moteur de fidélité Markdown. Il parse avec remark/mdast, conserve la source de chaque bloc et ne re-sérialise que les blocs modifiés, en vérifiant l'équivalence.
 - **`src/editor/`** : éditeur basé sur Tiptap/ProseMirror. Il contient le schéma, les vues de blocs, le menu `/`, le glisser-déposer, les poignées de tableau et la recherche.
