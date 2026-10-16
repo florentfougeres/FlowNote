@@ -100,6 +100,8 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
     if (!editor || editor.isDestroyed || !el) return;
     const onMove = (event: MouseEvent) => {
       if (drag.current || menu || editor.isDestroyed) return;
+      // Read-only (reading mode, documentation): no handle to add or move blocks.
+      if (!editor.isEditable) return setHover(null);
       const note = editor.view.dom;
       const noteRect = note.getBoundingClientRect();
       const contentLeft = noteRect.left + parseFloat(getComputedStyle(note).paddingLeft);

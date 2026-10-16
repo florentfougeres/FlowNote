@@ -26,6 +26,8 @@ interface Page {
   ticket?: boolean;
   presentation?: boolean;
   icon?: string;
+  /** The page's own title (vault.ts), shown in place of its name with `showTitles`. */
+  title?: string;
   /** A row of the base next to its folder (`X.base` + `X/`). */
   row?: boolean;
 }
@@ -39,7 +41,7 @@ export function toPages(entries: VaultEntry[], rows = false): Page[] {
     const folder = dirs.get(entry.name);
     if (folder) usedDirs.add(folder.name);
     const children = folder ? toPages(folder.children ?? [], isBasePath(entry.path)) : [];
-    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children, ticket: entry.ticket, presentation: entry.presentation, icon: entry.icon, row: rows && entry.path.endsWith(".md") });
+    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children, ticket: entry.ticket, presentation: entry.presentation, icon: entry.icon, title: entry.title, row: rows && entry.path.endsWith(".md") });
   }
   const folders = entries
     .filter((e) => e.kind === "dir" && !usedDirs.has(e.name))
@@ -168,7 +170,10 @@ interface Props {
   /** Paths left out of the tree: the tickets folder and the reading list have their own views. */
   hidden: string[];
   /** Live icon of the open page (its front matter may not be saved yet). */
-  liveIcon?: { path: string; icon: string | null };
+  liveIcon?: { path: string; icon: string | null; title: string | null };
+  /** Pages named by their title (else by their file name), and the button switching it. */
+  showTitles: boolean;
+  onToggleTitles: () => void;
   /** Number of changed files, or null when the vault has no Git repository. */
   gitChanges: number | null;
   gitOpen: boolean;
@@ -377,7 +382,9 @@ export const Sidebar = memo(function Sidebar(props: Props) {
     <ul className="tree">
       {list.map((page) => {
         const open = expanded.has(page.key);
-        const icon = page.notePath && liveIcon?.path === page.notePath ? liveIcon.icon : page.icon;
+        const live = page.notePath !== null && liveIcon?.path === page.notePath;
+        const icon = live ? liveIcon!.icon : page.icon;
+        const shownTitle = live ? liveIcon!.title : (page.title ?? null);
         return (
           <li key={page.key}>
             <div
@@ -413,7 +420,9 @@ export const Sidebar = memo(function Sidebar(props: Props) {
                 <span className="page-icon">
                   <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} presentation={page.presentation} row={page.row} />
                 </span>
-                <span className="page-label">{page.notePath ? noteTitle(page.notePath) : page.name}</span>
+                <span className="page-label" title={page.notePath ? (props.showTitles ? `Fichier : ${noteTitle(page.notePath)}` : (shownTitle ?? undefined)) : undefined}>
+                  {page.notePath ? (props.showTitles && shownTitle ? shownTitle : noteTitle(page.notePath)) : page.name}
+                </span>
               </button>
               <button
                 className="page-add"
@@ -503,6 +512,14 @@ export const Sidebar = memo(function Sidebar(props: Props) {
       )}
       <div className="sidebar-section">
         Pages
+        <button
+          className={props.showTitles ? "sidebar-section-add active" : "sidebar-section-add"}
+          onClick={props.onToggleTitles}
+          aria-pressed={props.showTitles}
+          title={props.showTitles ? "Afficher les noms de fichier" : "Afficher les titres des pages"}
+        >
+          <Icon name="text" size={14} />
+        </button>
         <button className="sidebar-section-add" onClick={() => props.onNewFolder("")} aria-label="Nouveau dossier" title="Nouveau dossier">
           <Icon name="folderAdd" size={14} />
         </button>

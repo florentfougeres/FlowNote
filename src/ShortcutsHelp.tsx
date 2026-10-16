@@ -16,6 +16,7 @@ const SHORTCUTS: [string, string][] = [
   ["⌘F / ⌘⌥F", "Rechercher / remplacer dans la note"],
   ["⌘⇧F", "Rechercher dans tout le vault"],
   ["⌘⇧E", "Mode Markdown brut"],
+  ["⌘⇧R", "Mode lecture"],
   ["⌘⇧M", "Mode focus"],
   ["⌘S", "Enregistrer maintenant"],
   ["⌘,", "Réglages"],

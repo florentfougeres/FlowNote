@@ -13,10 +13,11 @@ export function destroyEditors() {
 }
 
 /** Opens Markdown in a real editor; the cursor is placed at the end of the document. */
-export function openEditor(markdown = "", bridge: Partial<VaultBridge> = {}) {
+export function openEditor(markdown = "", bridge: Partial<VaultBridge> = {}, options: { titleHeading?: boolean } = {}) {
   const { doc, layout } = loadMarkdown(markdown);
   const wiring = defaultWiring();
   wiring.bridge.current = { ...wiring.bridge.current, ...bridge };
+  wiring.titleHeading.current = options.titleHeading ?? false;
   const editor = new Editor({ extensions: editorExtensions(wiring), content: doc });
   open_.push(editor);
   const session = new NoteSession(layout, editor.state.doc);

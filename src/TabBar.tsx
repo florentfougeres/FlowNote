@@ -8,6 +8,9 @@ export interface Tab {
   path: string | null;
   /** Page shown on its right (split view): the pair is one tab. */
   split?: string | null;
+  /** Reading mode of each side: nothing can be edited (⌘⇧R). */
+  reading?: boolean;
+  splitReading?: boolean;
 }
 
 /**
@@ -44,7 +47,7 @@ export function TabBar({
   const [dragged, setDragged] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   return (
-    <div className="tab-bar" role="tablist" aria-label="Pages ouvertes" data-tauri-drag-region>
+    <div className="tab-bar" role="tablist" aria-label="Pages ouvertes" data-tauri-drag-region="deep">
       {tabs.map((tab) => {
         const isActive = tab.id === active;
         const title = titleOf(tab);

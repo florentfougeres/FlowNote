@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { joinTab, nextPageTab, separateTab, splitOf, withSplit } from "./tabs";
+import { joinTab, nextPageTab, separateTab, splitOf, swapReading, withReading, withSplit } from "./tabs";
 import type { Tab } from "./TabBar";
 
 const isPage = (path: string) => !path.startsWith("flownote:");
@@ -22,6 +22,15 @@ describe("Split view in the tab list", () => {
   it("does not join a view nor the active tab itself", () => {
     expect(joinTab(tabs, "a", "b", "n", isPage)).toBeNull();
     expect(joinTab(tabs, "a", "a", "n", isPage)).toBeNull();
+  });
+
+  it("keeps each page's reading mode when joining, swapping and separating", () => {
+    const reading = withReading(withSplit(tabs, "c", null), "c", "page", true);
+    const joined = joinTab(withReading(withSplit(reading, "a", "Old.md"), "a", "split", true), "a", "c", "n", isPage);
+    expect(joined).toEqual([{ id: "a", path: "A.md", split: "C.md", splitReading: true }, tabs[1], { id: "n", path: "Old.md", reading: true }]);
+    const swapped = swapReading(joined!, "a");
+    expect(swapped[0]).toEqual({ id: "a", path: "A.md", split: "C.md", reading: true });
+    expect(separateTab(withReading(joined!, "a", "split", false), "a", "m")?.[1]).toEqual({ id: "m", path: "C.md", reading: false });
   });
 
   it("separates the pair into two tabs, the right page after", () => {

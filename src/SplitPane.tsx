@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { NoteEditor } from "./editor/NoteEditor";
+import { titleHeadingOf } from "./editor/titleHeading";
 import type { VaultBridge } from "./editor/bridge";
 import { isDrawingPath } from "./drawing/format";
 import { DrawingEditor } from "./drawing/DrawingEditor";
@@ -75,6 +76,8 @@ export const SplitPane = memo(function SplitPane({
   onToggleFocus,
   wide,
   onToggleWide,
+  reading: readingOn,
+  onToggleReading,
   git,
   notify,
 }: {
@@ -109,6 +112,9 @@ export const SplitPane = memo(function SplitPane({
   onToggleFocus: () => void;
   wide: boolean;
   onToggleWide: () => void;
+  /** Reading mode of this side (notes, tickets, presentations). */
+  reading: boolean;
+  onToggleReading: () => void;
   git: GitApi | null;
   notify: (message: string) => void;
 }) {
@@ -202,7 +208,6 @@ export const SplitPane = memo(function SplitPane({
   }, [save]);
 
   const onMarkdown = useCallback((markdown: string) => setPage((p) => (p ? { ...p, markdown } : p)), []);
-  const editable = page !== null && !hasConflictMarkers(page.disk) && !openOnLeft;
   const key = `${path}#${page?.reloads ?? 0}`;
   const drawing = isDrawingPath(path);
   const mindmap = isMindmapPath(path);
@@ -210,6 +215,10 @@ export const SplitPane = memo(function SplitPane({
   const ticket = page !== null && !drawing && !mindmap && !base && isTicketMarkdown(page.loaded);
   const note = !drawing && !mindmap && !base;
   const presentation = page !== null && note && !ticket && isPresentationMarkdown(page.markdown);
+  const reading = readingOn && note && !raw;
+  /** The note's first `# heading`, shown as its title (titleHeading.ts). */
+  const headingTitle = note && !ticket && !presentation && !raw && editor && !editor.isDestroyed ? titleHeadingOf(editor.state.doc) : null;
+  const editable = page !== null && !hasConflictMarkers(page.disk) && !openOnLeft && !reading;
   const slides = useSlides(presentation ? page.markdown : "", path, files, bridge.loadImage, presentation);
   const title = noteTitle(path);
 
@@ -297,16 +306,18 @@ export const SplitPane = memo(function SplitPane({
     );
   } else if (page) {
     body = (
-      <div className={presentation ? "page presentation-page" : wide ? "page wide" : "page"}>
+      <div className={`${presentation ? "page presentation-page" : wide ? "page wide" : "page"}${reading ? " reading" : ""}`}>
         {!ticket && (
           <div className="page-heading split-heading">
-            <h1 className="page-title">{noteTitle(path)}</h1>
+            <h1 className="page-title" title={headingTitle !== null ? `Fichier : ${noteTitle(path)}` : undefined}>
+              {headingTitle ?? noteTitle(path)}
+            </h1>
           </div>
         )}
         {ticket ? (
           <TicketView key={key} path={path} source={page.loaded} markdown={page.markdown} onMarkdown={onMarkdown} bridge={bridge} editable={editable} onEditor={setEditor} columns={ticketColumns} />
         ) : (
-          <NoteEditor key={key} source={page.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={editable} hiddenProperties={["icon"]} onEditor={setEditor} frontmatterControl={frontmatter} />
+          <NoteEditor key={key} source={page.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={editable} hiddenProperties={["icon"]} onEditor={setEditor} frontmatterControl={frontmatter} titleHeading={!presentation} />
         )}
       </div>
     );
@@ -338,7 +349,8 @@ export const SplitPane = memo(function SplitPane({
             </>
           )}
           {note && !openOnLeft && <ToolButton icon="outline" label="Plan de la note" onClick={() => setOutline(!outline)} active={outline && !raw} disabled={raw} />}
-          {note && spellingOn !== null && (
+          {note && <ToolButton icon="eye" label={reading ? "Quitter le mode lecture" : "Mode lecture"} onClick={onToggleReading} active={reading} disabled={raw || openOnLeft} />}
+          {note && !reading && spellingOn !== null && (
             <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={onToggleSpelling} active={spellingOn} />
           )}
           {presentation && !openOnLeft && (
@@ -348,7 +360,7 @@ export const SplitPane = memo(function SplitPane({
               <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportSlides().catch(report("Export"))} />
             </>
           )}
-          {note && !ticket && !presentation && !openOnLeft && (
+          {note && !ticket && !presentation && !openOnLeft && !reading && (
             <ToolButton icon="slides" label="Transformer en présentation" onClick={() => frontmatter.current?.set(setProperty(frontmatter.current.get(), "marp", true))} disabled={!editable || raw} />
           )}
           {git && <ToolButton icon="clock" label="Historique de la note" onClick={() => setHistory(!history)} active={history} />}

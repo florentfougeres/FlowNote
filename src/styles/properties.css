@@ -188,3 +188,17 @@
   background: var(--bg);
   color: var(--text);
 }
+
+/* Read-only (reading mode, conflict): values shown as they are, nothing to remove or add. */
+.property-editor.readonly {
+  pointer-events: none;
+}
+
+.property-editor.readonly .chip button,
+.property-editor.readonly .chip-input {
+  display: none;
+}
+
+.property-editor.readonly input::placeholder {
+  color: transparent;
+}

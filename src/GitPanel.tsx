@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DiffView } from "./DiffView";
 import { ConflictResolver } from "./ConflictResolver";
 import { Icon } from "./Icon";
-import { explainGitError, fetchResult, pullResult, pushResult, syncSummary } from "./vault/gitMessages";
+import { explainGitError, fetchResult, pullResult, pushResult, syncShort, syncSummary } from "./vault/gitMessages";
 import { autoCommitMessage, isConflicted, isUntracked, isStaged, isUnstaged, MergeConflictError, statusLabel, type GitApi, type GitFile, type GitStatus } from "./vault/git";
 import { basename, dirname } from "./vault/links";
 
@@ -31,6 +31,8 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
   const [selection, setSelection] = useState<Selection | null>(null);
   const [diff, setDiff] = useState("");
   const [message, setMessage] = useState("");
+  /** The commit message field grows while it has the focus. */
+  const [writing, setWriting] = useState(false);
   /** The operation running, shown on its button; every other action waits. */
   const [running, setRunning] = useState<Operation | null>(null);
   const busy = running !== null;
@@ -186,6 +188,7 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
   const conflicted = status.files.filter(isConflicted);
   const staged = status.files.filter(isStaged);
   const unstaged = status.files.filter(isUnstaged);
+  const clean = !status.merging && status.files.length === 0;
 
   const section = (title: string, files: GitFile[], stagedSection: boolean) => (
     <section className="git-section">
@@ -225,7 +228,6 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
           onCancel={() => setConfirmDiscard(null)}
         />
       )}
-      {files.length === 0 && <p className="git-none">{stagedSection ? "Rien d'indexé." : "Aucune modification."}</p>}
       <ul>
         {files.map((file) => {
           const letter = stagedSection ? file.index : file.worktree;
@@ -288,11 +290,15 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
   return (
     <div className="git-panel">
       <div className="git-sidebar">
-        <div className="git-branch">
-          <span>⎇ {status.branch ?? "HEAD détachée"}</span>
-        </div>
-        <p className={status.ahead > 0 || status.behind > 0 ? "git-sync-summary pending" : "git-sync-summary"}>{syncSummary(status.upstream, status.ahead, status.behind)}</p>
-        <div className="git-remote">
+        <div className="git-header">
+          <span className="git-branch" title={status.branch ?? undefined}>
+            <Icon name="branch" size={13} />
+            <span className="git-branch-name">{status.branch ?? "HEAD détachée"}</span>
+          </span>
+          <span className={status.ahead > 0 || status.behind > 0 ? "git-sync-summary pending" : "git-sync-summary"} title={syncSummary(status.upstream, status.ahead, status.behind)}>
+            {syncShort(status.upstream, status.ahead, status.behind)}
+          </span>
+          <div className="git-remote">
           <RemoteButton
             label="Pull"
             runningLabel="Récupération…"
@@ -326,6 +332,7 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
             title="Regarder s'il y a du nouveau sur le dépôt distant, sans rien modifier (git fetch)"
             onClick={() => void fetchRemote()}
           />
+          </div>
         </div>
         {feedback && <FeedbackBanner feedback={feedback} onClose={() => setFeedback(null)} />}
         {(status.merging || conflicted.length > 0) && (
@@ -381,18 +388,21 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
             </ul>
           </section>
         )}
-        {!status.merging && (
+        {!status.merging && !clean && (
         <div className="git-commit">
           <textarea
-            placeholder="Message de commit (facultatif : sinon date, heure et notes modifiées)"
+            placeholder="Message de commit (facultatif)"
+            title="Sans message : la date, l'heure et les notes modifiées. ⌘↩ pour commiter."
             value={message}
-            rows={3}
+            rows={writing || message ? 3 : 1}
+            onFocus={() => setWriting(true)}
+            onBlur={() => setWriting(false)}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && staged.length > 0) void commit();
             }}
           />
-          <button className="primary" disabled={busy || staged.length === 0} onClick={() => void commit()}>
+          <button className="primary" disabled={busy || staged.length === 0} onClick={() => void commit()} title={staged.length === 0 ? "Indexez d'abord des fichiers (+)" : undefined}>
             {running === "commit" ? (
               <>
                 <span className="spinner" aria-hidden="true" /> Commit…
@@ -403,9 +413,15 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
           </button>
         </div>
         )}
-        {section("Indexé", staged, true)}
-        {section("Modifications", unstaged, false)}
+        {staged.length > 0 && section("Indexé", staged, true)}
+        {unstaged.length > 0 && section("Modifications", unstaged, false)}
+        {clean && (
+          <p className="git-clean">
+            <Icon name="check" size={13} /> Rien à commiter
+          </p>
+        )}
       </div>
+      {selection && (
       <div className="git-diff">
         {selection?.conflict ? (
           <ConflictResolver
@@ -434,10 +450,9 @@ export function GitPanel({ git, beforeCommit, onOpenNote, onChanged, onPulled, o
             </header>
             <DiffView diff={diff} />
           </>
-        ) : (
-          <p className="git-none">Sélectionnez un fichier pour voir ses modifications.</p>
-        )}
+        ) : null}
       </div>
+      )}
     </div>
   );
 }
@@ -463,9 +478,15 @@ function RemoteButton(props: {
   onClick: () => void;
 }) {
   return (
-    <button className={props.highlight ? "git-remote-button highlight" : "git-remote-button"} disabled={props.disabled} onClick={props.onClick} title={props.title} aria-busy={props.running}>
+    <button
+      className={props.highlight ? "git-remote-button highlight" : "git-remote-button"}
+      disabled={props.disabled}
+      onClick={props.onClick}
+      title={`${props.label} : ${props.title}`}
+      aria-label={props.running ? props.runningLabel : props.label}
+      aria-busy={props.running}
+    >
       {props.running ? <span className="spinner" aria-hidden="true" /> : <span aria-hidden="true">{props.arrow}</span>}
-      {props.running ? props.runningLabel : props.label}
       {!props.running && props.count > 0 && <span className="git-count">{props.count}</span>}
     </button>
   );

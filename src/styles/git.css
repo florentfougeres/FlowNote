@@ -36,15 +36,36 @@
 }
 
 .git-sidebar {
-  padding: 12px;
+  padding: 10px 12px 12px;
   flex: none;
 }
 
-.git-branch {
+/* Branch, its state and Pull / Push / Check on one line. */
+.git-header {
   display: flex;
-  justify-content: space-between;
-  font-weight: 600;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
   margin-bottom: 10px;
+}
+
+.git-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.git-branch svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.git-branch-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .git-sync {
@@ -56,15 +77,32 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
+/* One line, three while writing (GitPanel.tsx). */
 .git-commit textarea {
   font: inherit;
-  padding: 6px 8px;
+  line-height: 1.4;
+  padding: 5px 8px;
   border: 1px solid var(--border);
-  border-radius: 4px;
-  resize: vertical;
+  border-radius: 6px;
+  resize: none;
+}
+
+.git-commit button.primary {
+  height: 28px;
+  padding: 0 10px;
+}
+
+/* Nothing changed: one line in place of the commit field and the lists. */
+.git-clean {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 button.primary {
@@ -182,8 +220,17 @@ button.primary:active:not(:disabled),
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  box-shadow: none;
   color: var(--muted);
   flex: none;
+}
+
+.git-action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text);
 }
 
 .git-file:hover .git-action {
@@ -295,42 +342,56 @@ button.primary:active:not(:disabled),
 
 .git-remote {
   display: flex;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-.git-remote button {
+  gap: 2px;
   flex: none;
-  padding: 4px 12px;
+  margin-left: auto;
 }
 
+/* Small icon buttons: an arrow, and a count when there is something to do. */
 .git-remote-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 4px;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+}
+
+.git-remote-button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
 }
 
 /* Something to send or to get: the button asks for attention. */
 .git-remote-button.highlight:not(:disabled) {
-  border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-soft);
 }
 
 .git-remote-button .git-count {
-  min-width: 16px;
-  padding: 0 5px;
-  border-radius: 8px;
+  min-width: 14px;
+  margin: 0;
+  padding: 0 4px;
+  border-radius: 7px;
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  line-height: 16px;
+  line-height: 14px;
   text-align: center;
 }
 
 .git-sync-summary {
-  margin: -4px 0 10px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 12px;
   color: var(--muted);
 }
@@ -448,19 +509,24 @@ button.primary:active:not(:disabled),
   flex: none;
 }
 
-/* Square icon buttons, in the style of Pull / Push. */
+/* Small icon buttons, like Pull / Push. */
 .git-icon-button {
-  width: 26px;
-  height: 24px;
+  width: 24px;
+  height: 22px;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  box-shadow: none;
   color: var(--muted);
   flex: none;
 }
 
 .git-icon-button:hover:not(:disabled) {
+  background: var(--hover);
   color: var(--text);
 }
 

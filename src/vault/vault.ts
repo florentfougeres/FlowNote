@@ -14,6 +14,8 @@ export interface VaultEntry {
   ticket?: boolean;
   /** Emoji of the note's `icon` property. */
   icon?: string;
+  /** The page's own title (first `# heading` of a note, `title` property otherwise), shown in place of the name on request. */
+  title?: string;
   /** The note is a presentation (front matter with `marp: true`). */
   presentation?: boolean;
 }
@@ -61,13 +63,18 @@ export class ConflictError extends Error {}
 
 import { memoryGit, type GitApi } from "./git";
 import { isTicketMarkdown } from "../ticket/format";
-import { noteIcon } from "./icon";
+import { noteIcon, pageTitle } from "./icon";
+import { isDrawingPath } from "../drawing/format";
+import { isMindmapPath } from "../mindmap/format";
 import { isPresentationMarkdown } from "../presentation/format";
 
 /** What the tree shows of a note besides its name, read from its beginning. */
-function noteMeta(head: string): Pick<VaultEntry, "ticket" | "icon" | "presentation"> {
+function noteMeta(head: string, path: string): Pick<VaultEntry, "ticket" | "icon" | "presentation" | "title"> {
   const icon = noteIcon(head);
-  return { ...(isTicketMarkdown(head) ? { ticket: true } : {}), ...(isPresentationMarkdown(head) ? { presentation: true } : {}), ...(icon ? { icon } : {}) };
+  const ticket = isTicketMarkdown(head);
+  const presentation = isPresentationMarkdown(head);
+  const title = pageTitle(head, !ticket && !presentation && !isDrawingPath(path) && !isMindmapPath(path));
+  return { ...(ticket ? { ticket: true } : {}), ...(presentation ? { presentation: true } : {}), ...(icon ? { icon } : {}), ...(title ? { title } : {}) };
 }
 
 /** Folders never shown nor touched: Obsidian config, Git data, trash. */
@@ -106,7 +113,7 @@ export async function openBrowserVault(): Promise<Vault> {
       } else if (handle.name.endsWith(".md")) {
         // Only the beginning is read to recognise tickets and icons.
         const head = await (await (handle as FileSystemFileHandle).getFile()).slice(0, 4096).text();
-        entries.push({ path, name: handle.name.slice(0, -3), kind: "file", ...noteMeta(head) });
+        entries.push({ path, name: handle.name.slice(0, -3), kind: "file", ...noteMeta(head, path) });
       }
     }
     return entries.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name, "fr") : a.kind === "dir" ? -1 : 1));
@@ -223,7 +230,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
     tree: async () => {
       const notes = [...contents.keys()].filter((p) => !hidden(p) && (p.endsWith(".md") || p.endsWith(".base")));
       const text = (v: string | Uint8Array | undefined) => (typeof v === "string" ? v : v ? new TextDecoder().decode(v) : "");
-      return buildTree(notes, (p) => (p.endsWith(".md") ? noteMeta(text(contents.get(p))) : {}), [...folders]);
+      return buildTree(notes, (p) => (p.endsWith(".md") ? noteMeta(text(contents.get(p)), p) : {}), [...folders]);
     },
     readNotes: async () => [...contents.entries()].filter(([p]) => !hidden(p) && p.endsWith(".md")).map(([p, v]): [string, string] => [p, typeof v === "string" ? v : new TextDecoder().decode(v)]),
     read: async (path) => text(path),
@@ -271,7 +278,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
 }
 
 /** Builds the sidebar tree from a flat list of note paths, plus `folders` shown even when empty. */
-export function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultEntry, "ticket" | "icon" | "presentation"> = () => ({}), folders: string[] = []): VaultEntry[] {
+export function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultEntry, "ticket" | "icon" | "presentation" | "title"> = () => ({}), folders: string[] = []): VaultEntry[] {
   const root: VaultEntry[] = [];
   // A folder is walked like the path of a note inside it, without the note.
   for (const path of [...paths, ...folders.map((f) => `${f}/`)]) {

@@ -100,7 +100,9 @@ const List = Node.create({
     { tag: "ul", attrs: { ordered: false } },
     { tag: "ol", attrs: { ordered: true } },
   ],
-  renderHTML: ({ node }) => (node.attrs.ordered ? ["ol", { start: node.attrs.start }, 0] : ["ul", 0]),
+  // Numbers are drawn by a CSS counter (editor.css), which starts here.
+  renderHTML: ({ node }) =>
+    node.attrs.ordered ? ["ol", { start: node.attrs.start, style: `counter-reset: list-number ${Number(node.attrs.start) - 1}` }, 0] : ["ul", 0],
 });
 
 const ListItem = Node.create({

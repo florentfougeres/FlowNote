@@ -16,6 +16,7 @@ import { tocPlugin } from "./toc";
 import { backtickPlugin } from "./backticks";
 import { removeCodeAround, syntaxMarksPlugin } from "./syntaxMarks";
 import { grammarPlugin } from "./grammar";
+import { titleHeadingPlugin } from "./titleHeading";
 import { dueDatePlugin } from "../ticket/dueDates";
 import { NULL_BRIDGE, type BridgeRef } from "./bridge";
 
@@ -48,10 +49,12 @@ export interface EditorWiring {
   linkStore: MenuStore<LinkItem>;
   emojiStore: MenuStore<EmojiItem>;
   bridge: BridgeRef;
+  /** The page shows the note's first `# heading` as its title: hidden in the editor (titleHeading.ts). */
+  titleHeading: { current: boolean };
 }
 
 export function defaultWiring(): EditorWiring {
-  return { slashStore: new SlashMenuStore(), linkStore: new MenuStore<LinkItem>(), emojiStore: new MenuStore<EmojiItem>(), bridge: { current: NULL_BRIDGE } };
+  return { slashStore: new SlashMenuStore(), linkStore: new MenuStore<LinkItem>(), emojiStore: new MenuStore<EmojiItem>(), bridge: { current: NULL_BRIDGE }, titleHeading: { current: false } };
 }
 
 /** Everything the note editor needs: document schema, node views and editing behaviour. */
@@ -69,5 +72,6 @@ export function editorExtensions(wiring: EditorWiring = defaultWiring()): AnyExt
     SlashCommand.configure({ store: wiring.slashStore, bridge: wiring.bridge }),
     WikilinkSuggest.configure({ store: wiring.linkStore, bridge: wiring.bridge }),
     EmojiSuggest.configure({ store: wiring.emojiStore }),
+    Extension.create({ name: "titleHeading", addProseMirrorPlugins: () => [titleHeadingPlugin(wiring.titleHeading)] }),
   ];
 }

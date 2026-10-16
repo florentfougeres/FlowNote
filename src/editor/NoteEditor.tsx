@@ -16,6 +16,7 @@ import { loadMarkdown, NoteSession } from "../markdown/note";
 import { pastedImageName, resolveLink } from "../vault/links";
 import { openUrl } from "../reading/web";
 import { markdownForClipboard } from "./clipboard";
+import { afterTitleHeading } from "./titleHeading";
 
 interface Props {
   /** File content as loaded from disk; a new value reloads the editor. */
@@ -35,6 +36,8 @@ interface Props {
   frontmatterControl?: MutableRefObject<FrontmatterControl | null>;
   /** False for text without front matter (ticket comments): no properties panel. */
   properties?: boolean;
+  /** The page shows the note's first `# heading` as its title: the editor hides it. */
+  titleHeading?: boolean;
 }
 
 export interface FrontmatterControl {
@@ -53,11 +56,12 @@ async function readFiles(list: FileList | null | undefined): Promise<{ name: str
   );
 }
 
-export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEditor, hiddenProperties, header, frontmatterControl, properties = true }: Props) {
+export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEditor, hiddenProperties, header, frontmatterControl, properties = true, titleHeading = false }: Props) {
   const session = useRef<NoteSession | null>(null);
   const shell = useRef<HTMLDivElement>(null);
   const [wiring] = useState(defaultWiring);
   wiring.bridge.current = bridge;
+  wiring.titleHeading.current = titleHeading;
   const markdownCallback = useRef(onMarkdown);
   markdownCallback.current = onMarkdown;
   const [frontmatter, setFrontmatter] = useState<string | null>(null);
@@ -159,10 +163,12 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
     const { doc, layout } = loadMarkdown(source);
     // A fresh state: loading must not be an undo step nor trigger onUpdate.
     const node = editor.schema.nodeFromJSON(doc);
-    editor.view.updateState(EditorState.create({ doc: node, plugins: editor.state.plugins }));
+    // The cursor starts after a hidden title heading, never in it.
+    const selection = wiring.titleHeading.current ? afterTitleHeading(node) : undefined;
+    editor.view.updateState(EditorState.create({ doc: node, plugins: editor.state.plugins, selection }));
     session.current = new NoteSession(layout, node);
     setFrontmatter(layout.frontmatter);
-  }, [editor, source]);
+  }, [editor, source, wiring.titleHeading]);
 
   const changeFrontmatter = (raw: string | null) => {
     if (!session.current || !editor) return;

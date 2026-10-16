@@ -65,8 +65,9 @@ export function setSystemSpellcheck(on: boolean) {
   views.forEach(applySpellcheck);
 }
 
+/** Never in a read-only editor (reading mode, documentation): nothing to correct there. */
 function applySpellcheck(view: EditorView) {
-  view.dom.spellcheck = systemSpellcheck && !checker;
+  view.dom.spellcheck = view.editable && systemSpellcheck && !checker;
 }
 
 const key = new PluginKey<DecorationSet>("grammar");
@@ -248,6 +249,7 @@ export function grammarPlugin(): Plugin {
       if (checker) schedule(view);
       return {
         update(updated, previous) {
+          applySpellcheck(updated);
           if (checker && !updated.state.doc.eq(previous.doc)) schedule(updated);
         },
         destroy() {
@@ -259,6 +261,7 @@ export function grammarPlugin(): Plugin {
     props: {
       decorations: (state) => key.getState(state),
       handleClick(view, pos, event) {
+        if (!view.editable) return false;
         const found = key.getState(view.state)?.find(pos, pos);
         const placed = found?.[0]?.spec.placed as PlacedError | undefined;
         if (!placed) return false;

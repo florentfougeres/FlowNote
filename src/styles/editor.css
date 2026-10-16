@@ -209,15 +209,65 @@
   font-size: 1.25em;
 }
 
+/*
+ * Bullets and numbers are drawn inside the item, not as native markers:
+ * WebKit forgets to repaint a marker (painted in the list's margin) after an
+ * edit in its item, and the bullet vanished from the screen while typing.
+ */
 .note ul,
 .note ol {
   margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.note li {
+  display: block;
+  position: relative;
   padding-left: 1.6em;
 }
 
-.note li.task {
-  list-style: none;
-  position: relative;
+.note ol > li {
+  counter-increment: list-number;
+}
+
+.note ul > li:not(.task)::before {
+  content: "";
+  position: absolute;
+  left: 0.55em;
+  top: calc(1px + 0.8em - 0.18em);
+  width: 0.36em;
+  height: 0.36em;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Nested levels: circle, then square, like the browser's. */
+.note ul ul > li:not(.task)::before {
+  background: none;
+  border: 1.2px solid currentColor;
+}
+
+.note ul ul ul > li:not(.task)::before {
+  border: none;
+  border-radius: 0;
+  background: currentColor;
+}
+
+.note ol > li:not(.task)::before {
+  content: counter(list-number) ".";
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 1.25em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The item being dragged, outside the list: same gutter. */
+li.drag-ghost {
+  padding-left: 1.6em;
 }
 
 .note li > .li-content > p {
@@ -226,7 +276,7 @@
 
 .note li.task > .checkbox {
   position: absolute;
-  left: -1.5em;
+  left: 0.1em;
   top: 0.35em;
   width: 16px;
   height: 16px;
@@ -453,6 +503,11 @@
 
 .note a:hover {
   text-decoration-color: var(--accent);
+}
+
+/* The note's first # heading, shown as the page title instead (titleHeading.ts). */
+.note .title-heading {
+  display: none;
 }
 
 /* Markdown marks shown around the cursor (syntaxMarks.ts). */

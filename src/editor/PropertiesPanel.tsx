@@ -166,7 +166,7 @@ export function PropertiesPanel({ raw, readOnly, onChange, hidden = [] }: Props)
           ) : (
             <CommitInput className="property-key" value={property.key} onCommit={(next) => next.trim() && apply(() => renameProperty(raw!, property.key, next.trim()))} />
           )}
-          <div className="property-editor" style={readOnly ? { pointerEvents: "none", opacity: 0.7 } : undefined}>
+          <div className={readOnly ? "property-editor readonly" : "property-editor"}>
             <ValueEditor property={property} onChange={(value) => apply(() => setProperty(raw, property.key, value))} />
           </div>
           {!readOnly && (

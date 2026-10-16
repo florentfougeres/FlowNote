@@ -36,9 +36,9 @@ export function ToolGroup({ children }: { children: ReactNode }) {
 
 export function Toolbar({ left, center, right }: { left: ReactNode; center: ReactNode; right: ReactNode }) {
   return (
-    <header className="toolbar" data-tauri-drag-region>
+    <header className="toolbar" data-tauri-drag-region="deep">
       <div className="toolbar-side">{left}</div>
-      <div className="toolbar-center" data-tauri-drag-region>
+      <div className="toolbar-center">
         {center}
       </div>
       <div className="toolbar-side toolbar-right">{right}</div>

@@ -21,6 +21,8 @@ export interface Settings {
   fetchTitles: boolean;
   /** Size of the whole interface (1: the default size). */
   uiScale: number;
+  /** The sidebar and the tabs name pages by their title (else by their file name). */
+  showTitles: boolean;
 }
 
 const AUTOSAVE_KEY = "flownote:autosave";
@@ -31,6 +33,7 @@ const COLUMNS_KEY = "flownote:ticket-columns";
 const READING_KEY = "flownote:reading-list";
 const TITLES_KEY = "flownote:fetch-titles";
 const SCALE_KEY = "flownote:ui-scale";
+const SHOW_TITLES_KEY = "flownote:show-titles";
 
 /** Sizes offered for the interface: text, buttons and spacing grow together. */
 export const UI_SCALES: [number, string][] = [
@@ -75,9 +78,10 @@ export function loadSettings(): Settings {
       readingList: localStorage.getItem(READING_KEY) || "Lectures.md",
       fetchTitles: localStorage.getItem(TITLES_KEY) !== "false",
       uiScale: readScale(),
+      showTitles: localStorage.getItem(SHOW_TITLES_KEY) !== "false",
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true, uiScale: 1 };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true };
   }
 }
 
@@ -91,6 +95,7 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(READING_KEY, settings.readingList);
     localStorage.setItem(TITLES_KEY, String(settings.fetchTitles));
     localStorage.setItem(SCALE_KEY, String(settings.uiScale));
+    localStorage.setItem(SHOW_TITLES_KEY, String(settings.showTitles));
   } catch {
     // Settings simply won't persist.
   }

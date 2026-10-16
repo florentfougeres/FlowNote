@@ -505,6 +505,32 @@
   text-decoration-color: var(--accent);
 }
 
+/* Read-only (reading mode, documentation): nothing to correct nor to edit. */
+.note[contenteditable="false"] .gc-error {
+  text-decoration-line: none;
+  cursor: inherit;
+}
+
+.note[contenteditable="false"] .code-action {
+  display: none;
+}
+
+.note[contenteditable="false"] .code-language {
+  pointer-events: none;
+}
+
+.note[contenteditable="false"] .code-language:placeholder-shown {
+  visibility: hidden;
+}
+
+.note[contenteditable="false"] .callout-icon {
+  cursor: default;
+}
+
+.note[contenteditable="false"] .callout-icon:hover {
+  background: none;
+}
+
 .grammar-popover {
   width: 280px;
   min-width: 0;

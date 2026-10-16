@@ -12,6 +12,13 @@ export function syncSummary(upstream: string | null | undefined, ahead: number, 
   return parts.join(" · ");
 }
 
+/** The same, in a few words, next to the branch name (the full sentence on hover). */
+export function syncShort(upstream: string | null | undefined, ahead: number, behind: number): string {
+  if (!upstream) return "non publiée";
+  if (ahead === 0 && behind === 0) return "à jour";
+  return [ahead > 0 && `${ahead} à envoyer`, behind > 0 && `${behind} à récupérer`].filter(Boolean).join(" · ");
+}
+
 export function pushResult(ahead: number, upstream: string | null | undefined): string {
   if (!upstream) return "Branche envoyée : elle existe maintenant sur le dépôt distant.";
   return ahead > 0 ? `${commits(ahead)} envoyé${ahead > 1 ? "s" : ""} vers ${upstream}.` : `Rien à envoyer : tout est déjà sur ${upstream}.`;

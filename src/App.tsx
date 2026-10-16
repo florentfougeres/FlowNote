@@ -16,6 +16,7 @@ import { baseOfNote, baseProperties, RowProperties, type RowBase } from "./base/
 import { columnInfo } from "./base/columns";
 import { mountBase, type EmbedProps } from "./base/EmbeddedBase";
 import { PageTitle } from "./PageTitle";
+import { setTitleHeading, titleHeadingOf } from "./editor/titleHeading";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { applyTheme, applyScale, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
@@ -26,7 +27,7 @@ import { GraphPage } from "./graph/GraphPage";
 import { ReadingView } from "./reading/ReadingView";
 import { AddLinkDialog } from "./reading/AddLinkDialog";
 import { addLink, newReadingList, parseReadingList, readingTagsOf } from "./reading/readingList";
-import { noteIcon } from "./vault/icon";
+import { noteIcon, pageTitle } from "./vault/icon";
 import { setProperty } from "./markdown/frontmatter";
 import type { FrontmatterControl } from "./editor/NoteEditor";
 import { GitPanel } from "./GitPanel";
@@ -57,7 +58,7 @@ import { hasConflictMarkers } from "./vault/conflicts";
 import { currentTauriVault, forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
 import { Welcome } from "./Welcome";
 import { TabBar, type Tab } from "./TabBar";
-import { joinTab as joinTabs, nextPageTab, separateTab as separateTabs, splitOf as splitIn, withSplit } from "./tabs";
+import { joinTab as joinTabs, nextPageTab, separateTab as separateTabs, splitOf as splitIn, swapReading, withReading, withSplit } from "./tabs";
 import { Dashboard } from "./Dashboard";
 import { TicketView } from "./ticket/TicketView";
 import { TicketsView } from "./ticket/TicketsView";
@@ -590,6 +591,7 @@ export function App() {
     else if (key === "\\") run(toggleSidebar);
     else if (key === "m" && event.shiftKey) run(toggleFocus);
     else if (key === "e" && event.shiftKey && noteRef.current) run(toggleRaw);
+    else if (key === "r" && event.shiftKey && readable) run(toggleReading);
   };
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => shortcuts.current(event);
@@ -915,7 +917,7 @@ export function App() {
     try {
       await saveNow();
       // A base's rows are the notes of the folder named after it, next to it (like sub-pages).
-      await createFile(path, kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : "");
+      await createFile(path, kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : `# ${title}\n`);
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";
@@ -1004,8 +1006,31 @@ export function App() {
   /** The open page is a base (Name.base, Obsidian's format). */
   const basePage = note !== null && isBasePath(note.path);
   const ticketPage = note !== null && !drawing && !mindmap && !basePage && isTicketMarkdown(note.loaded);
+  /** Reading mode (per tab, ⌘⇧R): notes, tickets and presentations, nothing editable. */
+  const readable = note !== null && !drawing && !mindmap && !basePage;
+  const readingOn = Boolean(tabs.find((t) => t.id === activeTab)?.reading);
+  const reading = readable && readingOn && !rawMode;
+  const toggleReading = () => replaceTabs(withReading(tabsRef.current, activeTab, "page", !readingOn));
   /** The open page is a presentation (`marp: true`), read from the current text so a conversion shows at once. */
   const presentationPage = note !== null && !drawing && !mindmap && !basePage && !ticketPage && isPresentationMarkdown(note.markdown);
+  /**
+   * A note's title is its first `# heading` (the file name without one): editing the
+   * title writes that heading, never renames the file (titleHeading.ts).
+   */
+  const titledNote = readable && !ticketPage && !presentationPage && !rawMode;
+  /** Pages whose title is their own, the file name shown under it. */
+  const titledPage = titledNote || presentationPage;
+  const headingTitle = titledNote && editor && !editor.isDestroyed ? titleHeadingOf(editor.state.doc) : null;
+  const retitle = async (title: string) => {
+    // A presentation's title is its `title` property (the first # is a slide's).
+    if (presentationPage) {
+      if (frontmatter.current && title.trim()) frontmatter.current.set(setProperty(frontmatter.current.get(), "title", title.trim()));
+      return true;
+    }
+    const tr = editor && !editor.isDestroyed ? setTitleHeading(editor.state, title) : null;
+    if (tr) editor!.view.dispatch(tr);
+    return true;
+  };
   const outlineShown = showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && !basePage;
   const historyShown = showHistory && Boolean(vault?.git);
   const slides = useSlides(presentationPage ? note.markdown : "", note?.path ?? "", files, loadImage, presentationPage);
@@ -1175,6 +1200,7 @@ export function App() {
       return;
     }
     setTabSplit(activeRef.current, left);
+    replaceTabs(swapReading(tabsRef.current, activeRef.current));
     await select(right, "history");
   };
 
@@ -1187,6 +1213,16 @@ export function App() {
     return found;
   }, [tree]);
   const iconOf = (path: string) => (note?.path === path ? liveIcon : (treeIcons.get(path) ?? null));
+  /** Titles of the pages (vault.ts), live from the text for the open page. */
+  const liveTitle = note && !basePage ? pageTitle(note.markdown, readable && !ticketPage && !presentationPage) : null;
+  const treeTitles = useMemo(() => {
+    const found = new Map<string, string>();
+    const walk = (entries: VaultEntry[]) => entries.forEach((e) => (e.title && found.set(e.path, e.title), e.children && walk(e.children)));
+    walk(tree);
+    return found;
+  }, [tree]);
+  /** How a page is named in the tabs: its title, or its file name (setting of the sidebar). */
+  const shownName = (path: string) => (settings.showTitles ? ((note?.path === path ? liveTitle : treeTitles.get(path)) ?? noteTitle(path)) : noteTitle(path));
   /** Presentations, from the tree (from the text for the open page: a conversion shows at once). */
   const presentationPaths = useMemo(() => {
     const found = new Set<string>();
@@ -1310,7 +1346,7 @@ export function App() {
   // The sidebar is memoized: typing in a note does not draw it again (see useHandlers).
   const sidebarHidden = useMemo(() => [settings.ticketsFolder, readingPath].filter(Boolean), [settings.ticketsFolder, readingPath]);
   const notePath = note?.path;
-  const sidebarLiveIcon = useMemo(() => (notePath ? { path: notePath, icon: liveIcon } : undefined), [notePath, liveIcon]);
+  const sidebarLiveIcon = useMemo(() => (notePath ? { path: notePath, icon: liveIcon, title: liveTitle } : undefined), [notePath, liveIcon, liveTitle]);
   const otherVaults = useMemo(
     () => (vault && isTauri() ? recentTauriVaults().filter((root) => root !== currentTauriVault()).map((root) => ({ root, name: root.split("/").filter(Boolean).pop() ?? root })) : []),
     [vault],
@@ -1328,9 +1364,15 @@ export function App() {
     onToggleSpelling: toggleSpelling,
     onToggleFocus: toggleFocus,
     onToggleWide: () => splitPath && toggleWide(splitPath),
+    onToggleReading: () => replaceTabs(withReading(tabsRef.current, activeTab, "split", !tabsRef.current.find((t) => t.id === activeTab)?.splitReading)),
     notify,
   });
   const sidebarHandlers = useHandlers({
+    onToggleTitles: () => {
+      const next = { ...settings, showTitles: !settings.showTitles };
+      setSettings(next);
+      saveSettings(next);
+    },
     onSelect: (path: string, newTabRequested: boolean) => void select(path, "push", newTabRequested),
     onOpenRight: openRight,
     onNewPage: (parent: string | null) => void newPage(parent),
@@ -1381,6 +1423,7 @@ export function App() {
       selected={note?.path}
       view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
       liveIcon={sidebarLiveIcon}
+      showTitles={settings.showTitles}
       gitChanges={vault.git ? gitChanges : null}
       gitOpen={gitOpen}
       favorites={bookmarks}
@@ -1391,7 +1434,8 @@ export function App() {
 
   return (
     <div className={`layout${sidebarOpen && !focusMode ? "" : " no-sidebar"}${focusMode ? " focus-mode" : ""}`}>
-      <header className="titlebar" data-tauri-drag-region>
+      {/* "deep": the window moves from any empty spot of the bar, not only from the bar itself (Tauri leaves buttons, fields and tabs alone). */}
+      <header className="titlebar" data-tauri-drag-region="deep">
         <div className="titlebar-controls">
           <button
             className="titlebar-button"
@@ -1417,7 +1461,7 @@ export function App() {
           tabs={tabs}
           active={activeTab}
           dirty={dirty}
-          titleOf={(tab) => (tab.path === null ? "Accueil" : (VIEWS[tab.path]?.title ?? noteTitle(tab.path)))}
+          titleOf={(tab) => (tab.path === null ? "Accueil" : (VIEWS[tab.path]?.title ?? shownName(tab.path)))}
           iconOf={(tab) =>
             tab.path === null ? <Icon name="home" size={13} /> : isView(tab.path) ? <Icon name={VIEWS[tab.path].icon} size={13} /> : <PageIcon path={tab.path} icon={iconOf(tab.path)} ticket={ticketPaths.has(tab.path)} presentation={isPresentation(tab.path)} size={13} />
           }
@@ -1504,7 +1548,8 @@ export function App() {
                     </>
                   )}
                   {!drawing && !mindmap && !basePage && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
-                  {!drawing && !mindmap && !basePage && settings.spellChecker !== "off" && (
+                  {readable && <ToolButton icon="eye" label={reading ? "Quitter le mode lecture (⌘⇧R)" : "Mode lecture (⌘⇧R)"} onClick={toggleReading} active={reading} disabled={rawMode} />}
+                  {readable && !reading && settings.spellChecker !== "off" && (
                     <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={toggleSpelling} active={spellingOn} />
                   )}
                   {presentationPage && (
@@ -1514,7 +1559,7 @@ export function App() {
                     <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportCurrent()} />
                   </>
                 )}
-                {!drawing && !mindmap && !basePage && !ticketPage && !presentationPage && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
+                {!drawing && !mindmap && !basePage && !ticketPage && !presentationPage && !reading && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
                 {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
                   {!drawing && !mindmap && !basePage && !presentationPage && (
                     <ToolButton icon="width" label={widePages.has(note.path) ? "Largeur normale" : "Pleine largeur"} onClick={() => toggleWide(note.path)} active={widePages.has(note.path)} />
@@ -1550,7 +1595,7 @@ export function App() {
                       onMarkdown={onMarkdown}
                       bridge={bridge}
                       theme={settings.theme === "dark" || (settings.theme === "system" && systemDark) ? "dark" : "light"}
-                      editable={!hasConflictMarkers(note.disk)}
+                      editable={!hasConflictMarkers(note.disk) && !reading}
                       onControls={setDrawingControls}
                       onToolChange={setDrawingTool}
                     />
@@ -1562,7 +1607,7 @@ export function App() {
                     files={files}
                     path={note.path}
                     source={note.markdown}
-                    editable={!hasConflictMarkers(note.disk)}
+                    editable={!hasConflictMarkers(note.disk) && !reading}
                     onSource={onMarkdown}
                     onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
                     onRenameRow={renamePath}
@@ -1580,12 +1625,12 @@ export function App() {
                       onMarkdown={onMarkdown}
                       title={noteTitle(note.path)}
                       theme={settings.theme === "dark" || (settings.theme === "system" && systemDark) ? "dark" : "light"}
-                      editable={!hasConflictMarkers(note.disk)}
+                      editable={!hasConflictMarkers(note.disk) && !reading}
                       onControls={setMindmapControls}
                     />
                   </div>
                 ) : (
-                <div className={presentationPage ? "page presentation-page" : widePages.has(note.path) ? "page wide" : "page"}>
+                <div className={`${presentationPage ? "page presentation-page" : widePages.has(note.path) ? "page wide" : "page"}${reading ? " reading" : ""}`}>
                   {hasConflictMarkers(note.disk) && (
                     <div className="conflict-note-banner">
                       <span>Cette note contient un conflit de fusion : elle est en lecture seule jusqu'à sa résolution.</span>
@@ -1594,9 +1639,11 @@ export function App() {
                   )}
                   {!rawMode && !ticketPage && (
                     <PageTitle
-                      title={noteTitle(note.path)}
-                      onRename={renameCurrent}
-                      readOnly={hasConflictMarkers(note.disk)}
+                      title={(presentationPage ? liveTitle : headingTitle) ?? noteTitle(note.path)}
+                      fileName={titledPage ? noteTitle(note.path) : undefined}
+                      onRenameFile={renameCurrent}
+                      onRename={titledPage ? retitle : renameCurrent}
+                      readOnly={hasConflictMarkers(note.disk) || reading}
                       icon={drawing ? undefined : liveIcon}
                       onIcon={drawing ? undefined : setPageIcon}
                     />
@@ -1609,7 +1656,7 @@ export function App() {
                       markdown={note.markdown}
                       onMarkdown={onMarkdown}
                       bridge={bridge}
-                      editable={!hasConflictMarkers(note.disk)}
+                      editable={!hasConflictMarkers(note.disk) && !reading}
                       onEditor={setEditor}
                       columns={settings.ticketColumns}
                     />
@@ -1621,9 +1668,10 @@ export function App() {
                       source={note.loaded}
                       onMarkdown={onMarkdown}
                       bridge={bridge}
-                      editable={!hasConflictMarkers(note.disk)}
+                      editable={!hasConflictMarkers(note.disk) && !reading}
                       onEditor={setEditor}
                       frontmatterControl={frontmatter}
+                      titleHeading={!presentationPage}
                       hiddenProperties={rowBase ? ["icon", ...baseProperties(rowBase.model)] : ["icon"]}
                       header={
                         rowBase
@@ -1632,7 +1680,7 @@ export function App() {
                                 base={rowBase}
                                 path={note.path}
                                 raw={raw}
-                                editable={!hasConflictMarkers(note.disk)}
+                                editable={!hasConflictMarkers(note.disk) && !reading}
                                 onChange={set}
                                 onOptions={(property, options) => void setRowOptions(property, options)}
                                 onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
@@ -1752,6 +1800,7 @@ export function App() {
                 spellingOn={settings.spellChecker !== "off" ? spellingOn : null}
                 focusOn={focusMode}
                 wide={widePages.has(splitPath)}
+                reading={Boolean(tabs.find((t) => t.id === activeTab)?.splitReading)}
                 git={vault.git ?? null}
                 {...splitHandlers}
               />

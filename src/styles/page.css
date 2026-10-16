@@ -9,6 +9,19 @@
   max-width: none;
 }
 
+/* Wider margins, like Notion's: a heading's ### (syntaxMarks.ts) fit in them. */
+.page.wide .page-heading,
+.page.wide .note,
+.page.wide .backlinks {
+  padding-left: 96px;
+  padding-right: 96px;
+}
+
+.page.wide .properties {
+  width: calc(100% - 192px);
+  padding: 0 96px;
+}
+
 /*
  * Focus mode: no sidebar; the tabs and the page bar fade out and come back
  * under the pointer. The window chrome takes the page colour.

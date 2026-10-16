@@ -46,10 +46,11 @@ Au-dessus de chaque page : le fil d'Ariane (cliquable, avec le menu des dossiers
 | Bouton | Action |
 | --- | --- |
 | Plan | les titres de la note, cliquables, dans une colonne à droite |
+| Mode lecture `⌘⇧R` | la page se lit sans pouvoir être modifiée : ni curseur, ni correcteur, ni poignées ; les liens et les cases à cocher restent cliquables (retenu pour chaque onglet et chaque côté du split view) |
 | Correction | active ou coupe le correcteur |
 | Présentation | transforme la note en présentation (sur une présentation : miniatures, Présenter, export HTML) |
 | Historique | les versions Git de la note, à comparer ou restaurer |
-| Pleine largeur | la page occupe toute la fenêtre (retenu pour chaque page) |
+| Pleine largeur | la page occupe toute la fenêtre, avec des marges où tiennent les `###` des titres (retenu pour chaque page) |
 | Mode focus `⌘⇧M` | masque tout sauf la page |
 | « … » | export PDF, copie en HTML |
 | Markdown brut `⌘⇧E` | le fichier tel quel, avec ses numéros de ligne |
@@ -86,6 +87,15 @@ Ouverts dans un onglet (`⌘,`) et rangés par catégorie :
 ![[reglages.webp]]
 
 ## L'éditeur de notes
+
+### Le titre
+
+Une page a un **titre** et un **nom de fichier**, indépendants :
+
+- **Le titre** s'affiche en haut de la page ; cliquez dessus pour le modifier. Pour une note, c'est sa première ligne `# Titre` (ajoutée si besoin) ; pour une présentation, sa propriété `title`. Le modifier ne renomme jamais le fichier.
+- **Le nom du fichier** s'affiche en gris sous le titre (`Réunion.md`) : cliquez dessus pour renommer le fichier. On renomme aussi depuis la barre latérale ou le fil d'Ariane.
+- Une nouvelle note commence par `# Nom` : titre et nom sont égaux au départ.
+- Le bouton **T** de la section « Pages » de la barre latérale choisit d'afficher les titres ou les noms de fichier, dans la barre latérale et les onglets ; l'autre s'affiche au survol.
 
 ### Les blocs
 
@@ -293,6 +303,10 @@ Une liste de lectures dans une seule note (`Lectures.md`) : une section par thè
 
 Si le vault est un dépôt Git, le panneau Git (`⌘⇧G`) montre les fichiers modifiés et leurs différences, indexe, commite, récupère (pull par fusion) et pousse. Comme FlowNote ne réécrit que les blocs modifiés, le diff ne montre que vos changements.
 
+- En haut, sur une ligne : la branche, son état (« à jour », « 2 à envoyer »…) et trois boutons, **↓** Pull, **↑** Push et **↻** Vérifier (fetch), avec le nombre de commits à récupérer ou à envoyer. Leur rôle s'affiche au survol.
+- Le message de commit est facultatif : sans message, FlowNote écrit la date, l'heure et les notes modifiées. `⌘↩` commite.
+- Les sections **Indexé** et **Modifications** n'apparaissent que si elles ont des fichiers ; cliquer un fichier affiche ses différences.
+
 ![[git.webp]]
 
 - L'**historique** d'une note (barre de page) permet de comparer une version à la note actuelle et de la restaurer.
@@ -324,6 +338,7 @@ Menu « … » de la page :
 | `⌥↑` / `⌥↓` | Déplacer le bloc |
 | `⌘D` | Dupliquer le bloc |
 | `⌘⇧E` | Markdown brut |
+| `⌘⇧R` | Mode lecture |
 | `⌘⇧M` | Mode focus |
 | `⌘⇧G` | Panneau Git |
 | `⌘⇧L` | Ajouter un lien à lire |

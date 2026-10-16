@@ -2,6 +2,21 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.15.0] - 2026-10-16
+
+### Ajouté
+- **Titre et nom de fichier indépendants** : le titre d'une page (première ligne `# Titre` d'une note, propriété `title` d'une présentation) se modifie en haut de la page sans renommer le fichier ; le nom du fichier, en gris sous le titre, se renomme d'un clic. Une nouvelle note commence par `# Nom`.
+- Bouton de la section « Pages » : afficher les titres ou les noms de fichier dans la barre latérale et les onglets.
+- **Mode lecture** (`⌘⇧R`, par onglet) : ni curseur, ni correcteur, ni poignées ; liens et cases à cocher restent cliquables. La documentation s'affiche ainsi.
+
+### Modifié
+- Panneau Git plus compact : branche, état et Pull / Push / Vérifier sur une ligne, champ de commit d'une ligne, sections vides masquées.
+- Pleine largeur : marges plus larges, les `###` des titres y tiennent.
+
+### Corrigé
+- Les puces des listes ne disparaissent plus pendant la frappe (WebKit).
+- La fenêtre se déplace de nouveau depuis tout l'espace vide de la barre d'onglets et de la barre de page.
+
 ## [0.14.1] - 2026-10-16
 
 ### Sécurité

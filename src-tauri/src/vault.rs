@@ -24,18 +24,56 @@ pub struct VaultEntry {
     /// Emoji of the `icon` front matter property, shown like a Notion page icon.
     #[serde(skip_serializing_if = "Option::is_none")]
     icon: Option<String>,
+    /// The page's own title: a note's first `# heading`, the `title` property otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    title: Option<String>,
 }
 
-/// Front matter of a note, read from the beginning of the file only.
-fn front_matter(path: &Path) -> Option<String> {
+/// The beginning of a file, enough for its front matter and first line.
+fn head(path: &Path) -> Option<String> {
     use std::io::Read;
     let mut head = vec![0u8; 4096];
     let mut file = fs::File::open(path).ok()?;
     let read = file.read(&mut head).ok()?;
-    let text = String::from_utf8_lossy(&head[..read]).into_owned();
-    let rest = text.trim_start_matches('\u{feff}').strip_prefix("---")?.to_string();
-    let end = rest.find("\n---")?;
-    Some(rest[..end].to_string())
+    Some(String::from_utf8_lossy(&head[..read]).trim_start_matches('\u{feff}').to_string())
+}
+
+/// Front matter and body of a file's beginning.
+fn split_front_matter(text: &str) -> (Option<&str>, &str) {
+    let Some(rest) = text.strip_prefix("---") else { return (None, text) };
+    let Some(end) = rest.find("\n---") else { return (None, text) };
+    let body = rest[end + 4..].split_once('\n').map_or("", |(_, b)| b);
+    (Some(&rest[..end]), body)
+}
+
+/// Front matter of a note, read from the beginning of the file only.
+#[cfg(test)]
+fn front_matter(path: &Path) -> Option<String> {
+    head(path).and_then(|text| split_front_matter(&text).0.map(str::to_string))
+}
+
+/// A page's title (see `pageTitle` in icon.ts): a plain note's first line when it is
+/// a `# heading`, the `title` property for the other kinds.
+fn title_of(yaml: Option<&str>, body: &str, plain_note: bool) -> Option<String> {
+    if !plain_note {
+        return yaml.and_then(|y| property(y, "title")).filter(|v| !v.is_empty()).map(str::to_string);
+    }
+    let first = body.lines().find(|l| !l.trim().is_empty())?;
+    let text = first.trim_start_matches(' ').strip_prefix("# ")?.trim().trim_end_matches('#').trim();
+    let mut plain = String::new();
+    let mut rest = text;
+    // [[target|label]] shows its label, [[target]] its target; emphasis marks go.
+    while let Some(start) = rest.find("[[") {
+        plain.push_str(&rest[..start]);
+        let Some(end) = rest[start..].find("]]") else { break };
+        let link = &rest[start + 2..start + end];
+        plain.push_str(link.split_once('|').map_or(link, |(_, label)| label));
+        rest = &rest[start + end + 2..];
+    }
+    plain.push_str(rest);
+    let plain: String = plain.chars().filter(|c| !matches!(c, '*' | '_' | '`' | '~' | '=')).collect();
+    let plain = plain.trim();
+    (!plain.is_empty()).then(|| plain.to_string())
 }
 
 /// Value of a top-level `key: value` line of the front matter, unquoted.
@@ -162,17 +200,21 @@ fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
             let children = list(&entry.path(), &path)?;
             // An empty folder is shown (just created); one holding only attachments is not.
             if !children.is_empty() || is_empty_dir(&entry.path()) {
-                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children), ticket: false, presentation: false, icon: None });
+                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children), ticket: false, presentation: false, icon: None, title: None });
             }
         } else if let Some(stem) = name.strip_suffix(".md") {
-            let yaml = front_matter(&entry.path());
-            let ticket = yaml.as_deref().is_some_and(is_ticket);
-            let presentation = yaml.as_deref().is_some_and(is_presentation);
-            let icon = yaml.as_deref().and_then(icon_of);
-            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket, presentation, icon });
+            let text = head(&entry.path()).unwrap_or_default();
+            let (yaml, body) = split_front_matter(&text);
+            let ticket = yaml.is_some_and(is_ticket);
+            let presentation = yaml.is_some_and(is_presentation);
+            let icon = yaml.and_then(icon_of);
+            let lower = name.to_lowercase();
+            let plain_note = !ticket && !presentation && !lower.ends_with(".excalidraw.md") && !lower.ends_with(".mindmap.md");
+            let title = title_of(yaml, body, plain_note);
+            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket, presentation, icon, title });
         } else if let Some(stem) = name.strip_suffix(".base") {
             // A base (Obsidian's format): shown as a page whose rows are its folder's notes.
-            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket: false, presentation: false, icon: None });
+            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket: false, presentation: false, icon: None, title: None });
         }
     }
     entries.sort_by(|a, b| {
@@ -431,6 +473,15 @@ mod tests {
         assert!(is_presentation("marp: \"true\"\r"));
         assert!(!is_presentation("marp: false"));
         assert!(!is_presentation("type: ticket"));
+    }
+
+    #[test]
+    fn page_titles_come_from_the_first_heading_or_the_title_property() {
+        let (yaml, body) = split_front_matter("---\ntitle: Diapos\n---\n\n# Mon **titre** [[Cible|lien]]\nTexte");
+        assert_eq!(title_of(yaml, body, true), Some("Mon titre lien".into()));
+        assert_eq!(title_of(yaml, body, false), Some("Diapos".into()));
+        assert_eq!(title_of(None, "Texte\n# Plus loin", true), None);
+        assert_eq!(title_of(None, "## Sous-titre", true), None);
     }
 
     #[test]

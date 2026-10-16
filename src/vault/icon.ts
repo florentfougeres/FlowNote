@@ -13,6 +13,32 @@ export function noteIcon(markdown: string): string | null {
   return value && isEmoji(value) ? value : null;
 }
 
+/** Inline Markdown reduced to its text: links show their label, emphasis marks go. */
+function plainText(text: string): string {
+  return text
+    .replace(/\[\[([^\]|]*)\|?([^\]]*)\]\]/g, (_m, target: string, alias: string) => alias || target)
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`~=]/g, "")
+    .trim();
+}
+
+/**
+ * A page's title, read from its beginning: a note's first line when it is a
+ * `# heading`, the `title` property for the other kinds (`plainNote` false).
+ * Null when it has none (the title is then the file name).
+ */
+export function pageTitle(markdown: string, plainNote: boolean): string | null {
+  const front = FRONTMATTER.exec(markdown);
+  if (!plainNote) {
+    const value = front && /^title[ \t]*:[ \t]*(.*)$/m.exec(front[1])?.[1].trim().replace(/^["']|["']$/g, "");
+    return value || null;
+  }
+  const body = front ? markdown.slice(front[0].length) : markdown.replace(/^\uFEFF/, "");
+  const first = body.split(/\r?\n/).find((line) => line.trim() !== "");
+  const heading = first && /^ {0,3}# +(.*?)(?:\s+#+)?\s*$/.exec(first);
+  return (heading && plainText(heading[1])) || null;
+}
+
 /** One emoji (possibly with modifiers or joiners), not text. */
 export function isEmoji(value: string): boolean {
   return value.length <= 16 && /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(value) && !/[\p{L}\p{N}]/u.test(value.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, ""));
