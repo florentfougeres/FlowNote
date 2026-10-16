@@ -237,7 +237,7 @@ button:disabled {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) auto;
+  grid-template-columns: var(--sidebar-width, 260px) minmax(0, 1fr) auto;
   /* One row of the window's height: the sidebar never grows with its tree (the tree scrolls). */
   grid-template-rows: minmax(0, 1fr);
 }
@@ -270,7 +270,7 @@ button:disabled {
   top: 6px;
   bottom: 6px;
   left: 0;
-  width: 260px;
+  width: var(--sidebar-width, 260px);
   z-index: 20;
   border-radius: 0 10px 10px 0;
   overflow: hidden;
@@ -292,6 +292,27 @@ button:disabled {
   .sidebar-dock.floating {
     animation: none;
   }
+}
+
+.sidebar-resize {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+}
+
+.sidebar-resize:hover,
+.sidebar-resizing .sidebar-resize {
+  background: var(--accent-line);
+}
+
+body.sidebar-resizing {
+  cursor: col-resize;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .sidebar {

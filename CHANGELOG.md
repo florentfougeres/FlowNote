@@ -2,6 +2,14 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.15.1] - 2026-10-16
+
+### Ajouté
+- La barre latérale se redimensionne en glissant son bord droit (largeur retenue).
+
+### Corrigé
+- Le choix titres / noms de fichier s'applique à toute la barre latérale, favoris compris.
+
 ## [0.15.0] - 2026-10-16
 
 ### Ajouté

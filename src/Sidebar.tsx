@@ -450,6 +450,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
 
   return (
     <aside className="sidebar">
+      <div className="sidebar-resize" onPointerDown={startSidebarResize} aria-hidden="true" />
       <div className="sidebar-header">
         <button
           className="vault-switcher"
@@ -502,7 +503,9 @@ export const Sidebar = memo(function Sidebar(props: Props) {
                         presentation={entries.get(path)?.presentation}
                       />
                     </span>
-                    <span className="page-label">{noteTitle(path)}</span>
+                    <span className="page-label">
+                      {props.showTitles ? ((path === liveIcon?.path ? liveIcon.title : entries.get(path)?.title) ?? noteTitle(path)) : noteTitle(path)}
+                    </span>
                   </button>
                 </div>
               </li>
@@ -557,3 +560,34 @@ export const Sidebar = memo(function Sidebar(props: Props) {
     </aside>
   );
 });
+
+const SIDEBAR_WIDTH_KEY = "flownote:sidebar-width";
+const clampWidth = (width: number) => Math.min(480, Math.max(200, Math.round(width)));
+const applyWidth = (width: number) => document.documentElement.style.setProperty("--sidebar-width", `${width}px`);
+try {
+  const saved = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY));
+  if (saved) applyWidth(clampWidth(saved));
+} catch {
+  // default width
+}
+
+/** Dragging the sidebar's right edge sets its width (remembered). */
+function startSidebarResize(event: React.PointerEvent) {
+  event.preventDefault();
+  const left = (event.currentTarget.parentElement as HTMLElement).getBoundingClientRect().left;
+  let width = 0;
+  document.body.classList.add("sidebar-resizing");
+  const move = (ev: PointerEvent) => applyWidth((width = clampWidth(ev.clientX - left)));
+  const up = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    document.body.classList.remove("sidebar-resizing");
+    try {
+      if (width) localStorage.setItem(SIDEBAR_WIDTH_KEY, String(width));
+    } catch {
+      // not remembered
+    }
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+}
