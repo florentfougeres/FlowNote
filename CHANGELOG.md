@@ -4,6 +4,8 @@ Les changements notables de FlowNote, version par version. Le format suit [Keep 
 
 ## [Non publié]
 
+## [0.14.0] - 2026-10-16
+
 ### Ajouté
 - **Documentation illustrée** : prise en main pas à pas, exemples de ce qui est écrit dans les fichiers, 18 captures d'écran en clair et en sombre (celles du thème de l'app). Quelques captures aussi dans le README.
 - Vault de démonstration plus complet : une base de voyages (tableau, kanban, calendrier), cinq tickets, une mind map, une présentation et une liste de lectures.
@@ -265,6 +267,7 @@ Note : le fichier de cette release s'appelle `FlowNote_0.7.0_aarch64.dmg` (numé
 - Recherche, plan de la note, mode Markdown brut.
 - Gestionnaire Git : statut, diff, commit, pull/push, historique d'une note, résolution des conflits.
 
+[0.14.0]: https://github.com/florentfougeres/FlowNote/compare/v0.13.0...v0.14.0
 [0.9.0]: https://github.com/florentfougeres/FlowNote/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/florentfougeres/FlowNote/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/florentfougeres/FlowNote/compare/v0.7.1...v0.7.2

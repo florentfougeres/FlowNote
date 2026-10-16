@@ -62,9 +62,9 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 3. Commit « Version X.Y.Z », merge dans `main`, puis `git tag vX.Y.Z && git push origin vX.Y.Z`.
 4. Le workflow `release.yml` construit le `.dmg` et crée une release en **brouillon**. L'utilisateur la publie lui-même.
 
-## État actuel (15 octobre 2026)
+## État actuel (16 octobre 2026)
 
-- v0.13.0 taguée (sommaire [TOC], notes liées, export PDF, copie HTML, pleine largeur, mode focus, import CSV, recherches harmonisées, durcissement sécurité). Le workflow de release crée un brouillon à publier.
+- v0.14.0 taguée (split view en un onglet avec barre d'outils complète, marques # et ` pour titres et code, liens cliquables, copie en Markdown, documentation illustrée de 18 captures, démo enrichie). Le workflow de release crée un brouillon à publier.
 - Sécurité côté Rust : `check_root` limite toutes les commandes (vault et git) à un dossier avec `.obsidian` ou choisi par `vault_pick` (sélecteur natif, liste dans `trusted-vaults.json` des données de l'app). git tourne avec `core.fsmonitor=false`.
 - Pistes ouvertes :
   - `App.tsx` (~1 650 lignes) à découper en hooks (vault, onglets, raccourcis, export) ; aucun composant mémoïsé, toute l'app se redessine à chaque frappe ;
