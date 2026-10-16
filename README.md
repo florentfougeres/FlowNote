@@ -154,6 +154,17 @@ npm run dev            # version navigateur (Chrome) sur http://localhost:1420
 | `cargo test --manifest-path src-tauri/Cargo.toml` | Tests Rust (fichiers du vault, Git, Grammalecte, liens web) |
 | `npm run tauri build` | Construit `FlowNote.app` et le `.dmg` dans `src-tauri/target/release/bundle/` |
 
+### Construire le `.dmg` en local
+
+Sans passer par GitHub Actions (mêmes prérequis que ci-dessus, sur un Mac Apple Silicon) :
+
+```sh
+npm install
+npm run tauri build -- --bundles dmg
+```
+
+Le fichier est créé dans `src-tauri/target/release/bundle/dmg/FlowNote_x.y.z_aarch64.dmg` (l'app seule dans `bundle/macos/FlowNote.app`). La première construction prend plusieurs minutes (compilation Rust et de Grammalecte). Pour l'ajouter à une release existante : `gh release upload vx.y.z src-tauri/target/release/bundle/dmg/*.dmg`.
+
 ### Architecture
 
 - **`src-tauri/`** : backend Rust (Tauri 2). Il gère l'accès aux fichiers du vault, le Git système, la recherche plein texte, l'ouverture des liens et la lecture du titre des pages web.
