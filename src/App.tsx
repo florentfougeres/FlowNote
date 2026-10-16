@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { keys } from "./keys";
 import { NoteEditor } from "./editor/NoteEditor";
-import { imageMime, type VaultBridge } from "./editor/bridge";
+import { imageMime, NULL_BRIDGE, type VaultBridge } from "./editor/bridge";
 import DOCUMENTATION from "./docs/documentation.md?raw";
 import { docsBridge } from "./docs/docsBridge";
 import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
@@ -48,11 +48,16 @@ import { DEMO_FILES, DEMO_REMOTE } from "./demo";
 import { GitDrawer, useGitDrawer } from "./GitDrawer";
 import { usePersistentFlag } from "./hooks/usePersistentFlag";
 import { useWidePages } from "./hooks/useWidePages";
+import { useHandlers } from "./hooks/useHandlers";
+import { useSplitWidth } from "./hooks/useSplitWidth";
+import { useSidebarPeek } from "./hooks/useSidebarPeek";
+import { exportMindmapPng, exportPdf, exportSlidesHtml, type ExportedPage } from "./pageExport";
 import { useSystemDark } from "./hooks/useSystemDark";
 import { hasConflictMarkers } from "./vault/conflicts";
 import { currentTauriVault, forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
 import { Welcome } from "./Welcome";
 import { TabBar, type Tab } from "./TabBar";
+import { joinTab as joinTabs, nextPageTab, separateTab as separateTabs, splitOf as splitIn, withSplit } from "./tabs";
 import { Dashboard } from "./Dashboard";
 import { TicketView } from "./ticket/TicketView";
 import { TicketsView } from "./ticket/TicketsView";
@@ -240,16 +245,7 @@ export function App() {
   }, [focusMode]);
   const [widePages, toggleWide, followWide] = useWidePages();
   /** Hidden sidebar shown over the page while the pointer is near the left edge, like Notion. */
-  const [peek, setPeek] = useState(false);
-  const peekTimer = useRef<number>(undefined);
-  const openPeek = () => {
-    window.clearTimeout(peekTimer.current);
-    setPeek(true);
-  };
-  const closePeekSoon = () => {
-    window.clearTimeout(peekTimer.current);
-    peekTimer.current = window.setTimeout(() => setPeek(false), 250);
-  };
+  const { peek, setPeek, openPeek, closePeekSoon } = useSidebarPeek();
   const frontmatter = useRef<FrontmatterControl | null>(null);
   useEffect(() => applyTheme(settings.theme, isTauri()), [settings.theme]);
   useEffect(() => applyScale(settings.uiScale, isTauri()), [settings.uiScale]);
@@ -272,21 +268,16 @@ export function App() {
   const tabState = useRef(new Map<string, { back: string[]; forward: string[]; scroll: number }>());
   const contentRef = useRef<HTMLElement>(null);
   /** Page on the right of the split view: part of the active tab (one tab for the pair). */
-  const splitOf = (id: string) => tabsRef.current.find((t) => t.id === id)?.split ?? null;
+  const splitOf = (id: string) => splitIn(tabsRef.current, id);
   /** Writes the right side's pending changes. */
   const splitSaver = useRef<(() => Promise<void>) | null>(null);
   const [tabMenu, setTabMenu] = useState<{ id: string; anchor: DOMRect } | null>(null);
-  const [splitWidth, setSplitWidth] = useState(() => {
-    try {
-      return Math.min(0.75, Math.max(0.25, Number(localStorage.getItem("flownote:split-width")) || 0.5));
-    } catch {
-      return 0.5;
-    }
-  });
+  const [splitWidth, startSplitResize] = useSplitWidth();
   const setTabPath = (id: string, path: string | null) => setTabs((list) => list.map((t) => (t.id === id ? { ...t, path } : t)));
   /** Sets (or, with null, closes) the page on the right of a tab. */
-  const setTabSplit = (id: string, split: string | null) => {
-    const next = tabsRef.current.map((t) => (t.id === id ? { ...t, split } : t));
+  const setTabSplit = (id: string, split: string | null) => replaceTabs(withSplit(tabsRef.current, id, split));
+  /** Replaces the tab list now (the ref too, for the callbacks that follow). */
+  const replaceTabs = (next: Tab[]) => {
     tabsRef.current = next;
     setTabs(next);
   };
@@ -972,7 +963,9 @@ export function App() {
 
   /** The page on the right of the split view (only pages are shown there). */
   const splitPath = tabs.find((t) => t.id === activeTab)?.split ?? null;
-  const splitBridge: VaultBridge = {
+  /** The right side's bridge: a stable object reading the latest values, so the memoized pane is not drawn again. */
+  const splitBridgeLatest = useRef<VaultBridge>(NULL_BRIDGE);
+  splitBridgeLatest.current = {
     ...bridge,
     notePath: splitPath ?? "",
     get files() {
@@ -981,30 +974,25 @@ export function App() {
     // Links followed on the right stay on the right (⌘-click: a new tab).
     openPath: (path, newTabRequested) => (newTabRequested ? void newTab(path) : isView(path) ? void select(path) : setTabSplit(activeRef.current, path)),
   };
-
-  /** Drag of the split view's separator: the right side's share of the width, kept for next time. */
-  const startSplitResize = (event: React.PointerEvent) => {
-    event.preventDefault();
-    const area = (event.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();
-    document.body.classList.add("split-resizing");
-    let share = splitWidth;
-    const move = (ev: PointerEvent) => {
-      share = Math.min(0.75, Math.max(0.25, (area.right - ev.clientX) / area.width));
-      setSplitWidth(share);
-    };
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      document.body.classList.remove("split-resizing");
-      try {
-        localStorage.setItem("flownote:split-width", String(share));
-      } catch {
-        // not remembered
-      }
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-  };
+  const splitBridge = useMemo<VaultBridge>(
+    () => ({
+      get notePath() {
+        return splitBridgeLatest.current.notePath;
+      },
+      get files() {
+        return splitBridgeLatest.current.files;
+      },
+      get config() {
+        return splitBridgeLatest.current.config;
+      },
+      loadImage: (path) => splitBridgeLatest.current.loadImage(path),
+      openPath: (path, newTabRequested) => splitBridgeLatest.current.openPath(path, newTabRequested),
+      askName: (title, initial) => splitBridgeLatest.current.askName(title, initial),
+      createFile: (path, content) => splitBridgeLatest.current.createFile(path, content),
+      mountBase: (dom, path) => splitBridgeLatest.current.mountBase?.(dom, path) ?? (() => {}),
+    }),
+    [],
+  );
 
   const onMarkdown = useCallback((markdown: string) => setNote((current) => (current ? { ...current, markdown } : current)), []);
 
@@ -1153,36 +1141,24 @@ export function App() {
    * place of the one joined.
    */
   const joinTab = (id: string) => {
-    const other = tabsRef.current.find((t) => t.id === id);
-    if (!other?.path || isView(other.path) || id === activeRef.current) return;
-    const previous = splitOf(activeRef.current);
-    const next = tabsRef.current.flatMap((t) => {
-      if (t.id === activeRef.current) return [{ ...t, split: other.path }];
-      if (t.id !== id) return [t];
-      return previous ? [{ id: newTabId(), path: previous }] : [];
-    });
+    const next = joinTabs(tabsRef.current, activeRef.current, id, newTabId(), (path) => !isView(path));
+    if (!next) return;
     tabState.current.delete(id);
-    tabsRef.current = next;
-    setTabs(next);
+    replaceTabs(next);
   };
 
   /** The page on the right of a tab goes to a tab of its own, after it. */
   const separateTab = async (id: string) => {
-    const split = splitOf(id);
-    if (!split) return;
+    if (!splitOf(id)) return;
     if (id === activeRef.current) await splitSaver.current?.();
-    const next = tabsRef.current.flatMap((t) => (t.id === id ? [{ ...t, split: null }, { id: newTabId(), path: split }] : [t]));
-    tabsRef.current = next;
-    setTabs(next);
+    const next = separateTabs(tabsRef.current, id, newTabId());
+    if (next) replaceTabs(next);
   };
 
   /** ⌘⌥\: closes the right side, or joins the next tab holding a page. */
   const toggleSplit = () => {
     if (splitOf(activeRef.current)) return setTabSplit(activeRef.current, null);
-    const list = tabsRef.current;
-    const index = list.findIndex((t) => t.id === activeRef.current);
-    const candidates = [...list.slice(index + 1), ...list.slice(0, index)];
-    const other = candidates.find((t) => t.path !== null && !isView(t.path));
+    const other = nextPageTab(tabsRef.current, activeRef.current, (path) => !isView(path));
     if (other) joinTab(other.id);
     else notify("⌥-clic sur une page de la barre latérale pour l'ouvrir à droite");
   };
@@ -1234,53 +1210,40 @@ export function App() {
     const control = frontmatter.current;
     if (control) control.set(setProperty(control.get(), "marp", true));
   };
+  /** The open page, for the exports of its toolbar (see pageExport.ts). */
+  const exportedPage = (): ExportedPage | null => {
+    const current = noteRef.current;
+    if (!current) return null;
+    const kind = drawing ? "drawing" : mindmap ? "mindmap" : presentationPage ? "presentation" : "note";
+    return { title: noteTitle(current.path), path: current.path, markdown: current.markdown, kind, drawing: drawingControls, mindmap: mindmapControls };
+  };
   /** "Exporter en image": the whole map as a PNG. */
   const exportMindmap = async () => {
-    const current = noteRef.current;
-    if (!mindmapControls || !current) return;
+    const page = exportedPage();
+    if (!mindmapControls || !page) return;
     try {
-      const blob = await mindmapControls.exportPng();
-      if (!blob) return setStatus("Export impossible : image vide.");
-      const { saveExport } = await import("./presentation/exportHtml");
-      const where = await saveExport(blob, `${noteTitle(current.path)}.png`, "Image PNG", "png");
+      const where = await exportMindmapPng(mindmapControls, page.title);
       if (where) notify(`Mind map exportée : ${where}`);
     } catch (error) {
       setStatus(`Export impossible : ${String(error)}`);
     }
   };
   const exportCurrent = async () => {
-    const current = noteRef.current;
-    if (!vault || !current) return;
+    const page = exportedPage();
+    if (!vault || !page) return;
     try {
-      const { exportPresentation } = await import("./presentation/exportHtml");
-      const where = await exportPresentation(current.markdown, noteTitle(current.path), current.path, filesRef.current, (path) => vault.readBinary(path));
+      const where = await exportSlidesHtml(vault, page, filesRef.current);
       if (where) notify(`Présentation exportée : ${where}`);
     } catch (error) {
       setStatus(`Export impossible : ${String(error)}`);
     }
   };
-  /** PDF of the open page through the print panel: a note as shown, slides one per page, a drawing or mind map as an image. */
-  const exportPdf = async () => {
-    const current = noteRef.current;
-    if (!vault || !current) return;
-    const title = noteTitle(current.path);
+  /** PDF of the open page through the print panel. */
+  const exportCurrentPdf = async () => {
+    const page = exportedPage();
+    if (!vault || !page) return;
     try {
-      const print = await import("./print");
-      if (drawing) {
-        if (!drawingControls) return;
-        const svg = await drawingControls.exportSvg();
-        await print.printImage(title, svg, svg.viewBox.baseVal.width, svg.viewBox.baseVal.height);
-      } else if (mindmap) {
-        if (!mindmapControls) return;
-        const { element, width, height } = mindmapControls.printable();
-        await print.printElement(title, element, width, height);
-      } else if (presentationPage) {
-        const { renderSlidesForExport } = await import("./presentation/exportHtml");
-        const rendered = await renderSlidesForExport(current.markdown, current.path, filesRef.current, (path) => vault.readBinary(path));
-        await print.printSlides(title, rendered.slides, rendered.css);
-      } else {
-        await print.printNote(title);
-      }
+      await exportPdf(vault, page, filesRef.current);
     } catch (error) {
       setStatus(`Export PDF impossible : ${String(error)}`);
     }
@@ -1344,6 +1307,58 @@ export function App() {
   /** Without autosave, unsaved changes stay in sight at the top. */
   const saveState = dirty && !settings.autosave ? <span className="save-state dirty">{keys("Non enregistré · ⌘S")}</span> : null;
 
+  // The sidebar is memoized: typing in a note does not draw it again (see useHandlers).
+  const sidebarHidden = useMemo(() => [settings.ticketsFolder, readingPath].filter(Boolean), [settings.ticketsFolder, readingPath]);
+  const notePath = note?.path;
+  const sidebarLiveIcon = useMemo(() => (notePath ? { path: notePath, icon: liveIcon } : undefined), [notePath, liveIcon]);
+  const otherVaults = useMemo(
+    () => (vault && isTauri() ? recentTauriVaults().filter((root) => root !== currentTauriVault()).map((root) => ({ root, name: root.split("/").filter(Boolean).pop() ?? root })) : []),
+    [vault],
+  );
+  const splitHandlers = useHandlers({
+    onOpen: (path: string, newTabRequested: boolean) => (newTabRequested ? void newTab(path) : setTabSplit(activeTab, path)),
+    onRenameRow: renamePath,
+    onSwap: () => void swapSplit(),
+    onSeparate: () => void separateTab(activeTab),
+    onClose: () => setTabSplit(activeTab, null),
+    onSaved: () => {
+      void refreshGit();
+      if (vault) void refresh(vault);
+    },
+    onToggleSpelling: toggleSpelling,
+    onToggleFocus: toggleFocus,
+    onToggleWide: () => splitPath && toggleWide(splitPath),
+    notify,
+  });
+  const sidebarHandlers = useHandlers({
+    onSelect: (path: string, newTabRequested: boolean) => void select(path, "push", newTabRequested),
+    onOpenRight: openRight,
+    onNewPage: (parent: string | null) => void newPage(parent),
+    onNewPageInFolder: (folder: string) => void newPage(null, undefined, folder),
+    onDelete: (path: string) => void removePage(path),
+    onDuplicate: (path: string) => void duplicatePage(path),
+    onCopyLink: (path: string) => void copyLink(path),
+    onReveal: vault?.reveal ? (path: string) => void vault.reveal!(path).catch((error: unknown) => setStatus(String(error))) : undefined,
+    onNewFolder: (parent: string) => void newFolder(parent),
+    onRenameFolder: (folder: string) => void renameFolderPath(folder),
+    onDeleteFolder: (folder: string) => void removeFolder(folder),
+    onMove: (item: { path: string; folder: boolean }, target: string) => void moveItem(item, target),
+    onRename: (path: string) => void askName("Renommer la page", noteTitle(path)).then((name) => (name ? renamePath(path, name) : false)),
+    onSearch: () => setModal("switcher"),
+    onVaultSearch: () => setModal("search"),
+    onHome: (newTabRequested: boolean) => void openView(null, newTabRequested),
+    onTickets: (newTabRequested: boolean) => void openView(TICKETS_VIEW, newTabRequested),
+    onGraph: (newTabRequested: boolean) => void openView(GRAPH_VIEW, newTabRequested),
+    onReading: (newTabRequested: boolean) => void openView(READING_VIEW, newTabRequested),
+    onDocs: (newTabRequested: boolean) => void openView(DOCS_VIEW, newTabRequested),
+    onGit: () => toggleGit(),
+    onSettings: (newTabRequested: boolean) => void select(SETTINGS_VIEW, "push", newTabRequested),
+    onHelp: () => setModal("help"),
+    onChangeVault: changeVault,
+    onSwitchVault: (root: string) => void saveNow().catch(() => {}).then(() => open(openTauriVault(root))),
+    onPickVault: isTauri() ? () => void saveNow().catch(() => {}).then(() => open(pickTauriVault())) : undefined,
+  });
+
   if (!vault) {
     return (
       <Welcome
@@ -1362,40 +1377,15 @@ export function App() {
       vaultName={vault.name}
       tree={tree}
       ticketsFolder={settings.ticketsFolder}
-      hidden={[settings.ticketsFolder, readingPath].filter(Boolean)}
+      hidden={sidebarHidden}
       selected={note?.path}
       view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
-      liveIcon={note ? { path: note.path, icon: liveIcon } : undefined}
+      liveIcon={sidebarLiveIcon}
       gitChanges={vault.git ? gitChanges : null}
       gitOpen={gitOpen}
-      onSelect={(path, newTabRequested) => void select(path, "push", newTabRequested)}
-      onOpenRight={openRight}
-      onNewPage={(parent) => void newPage(parent)}
-      onNewPageInFolder={(folder) => void newPage(null, undefined, folder)}
-      onDelete={(path) => void removePage(path)}
       favorites={bookmarks}
-      onDuplicate={(path) => void duplicatePage(path)}
-      onCopyLink={(path) => void copyLink(path)}
-      onReveal={vault.reveal ? (path) => void vault.reveal!(path).catch((error: unknown) => setStatus(String(error))) : undefined}
-      onNewFolder={(parent) => void newFolder(parent)}
-      onRenameFolder={(folder) => void renameFolderPath(folder)}
-      onDeleteFolder={(folder) => void removeFolder(folder)}
-      onMove={(item, target) => void moveItem(item, target)}
-      onRename={(path) => void askName("Renommer la page", noteTitle(path)).then((name) => (name ? renamePath(path, name) : false))}
-      onSearch={() => setModal("switcher")}
-      onVaultSearch={() => setModal("search")}
-      onHome={(newTabRequested) => void openView(null, newTabRequested)}
-      onTickets={(newTabRequested) => void openView(TICKETS_VIEW, newTabRequested)}
-      onGraph={(newTabRequested) => void openView(GRAPH_VIEW, newTabRequested)}
-      onReading={(newTabRequested) => void openView(READING_VIEW, newTabRequested)}
-      onDocs={(newTabRequested) => void openView(DOCS_VIEW, newTabRequested)}
-      onGit={() => toggleGit()}
-      onSettings={(newTabRequested) => void select(SETTINGS_VIEW, "push", newTabRequested)}
-      onHelp={() => setModal("help")}
-      onChangeVault={changeVault}
-      otherVaults={isTauri() ? recentTauriVaults().filter((root) => root !== currentTauriVault()).map((root) => ({ root, name: root.split("/").filter(Boolean).pop() ?? root })) : []}
-      onSwitchVault={(root) => void saveNow().catch(() => {}).then(() => open(openTauriVault(root)))}
-      onPickVault={isTauri() ? () => void saveNow().catch(() => {}).then(() => open(pickTauriVault())) : undefined}
+      otherVaults={otherVaults}
+      {...sidebarHandlers}
     />
   );
 
@@ -1543,7 +1533,7 @@ export function App() {
               anchor={pageMenu}
               onClose={() => setPageMenu(null)}
               items={[
-                { label: "Exporter en PDF…", icon: "export", run: () => void exportPdf() },
+                { label: "Exporter en PDF…", icon: "export", run: () => void exportCurrentPdf() },
                 ...(!drawing && !mindmap && !presentationPage ? [{ label: "Copier en HTML", icon: "copy", run: () => void copyAsHtml() } satisfies MenuItem] : []),
               ]}
             />
@@ -1756,24 +1746,14 @@ export function App() {
                 ticketColumns={settings.ticketColumns}
                 openOnLeft={note?.path === splitPath}
                 autosave={settings.autosave}
-                iconOf={pageIconFor}
-                onOpen={(path, newTabRequested) => (newTabRequested ? void newTab(path) : setTabSplit(activeTab, path))}
-                onRenameRow={renamePath}
-                onSwap={() => void swapSplit()}
-                onSeparate={() => void separateTab(activeTab)}
+                icon={iconOf(splitPath)}
+                isRow={isBaseRow(splitPath)}
                 saver={splitSaver}
-                tools={{
-                  spelling: settings.spellChecker !== "off" ? { on: spellingOn, toggle: toggleSpelling } : null,
-                  focus: { on: focusMode, toggle: toggleFocus },
-                  wide: { has: (path) => widePages.has(path), toggle: toggleWide },
-                  git: vault.git ?? null,
-                  notify,
-                }}
-                onClose={() => setTabSplit(activeTab, null)}
-                onSaved={() => {
-                  void refreshGit();
-                  void refresh(vault);
-                }}
+                spellingOn={settings.spellChecker !== "off" ? spellingOn : null}
+                focusOn={focusMode}
+                wide={widePages.has(splitPath)}
+                git={vault.git ?? null}
+                {...splitHandlers}
               />
             </div>
           </>

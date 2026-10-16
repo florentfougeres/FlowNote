@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { NoteEditor } from "./editor/NoteEditor";
 import type { VaultBridge } from "./editor/bridge";
 import { isDrawingPath } from "./drawing/format";
@@ -17,7 +17,7 @@ import type { Editor } from "@tiptap/core";
 import { RawEditor } from "./RawEditor";
 import { OutlinePanel } from "./OutlinePanel";
 import { HistoryPanel } from "./HistoryPanel";
-import { PopoverMenu, type MenuItem } from "./Sidebar";
+import { PageIcon, PopoverMenu, type MenuItem } from "./Sidebar";
 import { ToolButton, ToolGroup } from "./Toolbar";
 import type { FrontmatterControl } from "./editor/NoteEditor";
 import { copyNoteAsHtml } from "./editor/copyHtml";
@@ -29,17 +29,9 @@ import { slideAt, useSlides } from "./presentation/useSlides";
 import { SlidesPanel } from "./presentation/SlidesPanel";
 import { Presenter } from "./presentation/Presenter";
 import { setProperty } from "./markdown/frontmatter";
+import { exportMindmapPng, exportPdf, exportSlidesHtml, type ExportedPage } from "./pageExport";
 import type { GitApi } from "./vault/git";
 
-/** The app's settings and services the right side's toolbar shares with the left one. */
-export interface PaneTools {
-  /** Spell checking (null when it is off in the settings). */
-  spelling: { on: boolean; toggle: () => void } | null;
-  focus: { on: boolean; toggle: () => void };
-  wide: { has: (path: string) => boolean; toggle: (path: string) => void };
-  git: GitApi | null;
-  notify: (message: string) => void;
-}
 
 const AUTOSAVE_DELAY_MS = 700;
 
@@ -59,7 +51,7 @@ interface Loaded {
  * drawings, mind maps and bases are shown; a page already open on the left is
  * not edited twice.
  */
-export function SplitPane({
+export const SplitPane = memo(function SplitPane({
   vault,
   path,
   files,
@@ -68,7 +60,8 @@ export function SplitPane({
   ticketColumns,
   openOnLeft,
   autosave,
-  iconOf,
+  icon,
+  isRow,
   onOpen,
   onRenameRow,
   onSwap,
@@ -76,7 +69,14 @@ export function SplitPane({
   onClose,
   onSaved,
   saver,
-  tools,
+  spellingOn,
+  onToggleSpelling,
+  focusOn,
+  onToggleFocus,
+  wide,
+  onToggleWide,
+  git,
+  notify,
 }: {
   vault: Vault;
   path: string;
@@ -88,7 +88,9 @@ export function SplitPane({
   /** The left side shows the same page: it is edited there only. */
   openOnLeft: boolean;
   autosave: boolean;
-  iconOf: (path: string) => ReactNode;
+  /** The page's emoji (its `icon` property), and whether it is a row of a base. */
+  icon: string | null;
+  isRow: boolean;
   onOpen: (path: string, newTab: boolean) => void;
   onRenameRow: (path: string, name: string) => Promise<boolean>;
   /** Shows this page on the left (and the left one here). */
@@ -100,7 +102,15 @@ export function SplitPane({
   onSaved: () => void;
   /** Receives how to write pending changes now (before the sides are swapped). */
   saver?: { current: (() => Promise<void>) | null };
-  tools: PaneTools;
+  /** Settings and services shared with the left side's toolbar. Spell checking: null when off in the settings. */
+  spellingOn: boolean | null;
+  onToggleSpelling: () => void;
+  focusOn: boolean;
+  onToggleFocus: () => void;
+  wide: boolean;
+  onToggleWide: () => void;
+  git: GitApi | null;
+  notify: (message: string) => void;
 }) {
   const [page, setPage] = useState<Loaded | null>(null);
   const [status, setStatus] = useState("");
@@ -201,45 +211,31 @@ export function SplitPane({
   const note = !drawing && !mindmap && !base;
   const presentation = page !== null && note && !ticket && isPresentationMarkdown(page.markdown);
   const slides = useSlides(presentation ? page.markdown : "", path, files, bridge.loadImage, presentation);
-  const wide = tools.wide.has(path);
   const title = noteTitle(path);
 
   const report = (what: string) => (error: unknown) => setStatus(`${what} impossible : ${String(error)}`);
+  const exported = (): ExportedPage | null =>
+    page && { title, path, markdown: page.markdown, kind: drawing ? "drawing" : mindmap ? "mindmap" : presentation ? "presentation" : "note", drawing: drawingControls, mindmap: mindmapControls };
   const exportPng = async () => {
-    const blob = await mindmapControls?.exportPng();
-    if (!blob) return;
-    const { saveExport } = await import("./presentation/exportHtml");
-    const where = await saveExport(blob, `${title}.png`, "Image PNG", "png");
-    if (where) tools.notify(`Mind map exportée : ${where}`);
+    if (!mindmapControls) return;
+    const where = await exportMindmapPng(mindmapControls, title);
+    if (where) notify(`Mind map exportée : ${where}`);
   };
   const exportSlides = async () => {
-    if (!page) return;
-    const { exportPresentation } = await import("./presentation/exportHtml");
-    const where = await exportPresentation(page.markdown, title, path, files, (file) => vault.readBinary(file));
-    if (where) tools.notify(`Présentation exportée : ${where}`);
+    const current = exported();
+    if (!current) return;
+    const where = await exportSlidesHtml(vault, current, files);
+    if (where) notify(`Présentation exportée : ${where}`);
   };
   /** PDF of this page through the print panel, as the left side does it. */
-  const exportPdf = async () => {
-    if (!page) return;
-    const print = await import("./print");
-    if (drawing && drawingControls) {
-      const svg = await drawingControls.exportSvg();
-      await print.printImage(title, svg, svg.viewBox.baseVal.width, svg.viewBox.baseVal.height);
-    } else if (mindmap && mindmapControls) {
-      const { element, width, height } = mindmapControls.printable();
-      await print.printElement(title, element, width, height);
-    } else if (presentation) {
-      const { renderSlidesForExport } = await import("./presentation/exportHtml");
-      const rendered = await renderSlidesForExport(page.markdown, path, files, (file) => vault.readBinary(file));
-      await print.printSlides(title, rendered.slides, rendered.css);
-    } else {
-      await print.printNote(title, "right");
-    }
+  const exportPagePdf = async () => {
+    const current = exported();
+    if (current) await exportPdf(vault, current, files, "right");
   };
   const copyHtml = async () => {
     if (!editor || !page) return;
     await copyNoteAsHtml(editor.state.doc, title, page.markdown);
-    tools.notify("Note copiée en HTML");
+    notify("Note copiée en HTML");
   };
   /** A version from the history replaces the page (as a change to commit). */
   const restore = async (content: string) => {
@@ -250,7 +246,7 @@ export function SplitPane({
       await vault.write(path, content, pageRef.current?.disk ?? current.disk);
       setPage({ loaded: content, disk: content, markdown: content, reloads: current.reloads + 1 });
       savedCallback.current();
-      tools.notify("Version restaurée : elle apparaît comme une modification à commiter.");
+      notify("Version restaurée : elle apparaît comme une modification à commiter.");
     } catch (error) {
       setStatus(String(error));
     }
@@ -319,7 +315,9 @@ export function SplitPane({
   return (
     <section className="split-pane" aria-label={`Panneau de droite : ${noteTitle(path)}`}>
       <header className="split-pane-bar toolbar">
-        <span className="split-pane-icon">{iconOf(path)}</span>
+        <span className="split-pane-icon">
+          <PageIcon path={path} icon={icon} ticket={ticket} presentation={presentation} row={isRow} />
+        </span>
         <span className="split-pane-title" title={path}>
           {noteTitle(path)}
         </span>
@@ -340,8 +338,8 @@ export function SplitPane({
             </>
           )}
           {note && !openOnLeft && <ToolButton icon="outline" label="Plan de la note" onClick={() => setOutline(!outline)} active={outline && !raw} disabled={raw} />}
-          {note && tools.spelling && (
-            <ToolButton icon="spelling" label={tools.spelling.on ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={tools.spelling.toggle} active={tools.spelling.on} />
+          {note && spellingOn !== null && (
+            <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={onToggleSpelling} active={spellingOn} />
           )}
           {presentation && !openOnLeft && (
             <>
@@ -353,9 +351,9 @@ export function SplitPane({
           {note && !ticket && !presentation && !openOnLeft && (
             <ToolButton icon="slides" label="Transformer en présentation" onClick={() => frontmatter.current?.set(setProperty(frontmatter.current.get(), "marp", true))} disabled={!editable || raw} />
           )}
-          {tools.git && <ToolButton icon="clock" label="Historique de la note" onClick={() => setHistory(!history)} active={history} />}
-          {note && !presentation && <ToolButton icon="width" label={wide ? "Largeur normale" : "Pleine largeur"} onClick={() => tools.wide.toggle(path)} active={wide} />}
-          <ToolButton icon="focus" label={tools.focus.on ? "Quitter le mode focus (⌘⇧M)" : "Mode focus (⌘⇧M)"} onClick={tools.focus.toggle} active={tools.focus.on} />
+          {git && <ToolButton icon="clock" label="Historique de la note" onClick={() => setHistory(!history)} active={history} />}
+          {note && !presentation && <ToolButton icon="width" label={wide ? "Largeur normale" : "Pleine largeur"} onClick={onToggleWide} active={wide} />}
+          <ToolButton icon="focus" label={focusOn ? "Quitter le mode focus (⌘⇧M)" : "Mode focus (⌘⇧M)"} onClick={onToggleFocus} active={focusOn} />
           {!base && !ticket && !openOnLeft && (
             <ToolButton icon="more" label="Exporter, copier…" onClick={(event) => setMenu(event.currentTarget.getBoundingClientRect())} active={menu !== null} disabled={raw || !page} />
           )}
@@ -369,10 +367,10 @@ export function SplitPane({
       <div className="split-pane-main">
         <div className="split-pane-body">{body ?? (status ? null : <p className="split-notice">Chargement…</p>)}</div>
         {presentation && showSlides && !raw && !openOnLeft && <SlidesPanel editor={editor} rendered={slides} onPresent={setPresenting} onClose={() => setShowSlides(false)} />}
-        {((outline && note && !raw && !openOnLeft) || (history && tools.git && page)) && (
-          <div className={history && tools.git ? "split-outline side-column with-history" : "split-outline"}>
+        {((outline && note && !raw && !openOnLeft) || (history && git && page)) && (
+          <div className={history && git ? "split-outline side-column with-history" : "split-outline"}>
             {outline && note && !raw && !openOnLeft && <OutlinePanel editor={editor} onClose={() => setOutline(false)} />}
-            {history && tools.git && page && <HistoryPanel git={tools.git} path={path} current={page.disk} onRestore={restore} onClose={() => setHistory(false)} />}
+            {history && git && page && <HistoryPanel git={git} path={path} current={page.disk} onRestore={restore} onClose={() => setHistory(false)} />}
           </div>
         )}
       </div>
@@ -381,7 +379,7 @@ export function SplitPane({
           anchor={menu}
           onClose={() => setMenu(null)}
           items={[
-            { label: "Exporter en PDF…", icon: "export", run: () => void exportPdf().catch(report("Export PDF")) },
+            { label: "Exporter en PDF…", icon: "export", run: () => void exportPagePdf().catch(report("Export PDF")) },
             ...(note && !presentation ? [{ label: "Copier en HTML", icon: "copy", run: () => void copyHtml().catch(report("Copie")) } satisfies MenuItem] : []),
           ]}
         />
@@ -389,4 +387,4 @@ export function SplitPane({
       {presenting !== null && slides && presentation && <Presenter rendered={slides} start={presenting} onClose={() => setPresenting(null)} />}
     </section>
   );
-}
+});

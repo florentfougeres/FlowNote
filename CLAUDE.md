@@ -29,6 +29,7 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 - `src/editor/` : Tiptap/ProseMirror. Les vues de nœuds sont dans `views.ts`, le pont vers l'app dans `bridge.ts`.
 - `src/vault/` : accès au vault, résolution des liens façon Obsidian (`links.ts`), opérations sur les pages (`pageOps.ts`), notes liées (`backlinks.ts`), copie des notes en mémoire (`noteCache.ts` : le vault ouvert est enveloppé, ses écritures tiennent la copie à jour).
 - `src/print.ts` : export PDF par le panneau d'impression (styles dans `styles/print.css`).
+- `src/tabs.ts` : la liste d'onglets et le split view en fonctions pures (testées). `src/pageExport.ts` : exports PDF, PNG et HTML d'une page, partagés par les deux côtés du split view.
 - `src/SplitPane.tsx` : côté droit du split view (lecture et enregistrement propres, barre d'outils) ; la page de droite est le champ `split` de l'onglet (`Tab` dans `TabBar.tsx`) : la paire forme un seul onglet.
 - `src/editor/syntaxMarks.ts` : `#` des titres et `` ` `` du code affichés autour du curseur, pour changer de niveau ou retirer le code sans la vue brute.
 - `src/DatePicker.tsx` : sélecteur de date de l'app (jamais d'`<input type="date">`).
@@ -40,6 +41,8 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 ## Pièges connus
 
+- **Rendus** : `Sidebar` et `SplitPane` sont enveloppés dans `memo` pour ne pas se redessiner à chaque frappe. Leur passer des valeurs stables : fonctions via `useHandlers` (`src/hooks/useHandlers.ts`), objets et tableaux via `useMemo`, jamais une fonction ou un objet créé dans le JSX.
+- **CSP** (`tauri.conf.json`, `csp` et `devCsp`) : scripts de l'app seulement (`'wasm-unsafe-eval'` pour le WebAssembly d'Excalidraw), styles inline permis (`dangerousDisableAssetCspModification: ["style-src"]`, sinon Tauri ajoute un nonce qui les bloque), images de partout, polices de l'app plus `cdn.jsdelivr.net` (KaTeX des diapos) et `esm.sh` (polices CJK d'Excalidraw, non embarquées). Une nouvelle bibliothèque qui charge une ressource externe doit y être ajoutée : tester avec la CSP dans la console.
 - **Glisser-déposer** : utiliser des pointer events, pas le drag HTML5 (WebKit le refuse sur les `<button>`). Ajouter `user-select: none` et `-webkit-user-select: none` pour qu'aucun texte ne reste sélectionné.
 - **Versions figées** : TanStack Table en v8 (la v9 change d'API), mind-elixir 5.15.x. Marp avec `inlineSVG: false` (WebKit dessine mal `foreignObject`).
 - **Plotly 3+** n'affiche plus les titres écrits en texte simple (`title: Ventes`) : `src/editor/plotly.ts` les convertit en `{ text }` au dessin.
@@ -67,8 +70,8 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 - v0.14.0 taguée (split view en un onglet avec barre d'outils complète, marques # et ` pour titres et code, liens cliquables, copie en Markdown, documentation illustrée de 18 captures, démo enrichie). Le workflow de release crée un brouillon à publier.
 - Sécurité côté Rust : `check_root` limite toutes les commandes (vault et git) à un dossier avec `.obsidian` ou choisi par `vault_pick` (sélecteur natif, liste dans `trusted-vaults.json` des données de l'app). git tourne avec `core.fsmonitor=false`.
 - Pistes ouvertes :
-  - `App.tsx` (~1 650 lignes) à découper en hooks (vault, onglets, raccourcis, export) ; aucun composant mémoïsé, toute l'app se redessine à chaque frappe ;
-  - CSP toujours désactivée (`csp: null`) : à activer après essais dans l'app de bureau (Excalidraw, Plotly, KaTeX) ;
+  - `App.tsx` (~1 830 lignes) à continuer de découper au fil des modifications (déjà sortis : `useSplitWidth`, `useSidebarPeek`, `tabs.ts`, `pageExport.ts`) ;
+  - CSP active depuis octobre 2026, validée dans Chrome : à vérifier dans l'app de bureau (protocoles `ipc:` et `asset:`) ;
   - branche `feature/notebooks` (notebooks Python marimo) jamais fusionnée, 41 commits de retard ;
   - suppression d'une base « en plusieurs fois » dans l'app de bureau : rendue robuste mais pas reproduite, à confirmer ;
   - kanban et calendrier des bases à vérifier dans Obsidian ;

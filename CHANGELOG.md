@@ -4,6 +4,12 @@ Les changements notables de FlowNote, version par version. Le format suit [Keep 
 
 ## [Non publié]
 
+### Sécurité
+- **Politique de sécurité du contenu (CSP)** activée : la fenêtre n'exécute que les scripts de l'app ; une note piégée ne peut plus charger de script ni envoyer de données vers un site extérieur.
+
+### Modifié
+- Taper dans une note ne redessine plus la barre latérale ni le panneau de droite (jusqu'à 20 fois moins de travail par frappe sur ces parties).
+
 ## [0.14.0] - 2026-10-16
 
 ### Ajouté

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { VaultEntry } from "./vault/vault";
 import { Icon, type IconName } from "./Icon";
 import { isDrawingPath } from "./drawing/format";
@@ -212,7 +212,11 @@ interface Props {
   onPickVault?: () => void;
 }
 
-export function Sidebar(props: Props) {
+/**
+ * Memoized: the app passes stable handlers (useHandlers), so typing in a note
+ * does not draw the tree again.
+ */
+export const Sidebar = memo(function Sidebar(props: Props) {
   const { vaultName, tree, selected, view, liveIcon, gitChanges, gitOpen } = props;
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ anchor: DOMRect; items: MenuItem[] } | null>(null);
@@ -535,4 +539,4 @@ export function Sidebar(props: Props) {
       {menu && <PopoverMenu anchor={menu.anchor} items={menu.items} onClose={() => setMenu(null)} />}
     </aside>
   );
-}
+});
