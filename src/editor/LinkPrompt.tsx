@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getMarkRange, type Editor } from "@tiptap/core";
 import type { EditorState } from "@tiptap/pm/state";
+import { Icon } from "../Icon";
 
 export interface LinkRequest {
   from: number;
@@ -71,6 +72,108 @@ export function LinkPrompt({ request, onDone }: { request: LinkRequest; onDone: 
           </button>
         )}
       </div>
+    </div>,
+    document.body,
+  );
+}
+
+interface Hovered {
+  from: number;
+  to: number;
+  href: string;
+  rect: DOMRect;
+}
+
+/**
+ * The link under the mouse, like in Notion: its address with Modify, Copy and
+ * Remove, under the link. A click on the link opens it (see NoteEditor).
+ */
+export function LinkHover({ editor, onEdit }: { editor: Editor | null; onEdit: (request: LinkRequest) => void }) {
+  const [hovered, setHovered] = useState<Hovered | null>(null);
+  const [copied, setCopied] = useState(false);
+  const timer = useRef(0);
+
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+    const schedule = (next: Hovered | null, delay: number) => {
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => {
+        setHovered(next);
+        setCopied(false);
+      }, delay);
+    };
+    const over = (event: MouseEvent) => {
+      const link = (event.target as Element).closest?.("a[href]");
+      if (!link || !dom.contains(link)) return;
+      const pos = editor.view.posAtDOM(link, 0);
+      const range = getMarkRange(editor.state.doc.resolve(pos), editor.schema.marks.link);
+      if (!range) return;
+      schedule({ ...range, href: link.getAttribute("href") ?? "", rect: link.getBoundingClientRect() }, 350);
+    };
+    const out = (event: MouseEvent) => {
+      if ((event.target as Element).closest?.("a[href]")) schedule(null, 250);
+    };
+    dom.addEventListener("mouseover", over);
+    dom.addEventListener("mouseout", out);
+    return () => {
+      window.clearTimeout(timer.current);
+      dom.removeEventListener("mouseover", over);
+      dom.removeEventListener("mouseout", out);
+    };
+  }, [editor]);
+
+  // The bar is placed once: it goes away when the page scrolls.
+  useEffect(() => {
+    if (!hovered) return;
+    const hide = () => setHovered(null);
+    window.addEventListener("scroll", hide, true);
+    return () => window.removeEventListener("scroll", hide, true);
+  }, [hovered]);
+
+  if (!editor || !hovered) return null;
+  const close = () => setHovered(null);
+  const left = Math.max(8, Math.min(hovered.rect.left, window.innerWidth - 360));
+  return createPortal(
+    <div
+      className="block-menu link-hover"
+      style={{ left, top: hovered.rect.bottom + 4 }}
+      onMouseEnter={() => window.clearTimeout(timer.current)}
+      onMouseLeave={() => (timer.current = window.setTimeout(close, 250))}
+    >
+      <span className="link-hover-href" title={hovered.href}>
+        {hovered.href}
+      </span>
+      {editor.isEditable && (
+        <button
+          title="Modifier le lien"
+          onClick={() => {
+            close();
+            onEdit({ from: hovered.from, to: hovered.to, href: hovered.href, x: hovered.rect.left, y: hovered.rect.bottom });
+          }}
+        >
+          <Icon name="pencil" size={14} />
+        </button>
+      )}
+      <button
+        title={copied ? "Copié" : "Copier l'adresse"}
+        onClick={() => {
+          void navigator.clipboard.writeText(hovered.href).then(() => setCopied(true));
+        }}
+      >
+        <Icon name={copied ? "check" : "copy"} size={14} />
+      </button>
+      {editor.isEditable && (
+        <button
+          title="Retirer le lien"
+          onClick={() => {
+            applyLink(editor, hovered.from, hovered.to, "");
+            close();
+          }}
+        >
+          <Icon name="trash" size={14} />
+        </button>
+      )}
     </div>,
     document.body,
   );

@@ -269,13 +269,11 @@ export function App() {
   /** Back/forward history and scroll position of the inactive tabs. */
   const tabState = useRef(new Map<string, { back: string[]; forward: string[]; scroll: number }>());
   const contentRef = useRef<HTMLElement>(null);
-  /** Tab shown on the right of the split view (one tab bar for both sides), or null. */
-  const [splitTab, setSplitTab] = useState<string | null>(null);
+  /** Page on the right of the split view: part of the active tab (one tab for the pair). */
+  const splitOf = (id: string) => tabsRef.current.find((t) => t.id === id)?.split ?? null;
   /** Writes the right side's pending changes. */
   const splitSaver = useRef<(() => Promise<void>) | null>(null);
   const [tabMenu, setTabMenu] = useState<{ id: string; anchor: DOMRect } | null>(null);
-  const splitTabRef = useRef(splitTab);
-  splitTabRef.current = splitTab;
   const [splitWidth, setSplitWidth] = useState(() => {
     try {
       return Math.min(0.75, Math.max(0.25, Number(localStorage.getItem("flownote:split-width")) || 0.5));
@@ -284,6 +282,12 @@ export function App() {
     }
   });
   const setTabPath = (id: string, path: string | null) => setTabs((list) => list.map((t) => (t.id === id ? { ...t, path } : t)));
+  /** Sets (or, with null, closes) the page on the right of a tab. */
+  const setTabSplit = (id: string, split: string | null) => {
+    const next = tabsRef.current.map((t) => (t.id === id ? { ...t, split } : t));
+    tabsRef.current = next;
+    setTabs(next);
+  };
 
   // Latest values for async callbacks.
   const noteRef = useRef(note);
@@ -318,7 +322,6 @@ export function App() {
       // A vault opens on the dashboard, in a single tab (FLOWNOTE_OPEN opens a page, for debugging).
       const first = { id: newTabId(), path: null };
       tabState.current.clear();
-      setSplitTab(null);
       back.current = [];
       forward.current = [];
       activeRef.current = first.id;
@@ -438,12 +441,6 @@ export function App() {
       } catch {
         return; // keep the note open so the conflict can be resolved
       }
-      // The tab shown on the right comes to the left; the left one goes to the right (a page only).
-      if (id === splitTabRef.current) {
-        await splitSaver.current?.();
-        const left = tabsRef.current.find((t) => t.id === activeRef.current)?.path ?? null;
-        setSplitTab(left !== null && !isView(left) ? activeRef.current : null);
-      }
       await activate(id);
     },
     [saveNow, activate],
@@ -477,12 +474,12 @@ export function App() {
       if (closingActive) {
         try {
           await saveNow();
+          await splitSaver.current?.();
         } catch {
           return;
         }
       }
       tabState.current.delete(id);
-      if (id === splitTabRef.current) setSplitTab(null);
       let remaining = list.filter((t) => t.id !== id);
       if (remaining.length === 0) remaining = [{ id: newTabId(), path: null }];
       tabsRef.current = remaining;
@@ -711,7 +708,7 @@ export function App() {
     back.current = back.current.map(moved);
     forward.current = forward.current.map(moved);
     followWide(moved);
-    setTabs((list) => list.map((t) => (t.path && !isView(t.path) ? { ...t, path: moved(t.path) } : t)));
+    setTabs((list) => list.map((t) => ({ ...t, path: t.path && !isView(t.path) ? moved(t.path) : t.path, split: t.split ? moved(t.split) : t.split })));
     const current = noteRef.current;
     if (current && (moved(current.path) !== current.path || updatedNotes.includes(moved(current.path)))) {
       const openPath = moved(current.path);
@@ -867,7 +864,7 @@ export function App() {
     const gone = (p: string | null) => p !== null && !isView(p) && removed(p) && !files.includes(p);
     back.current = back.current.filter((p) => !gone(p));
     forward.current = forward.current.filter((p) => !gone(p));
-    setTabs((list) => list.map((t) => (gone(t.path) ? { ...t, path: null } : t)));
+    setTabs((list) => list.map((t) => ({ ...t, path: gone(t.path) ? null : t.path, split: gone(t.split ?? null) ? null : t.split })));
     if (noteRef.current && gone(noteRef.current.path)) {
       noteRef.current = null;
       setNote(null);
@@ -972,10 +969,7 @@ export function App() {
   };
 
   /** The page on the right of the split view (only pages are shown there). */
-  const splitPath = (() => {
-    const path = tabs.find((t) => t.id === splitTab)?.path ?? null;
-    return path !== null && !isView(path) && splitTab !== activeTab ? path : null;
-  })();
+  const splitPath = tabs.find((t) => t.id === activeTab)?.split ?? null;
   const splitBridge: VaultBridge = {
     ...bridge,
     notePath: splitPath ?? "",
@@ -983,7 +977,7 @@ export function App() {
       return filesRef.current;
     },
     // Links followed on the right stay on the right (⌘-click: a new tab).
-    openPath: (path, newTabRequested) => (newTabRequested ? void newTab(path) : splitTabRef.current ? setTabPath(splitTabRef.current, path) : void select(path)),
+    openPath: (path, newTabRequested) => (newTabRequested ? void newTab(path) : isView(path) ? void select(path) : setTabSplit(activeRef.current, path)),
   };
 
   /** Drag of the split view's separator: the right side's share of the width, kept for next time. */
@@ -1146,35 +1140,64 @@ export function App() {
     return path === null ? showHome() : select(path, "push");
   };
 
-  /** Shows a page on the right of the split view: in the tab already there, else in a new tab. */
+  /** Shows a page on the right of the active tab (replacing the one there). */
   const openRight = (path: string) => {
-    if (isView(path)) return;
-    const current = splitTabRef.current;
-    if (current) return setTabPath(current, path);
-    const tab = { id: newTabId(), path };
-    const list = tabsRef.current;
-    const index = list.findIndex((t) => t.id === activeRef.current);
-    const next = [...list.slice(0, index + 1), tab, ...list.slice(index + 1)];
-    tabsRef.current = next;
-    setTabs(next);
-    setSplitTab(tab.id);
+    if (!isView(path)) setTabSplit(activeRef.current, path);
   };
 
-  /** ⌘⌥\: closes the right side, or shows there the next tab holding a page. */
+  /**
+   * Puts the page of another tab on the right of the active one: the two make
+   * one tab. A page already on the right goes back to a tab of its own, in
+   * place of the one joined.
+   */
+  const joinTab = (id: string) => {
+    const other = tabsRef.current.find((t) => t.id === id);
+    if (!other?.path || isView(other.path) || id === activeRef.current) return;
+    const previous = splitOf(activeRef.current);
+    const next = tabsRef.current.flatMap((t) => {
+      if (t.id === activeRef.current) return [{ ...t, split: other.path }];
+      if (t.id !== id) return [t];
+      return previous ? [{ id: newTabId(), path: previous }] : [];
+    });
+    tabState.current.delete(id);
+    tabsRef.current = next;
+    setTabs(next);
+  };
+
+  /** The page on the right of a tab goes to a tab of its own, after it. */
+  const separateTab = async (id: string) => {
+    const split = splitOf(id);
+    if (!split) return;
+    if (id === activeRef.current) await splitSaver.current?.();
+    const next = tabsRef.current.flatMap((t) => (t.id === id ? [{ ...t, split: null }, { id: newTabId(), path: split }] : [t]));
+    tabsRef.current = next;
+    setTabs(next);
+  };
+
+  /** ⌘⌥\: closes the right side, or joins the next tab holding a page. */
   const toggleSplit = () => {
-    if (splitTabRef.current) return setSplitTab(null);
+    if (splitOf(activeRef.current)) return setTabSplit(activeRef.current, null);
     const list = tabsRef.current;
     const index = list.findIndex((t) => t.id === activeRef.current);
     const candidates = [...list.slice(index + 1), ...list.slice(0, index)];
     const other = candidates.find((t) => t.path !== null && !isView(t.path));
-    if (other) setSplitTab(other.id);
+    if (other) joinTab(other.id);
     else notify("⌥-clic sur une page de la barre latérale pour l'ouvrir à droite");
   };
 
-  /** Swaps the two sides: the right tab becomes the active one. */
+  /** Swaps the two sides of the active tab. */
   const swapSplit = async () => {
-    const right = splitTabRef.current;
-    if (right) await switchTab(right);
+    const right = splitOf(activeRef.current);
+    const left = noteRef.current?.path ?? null;
+    if (!right || !left) return;
+    try {
+      await saveNow();
+      await splitSaver.current?.();
+    } catch {
+      return;
+    }
+    setTabSplit(activeRef.current, left);
+    await select(right, "history");
   };
 
   /** Icon of the open page, live from its text (the tree is read from disk). */
@@ -1410,7 +1433,6 @@ export function App() {
           onClose={(id) => void closeTab(id)}
           onNew={() => void newTab(null)}
           onReorder={reorderTab}
-          split={splitPath ? splitTab : null}
           onMenu={(id, anchor) => setTabMenu({ id, anchor })}
         />
         {tabMenu && (
@@ -1420,9 +1442,18 @@ export function App() {
             items={(() => {
               const tab = tabs.find((t) => t.id === tabMenu.id);
               const page = tab?.path !== null && tab?.path !== undefined && !isView(tab.path);
+              const isActive = tabMenu.id === activeTab;
               const items: MenuItem[] = [];
-              if (tabMenu.id === splitTab && splitPath) items.push({ label: "Fermer le panneau de droite", icon: "split", run: () => setSplitTab(null) });
-              else if (page && tabMenu.id !== activeTab) items.push({ label: "Afficher à droite", icon: "split", run: () => setSplitTab(tabMenu.id) });
+              if (tab?.split) {
+                if (isActive) items.push({ label: "Échanger les côtés", icon: "replace", run: () => void swapSplit() });
+                items.push({ label: "Séparer en deux onglets", icon: "split", run: () => void separateTab(tabMenu.id) });
+                items.push({ label: "Fermer la page de droite", icon: "close", run: () => setTabSplit(tabMenu.id, null) });
+              } else if (page && !isActive) {
+                const activeTitle = activePath === null ? "Accueil" : (VIEWS[activePath]?.title ?? noteTitle(activePath));
+                items.push({ label: `Afficher à droite de « ${activeTitle} »`, icon: "split", run: () => joinTab(tabMenu.id) });
+              } else if (isActive && tabs.some((t) => t.id !== activeTab && t.path !== null && !isView(t.path))) {
+                items.push({ label: "Diviser avec l'onglet suivant", icon: "split", run: toggleSplit });
+              }
               items.push({ label: "Fermer l'onglet", icon: "close", run: () => void closeTab(tabMenu.id) });
               return items;
             })()}
@@ -1714,7 +1745,7 @@ export function App() {
             />
             <div className="split-host" style={{ flexBasis: `${splitWidth * 100}%` }}>
               <SplitPane
-                key={splitTab ?? ""}
+                key={activeTab}
                 vault={vault}
                 path={splitPath}
                 files={files}
@@ -1724,11 +1755,19 @@ export function App() {
                 openOnLeft={note?.path === splitPath}
                 autosave={settings.autosave}
                 iconOf={pageIconFor}
-                onOpen={(path, newTabRequested) => (newTabRequested ? void newTab(path) : splitTab && setTabPath(splitTab, path))}
+                onOpen={(path, newTabRequested) => (newTabRequested ? void newTab(path) : setTabSplit(activeTab, path))}
                 onRenameRow={renamePath}
                 onSwap={() => void swapSplit()}
+                onSeparate={() => void separateTab(activeTab)}
                 saver={splitSaver}
-                onClose={() => setSplitTab(null)}
+                tools={{
+                  spelling: settings.spellChecker !== "off" ? { on: spellingOn, toggle: toggleSpelling } : null,
+                  focus: { on: focusMode, toggle: toggleFocus },
+                  wide: { has: (path) => widePages.has(path), toggle: toggleWide },
+                  git: vault.git ?? null,
+                  notify,
+                }}
+                onClose={() => setTabSplit(activeTab, null)}
                 onSaved={() => {
                   void refreshGit();
                   void refresh(vault);

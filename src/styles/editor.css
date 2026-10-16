@@ -444,9 +444,38 @@
 }
 
 .note a {
-  color: inherit;
+  color: var(--accent);
   text-decoration: underline;
-  text-decoration-color: var(--faint);
+  text-decoration-color: var(--accent-line);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.note a:hover {
+  text-decoration-color: var(--accent);
+}
+
+/* Markdown marks shown around the cursor (syntaxMarks.ts). */
+.note .syntax-mark {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-weight: 400;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* A heading's #, in the margin: the text does not move. */
+.note .heading-mark {
+  position: absolute;
+  transform: translateX(calc(-100% - 0.3em));
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.note .code-mark {
+  font-size: 0.85em;
 }
 
 .note .wikilink {

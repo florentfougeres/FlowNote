@@ -28,8 +28,9 @@ FlowNote édite votre vault Obsidian comme Notion : par blocs, avec un menu `/`,
 ### Les onglets et le split view
 
 - Chaque page s'ouvre dans un onglet : `⌘T` nouvel onglet, `⌘W` fermer, `⌘1` … `⌘9` aller à un onglet, `⌘⇧[` / `⌘⇧]` onglet précédent / suivant, `⌘-clic` ouvrir dans un nouvel onglet. Les onglets se réordonnent par glisser-déposer.
-- **Deux pages côte à côte** : `⌥-clic` sur une page de la barre latérale (ou « Ouvrir à droite » dans son menu) l'affiche à droite de la page active. Clic droit sur un onglet : « Afficher à droite ».
-  - L'onglet de droite porte une petite marque dans la barre ; un clic dessus échange les deux côtés.
+- **Deux pages côte à côte** : `⌥-clic` sur une page de la barre latérale (ou « Ouvrir à droite » dans son menu) l'affiche à droite de la page active. Clic droit sur un autre onglet : « Afficher à droite de… » ; sur l'onglet actif : « Diviser avec l'onglet suivant ».
+  - Les deux pages forment **un seul onglet**, qui porte leurs deux noms. Clic droit dessus : échanger les côtés, séparer en deux onglets, fermer la page de droite. Fermer l'onglet ferme les deux.
+  - La page de droite a la même barre d'outils que celle de gauche (plan, orthographe, présentation, historique, pleine largeur, focus, export PDF et copie HTML, Markdown brut, outils du croquis et de la mind map), plus : ouvrir dans son propre onglet, échanger les côtés, fermer.
   - Le séparateur se déplace à la souris (la largeur est retenue).
   - `⌘⌥\` ouvre ou ferme le panneau de droite.
   - Les deux côtés s'enregistrent chacun de leur côté. Une page ouverte des deux côtés ne se modifie qu'à gauche.
@@ -73,13 +74,15 @@ Les raccourcis Markdown marchent aussi à la frappe :
 
 - La **poignée** à gauche d'un bloc le déplace par glisser-déposer (avec imbrication) et ouvre son menu : dupliquer, transformer, supprimer. `⌥↑` / `⌥↓` déplacent le bloc, `⌘D` le duplique.
 - `↵` en fin de liste vide en sort ; `⇧↵` passe à la ligne dans le même bloc.
+- **Niveau d'un titre** : curseur dans un titre, ses `#` s'affichent en gris dans la marge. Au début du titre, `⌫` en retire un (un titre 1 redevient du texte) et `#` en ajoute un.
 - `⌫` au début d'une ligne la remonte au bout de la ligne du dessus, même sous une liste, une citation ou un callout. Sous un tableau, le curseur va dans la dernière cellule ; sous un séparateur, celui-ci est sélectionné (un second `⌫` le supprime).
 
 ### La mise en forme
 
 - `⌘B` gras, `⌘I` italique, `⌘E` code, `⌘⇧S` barré, `⌘⇧H` surligné.
-- **Liens** : `⌘K` sur un texte sélectionné demande l'adresse du lien (sur un lien existant, elle le modifie ou le retire). Coller une URL sur un texte sélectionné en fait aussi un lien.
-- **Code en ligne** : `` ` `` tapé sur une sélection la met entre accents graves ; tapé avant un texte déjà suivi d'un `` ` ``, ce texte devient du code.
+- **Liens** : `⌘K` sur un texte sélectionné demande l'adresse du lien (sur un lien existant, elle le modifie ou le retire). Coller une URL sur un texte sélectionné en fait aussi un lien. Un clic sur un lien l'ouvre (dans le navigateur, ou la note du vault) ; au survol, une barre affiche l'adresse avec Modifier, Copier et Retirer.
+- **Code en ligne** : `` ` `` tapé sur une sélection la met entre accents graves ; tapé avant un texte déjà suivi d'un `` ` ``, ou après un texte précédé d'un `` ` ``, ce texte devient du code. Curseur dans le code, ses `` ` `` s'affichent en gris : `→` à la fin passe le `` ` `` fermant, puis `⌫` retire le code (le texte reste) ; `⌦` avant le `` ` `` ouvrant, ou `⌘E` dans le code, le retire aussi.
+- **Copier** : le texte copié depuis une note est collé en Markdown dans un éditeur de texte (en texte mis en forme dans un traitement de texte).
 - `[[` insère un lien vers une note, avec autocomplétion ; `![[` intègre une note, une image ou une base.
 - `:` suivi d'un mot propose un emoji (écrit `:shortcode:` dans le fichier).
 

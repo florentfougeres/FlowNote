@@ -108,7 +108,15 @@
   justify-self: start;
 }
 
-.drawing-pane .excalidraw .context-menu-item__shortcut {
+/* Excalidraw's style sheet loads after the app's: one class more so the app's type wins. */
+.drawing-pane .excalidraw .context-menu .context-menu-item,
+.drawing-pane .excalidraw .context-menu .context-menu-item .context-menu-item__label {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  letter-spacing: normal;
+}
+
+.drawing-pane .excalidraw .context-menu .context-menu-item .context-menu-item__shortcut {
   color: var(--muted);
   font-family: var(--font-ui);
   font-size: 12px;

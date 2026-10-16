@@ -14,6 +14,7 @@ import { codeHighlightPlugin } from "./codeHighlight";
 import { findPlugin } from "./find";
 import { tocPlugin } from "./toc";
 import { backtickPlugin } from "./backticks";
+import { removeCodeAround, syntaxMarksPlugin } from "./syntaxMarks";
 import { grammarPlugin } from "./grammar";
 import { dueDatePlugin } from "../ticket/dueDates";
 import { NULL_BRIDGE, type BridgeRef } from "./bridge";
@@ -21,7 +22,7 @@ import { NULL_BRIDGE, type BridgeRef } from "./bridge";
 const Editing = Extension.create({
   priority: 150,
   name: "editing",
-  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin(), codeHighlightPlugin(), findPlugin(), grammarPlugin(), dueDatePlugin(), tocPlugin(), backtickPlugin()],
+  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin(), codeHighlightPlugin(), findPlugin(), grammarPlugin(), dueDatePlugin(), tocPlugin(), backtickPlugin(), syntaxMarksPlugin()],
   addKeyboardShortcuts() {
     return {
       "Mod-z": () => undo(this.editor.state, this.editor.view.dispatch),
@@ -29,7 +30,12 @@ const Editing = Extension.create({
       "Mod-y": () => redo(this.editor.state, this.editor.view.dispatch),
       "Mod-b": () => this.editor.commands.toggleMark("bold"),
       "Mod-i": () => this.editor.commands.toggleMark("italic"),
-      "Mod-e": () => this.editor.commands.toggleMark("code"),
+      "Mod-e": () => {
+        const tr = removeCodeAround(this.editor.state);
+        if (!tr) return this.editor.commands.toggleMark("code");
+        this.editor.view.dispatch(tr);
+        return true;
+      },
       "Mod-Shift-s": () => this.editor.commands.toggleMark("strike"),
       "Mod-Shift-h": () => this.editor.commands.toggleMark("highlight"),
       "Shift-Enter": () => this.editor.commands.insertContent({ type: "softBreak" }),

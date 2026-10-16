@@ -80,8 +80,8 @@ describe("block keyboard behaviour", () => {
     expect(save()).toBe("- un\n\ntexte\n");
   });
 
-  it("Backspace at the start of a heading turns it into text", () => {
-    const { editor, save } = open("## Titre\n");
+  it("Backspace at the start of an H1 turns it into text", () => {
+    const { editor, save } = open("# Titre\n");
     cursorAtStartOf(editor, "Titre");
     press(editor, "Backspace");
     expect(save()).toBe("Titre\n");

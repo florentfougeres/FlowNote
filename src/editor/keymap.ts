@@ -5,6 +5,7 @@ import { liftListItem, sinkListItem, splitListItem } from "@tiptap/pm/schema-lis
 import { NodeSelection, TextSelection, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { isInTable, TableMap } from "@tiptap/pm/tables";
 import { blockAt, duplicateBlock, moveBlockByOne } from "./blocks";
+import { headingLevelDown, stepOverBacktick, unwrapCode } from "./syntaxMarks";
 
 /** The last text line inside `node` (itself when it is one), with its position. */
 function lastTextblock(node: PMNode, pos: number): { node: PMNode; pos: number } | null {
@@ -189,12 +190,16 @@ export const BlockKeymap = Extension.create({
 
       Backspace: () => {
         const { state } = editor;
+        const unwrapped = unwrapCode(state, "Backspace") ?? headingLevelDown(state);
+        if (unwrapped) {
+          dispatch(unwrapped);
+          return true;
+        }
         const { $from, empty } = state.selection;
         if (!empty || $from.parentOffset !== 0) return false;
         const parent = $from.parent;
         const container = $from.depth >= 2 ? $from.node(-1) : null;
 
-        if (parent.type === types().heading) return setBlockType(types().paragraph)(state, dispatch);
         if (parent.type === types().codeBlock && parent.content.size === 0) return setBlockType(types().paragraph)(state, dispatch);
         if (container?.type === types().listItem && $from.index(-1) === 0) return liftListItem(types().listItem)(state, dispatch);
         if (container?.type === types().blockquote && $from.index(-1) === 0) return lift(state, dispatch);
@@ -230,6 +235,22 @@ export const BlockKeymap = Extension.create({
           return true;
         }
         return false;
+      },
+
+      Delete: () => {
+        const tr = unwrapCode(editor.state, "Delete");
+        if (tr) dispatch(tr);
+        return !!tr;
+      },
+      ArrowRight: () => {
+        const tr = stepOverBacktick(editor.state, 1);
+        if (tr) editor.view.dispatch(tr);
+        return !!tr;
+      },
+      ArrowLeft: () => {
+        const tr = stepOverBacktick(editor.state, -1);
+        if (tr) editor.view.dispatch(tr);
+        return !!tr;
       },
 
       Tab: () => {

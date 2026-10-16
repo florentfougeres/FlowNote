@@ -6,16 +6,18 @@ export interface Tab {
   id: string;
   /** Page shown in the tab; null: the dashboard. */
   path: string | null;
+  /** Page shown on its right (split view): the pair is one tab. */
+  split?: string | null;
 }
 
 /**
  * Open pages, one tab each, in the window's title bar (like Notion). Drag to reorder, middle-click
- * or × to close; the + opens the dashboard in a new tab.
+ * or × to close; the + opens the dashboard in a new tab. Two pages side by side
+ * make one tab, both named in it.
  */
 export function TabBar({
   tabs,
   active,
-  split,
   dirty,
   titleOf,
   iconOf,
@@ -27,8 +29,6 @@ export function TabBar({
 }: {
   tabs: Tab[];
   active: string;
-  /** Tab shown on the right of the split view. */
-  split?: string | null;
   /** The active tab has unsaved changes. */
   dirty: boolean;
   titleOf: (tab: Tab) => string;
@@ -54,8 +54,8 @@ export function TabBar({
             role="tab"
             aria-selected={isActive}
             tabIndex={isActive ? 0 : -1}
-            className={`tab${isActive ? " active" : ""}${tab.id === split ? " split" : ""}${over === tab.id && dragged !== tab.id ? " drop-before" : ""}${dragged === tab.id ? " dragging" : ""}`}
-            title={tab.path ?? "Accueil"}
+            className={`tab${isActive ? " active" : ""}${tab.split ? " split" : ""}${over === tab.id && dragged !== tab.id ? " drop-before" : ""}${dragged === tab.id ? " dragging" : ""}`}
+            title={tab.split ? `${tab.path ?? "Accueil"}  |  ${tab.split}` : (tab.path ?? "Accueil")}
             data-kind={tab.path === null ? "home" : tab.path.toLowerCase().endsWith(".excalidraw.md") ? "drawing" : tab.path.toLowerCase().endsWith(".mindmap.md") ? "mindmap" : "note"}
             draggable
             onDragStart={(event) => {
@@ -90,12 +90,14 @@ export function TabBar({
             }}
           >
             <span className="tab-icon">{iconOf(tab)}</span>
-            {tab.id === split && (
-              <span className="tab-split" title="Affiché à droite">
-                <Icon name="split" size={11} />
-              </span>
-            )}
             <span className="tab-title">{title}</span>
+            {tab.split && (
+              <>
+                <span className="tab-split" aria-label="à côté de" />
+                <span className="tab-icon">{iconOf({ id: tab.id, path: tab.split })}</span>
+                <span className="tab-title">{titleOf({ id: tab.id, path: tab.split })}</span>
+              </>
+            )}
             {isActive && dirty && <span className="tab-dirty" aria-label="Modifications non enregistrées" />}
             <button
               className="tab-close"

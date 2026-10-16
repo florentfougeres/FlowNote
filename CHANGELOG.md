@@ -5,7 +5,11 @@ Les changements notables de FlowNote, version par version. Le format suit [Keep 
 ## [Non publié]
 
 ### Ajouté
-- **Split view** : deux pages côte à côte, une seule barre d'onglets. `⌥-clic` sur une page (ou « Ouvrir à droite ») l'affiche à droite, clic droit sur un onglet : « Afficher à droite ». Un clic sur l'onglet de droite échange les côtés, le séparateur se déplace, `⌘⌥\` ouvre ou ferme le panneau.
+- **Split view** : deux pages côte à côte dans un seul onglet. `⌥-clic` sur une page (ou « Ouvrir à droite ») l'affiche à droite ; clic droit sur un onglet : « Afficher à droite de… », échanger les côtés, séparer en deux onglets. La page de droite a la même barre d'outils que la gauche (plus : onglet propre, échange, fermeture), le séparateur se déplace, `⌘⌥\` ouvre ou ferme le panneau.
+- **Niveau des titres** sans la vue brute : les `#` s'affichent dans la marge, `⌫` au début du titre en retire un, `#` en ajoute un.
+- **Code en ligne** : ses `` ` `` s'affichent autour du curseur ; `→` puis `⌫` (ou `⌘E`) retire le code.
+- **Liens** : bien visibles, ouverts d'un clic ; au survol, une barre pour modifier, copier ou retirer le lien.
+- Copier depuis une note met son Markdown dans le presse-papiers (texte brut).
 - **Documentation** de toutes les fonctionnalités, en lecture seule, sous « Graphe » dans la barre latérale.
 - **Admonitions HedgeDoc** (`:::info` … `:::`, `success`, `warning`, `danger`, `spoiler`) affichées comme des callouts ; le fichier garde leur syntaxe. `:::type` suivi d'un espace en crée une, « Admonition HedgeDoc » dans le menu `/`.
 - `⌘K` sur un texte sélectionné : adresse du lien (sur un lien : le modifier ou le retirer).
@@ -24,6 +28,10 @@ Les changements notables de FlowNote, version par version. Le format suit [Keep 
 - Bases : les lignes d'une base ont leur propre icône dans la barre latérale.
 
 ### Corrigé
+- `` ` `` posé devant puis derrière un mot (ou l'inverse) le met en code quelle que soit la façon dont il arrive (touche, touche morte suivie d'un autre caractère, saisie que WebKit ne signale pas) ; un `` ` `` collé reste du texte.
+- Réglages : plus de barre de défilement quand tout tient dans la fenêtre.
+- Plan et historique affichés ensemble : une seule barre verticale.
+- Croquis : le menu du clic droit reprend la police de l'app.
 - Plus de `\` isolé quand on vide un bloc qui contenait un saut de ligne.
 - « Ajouter des propriétés » s'affiche sur une note sans propriétés.
 - Mind map : le texte reste net après un zoom (+ / −).

@@ -8,12 +8,14 @@ import { SuggestionMenu } from "./SuggestionMenu";
 import { BlockHandle } from "./BlockHandle";
 import { TableHandles } from "./TableHandles";
 import { CalloutPicker } from "./CalloutPicker";
-import { applyLink, LinkPrompt, linkTarget, type LinkRequest } from "./LinkPrompt";
+import { applyLink, LinkHover, LinkPrompt, linkTarget, type LinkRequest } from "./LinkPrompt";
 import { GrammarPopover } from "./GrammarPopover";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { insertAttachments, type VaultBridge } from "./bridge";
 import { loadMarkdown, NoteSession } from "../markdown/note";
 import { pastedImageName, resolveLink } from "../vault/links";
+import { openUrl } from "../reading/web";
+import { markdownForClipboard } from "./clipboard";
 
 interface Props {
   /** File content as loaded from disk; a new value reloads the editor. */
@@ -73,6 +75,28 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         current.openPath(path, event.metaKey || event.ctrlKey);
         return true;
       },
+      // A click on a link opens it: a web address in the browser, a vault path in the app.
+      handleClick: (view, _pos, event) => {
+        const link = (event.target as Element).closest?.("a[href]");
+        if (!link || !view.dom.contains(link) || event.shiftKey || event.button !== 0) return false;
+        const href = link.getAttribute("href") ?? "";
+        if (/^(https?|mailto):/i.test(href)) {
+          openUrl(href);
+          return true;
+        }
+        const current = wiring.bridge.current;
+        let target = href;
+        try {
+          target = decodeURI(href);
+        } catch {
+          // A malformed address: kept as written.
+        }
+        const path = resolveLink(target, current.files, current.notePath);
+        if (!path) return false;
+        current.openPath(path, event.metaKey || event.ctrlKey);
+        return true;
+      },
+      clipboardTextSerializer: (slice) => markdownForClipboard(slice),
       handleKeyDown: (view, event) => {
         // ⌘K on selected text (or in a link): its address, like in Notion.
         if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "k" || !view.editable) return false;
@@ -170,6 +194,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
       <BlockHandle editor={editor} shell={shell} />
       <TableHandles editor={editor} />
       <CalloutPicker />
+      <LinkHover editor={editor} onEdit={setLinkRequest} />
       {linkRequest && editor && (
         <LinkPrompt
           request={linkRequest}

@@ -29,7 +29,8 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 - `src/editor/` : Tiptap/ProseMirror. Les vues de nœuds sont dans `views.ts`, le pont vers l'app dans `bridge.ts`.
 - `src/vault/` : accès au vault, résolution des liens façon Obsidian (`links.ts`), opérations sur les pages (`pageOps.ts`), notes liées (`backlinks.ts`), copie des notes en mémoire (`noteCache.ts` : le vault ouvert est enveloppé, ses écritures tiennent la copie à jour).
 - `src/print.ts` : export PDF par le panneau d'impression (styles dans `styles/print.css`).
-- `src/SplitPane.tsx` : côté droit du split view (lecture et enregistrement propres) ; l'onglet affiché à droite est `splitTab` dans `App.tsx`.
+- `src/SplitPane.tsx` : côté droit du split view (lecture et enregistrement propres, barre d'outils) ; la page de droite est le champ `split` de l'onglet (`Tab` dans `TabBar.tsx`) : la paire forme un seul onglet.
+- `src/editor/syntaxMarks.ts` : `#` des titres et `` ` `` du code affichés autour du curseur, pour changer de niveau ou retirer le code sans la vue brute.
 - `src/DatePicker.tsx` : sélecteur de date de l'app (jamais d'`<input type="date">`).
 - `src/docs/documentation.md` : documentation affichée dans l'app (`flownote:docs`). **La mettre à jour avec chaque fonctionnalité.**
 - Types de page, un dossier chacun : `base/` (`.base`), `drawing/` (`.excalidraw.md`), `mindmap/` (`.mindmap.md`), `ticket/` (`type: ticket`), `presentation/` (`marp: true`), plus `reading/` et `graph/`.

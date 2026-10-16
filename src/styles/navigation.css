@@ -151,8 +151,21 @@ button.crumb:hover {
 
 .side-column.with-history .outline-panel {
   max-height: 40%;
-  padding: 12px 12px 12px 6px;
+  padding: 12px 12px 12px 0;
   border-bottom: 1px solid var(--border);
+}
+
+/* With the history, the column's border is the outline's line: one bar, not two. */
+.side-column.with-history .outline-panel > header {
+  padding-left: 14px;
+}
+
+.side-column.with-history .outline-panel nav {
+  border-left: none;
+}
+
+.side-column.with-history .outline-item {
+  margin-left: 0;
 }
 
 .outline-panel {
