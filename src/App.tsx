@@ -1,3 +1,4 @@
+import { tabMenu as tabMenuOf } from "./menus";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { keys } from "./keys";
 import { NoteEditor } from "./editor/NoteEditor";
@@ -1414,6 +1415,25 @@ export function App() {
     );
   }
 
+  /** A tab's menu (menus.ts): the split view's actions, then closing it. */
+  const tabMenuItems = (id: string) => {
+    const tab = tabs.find((t) => t.id === id);
+    return tabMenuOf({
+      path: tab?.path ?? null,
+      split: tab?.split,
+      isActive: id === activeTab,
+      activeTitle: activePath === null ? "Accueil" : (VIEWS[activePath]?.title ?? noteTitle(activePath)),
+      otherPage: tabs.some((t) => t.id !== activeTab && t.path !== null && !isView(t.path)),
+      isView,
+      swapSplit: () => void swapSplit(),
+      separate: () => void separateTab(id),
+      closeSplit: () => setTabSplit(id, null),
+      join: () => joinTab(id),
+      toggleSplit,
+      close: () => void closeTab(id),
+    });
+  };
+
   const sidebar = (
     <Sidebar
       vaultName={vault.name}
@@ -1475,24 +1495,7 @@ export function App() {
           <PopoverMenu
             anchor={tabMenu.anchor}
             onClose={() => setTabMenu(null)}
-            items={(() => {
-              const tab = tabs.find((t) => t.id === tabMenu.id);
-              const page = tab?.path !== null && tab?.path !== undefined && !isView(tab.path);
-              const isActive = tabMenu.id === activeTab;
-              const items: MenuItem[] = [];
-              if (tab?.split) {
-                if (isActive) items.push({ label: "Échanger les côtés", icon: "replace", run: () => void swapSplit() });
-                items.push({ label: "Séparer en deux onglets", icon: "split", run: () => void separateTab(tabMenu.id) });
-                items.push({ label: "Fermer la page de droite", icon: "close", run: () => setTabSplit(tabMenu.id, null) });
-              } else if (page && !isActive) {
-                const activeTitle = activePath === null ? "Accueil" : (VIEWS[activePath]?.title ?? noteTitle(activePath));
-                items.push({ label: `Afficher à droite de « ${activeTitle} »`, icon: "split", run: () => joinTab(tabMenu.id) });
-              } else if (isActive && tabs.some((t) => t.id !== activeTab && t.path !== null && !isView(t.path))) {
-                items.push({ label: "Diviser avec l'onglet suivant", icon: "split", run: toggleSplit });
-              }
-              items.push({ label: "Fermer l'onglet", icon: "close", run: () => void closeTab(tabMenu.id) });
-              return items;
-            })()}
+            items={tabMenuItems(tabMenu.id)}
           />
         )}
       </header>

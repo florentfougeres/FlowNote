@@ -1,7 +1,29 @@
-mod git;
-mod grammar;
-mod vault;
-mod web;
+use flownote_core::{backend, grammar, vault};
+
+/// Every backend command (files, Git, Grammalecte, web), through the one
+/// dispatch shared with the native shell (src-tauri/core). Run away from the UI thread.
+#[tauri::command]
+async fn backend(command: String, args: serde_json::Value) -> Result<serde_json::Value, String> {
+  tauri::async_runtime::spawn_blocking(move || backend::dispatch(&command, &args)).await.map_err(|e| e.to_string())?
+}
+
+/// Raw bytes of a file (images and other attachments), sent without JSON encoding.
+#[tauri::command]
+fn vault_read_binary(root: String, path: String) -> Result<tauri::ipc::Response, String> {
+  vault::vault_read_binary(root, path).map(tauri::ipc::Response::new)
+}
+
+/// The folder picker for a vault. The chosen folder is trusted: it opens even
+/// when it is not an Obsidian vault yet. Picked natively here, so the page
+/// cannot add a folder of its choice.
+#[tauri::command]
+async fn vault_pick(app: tauri::AppHandle) -> Option<String> {
+  use tauri_plugin_dialog::DialogExt;
+  let picked = app.dialog().file().set_title("Choisir un vault Obsidian").blocking_pick_folder()?;
+  let root = picked.into_path().ok()?.to_string_lossy().into_owned();
+  vault::trust(&root);
+  Some(root)
+}
 
 /// Errors raised in the webview, printed in the terminal running the app.
 #[tauri::command]
@@ -63,48 +85,7 @@ pub fn run() {
   tauri::Builder::default()
     .menu(app_menu)
     .plugin(tauri_plugin_dialog::init())
-    .invoke_handler(tauri::generate_handler![
-      log_frontend,
-      web::open_url,
-      web::fetch_page_title,
-      web::save_export,
-      web::open_export,
-      startup_note,
-      vault::vault_pick,
-      vault::vault_tree,
-      vault::vault_stats,
-      vault::vault_read,
-      vault::vault_write,
-      vault::vault_files,
-      vault::vault_read_binary,
-      vault::vault_create,
-      vault::vault_create_dir,
-      vault::vault_reveal,
-      vault::vault_config,
-      vault::vault_rename,
-      vault::vault_trash,
-      vault::vault_search,
-      vault::vault_read_notes,
-      vault::vault_bookmarks,
-      grammar::grammar_check,
-      git::git_status,
-      git::git_diff,
-      git::git_stage,
-      git::git_unstage,
-      git::git_discard,
-      git::git_commit,
-      git::git_log,
-      git::git_show,
-      git::git_fetch,
-      git::git_pull,
-      git::git_push,
-      git::git_conflict,
-      git::git_resolve,
-      git::git_merge_continue,
-      git::git_merge_abort,
-      git::git_activity,
-      git::git_last_commit
-    ])
+    .invoke_handler(tauri::generate_handler![log_frontend, startup_note, backend, vault_read_binary, vault_pick])
     .setup(|app| {
       use tauri::Manager;
       if let Ok(dir) = app.path().app_data_dir() {

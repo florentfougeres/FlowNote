@@ -1,5 +1,5 @@
+import { backend } from "../platform";
 import { useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { setGrammarChecker, setSystemSpellcheck, type ParagraphResult } from "./grammar";
 import { isTauri } from "../vault/tauriVault";
 import { usePersistentFlag } from "../hooks/usePersistentFlag";
@@ -14,7 +14,7 @@ export function useSpellChecking(chosen: SpellChecker) {
   useEffect(() => {
     const spellChecker = on ? chosen : "off";
     const grammalecte = isTauri() && spellChecker === "grammalecte";
-    setGrammarChecker(grammalecte ? (paragraphs) => invoke<ParagraphResult[]>("grammar_check", { paragraphs }) : null);
+    setGrammarChecker(grammalecte ? (paragraphs) => backend<ParagraphResult[]>("grammar_check", { paragraphs }) : null);
     // Outside the desktop app, the Grammalecte choice falls back to the system checker.
     setSystemSpellcheck(spellChecker === "system" || (spellChecker === "grammalecte" && !isTauri()));
   }, [chosen, on]);

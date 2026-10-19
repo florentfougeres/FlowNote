@@ -24,7 +24,8 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 ## Architecture
 
-- `src-tauri/src/vault.rs` : fichiers du vault (lecture, écriture atomique avec contrôle de conflit, corbeille, arbre, `vault_stats`).
+- `src-tauri/core/` : **le backend**, bibliothèque `flownote-core` sans Tauri. Elle couvre les fichiers du vault (`vault.rs` : lecture, écriture atomique avec contrôle de conflit, corbeille, arbre, `vault_stats`), Git (`git.rs`), Grammalecte (`grammar.rs`) et le web (`web.rs`). Un aiguillage unique, `backend.rs` (`dispatch` et `COMMANDS`), sert toutes les commandes. Côté web, on passe toujours par `backend()` dans `src/platform.ts`. `src-tauri/src/lib.rs` n'expose que la commande `backend`, plus ce qui est propre à Tauri (sélecteur de dossier, lecture binaire brute, `startup_note`, `log_frontend`).
+- `src/menus.ts` : menus des pages, des dossiers et des onglets, écrits une fois (barre latérale et barre d'onglets).
 - `src/markdown/` : moteur de fidélité (remark/mdast, re-sérialisation bloc par bloc).
 - `src/editor/` : Tiptap/ProseMirror. Les vues de nœuds sont dans `views.ts`, le pont vers l'app dans `bridge.ts`.
 - `src/vault/` : accès au vault, résolution des liens façon Obsidian (`links.ts`), opérations sur les pages (`pageOps.ts`), notes liées (`backlinks.ts`), copie des notes en mémoire (`noteCache.ts` : le vault ouvert est enveloppé, ses écritures tiennent la copie à jour).

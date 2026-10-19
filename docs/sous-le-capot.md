@@ -55,7 +55,7 @@ Le principe qui guide tout le reste : **le vault Obsidian reste la seule source 
 | Bases | [TanStack Table](https://tanstack.com/table) v8 | `src/base/TableView.tsx` | Vue tableau des bases `.base` |
 | Graphe | [d3-force](https://d3js.org/d3-force) | `src/graph/GraphView.tsx` | Disposition du graphe des liens |
 | Animations | [Motion](https://motion.dev) | `src/editor/dragMotion.ts` | Animation du glisser-déposer des blocs |
-| Correcteur | [Grammalecte](https://grammalecte.net) 2.3.0 | `grammar/`, `src-tauri/src/grammar.rs` | Grammaire et orthographe françaises |
+| Correcteur | [Grammalecte](https://grammalecte.net) 2.3.0 | `grammar/`, `src-tauri/core/src/grammar.rs` | Grammaire et orthographe françaises |
 | Côté Rust | `serde`, `trash`, `ureq`, `tauri-plugin-dialog` | `src-tauri/` | Échanges JSON, corbeille du système, titre d'une page web, sélecteur de dossier |
 | Outils | Vite, Vitest + jsdom, oxlint, TypeScript 7 | | Build, tests, lint, types |
 
@@ -206,9 +206,15 @@ Autour de cette interface :
 - **`backlinks.ts`**, **`search.ts`** : notes liées et recherche dans le vault.
 - **`conflicts.ts`** : lecture des marqueurs de conflit Git (`<<<<<<<`, `=======`, `>>>>>>>`, y compris le style diff3) pour l'outil de résolution.
 
-## Le backend Rust (`src-tauri/`)
+## Le backend Rust (`src-tauri/core/`)
 
-Le backend est volontairement petit. Les commandes sont déclarées avec `#[tauri::command]` et appelées depuis TypeScript par `invoke()`.
+Le backend est volontairement petit, et **unique** : la bibliothèque `flownote-core` (`src-tauri/core/`) ne dépend pas de Tauri.
+- **Un seul aiguillage** : `backend::dispatch(commande, arguments)` sert toutes les commandes. Leur liste est la constante `COMMANDS`.
+- **Côté web** : on l'appelle toujours par `backend()` (`src/platform.ts`).
+- **Côté Tauri** : l'app (`src-tauri/src/lib.rs`) l'expose par une seule commande `backend`, exécutée hors du fil de l'interface. Elle ne garde en propre que ce qui touche sa fenêtre : le sélecteur de dossier (`vault_pick`), la lecture binaire brute (`vault_read_binary`, sans passage par JSON), `startup_note` et `log_frontend`.
+- **Contrat testé** : `src/platform.test.ts` vérifie que chaque commande appelée par le web existe dans `COMMANDS`, et que chaque `invoke` direct est déclaré par l'app Tauri.
+
+**Ajouter une commande** : une fonction dans le bon module de `core/`, une ligne dans `dispatch` et dans `COMMANDS`, puis un appel `backend("…")` côté web. Rien d'autre.
 
 - **`vault.rs`** : les fichiers. Les chemins reçus sont relatifs au vault et vérifiés ; les entrées cachées (`.obsidian`, `.git`, `.trash`…) ne sont jamais listées, lues ni écrites. L'écriture est **atomique** (fichier temporaire puis `rename`, pour qu'Obsidian ou un client de synchronisation ne voie jamais un fichier à moitié écrit) et **contrôlée** : elle n'a lieu que si le fichier contient encore ce que l'app avait chargé, sinon l'erreur commence par `CONFLICT:`. La suppression passe par la corbeille du système (crate `trash`). L'arbre renvoie aussi, pour chaque note, ce que l'interface affiche sans la lire en entier (ticket, présentation, icône, titre), à partir des 4 premiers Ko du fichier.
 - **`git.rs`** : le gestionnaire Git lance le **`git` du système** (avec la configuration, les identifiants et les hooks de l'utilisateur), avec `-C <vault>` et `core.fsmonitor=false`. Il gère statut, diff, indexation, commit, historique, fetch, pull, push et résolution des conflits de fusion.

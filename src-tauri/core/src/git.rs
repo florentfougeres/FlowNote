@@ -140,7 +140,6 @@ fn has_head(root: &str) -> bool {
     run(cmd, None, &[]).is_ok()
 }
 
-#[tauri::command]
 pub fn git_status(root: String) -> Result<GitStatus, String> {
     let Ok(prefix) = prefix(&root) else { return Ok(GitStatus::default()) };
     let mut cmd = git(&root)?;
@@ -155,7 +154,6 @@ pub fn git_status(root: String) -> Result<GitStatus, String> {
 
 /// Unified diff of one file: staged changes, working tree changes, or the whole
 /// content of an untracked file.
-#[tauri::command]
 pub fn git_diff(root: String, path: String, staged: bool, untracked: bool) -> Result<String, String> {
     check_path(&path)?;
     let mut cmd = git(&root)?;
@@ -172,7 +170,6 @@ pub fn git_diff(root: String, path: String, staged: bool, untracked: bool) -> Re
     Ok(String::from_utf8_lossy(&run(cmd, None, &[])?.stdout).into_owned())
 }
 
-#[tauri::command]
 pub fn git_stage(root: String, paths: Vec<String>) -> Result<(), String> {
     paths.iter().try_for_each(|p| check_path(p))?;
     let mut cmd = git(&root)?;
@@ -180,7 +177,6 @@ pub fn git_stage(root: String, paths: Vec<String>) -> Result<(), String> {
     run(cmd, None, &[]).map(|_| ())
 }
 
-#[tauri::command]
 pub fn git_unstage(root: String, paths: Vec<String>) -> Result<(), String> {
     paths.iter().try_for_each(|p| check_path(p))?;
     let mut cmd = git(&root)?;
@@ -196,7 +192,6 @@ pub fn git_unstage(root: String, paths: Vec<String>) -> Result<(), String> {
 /// Discards the working-tree changes of files (the "Modifications" section):
 /// tracked files go back to their indexed version, new untracked files go to
 /// the system trash (recoverable) rather than being deleted.
-#[tauri::command]
 pub fn git_discard(root: String, paths: Vec<String>) -> Result<(), String> {
     paths.iter().try_for_each(|p| check_path(p))?;
     // .obsidian and other hidden folders are never touched.
@@ -222,7 +217,6 @@ pub fn git_discard(root: String, paths: Vec<String>) -> Result<(), String> {
 }
 
 /// Commits the staged changes; the message is passed on stdin, untouched.
-#[tauri::command]
 pub fn git_commit(root: String, message: String) -> Result<String, String> {
     if message.trim().is_empty() {
         return Err("Le message de commit est vide.".into());
@@ -274,7 +268,6 @@ pub fn parse_log(raw: &str, prefix: &str) -> Vec<GitCommit> {
 }
 
 /// History of one note, following renames.
-#[tauri::command]
 pub fn git_log(root: String, path: String, limit: Option<u32>) -> Result<Vec<GitCommit>, String> {
     check_path(&path)?;
     let prefix = prefix(&root)?;
@@ -288,7 +281,6 @@ pub fn git_log(root: String, path: String, limit: Option<u32>) -> Result<Vec<Git
 }
 
 /// Commits per day over the last `days` days (author dates), for the dashboard.
-#[tauri::command]
 pub fn git_activity(root: String, days: u32) -> Result<Vec<(String, u32)>, String> {
     let mut cmd = git(&root)?;
     cmd.args(["log", "--no-color", "--date=short", "--format=%ad"]).arg(format!("--since={days} days ago"));
@@ -304,7 +296,6 @@ pub fn git_activity(root: String, days: u32) -> Result<Vec<(String, u32)>, Strin
 }
 
 /// The latest commit of the current branch (None in a repository without commits).
-#[tauri::command]
 pub fn git_last_commit(root: String) -> Result<Option<GitCommit>, String> {
     if !has_head(&root) {
         return Ok(None);
@@ -321,7 +312,6 @@ pub fn git_last_commit(root: String) -> Result<Option<GitCommit>, String> {
 }
 
 /// Content of a file at a given commit (`path` relative to the vault).
-#[tauri::command]
 pub fn git_show(root: String, hash: String, path: String) -> Result<String, String> {
     check_path(&path)?;
     if !hash.chars().all(|c| c.is_ascii_hexdigit()) {
@@ -338,7 +328,6 @@ fn combined_output(output: &Output) -> String {
 }
 
 /// Updates the remote-tracking branches (for the behind counter).
-#[tauri::command]
 pub fn git_fetch(root: String) -> Result<(), String> {
     let mut cmd = git(&root)?;
     cmd.args(["fetch", "--quiet"]);
@@ -347,7 +336,6 @@ pub fn git_fetch(root: String) -> Result<(), String> {
 
 /// Pulls with a merge (never a rebase). A conflict is reported as an error
 /// starting with "CONFLICT:" and leaves the merge in progress.
-#[tauri::command]
 pub fn git_pull(root: String) -> Result<String, String> {
     let mut cmd = git(&root)?;
     cmd.args(["pull", "--no-rebase", "--no-edit"]);
@@ -365,7 +353,6 @@ pub fn git_pull(root: String) -> Result<String, String> {
 }
 
 /// Pushes the current branch; sets the upstream on "origin" the first time.
-#[tauri::command]
 pub fn git_push(root: String) -> Result<String, String> {
     let status = git_status(root.clone())?;
     let mut cmd = git(&root)?;
@@ -409,7 +396,6 @@ fn ensure_conflicted(root: &str, path: &str) -> Result<(), String> {
     }
 }
 
-#[tauri::command]
 pub fn git_conflict(root: String, path: String) -> Result<ConflictVersions, String> {
     ensure_conflicted(&root, &path)?;
     Ok(ConflictVersions {
@@ -422,7 +408,6 @@ pub fn git_conflict(root: String, path: String) -> Result<ConflictVersions, Stri
 
 /// Writes the resolved content of a conflicted file (None deletes it) and marks it resolved.
 /// Only conflicted files can be written this way.
-#[tauri::command]
 pub fn git_resolve(root: String, path: String, content: Option<String>) -> Result<(), String> {
     ensure_conflicted(&root, &path)?;
     let file = Path::new(&root).join(&path);
@@ -443,7 +428,6 @@ pub fn git_resolve(root: String, path: String, content: Option<String>) -> Resul
 }
 
 /// Concludes the merge with git's prepared message, once no conflict remains.
-#[tauri::command]
 pub fn git_merge_continue(root: String) -> Result<String, String> {
     let status = git_status(root.clone())?;
     if !status.merging {
@@ -460,7 +444,6 @@ pub fn git_merge_continue(root: String) -> Result<String, String> {
 }
 
 /// Abandons the merge and restores the state before it.
-#[tauri::command]
 pub fn git_merge_abort(root: String) -> Result<(), String> {
     let mut cmd = git(&root)?;
     cmd.args(["merge", "--abort"]);

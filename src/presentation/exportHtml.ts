@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { backend } from "../platform";
 import { save } from "@tauri-apps/plugin-dialog";
 import { imageMime } from "../editor/bridge";
 import { isTauri } from "../vault/tauriVault";
@@ -34,8 +34,8 @@ export async function saveExport(blob: Blob, fileName: string, kind: string, ext
   if (isTauri()) {
     const path = await save({ defaultPath: fileName, filters: [{ name: kind, extensions: [extension] }] });
     if (!path) return null;
-    await invoke("save_export", { path, content: Array.from(new Uint8Array(await blob.arrayBuffer())) });
-    void invoke("open_export", { path }).catch(() => {});
+    await backend("save_export", { path, content: Array.from(new Uint8Array(await blob.arrayBuffer())) });
+    void backend("open_export", { path }).catch(() => {});
     return path;
   }
   const url = URL.createObjectURL(blob);
