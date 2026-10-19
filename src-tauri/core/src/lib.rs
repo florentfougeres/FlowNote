@@ -1,7 +1,6 @@
 //! FlowNote's backend: the vault's files, Git, the Grammalecte companion and
-//! the few web requests. It knows nothing of the window around it, and serves
-//! both apps through `backend::dispatch`: FlowNote (Tauri, src-tauri) and
-//! FlowNote Swift (the native shell, native/).
+//! the few web requests. It knows nothing of the window around it: the Tauri
+//! app (src-tauri) serves it through `backend::dispatch`.
 
 pub mod backend;
 pub mod git;

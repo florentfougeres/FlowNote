@@ -10,7 +10,7 @@ rust-version = "1.90"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-# The backend (src-tauri/core) is shared with the native shell (native/ffi).
+# The backend (src-tauri/core), a library without Tauri.
 [workspace]
 members = ["core"]
 

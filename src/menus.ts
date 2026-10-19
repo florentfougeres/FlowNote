@@ -3,9 +3,8 @@ import type { MenuItem } from "./Sidebar";
 import { isBasePath } from "./base/baseFile";
 
 /**
- * The menus of the sidebar and of the tabs, written once: the web sidebar and
- * tab bar show them, and so does the native shell (FlowNote Swift), which asks
- * the app for them. Each takes the actions it runs.
+ * The menus of the sidebar and of the tabs, written once: the sidebar and the
+ * tab bar show them. Each takes the actions it runs.
  */
 
 export interface PageMenuActions {

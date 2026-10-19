@@ -3,14 +3,9 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { installErrorReporting } from "./errors";
-import { callNative, isNative } from "./platform";
 import "./styles.css";
 
 installErrorReporting();
-
-// In the native macOS shell, WKWebView ignores window.print(): the shell opens
-// the system's print panel on the page (PDF ▸ Enregistrer au format PDF).
-if (isNative()) window.print = () => void callNative("print", { title: document.title }).catch(() => {});
 
 // The window itself never scrolls (see base.css): a scrollIntoView() or a
 // focus() can still move it, so it is put back at once.

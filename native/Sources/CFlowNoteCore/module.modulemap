@@ -1,5 +1,0 @@
-module CFlowNoteCore [system] {
-  header "flownote.h"
-  link "flownote_ffi"
-  export *
-}

@@ -1,6 +1,5 @@
-//! The one entry point of the backend, shared by both apps: Tauri calls it
-//! through its `backend` command, the native shell (FlowNote Swift) through
-//! the C function of `native/ffi`. Commands and arguments are those the web
+//! The one entry point of the backend: Tauri calls it through its `backend`
+//! command. Commands and arguments are those the web
 //! app sends (`backend()` in src/platform.ts); arguments keep their camelCase.
 
 use crate::{git, grammar, vault, web};

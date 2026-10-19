@@ -1,15 +1,16 @@
-import { backend, hasBackend } from "../platform";
+import { backend } from "../platform";
 import { reportError } from "../errors";
+import { isTauri } from "../vault/tauriVault";
 
 /** Opens a web link in the default browser. */
 export function openUrl(url: string) {
-  if (hasBackend()) void backend("open_url", { url }).catch(reportError);
+  if (isTauri()) void backend("open_url", { url }).catch(reportError);
   else window.open(url, "_blank", "noopener,noreferrer");
 }
 
 /** Title of a web page, or null (offline, or in the browser where pages refuse to be read). */
 export async function fetchTitle(url: string): Promise<string | null> {
-  if (!hasBackend()) return null;
+  if (!isTauri()) return null;
   return backend<string | null>("fetch_page_title", { url }).catch(() => null);
 }
 

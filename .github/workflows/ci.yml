@@ -45,14 +45,3 @@ jobs:
       # The Tauri build needs the frontend and the Grammalecte companion.
       - run: ./scripts/build-grammar.sh && npm run build
       - run: cargo test --manifest-path src-tauri/Cargo.toml
-
-  # The native shell (native/, "FlowNote Swift"): the C library of the shared
-  # backend (native/ffi) and the Swift app build. Xcode 26 or later (SwiftUI, Liquid Glass).
-  swift:
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --manifest-path native/ffi/Cargo.toml
-      - run: MACOSX_DEPLOYMENT_TARGET=26.0 cargo build --release --manifest-path native/ffi/Cargo.toml
-      - run: swift build --package-path native --product FlowNote

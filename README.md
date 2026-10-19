@@ -123,73 +123,55 @@ C'est le cœur du projet : **une note que FlowNote n'a pas modifiée est réécr
 
 ## Installation
 
-FlowNote existe en **deux applications**, à installer au choix ou côte à côte. Elles font tourner la même app et le même backend :
-
-| App | Fichier | Pour qui |
-| --- | --- | --- |
-| **FlowNote** | `FlowNote_x.y.z_aarch64.dmg` | L'app Tauri, macOS 11 (Big Sur) ou plus récent |
-| **FlowNote Swift** | `FlowNote-Swift_x.y.z_aarch64.dmg` | La même app dans une fenêtre macOS native (barre latérale, onglets, Liquid Glass), macOS 26 ou plus récent |
-
-1. Téléchargez le `.dmg` voulu depuis la page [Releases](https://github.com/florentfougeres/FlowNote/releases).
+1. Téléchargez `FlowNote_x.y.z_aarch64.dmg` depuis la page [Releases](https://github.com/florentfougeres/FlowNote/releases).
 2. Ouvrez-le et glissez l'app dans le dossier **Applications**.
-3. **Premier lancement** : les apps ne sont pas encore signées par un certificat Apple Developer, donc macOS les bloque. Ouvrez *Réglages Système → Confidentialité et sécurité*, puis cliquez sur **Ouvrir quand même**. Si macOS indique que l'application « est endommagée », exécutez une fois :
+3. **Premier lancement** : l'app n'est pas encore signée par un certificat Apple Developer, donc macOS la bloque. Ouvrez *Réglages Système → Confidentialité et sécurité*, puis cliquez sur **Ouvrir quand même**. Si macOS indique que l'application « est endommagée », exécutez une fois :
 
    ```sh
    xattr -cr /Applications/FlowNote.app
-   xattr -cr "/Applications/FlowNote Swift.app"
    ```
 
-Configuration requise : Mac Apple Silicon (M1 et suivants). Git doit être installé pour utiliser les fonctions Git (`xcode-select --install` ou Homebrew).
+Configuration requise : Mac Apple Silicon (M1 et suivants), macOS 11 (Big Sur) ou plus récent. Git doit être installé pour utiliser les fonctions Git (`xcode-select --install` ou Homebrew).
 
 ## Développement
 
-Prérequis : [Node.js](https://nodejs.org) 20+, [Rust](https://rustup.rs), [uv](https://docs.astral.sh/uv/) et les outils en ligne de commande Xcode. Pour FlowNote Swift, il faut **Xcode** complet, en version 26 ou plus récente (SwiftUI).
+Prérequis : [Node.js](https://nodejs.org) 20+, [Rust](https://rustup.rs), [uv](https://docs.astral.sh/uv/) et les outils en ligne de commande Xcode.
 
-Au premier lancement, `scripts/build-grammar.sh` télécharge Grammalecte (version fixée, empreinte vérifiée) et le compile en un exécutable embarqué dans les apps (`src-tauri/binaries/`).
+Au premier lancement, `scripts/build-grammar.sh` télécharge Grammalecte (version fixée, empreinte vérifiée) et le compile en un exécutable embarqué dans l'app (`src-tauri/binaries/`).
 
 ```sh
 npm install
-npm run tauri dev        # FlowNote (Tauri), avec rechargement à chaud
-native/build.sh --open   # FlowNote Swift : construit puis lance native/build/FlowNote Swift.app
+npm run tauri dev        # app de bureau, avec rechargement à chaud
 npm run dev              # version navigateur (Chrome) sur http://localhost:1420
 ```
 
 | Commande | Rôle |
 | --- | --- |
-| `npm test` | Tests unitaires (Vitest), dont les contrats app ↔ backend ↔ coquille Swift |
+| `npm test` | Tests unitaires (Vitest), dont le contrat app ↔ backend |
 | `npm run typecheck` | Vérification TypeScript |
 | `npm run lint` | Analyse du code (oxlint) |
 | `npm run fidelity -- <vault>` | Vérifie, en lecture seule, que chaque note d'un vault est réécrite à l'identique |
 | `cargo test --workspace --manifest-path src-tauri/Cargo.toml` | Tests Rust du backend (fichiers du vault, Git, Grammalecte, liens web) |
 
-### Construire les `.dmg` en local
+### Construire le `.dmg` en local
 
 Sans passer par GitHub Actions, sur un Mac Apple Silicon :
 
 ```sh
 npm install
-CI=true npm run tauri build -- --bundles dmg   # FlowNote : src-tauri/target/release/bundle/dmg/FlowNote_x.y.z_aarch64.dmg
-native/build.sh                        # FlowNote Swift : native/build/FlowNote Swift.app
+CI=true npm run tauri build -- --bundles dmg   # src-tauri/target/release/bundle/dmg/FlowNote_x.y.z_aarch64.dmg
 ```
 
 `CI=true` saute la mise en page de la fenêtre du `.dmg` par le Finder (comme dans la CI). Sans lui, la construction échoue sur `bundle_dmg.sh` si le Terminal n'a pas le droit de piloter le Finder (*Réglages Système → Confidentialité et sécurité → Automatisation*). Après un échec, supprimer l'image temporaire `rw.*.dmg` laissée dans `src-tauri/target/release/bundle/macos/`.
-
-Pour emballer FlowNote Swift en `.dmg` :
-
-```sh
-mkdir -p /tmp/dmg && cp -R "native/build/FlowNote Swift.app" /tmp/dmg/ && ln -sf /Applications /tmp/dmg/Applications
-hdiutil create -volname "FlowNote Swift" -srcfolder /tmp/dmg -ov -format UDZO FlowNote-Swift_x.y.z_aarch64.dmg
-```
 
 La première construction prend plusieurs minutes (compilation Rust et de Grammalecte). Pour ajouter un `.dmg` à une release existante : `gh release upload vx.y.z <fichier>.dmg`.
 
 ### Architecture
 
-Le fonctionnement interne (bibliothèques, moteur de fidélité Markdown, formats des types de page, backend Rust, coquille Swift) est détaillé dans [docs/sous-le-capot.md](docs/sous-le-capot.md). Ce qui se maintient à deux endroits entre les deux apps est listé dans `CLAUDE.md`, section « Deux applications ».
+Le fonctionnement interne (bibliothèques, moteur de fidélité Markdown, formats des types de page, backend Rust) est détaillé dans [docs/sous-le-capot.md](docs/sous-le-capot.md).
 
-- **`src-tauri/core/`** : le backend Rust, commun aux deux apps. Il gère les fichiers du vault, le Git système, la recherche plein texte, Grammalecte, l'ouverture des liens et la lecture du titre des pages web, derrière un aiguillage unique (`backend.rs`).
+- **`src-tauri/core/`** : le backend Rust, sans dépendance à Tauri. Il gère les fichiers du vault, le Git système, la recherche plein texte, Grammalecte, l'ouverture des liens et la lecture du titre des pages web, derrière un aiguillage unique (`backend.rs`).
 - **`src-tauri/`** : l'app Tauri autour de ce backend.
-- **`native/`** : FlowNote Swift, la coquille SwiftUI. `native/ffi` compile le backend en bibliothèque C.
 - **`src/markdown/`** : moteur de fidélité Markdown. Il parse avec remark/mdast, conserve la source de chaque bloc et ne re-sérialise que les blocs modifiés, en vérifiant l'équivalence.
 - **`src/editor/`** : éditeur basé sur Tiptap/ProseMirror. Il contient le schéma, les vues de blocs, le menu `/`, le glisser-déposer, les poignées de tableau et la recherche.
 - **`src/vault/`** : accès au vault, résolution des liens façon Obsidian, opérations sur les pages et client Git. `src/platform.ts` est le point d'appel au backend.
@@ -198,12 +180,12 @@ Le fonctionnement interne (bibliothèques, moteur de fidélité Markdown, format
 
 ### Publier une version
 
-Le guide complet est dans [docs/publier-une-version.md](docs/publier-une-version.md), et la liste des fonctionnalités à vérifier dans les deux apps dans [docs/recette.md](docs/recette.md). En bref :
+Le guide complet est dans [docs/publier-une-version.md](docs/publier-une-version.md), et la liste des fonctionnalités à vérifier avant chaque release dans [docs/recette.md](docs/recette.md). En bref :
 
 1. Ajoutez la version et ses changements en tête de `CHANGELOG.md`.
 2. Mettez à jour la version dans `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `src-tauri/Cargo.lock`.
 3. Commitez, puis poussez un tag : `git tag vX.Y.Z && git push origin vX.Y.Z`.
-4. Le workflow GitHub Actions lance les tests, construit les **deux** `.dmg` (FlowNote et FlowNote Swift) et prépare une release en brouillon. Relisez-la, puis publiez-la sur GitHub.
+4. Le workflow GitHub Actions lance les tests, construit le `.dmg` et prépare une release en brouillon. Relisez-la, puis publiez-la sur GitHub.
 
 ## Licence
 

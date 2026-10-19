@@ -1,6 +1,6 @@
 # Publier une version
 
-Pousser un tag `vX.Y.Z` déclenche `.github/workflows/release.yml`. Le workflow lance les tests (`ci.yml`), puis construit deux `.dmg` pour Apple Silicon : **FlowNote** (Tauri) et **FlowNote Swift** (`native/`, ajouté après). Les deux arrivent dans la même release GitHub, en **brouillon**. Il ne reste plus qu'à la publier.
+Pousser un tag `vX.Y.Z` déclenche `.github/workflows/release.yml`. Le workflow lance les tests (`ci.yml`), construit le `.dmg` pour Apple Silicon, puis crée une release GitHub en **brouillon**. Il ne reste plus qu'à la publier.
 
 Toutes les commandes se lancent depuis la racine du dépôt.
 
@@ -14,7 +14,7 @@ git status            # rien en attente
 
 ## 2. Vérifier
 
-Faire la recette dans les deux apps : `docs/recette.md`, toutes les fonctionnalités à cocher.
+Faire la recette dans l'app de bureau : `docs/recette.md`, toutes les fonctionnalités à cocher.
 
 
 ```sh
@@ -79,9 +79,9 @@ git push origin "v$V"
 
 ## 6. Publier la release
 
-1. Suivre le build : `gh run watch` (ou l'onglet *Actions* sur GitHub). Attendre les deux jobs `build` (Tauri) et `swift`.
+1. Suivre le build : `gh run watch` (ou l'onglet *Actions* sur GitHub).
 2. Ouvrir le brouillon : `gh release view "v$V" --web`.
-3. Vérifier les notes et la présence des deux `.dmg`, puis cliquer sur **Publish release**.
+3. Vérifier les notes, puis cliquer sur **Publish release**.
 
 ## En cas de problème
 
@@ -92,4 +92,4 @@ git push origin "v$V"
   git tag "v$V" && git push origin "v$V"
   ```
 - **Relancer un build sans rien changer** : `gh run list --workflow release.yml`, puis `gh run rerun <id> --failed`.
-- **Construire en local**, sans GitHub : le `.dmg` Tauri, voir le README ; FlowNote Swift, `native/build.sh` (Xcode requis).
+- **Construire le `.dmg` en local**, sans GitHub : voir le README.
