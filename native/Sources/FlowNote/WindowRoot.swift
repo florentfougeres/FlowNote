@@ -274,6 +274,11 @@ struct MouseCatcher: NSViewRepresentable {
       NSMenu.popUpContextMenu(Self.build(menuEntries), with: event, for: self)
     }
 
+    // The press is kept here too, so that the list (or the toolbar) does not take the gesture.
+    override func otherMouseDown(with event: NSEvent) {
+      if event.buttonNumber != 2 { super.otherMouseDown(with: event) }
+    }
+
     override func otherMouseUp(with event: NSEvent) {
       if event.buttonNumber == 2 { middle?() } else { super.otherMouseUp(with: event) }
     }

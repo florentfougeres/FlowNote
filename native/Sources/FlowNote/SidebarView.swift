@@ -70,7 +70,7 @@ struct SidebarView: View {
     BottomRow(title: view.title, icon: view.icon, active: window.activeTab.map { $0.path == view.path } ?? false) {
       window.call("select", view.path ?? NSNull(), NSApp.currentEvent?.modifierFlags.contains(.command) ?? false)
     }
-    .background(MiddleClick { window.call("select", view.path ?? NSNull(), true) })
+    .overlay(MiddleClick { window.call("select", view.path ?? NSNull(), true) })
   }
 
   private var list: some View {
@@ -100,7 +100,7 @@ struct SidebarView: View {
     let live = window.live.flatMap { $0.path == entry.path ? $0 : nil }
     let content = SidebarRow(window: window, entry: entry, title: window.title(of: entry), emoji: live != nil ? live!.icon : entry.icon) { menu(for: entry) }
       .tag(entry.path)
-      .background(MiddleClick { if !entry.isFolder { window.call("select", entry.path, true) } })
+      .overlay(MiddleClick { if !entry.isFolder { window.call("select", entry.path, true) } })
       .dropDestination(for: String.self) { paths, _ in drop(paths, into: entry.path, folder: entry.isFolder) }
     // Tickets and their folder stay where the app numbers them (Sidebar.tsx).
     if entry.ticket == true || window.inTickets(entry.path) { content } else { content.draggable(entry.path) }
