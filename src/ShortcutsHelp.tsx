@@ -1,39 +1,5 @@
 import { keys } from "./keys";
-
-const SHORTCUTS: [string, string][] = [
-  ["⌘P / ⌘K", "Rechercher une page"],
-  ["⌘N", "Nouvelle page"],
-  ["⌘[ / ⌘]", "Page précédente / suivante"],
-  ["⌘T / ⌘W", "Nouvel onglet / fermer l'onglet"],
-  ["⌘⇧[ / ⌘⇧]", "Onglet précédent / suivant"],
-  ["⌘1 … ⌘9", "Aller à l'onglet (⌘9 : le dernier)"],
-  ["⌘-clic", "Ouvrir dans un nouvel onglet"],
-  ["⌥-clic", "Ouvrir à droite (deux pages côte à côte)"],
-  ["⌘⌥\\", "Ouvrir ou fermer le panneau de droite"],
-  ["⌘⇧G", "Panneau Git"],
-  ["⌘⇧L", "Ajouter un lien à lire"],
-  ["⌘⇧P", "Présenter (présentation ouverte)"],
-  ["⌘F / ⌘⌥F", "Rechercher / remplacer dans la note"],
-  ["⌘⇧F", "Rechercher dans tout le vault"],
-  ["⌘⇧E", "Mode Markdown brut"],
-  ["⌘⇧R", "Mode lecture"],
-  ["⌘⇧M", "Mode focus"],
-  ["⌘S", "Enregistrer maintenant"],
-  ["⌘,", "Réglages"],
-  ["⌘/", "Cette aide"],
-  ["/", "Menu des blocs"],
-  ["[[", "Lier une note"],
-  ["⌘B / ⌘I / ⌘E", "Gras / italique / code"],
-  ["⌘K", "Lien sur le texte sélectionné"],
-  ["⌘⇧S / ⌘⇧H", "Barré / surligné"],
-  ["⌘⌥1…3 / ⌘⌥0", "Titre 1 à 3 / texte"],
-  ["Tab / ⇧Tab", "Indenter / désindenter une liste"],
-  ["⌘↵", "Cocher une tâche, sortir d'un bloc de code"],
-  ["⌥↑ / ⌥↓", "Déplacer le bloc (aussi ⌘⇧↑ / ⌘⇧↓)"],
-  ["⌘D", "Dupliquer le bloc"],
-  ["⇧↵", "Retour à la ligne dans un bloc"],
-  ["⌘Z / ⌘⇧Z", "Annuler / rétablir"],
-];
+import { SHORTCUTS } from "./shortcuts";
 
 export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
   return (
@@ -47,7 +13,7 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
         </header>
         <table>
           <tbody>
-            {SHORTCUTS.map(([shortcut, label]) => (
+            {SHORTCUTS.map(({ keys: shortcut, label }) => (
               <tr key={shortcut}>
                 <td>
                   <kbd>{keys(shortcut)}</kbd>

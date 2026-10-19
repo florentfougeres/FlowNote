@@ -6,12 +6,12 @@ import { imageMime, NULL_BRIDGE, type VaultBridge } from "./editor/bridge";
 import DOCUMENTATION from "./docs/documentation.md?raw";
 import { docsBridge } from "./docs/docsBridge";
 import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
-import { DRAWING_SUFFIX, isDrawingPath, newDrawingFile } from "./drawing/format";
+import { isDrawingPath } from "./drawing/format";
 import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
 import { DRAWING_TOOLS } from "./drawing/tools";
-import { isMindmapPath, MINDMAP_SUFFIX, newMindmapFile } from "./mindmap/format";
+import { isMindmapPath } from "./mindmap/format";
 import { MindmapEditor, type MindmapControls } from "./mindmap/MindmapEditor";
-import { BASE_SUFFIX, isBasePath, newBaseFile, parseBase, serializeBase, writeColumn, type SelectOption } from "./base/baseFile";
+import { isBasePath, parseBase, serializeBase, writeColumn, type SelectOption } from "./base/baseFile";
 import { BaseView } from "./base/BaseView";
 import { baseOfNote, baseProperties, RowProperties, type RowBase } from "./base/RowProperties";
 import { columnInfo } from "./base/columns";
@@ -20,8 +20,10 @@ import { PageTitle } from "./PageTitle";
 import { setTitleHeading, titleHeadingOf } from "./editor/titleHeading";
 import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
+import { Titlebar } from "./Titlebar";
+import { usePageOps } from "./hooks/usePageOps";
+import { globalAction, type GlobalAction } from "./shortcuts";
 import { applyTheme, applyScale, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
-import { deletePage, followFolder, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "./vault/pageOps";
 import { PageIcon, PopoverMenu, Sidebar, type MenuItem } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
 import { GraphPage } from "./graph/GraphPage";
@@ -45,7 +47,7 @@ import { useSpellChecking } from "./editor/useSpellChecking";
 import type { Editor } from "@tiptap/core";
 import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
-import { DEFAULT_CONFIG, dirname, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
+import { DEFAULT_CONFIG, dirname, noteTitle, parseObsidianConfig, type ObsidianConfig } from "./vault/links";
 import { DEMO_FILES, DEMO_REMOTE } from "./demo";
 import { GitDrawer, useGitDrawer } from "./GitDrawer";
 import { usePersistentFlag } from "./hooks/usePersistentFlag";
@@ -63,14 +65,13 @@ import { joinTab as joinTabs, nextPageTab, separateTab as separateTabs, splitOf 
 import { Dashboard } from "./Dashboard";
 import { TicketView } from "./ticket/TicketView";
 import { TicketsView } from "./ticket/TicketsView";
-import { isTicketMarkdown, newTicketFile, nextTicketId } from "./ticket/format";
-import { isPresentationMarkdown, newPresentationFile } from "./presentation/format";
+import { isTicketMarkdown } from "./ticket/format";
+import { isPresentationMarkdown } from "./presentation/format";
 import { slideAt, useSlides } from "./presentation/useSlides";
 import { SlidesPanel } from "./presentation/SlidesPanel";
 import { Presenter } from "./presentation/Presenter";
 import { SplitPane } from "./SplitPane";
-import { ticketInfo } from "./ticket/agenda";
-import { moveRecentPage, recordRecentPage } from "./dashboard/recents";
+import { recordRecentPage } from "./dashboard/recents";
 import { countWords, readingMinutes } from "./markdown/wordCount";
 import { bookmarkedFiles } from "./dashboard/stats";
 import { invoke } from "@tauri-apps/api/core";
@@ -549,50 +550,41 @@ export function App() {
   // Application shortcuts (editor shortcuts live in the editor extensions).
   const shortcuts = useRef<(event: KeyboardEvent) => void>(() => {});
   shortcuts.current = (event: KeyboardEvent) => {
-    if (!(event.metaKey || event.ctrlKey)) return;
-    if (event.altKey && event.code === "Backslash" && vault) {
-      event.preventDefault();
-      toggleSplit();
-      return;
-    }
-    if (event.code === "KeyF" && vault) {
-      event.preventDefault();
-      if (event.shiftKey) setModal("search");
-      else if (noteRef.current && !rawModeRef.current) openFind(event.altKey);
-      return;
-    }
-    if (event.altKey) return;
-    const key = event.key.toLowerCase();
-    const run = (action: () => void) => {
-      event.preventDefault();
-      action();
+    const action = globalAction(event);
+    // Without a vault, only ⌘S does something.
+    if (!action || (!vault && action !== "save")) return;
+    const findable = noteRef.current !== null && !rawModeRef.current;
+    /** What each shortcut runs (shortcuts.ts); false: nothing to do here, the key goes on. */
+    const actions: Record<GlobalAction, () => boolean | void> = {
+      switcher: () => setModal("switcher"),
+      present: () => (presentationPageRef.current ? present() : setModal("switcher")),
+      newPage: () => void newPage(null),
+      back: goBack,
+      forward: goForward,
+      newTab: () => void newTab(null),
+      closeTab: () => void closeTab(activeRef.current),
+      previousTab: () => cycleTab(-1),
+      nextTab: () => cycleTab(1),
+      goToTab: () => {
+        const list = tabsRef.current;
+        const target = event.key === "9" ? list[list.length - 1] : list[Number(event.key) - 1];
+        if (target) void switchTab(target.id);
+      },
+      split: () => toggleSplit(),
+      git: () => toggleGit(),
+      addLink: () => void openAddLink(),
+      find: () => void (findable && openFind(false)),
+      replace: () => void (findable && openFind(true)),
+      vaultSearch: () => setModal("search"),
+      raw: () => (noteRef.current ? toggleRaw() : false),
+      reading: () => (readable ? toggleReading() : false),
+      focus: toggleFocus,
+      save: () => void saveNow().catch(() => {}),
+      settings: () => void select(SETTINGS_VIEW, "push"),
+      help: () => setModal("help"),
+      sidebar: toggleSidebar,
     };
-    if (key === "s") run(() => void saveNow().catch(() => {}));
-    else if (!vault) return;
-    else if (key === "p" && event.shiftKey && presentationPageRef.current) run(() => present());
-    // ⌘K in the editor links the selected text (handled there first).
-    else if (key === "k" && event.defaultPrevented) return;
-    else if (key === "p" || key === "k" || key === "o") run(() => setModal("switcher"));
-    else if (key === "n" && !event.shiftKey) run(() => void newPage(null));
-    else if (event.code === "BracketLeft" && event.shiftKey) run(() => cycleTab(-1));
-    else if (event.code === "BracketRight" && event.shiftKey) run(() => cycleTab(1));
-    else if (key === "[") run(goBack);
-    else if (key === "]") run(goForward);
-    else if (key === "t" && !event.shiftKey) run(() => void newTab(null));
-    else if (key === "w" && !event.shiftKey) run(() => void closeTab(activeRef.current));
-    else if (/^[1-9]$/.test(key) && !event.shiftKey) run(() => {
-      const list = tabsRef.current;
-      const target = key === "9" ? list[list.length - 1] : list[Number(key) - 1];
-      if (target) void switchTab(target.id);
-    });
-    else if (key === "g" && event.shiftKey) run(() => toggleGit());
-    else if (key === "l" && event.shiftKey) run(() => void openAddLink());
-    else if (key === "/") run(() => setModal("help"));
-    else if (key === ",") run(() => void select(SETTINGS_VIEW, "push"));
-    else if (key === "\\") run(toggleSidebar);
-    else if (key === "m" && event.shiftKey) run(toggleFocus);
-    else if (key === "e" && event.shiftKey && noteRef.current) run(toggleRaw);
-    else if (key === "r" && event.shiftKey && readable) run(toggleReading);
+    if (actions[action]() !== false) event.preventDefault();
   };
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => shortcuts.current(event);
@@ -652,47 +644,15 @@ export function App() {
     [],
   );
 
-  /** Every folder of the vault, for the "new page" dialog ("" is the root). */
-  const folderChoices = () => {
-    const folders = new Set<string>([""]);
-    for (const file of filesRef.current) {
-      const parts = file.split("/").slice(0, -1);
-      parts.forEach((_, i) => folders.add(parts.slice(0, i + 1).join("/")));
-    }
-    // Empty folders are only in the tree.
-    const walk = (entries: VaultEntry[]) => entries.forEach((e) => e.kind === "dir" && (folders.add(e.path), walk(e.children ?? [])));
-    walk(tree);
-    return [...folders].sort((a, b) => a.localeCompare(b, "fr"));
-  };
   const askConfirm = (message: string, confirmLabel: string) => new Promise<boolean>((resolve) => setConfirm({ message, confirmLabel, resolve }));
 
-  /**
-   * Renames a page (and its sub-pages folder); links across the vault follow.
-   * Tabs, history and the open note follow the new paths.
-   */
-  const renamePath = async (path: string, title: string): Promise<boolean> => {
-    if (!vault) return false;
-    try {
-      await saveNow();
-      const result = await renamePage(vault, path, title);
-      // A base follows its rows' folder, renamed with it.
-      if (isBasePath(path) && result.path !== path) {
-        const text = await vault.read(result.path);
-        const next = text.split(`file.inFolder(${JSON.stringify(subpageFolder(path))})`).join(`file.inFolder(${JSON.stringify(subpageFolder(result.path))})`);
-        if (next !== text) await vault.write(result.path, next, text);
-      }
-      const oldFolder = `${subpageFolder(path)}/`;
-      await followMoves((p) => (p === path ? result.path : p.startsWith(oldFolder) ? `${subpageFolder(result.path)}/${p.slice(oldFolder.length)}` : p), result.updatedNotes);
-      moveRecentPage(vault.name, path, result.path);
-      const others = result.updatedNotes.filter((p) => p !== result.path).length;
-      notify(others > 0 ? `Page renommée ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}.` : "Page renommée.");
-      void refreshGit();
-      return true;
-    } catch (error) {
-      setStatus(String(error));
-      return false;
-    }
-  };
+  const ticketPaths = useMemo(() => {
+    const found = new Set<string>();
+    const walk = (entries: VaultEntry[]) => entries.forEach((e) => (e.ticket ? found.add(e.path) : e.children && walk(e.children)));
+    walk(tree);
+    return found;
+  }, [tree]);
+
   /**
    * After files moved (`moved` maps old paths to new ones): the tree, tabs,
    * history and the open note follow, and the open note is read again if its
@@ -715,140 +675,6 @@ export function App() {
     }
   };
 
-  /** "Nouveau dossier": an empty folder in `parent` ("" is the vault root). */
-  const newFolder = async (parent: string) => {
-    if (!vault) return;
-    const name = sanitizeName((await askName(parent ? "Nouveau sous-dossier" : "Nouveau dossier", "Sans titre")) ?? "");
-    if (!name) return;
-    try {
-      await vault.createFolder(parent ? `${parent}/${name}` : name);
-      await refresh(vault);
-      setStatus("");
-    } catch (error) {
-      setStatus(String(error));
-    }
-  };
-
-  /** Renames a folder; links to its pages and bases' folder filters follow. */
-  /** The tickets folder setting follows its folder (or a parent) when it moves, and is back to "Tickets" when it is deleted. */
-  const followTicketsFolder = (from: string, to: string | null) => {
-    const ticketsFolder = followFolder(settings.ticketsFolder, from, to, "Tickets");
-    if (ticketsFolder === settings.ticketsFolder) return;
-    const next = { ...settings, ticketsFolder };
-    setSettings(next);
-    saveSettings(next);
-  };
-  const renameFolderPath = async (folder: string) => {
-    if (!vault) return;
-    const title = await askName("Renommer le dossier", folder.slice(folder.lastIndexOf("/") + 1));
-    if (!title) return;
-    try {
-      await saveNow();
-      const result = await renameFolder(vault, folder, title);
-      if (result.path === folder) return;
-      followTicketsFolder(folder, result.path);
-      await followMoves((p) => (p.startsWith(`${folder}/`) ? result.path + p.slice(folder.length) : p), result.updatedNotes);
-      moveRecentPage(vault.name, folder, result.path);
-      const others = result.updatedNotes.filter((p) => !p.startsWith(`${result.path}/`)).length;
-      notify(others > 0 ? `Dossier renommé ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}.` : "Dossier renommé.");
-      void refreshGit();
-    } catch (error) {
-      setStatus(String(error));
-    }
-  };
-
-  /** Drag and drop in the tree: a page (with its sub-pages) or a folder goes into `target` ("" is the root). */
-  const moveItem = async (item: { path: string; folder: boolean }, target: string) => {
-    if (!vault) return;
-    try {
-      await saveNow();
-      const result = item.folder ? await moveFolder(vault, item.path, target) : await movePage(vault, item.path, target);
-      if (result.path === item.path) return;
-      if (item.folder) followTicketsFolder(item.path, result.path);
-      const from = item.folder ? item.path : subpageFolder(item.path);
-      const to = item.folder ? result.path : subpageFolder(result.path);
-      await followMoves((p) => (p === item.path ? result.path : p.startsWith(`${from}/`) ? to + p.slice(from.length) : p), result.updatedNotes);
-      moveRecentPage(vault.name, item.path, result.path);
-      const where = target ? `« ${target.slice(target.lastIndexOf("/") + 1)} »` : "la racine";
-      const others = result.updatedNotes.filter((p) => p !== result.path && !p.startsWith(`${to}/`)).length;
-      notify(`${item.folder ? "Dossier déplacé" : "Page déplacée"} dans ${where}${others > 0 ? ` ; liens mis à jour dans ${others} note${others > 1 ? "s" : ""}` : ""}.`);
-      void refreshGit();
-    } catch (error) {
-      setStatus(String(error));
-    }
-  };
-
-  /** A copy of a page next to it ("Nom 1"), opened; its sub-pages are not copied. */
-  const duplicatePage = async (path: string) => {
-    if (!vault) return;
-    try {
-      await saveNow();
-      const extension = /\.(?:excalidraw|mindmap)\.md$|\.base$|\.md$/i.exec(path)?.[0] ?? "";
-      const stem = path.slice(0, path.length - extension.length);
-      let copy = "";
-      for (let i = 1; !copy || filesRef.current.some((f) => f.toLowerCase() === copy.toLowerCase()); i++) copy = `${stem} ${i}${extension}`;
-      await createFile(copy, await vault.read(path));
-      await select(copy);
-    } catch (error) {
-      setStatus(String(error));
-    }
-  };
-
-  /** Copies a `[[link]]` to the page, as Obsidian would write it. */
-  const copyLink = async (path: string) => {
-    const link = `[[${linkTextFor(path, filesRef.current)}]]`;
-    try {
-      await navigator.clipboard.writeText(link);
-      notify(`Lien copié : ${link}`);
-    } catch (error) {
-      setStatus(`Copie impossible : ${String(error)}`);
-    }
-  };
-
-  /** Removes a folder and everything in it, after confirmation. */
-  const removeFolder = async (folder: string) => {
-    if (!vault) return;
-    const pages = filesRef.current.filter((f) => f.startsWith(`${folder}/`) && (f.endsWith(".md") || f.endsWith(".base"))).length;
-    const others = filesRef.current.filter((f) => f.startsWith(`${folder}/`)).length - pages;
-    const content = [pages ? `${pages} page${pages > 1 ? "s" : ""}` : "", others ? `${others} autre${others > 1 ? "s" : ""} fichier${others > 1 ? "s" : ""}` : ""].filter(Boolean).join(" et ");
-    const where = isTauri() ? "Il ira dans la corbeille." : "Cette suppression est définitive.";
-    const message = `Supprimer le dossier « ${folder.slice(folder.lastIndexOf("/") + 1)} »${content ? ` et son contenu (${content})` : ""} ? ${where}`;
-    if (!(await askConfirm(message, "Supprimer"))) return;
-    if (noteRef.current?.path.startsWith(`${folder}/`)) await saveNow().catch(() => {});
-    try {
-      await vault.remove(folder);
-      followTicketsFolder(folder, null);
-      setStatus("");
-    } catch (error) {
-      setStatus(String(error));
-    }
-    await forgetRemoved((p) => p.startsWith(`${folder}/`));
-    moveRecentPage(vault.name, folder, null);
-  };
-
-  /** Renames the open page from its title. */
-  const renameCurrent = (title: string) => (noteRef.current ? renamePath(noteRef.current.path, title) : Promise.resolve(false));
-
-  const removePage = async (path: string) => {
-    if (!vault) return;
-    const children = subpagesOf(path, filesRef.current).length;
-    const where = isTauri() ? "Elle ira dans la corbeille." : "Cette suppression est définitive.";
-    const withChildren = children === 0 ? "" : children === 1 ? " et sa sous-page" : ` et ses ${children} sous-pages`;
-    const message = `Supprimer « ${noteTitle(path)} »${withChildren} ? ${where}`;
-    if (!(await askConfirm(message, "Supprimer"))) return;
-    let failure: unknown = null;
-    try {
-      if (noteRef.current?.path === path) await saveNow().catch(() => {});
-      await deletePage(vault, path, filesRef.current);
-    } catch (error) {
-      failure = error;
-    }
-    // Even after a partial failure: show what is left on disk, and leave the pages that are gone.
-    const files = await forgetRemoved((p) => p === path || p.startsWith(`${subpageFolder(path)}/`));
-    if (!files.includes(path)) moveRecentPage(vault.name, path, null);
-    setStatus(failure ? String(failure) : "");
-  };
-
   /**
    * After a deletion: the tree is read again, and tabs, history and the open
    * note leave the pages matching `removed` that are no longer on disk.
@@ -869,66 +695,31 @@ export function App() {
     return files;
   };
 
-  const createFile = useCallback(
-    async (path: string, content: string | Uint8Array) => {
-      if (!vault) return;
-      await vault.create(path, content);
-      filesRef.current = [...filesRef.current, path].sort();
-      await refresh(vault);
-    },
-    [vault, refresh],
-  );
-
-  /**
-   * "+ Nouvelle page" (asks for a name and a folder), "+" on a page (sub-page,
-   * linked from its parent) or "+" on a folder (page inside it).
-   */
-  const newPage = async (parent: string | null, presetName?: string, inFolder?: string, initialKind?: PageKind) => {
-    if (!vault) return;
-    let name = presetName ?? null;
-    let kind: PageKind = "note";
-    let folder = parent ? subpageFolder(parent) : (inFolder ?? newNoteFolder("", config));
-    if (!name) {
-      const chooseFolder = !parent && inFolder === undefined;
-      const result = await new Promise<NameResult | null>((resolve) =>
-        setDialog({
-          title: parent ? "Nom de la sous-page" : "Nouvelle page",
-          initial: "Sans titre",
-          folders: chooseFolder ? folderChoices() : undefined,
-          folder,
-          kinds: true,
-          initialKind,
-          resolve,
-        }),
-      );
-      if (!result) return;
-      name = result.name;
-      kind = result.kind;
-      if (chooseFolder) folder = result.folder;
-    }
-    const title = sanitizeName(name) || "Sans titre";
-    // Tickets go to their folder, numbered: "Tickets/12 - Titre.md".
-    const usedIds =
-      kind === "ticket" ? await Promise.all([...ticketPaths].map((p) => vault.read(p).then((text) => ticketInfo(p, text).id ?? 0, () => 0))) : [];
-    const ticketId = kind === "ticket" ? nextTicketId(filesRef.current, settings.ticketsFolder, usedIds) : 0;
-    const path =
-      kind === "ticket"
-        ? uniquePath(settings.ticketsFolder, `${ticketId} - ${title}.md`, filesRef.current)
-        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : kind === "base" ? BASE_SUFFIX : ".md"}`, filesRef.current);
-    try {
-      await saveNow();
-      // A base's rows are the notes of the folder named after it, next to it (like sub-pages).
-      await createFile(path, kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : `# ${title}\n`);
-      if (parent) {
-        const content = await vault.read(parent);
-        const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";
-        await vault.write(parent, `${content}${separator}[[${linkTextFor(path, filesRef.current)}]]\n`, content);
-      }
-      await select(path);
-    } catch (error) {
-      setStatus(String(error));
-    }
+  const changeSettings = (next: Settings) => {
+    setSettings(next);
+    saveSettings(next);
   };
+  const { createFile, renamePath, renameCurrent, newFolder, renameFolderPath, moveItem, duplicatePage, copyLink, removeFolder, removePage, newPage } = usePageOps({
+    vault,
+    tree,
+    filesRef,
+    noteRef,
+    config,
+    ticketPaths,
+    settings,
+    changeSettings,
+    saveNow,
+    refresh,
+    refreshGit,
+    select: (path) => select(path),
+    notify,
+    setStatus,
+    askName,
+    askConfirm,
+    askNewPage: (request) => new Promise<NameResult | null>((resolve) => setDialog({ ...request, resolve })),
+    followMoves,
+    forgetRemoved,
+  });
 
   const loadImage = useCallback(
     async (path: string) => {
@@ -1084,12 +875,6 @@ export function App() {
     }
   };
   const activePath = tabs.find((t) => t.id === activeTab)?.path ?? null;
-  const ticketPaths = useMemo(() => {
-    const found = new Set<string>();
-    const walk = (entries: VaultEntry[]) => entries.forEach((e) => (e.ticket ? found.add(e.path) : e.children && walk(e.children)));
-    walk(tree);
-    return found;
-  }, [tree]);
 
   const readingPath = settings.readingList || "Lectures.md";
   /** "Ajouter un lien": the dialog lists the themes and tags of the reading list. */
@@ -1454,29 +1239,18 @@ export function App() {
 
   return (
     <div className={`layout${sidebarOpen && !focusMode ? "" : " no-sidebar"}${focusMode ? " focus-mode" : ""}`}>
-      {/* "deep": the window moves from any empty spot of the bar, not only from the bar itself (Tauri leaves buttons, fields and tabs alone). */}
-      <header className="titlebar" data-tauri-drag-region="deep">
-        <div className="titlebar-controls">
-          <button
-            className="titlebar-button"
-            onClick={() => {
-              setPeek(false);
-              toggleSidebar();
-            }}
-            onMouseEnter={() => !sidebarOpen && openPeek()}
-            onMouseLeave={() => !sidebarOpen && closePeekSoon()}
-            aria-label={sidebarOpen ? "Masquer la barre latérale" : "Afficher la barre latérale"}
-            title={keys(sidebarOpen ? "Masquer la barre latérale (⌘\\)" : "Afficher la barre latérale (⌘\\)")}
-          >
-            <Icon name="sidebar" size={16} />
-          </button>
-          <button className="titlebar-button" onClick={goBack} disabled={back.current.length === 0} aria-label="Page précédente" title={keys("Page précédente (⌘[)")}>
-            <Icon name="chevronLeft" size={16} />
-          </button>
-          <button className="titlebar-button" onClick={goForward} disabled={forward.current.length === 0} aria-label="Page suivante" title={keys("Page suivante (⌘])")}>
-            <Icon name="chevronRight" size={16} />
-          </button>
-        </div>
+      <Titlebar
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => {
+          setPeek(false);
+          toggleSidebar();
+        }}
+        onPeek={(shown) => (shown ? openPeek() : closePeekSoon())}
+        canBack={back.current.length > 0}
+        canForward={forward.current.length > 0}
+        onBack={goBack}
+        onForward={goForward}
+      >
         <TabBar
           tabs={tabs}
           active={activeTab}
@@ -1498,7 +1272,7 @@ export function App() {
             items={tabMenuItems(tabMenu.id)}
           />
         )}
-      </header>
+      </Titlebar>
       <div className="workspace">
         {sidebarOpen && !focusMode ? (
           <div className="sidebar-dock">{sidebar}</div>

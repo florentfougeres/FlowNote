@@ -112,7 +112,7 @@ L'éditeur est construit sur **Tiptap 3**, une couche au-dessus de **ProseMirror
 
 - **`schema.ts`** : le schéma du document. Il suit exactement le sous-ensemble de Markdown géré par `src/markdown/` : chaque attribut relevé par le parseur (marqueurs, sources brutes) doit y être déclaré, sinon Tiptap l'efface et le bloc perdrait son style d'origine. Les tableaux viennent de `@tiptap/extension-table`.
 - **`extensions.ts`** : assemble les plugins ProseMirror (historique, curseurs, coloration, recherche, correcteur, sommaire, échéances, marques de syntaxe) et les raccourcis clavier.
-- **`views.ts`** : les vues de nœuds (callouts, images, embeds, blocs de code, Mermaid, Plotly, bases intégrées…), qui ajoutent des contrôles autour du texte éditable. Replier un callout est un état d'affichage : rien n'est écrit dans le fichier.
+- **`views/`** : les vues de nœuds, un fichier chacune (callouts, images, embeds, blocs de code, Mermaid, Plotly, bases intégrées…), qui ajoutent des contrôles autour du texte éditable. Replier un callout est un état d'affichage : rien n'est écrit dans le fichier.
 - **`slash.ts`, `wikilinks.ts`, `emoji.ts`, `menu.ts`** : les menus `/`, `[[` et `:` reposent sur `@tiptap/suggestion`.
 - **`shortcuts.ts`, `keymap.ts`** : raccourcis Markdown à la frappe (`#`, `-`, `[]`, `>`) et clavier des blocs.
 - **`BlockHandle.tsx`, `dragMotion.ts`** : poignée et glisser-déposer des blocs, en pointer events (WebKit refuse le drag HTML5 sur les `<button>`), animés par Motion.

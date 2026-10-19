@@ -79,7 +79,7 @@ export function removeCodeAround(state: EditorState): Transaction | null {
   return code ? state.tr.removeMark(code.from, code.to, state.schema.marks.code) : null;
 }
 
-/** Placeholders of the empty headings (views.ts), drawn after the `#` while they show. */
+/** Placeholders of the empty headings (placeholder.ts), drawn after the `#` while they show. */
 export const HEADING_PLACEHOLDERS = ["Titre 1", "Titre 2", "Titre 3", "Titre 4", "Titre 5", "Titre 6"];
 
 function mark(text: string, className: string, placeholder?: string): HTMLElement {

@@ -1,6 +1,6 @@
 import { Plugin, type EditorState, type Transaction } from "@tiptap/pm/state";
 import type { Mark, Node as PMNode } from "@tiptap/pm/model";
-import { changedRanges } from "./views";
+import { changedRanges } from "./tags";
 
 /**
  * Web addresses typed in text become links once the cursor leaves them, as the
