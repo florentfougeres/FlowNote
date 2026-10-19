@@ -1,7 +1,6 @@
-import { backend } from "../platform";
 import { invoke } from "@tauri-apps/api/core";
-import { ConflictError, encodeText, type Vault, type VaultEntry } from "./vault";
-import { tauriGit } from "./git";
+import type { Vault } from "./vault";
+import { backendVault } from "./backendVault";
 
 const LAST_VAULT_KEY = "flownote:last-vault";
 const RECENT_VAULTS_KEY = "flownote:recent-vaults";
@@ -9,34 +8,7 @@ const RECENT_VAULTS_KEY = "flownote:recent-vaults";
 export { isTauri } from "../platform";
 
 export function tauriVault(root: string): Vault {
-  return {
-    name: root.split("/").filter(Boolean).pop() ?? root,
-    git: tauriGit(root),
-    tree: () => backend<VaultEntry[]>("vault_tree", { root }),
-    read: (path) => backend<string>("vault_read", { root, path }),
-    write: async (path, content, expected) => {
-      try {
-        await backend("vault_write", { root, path, content, expected });
-      } catch (error) {
-        const message = String(error);
-        if (message.startsWith("CONFLICT:")) throw new ConflictError(message.slice("CONFLICT:".length));
-        throw new Error(message);
-      }
-    },
-    files: () => backend<string[]>("vault_files", { root }),
-    readBinary: async (path) => new Uint8Array(await invoke<ArrayBuffer>("vault_read_binary", { root, path })),
-    create: (path, content) =>
-      backend("vault_create", { root, path, content: Array.from(typeof content === "string" ? encodeText(content) : content) }),
-    createFolder: (path) => backend("vault_create_dir", { root, path }),
-    reveal: (path) => backend("vault_reveal", { root, path }),
-    obsidianConfig: () => backend<string>("vault_config", { root }),
-    rename: (from, to) => backend("vault_rename", { root, from, to }),
-    remove: (path) => backend("vault_trash", { root, path }),
-    search: (query, caseSensitive, limit) => backend("vault_search", { root, query, caseSensitive, limit }),
-    readNotes: () => backend<[string, string][]>("vault_read_notes", { root }),
-    stats: () => backend<{ path: string; ctime: number; mtime: number }[]>("vault_stats", { root }),
-    bookmarks: () => backend<string>("vault_bookmarks", { root }),
-  };
+  return backendVault(root.split("/").filter(Boolean).pop() ?? root, root, true);
 }
 
 /** Asks for a vault folder; resolves to null if the dialog is cancelled. */
