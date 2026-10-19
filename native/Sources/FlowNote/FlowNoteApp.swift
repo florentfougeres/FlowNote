@@ -9,9 +9,8 @@ struct FlowNoteApp: App {
     // Launched with `swift run` (no bundle): still a regular app with a Dock icon.
     NSApplication.shared.setActivationPolicy(.regular)
     // New windows open as tabs of the current one, like Safari's or the Finder's.
-    NSWindow.allowsAutomaticWindowTabbing = true
-    // The app's own tabbing preference ("always"): ⌘T and "open in a new tab" add a tab, never a window.
-    UserDefaults.standard.register(defaults: ["AppleWindowTabbingMode": "always"])
+    // The tabs are the app's own, in the toolbar (TabStrip): no system tabs.
+    NSWindow.allowsAutomaticWindowTabbing = false
     // The Grammalecte companion stops with the app.
     NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) { _ in Grammar.shared.stop() }
   }
@@ -34,6 +33,7 @@ struct FlowNoteApp: App {
 struct AppCommands: Commands {
   let app: AppModel
   @FocusedValue(\.page) private var page
+  @FocusedValue(\.tabs) private var tabs
   @Environment(\.openWindow) private var openWindow
 
   var body: some Commands {
@@ -44,8 +44,12 @@ struct AppCommands: Commands {
       Button("Aller à une page…") { page?.searching = true }
         .keyboardShortcut("p")
         .disabled(page == nil || app.vault == nil)
-      Button("Nouvel onglet") { openWindow(id: "page") }
+      Button("Nouvel onglet") { if let tabs { tabs.open(nil) } else { openWindow(id: "page") } }
         .keyboardShortcut("t")
+      Button("Nouvelle fenêtre") { openWindow(id: "page") }
+        .keyboardShortcut("n", modifiers: [.command, .shift])
+      Button("Fermer l'onglet") { if let tabs { Task { await tabs.close(tabs.active) } } else { NSApp.keyWindow?.performClose(nil) } }
+        .keyboardShortcut("w")
       Divider()
       Button("Ouvrir un vault…") { app.chooseVault() }
         .keyboardShortcut("o")
@@ -63,6 +67,18 @@ struct AppCommands: Commands {
         .keyboardShortcut("l", modifiers: [.command, .shift])
         .disabled(page == nil || app.vault == nil)
     }
+    CommandGroup(after: .windowArrangement) {
+      Button("Onglet suivant") { tabs?.cycle(1) }
+        .keyboardShortcut("]", modifiers: [.command, .shift])
+        .disabled((tabs?.pages.count ?? 0) < 2)
+      Button("Onglet précédent") { tabs?.cycle(-1) }
+        .keyboardShortcut("[", modifiers: [.command, .shift])
+        .disabled((tabs?.pages.count ?? 0) < 2)
+      ForEach(1..<10) { n in
+        Button("Onglet \(n)") { tabs?.select(at: n == 9 ? (tabs?.pages.count ?? 1) - 1 : n - 1) }
+          .keyboardShortcut(KeyEquivalent(Character("\(n)")))
+      }
+    }
     CommandGroup(after: .sidebar) {
       Button("Page précédente") { page?.goBack() }
         .keyboardShortcut("[")
@@ -78,9 +94,18 @@ struct PageKey: FocusedValueKey {
   typealias Value = PageModel
 }
 
+struct TabsKey: FocusedValueKey {
+  typealias Value = TabsModel
+}
+
 extension FocusedValues {
   var page: PageModel? {
     get { self[PageKey.self] }
     set { self[PageKey.self] = newValue }
+  }
+
+  var tabs: TabsModel? {
+    get { self[TabsKey.self] }
+    set { self[TabsKey.self] = newValue }
   }
 }

@@ -3,18 +3,28 @@ import FlowNoteCore
 import SwiftUI
 import WebKit
 
-/// A window (a tab): the vault's tree on the left, the page on the right.
+/// A window: the vault's tree on the left, the active tab's page on the right,
+/// the tabs in the toolbar between the history buttons and the page's tools.
 struct WindowRoot: View {
   @Environment(AppModel.self) private var app
-  @Environment(\.openWindow) private var openWindow
-  @State private var page: PageModel
+  @State private var tabs: TabsModel
+  /// The tabs' pages, kept with the window (restored at launch).
+  @SceneStorage("tabs") private var savedTabs = ""
+  private let restorable: Bool
+  /// Width of the page column: the tabs take what the toolbar's buttons leave.
+  @State private var detailWidth: CGFloat = 800
 
   init(initialPath: String?) {
     // FLOWNOTE_OPEN: a page shown at launch (development, screenshots).
-    _page = State(initialValue: PageModel(path: initialPath ?? ProcessInfo.processInfo.environment["FLOWNOTE_OPEN"] ?? "flownote:home"))
+    let forced = initialPath ?? ProcessInfo.processInfo.environment["FLOWNOTE_OPEN"]
+    restorable = forced == nil
+    _tabs = State(initialValue: TabsModel(paths: [forced ?? TabsModel.home]))
   }
 
+  private var page: PageModel { tabs.active }
+
   var body: some View {
+    @Bindable var page = tabs.active
     Group {
       if app.vault == nil {
         WelcomeView()
@@ -24,6 +34,8 @@ struct WindowRoot: View {
             .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 420)
         } detail: {
           WebViewHost(webView: page.webView)
+            .id(ObjectIdentifier(page))
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { detailWidth = $0 }
             .ignoresSafeArea(edges: .bottom)
             .overlay(alignment: .bottom) { ToastView(message: page.toast) }
         }
@@ -36,18 +48,90 @@ struct WindowRoot: View {
               .disabled(page.forward.isEmpty)
               .help("Page suivante (⌘])")
           }
+          ToolbarItem(placement: .principal) {
+            TabStrip(tabs: tabs)
+              .frame(width: max(160, detailWidth - 90 - PageToolbar.width(page.tools)))
+          }
           PageToolbar(page: page)
         }
+        // The tab already says which page is shown.
+        .toolbar(removing: .title)
       }
     }
     .navigationTitle(page.title)
-    .navigationSubtitle(page.path.flatMap { $0.hasPrefix("flownote:") ? nil : ($0 as NSString).deletingLastPathComponent } ?? "")
     .focusedSceneValue(\.page, page)
+    .focusedSceneValue(\.tabs, tabs)
     .sheet(item: $page.nameRequest) { request in NameSheet(request: request) }
     .sheet(isPresented: $page.searching) { SearchPanel(page: page) }
-    .background(WindowTabbing(edited: page.dirty))
-    .onAppear { page.openTab = { path in if let path { openWindow(id: "page", value: path) } else { openWindow(id: "page") } } }
+    .background(WindowState(edited: tabs.pages.contains { $0.dirty }))
+    .onAppear {
+      if restorable, let data = savedTabs.data(using: .utf8), let paths = try? JSONDecoder().decode([String].self, from: data) { tabs.restore(paths) }
+    }
+    .onChange(of: tabs.paths) { _, paths in
+      savedTabs = (try? String(decoding: JSONEncoder().encode(paths), as: UTF8.self)) ?? ""
+    }
     .frame(minWidth: 720, minHeight: 480)
+  }
+}
+
+/// The tabs, sharing the toolbar's width like Safari's compact tabs: one tab takes it all.
+struct TabStrip: View {
+  @Environment(AppModel.self) private var app
+  let tabs: TabsModel
+
+  var body: some View {
+    HStack(spacing: 4) {
+      ForEach(tabs.pages, id: \.id) { page in
+        TabChip(page: page, active: page === tabs.active, closable: tabs.pages.count > 1) {
+          tabs.select(page)
+        } close: {
+          Task { await tabs.close(page) }
+        }
+      }
+      Button { tabs.open(nil) } label: { Image(systemName: "plus") }
+        .buttonStyle(.borderless)
+        .help("Nouvel onglet (⌘T)")
+        .padding(.horizontal, 6)
+    }
+
+  }
+}
+
+struct TabChip: View {
+  @Environment(AppModel.self) private var app
+  let page: PageModel
+  let active: Bool
+  let closable: Bool
+  let select: () -> Void
+  let close: () -> Void
+  @State private var hovered = false
+
+  var body: some View {
+    HStack(spacing: 6) {
+      // Close on the left, shown under the pointer (like Safari).
+      Button(action: close) { Image(systemName: "xmark").font(.system(size: 9, weight: .semibold)) }
+        .buttonStyle(.borderless)
+        .opacity(closable && hovered ? 1 : 0)
+        .disabled(!closable)
+        .help("Fermer l'onglet (⌘W)")
+      Spacer(minLength: 0)
+      Text(page.title)
+        .font(.callout)
+        .fontWeight(active ? .medium : .regular)
+        .foregroundStyle(active ? .primary : .secondary)
+        .lineLimit(1)
+        .truncationMode(.tail)
+      if page.dirty { Circle().fill(.secondary).frame(width: 5, height: 5) }
+      Spacer(minLength: 0)
+      Color.clear.frame(width: 12)
+    }
+    .padding(.horizontal, 8)
+    .frame(maxWidth: .infinity, minHeight: 26)
+    .background(active ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear), in: Capsule())
+    .contentShape(Capsule())
+    .onTapGesture(perform: select)
+    .onHover { hovered = $0 }
+    .help(page.path ?? "")
   }
 }
 
@@ -58,19 +142,13 @@ struct WebViewHost: NSViewRepresentable {
   func updateNSView(_ view: WKWebView, context: Context) {}
 }
 
-/// Every window joins the tabs of the others; unsaved changes show as the dot in its close button.
-struct WindowTabbing: NSViewRepresentable {
+/// A window of its own (tabs are drawn in the toolbar); unsaved changes show as the dot in its close button.
+struct WindowState: NSViewRepresentable {
   let edited: Bool
 
   func makeNSView(context: Context) -> NSView {
     let view = NSView()
-    DispatchQueue.main.async {
-      guard let window = view.window else { return }
-      window.tabbingMode = .preferred
-      window.tabbingIdentifier = "FlowNote"
-      // The tab bar stays shown, even with one tab (like Safari's setting).
-      if window.tabGroup?.isTabBarVisible == false { window.toggleTabBar(nil) }
-    }
+    DispatchQueue.main.async { view.window?.tabbingMode = .disallowed }
     return view
   }
 
@@ -84,13 +162,22 @@ struct WindowTabbing: NSViewRepresentable {
 struct PageToolbar: ToolbarContent {
   let page: PageModel
 
+  /// Width the toolbar gives the page's buttons (to size the tabs beside them).
+  static func width(_ tools: [PageTool]) -> CGFloat {
+    let shown = tools.filter { $0.group == nil && $0.icon != "focus" }
+    let direct = shown.filter { direct.contains($0.icon) }.count
+    let menu = shown.count > direct ? 1 : 0
+    let group = tools.filter { $0.group != nil }.count
+    return CGFloat(direct) * 36 + CGFloat(menu) * 52 + (group > 0 ? CGFloat(group) * 30 + 24 : 0) + (direct > 0 ? 24 : 0) + 24
+  }
+
   /// Focus mode hides the sidebar: the window already has that button.
   private var buttons: [PageTool] { page.tools.filter { $0.group == nil && $0.icon != "focus" } }
   private var groupTools: [PageTool] { page.tools.filter { $0.group != nil } }
 
   var body: some ToolbarContent {
     if !groupTools.isEmpty {
-      ToolbarItem(placement: .principal) {
+      ToolbarItem(placement: .primaryAction) {
         Picker("Outil", selection: Binding(get: { groupTools.first { $0.active == true }?.id ?? "" }, set: { page.runTool($0) })) {
           ForEach(groupTools) { tool in
             Image(systemName: symbol(tool.icon)).help(tool.label).tag(tool.id)
@@ -179,6 +266,19 @@ struct WelcomeView: View {
         .buttonStyle(.glassProminent)
       Button("Choisir dans iCloud Drive…") { app.chooseVault(inICloud: true) }
         .buttonStyle(.glass)
+      if !app.recentVaults.isEmpty {
+        VStack(alignment: .leading, spacing: 6) {
+          Text("Récents").font(.caption).foregroundStyle(.secondary)
+          ForEach(app.recentVaults, id: \.self) { url in
+            Button { app.open(url) } label: {
+              Label(url.lastPathComponent, systemImage: url.path.contains("/Mobile Documents/") ? "icloud" : "folder")
+            }
+            .buttonStyle(.link)
+            .help(url.path)
+          }
+        }
+        .padding(.top, 12)
+      }
     }
   }
 }

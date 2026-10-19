@@ -40,6 +40,7 @@ struct PageTool: Identifiable, Equatable {
 /// One tab: the page it shows, its history, and its web view.
 @MainActor @Observable
 final class PageModel {
+  let id = UUID()
   private(set) var path: String?
   private(set) var back: [String] = []
   private(set) var forward: [String] = []
@@ -108,6 +109,11 @@ final class PageModel {
   // MARK: Messages to the page
 
   func refresh() { js("window.flownoteShell?.refresh()") }
+
+  /// Writes the page's pending changes (before its tab closes).
+  func saveNow() async {
+    _ = try? await webView.callAsyncJavaScript("await window.flownoteShell?.save()", arguments: [:], contentWorld: .page)
+  }
 
   func applyZoom() { webView.pageZoom = app.uiScale }
 

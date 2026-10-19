@@ -21,6 +21,9 @@ struct SidebarView: View {
 
   var body: some View {
     List(selection: selection) {
+      VaultMenu()
+        .listRowSeparator(.hidden)
+        .selectionDisabled()
       Section {
         ForEach(AppModel.views.filter { $0.path != "flownote:git" || app.isGitRepo }, id: \.path) { view in
           Label(view.title, systemImage: view.icon)
@@ -28,7 +31,7 @@ struct SidebarView: View {
             .tag(view.path)
         }
       }
-      Section(app.vault?.name ?? "Vault") {
+      Section("Pages") {
         OutlineGroup(filtered(app.tree), children: \.folderChildren) { entry in
           SidebarRow(entry: entry)
             .draggable(entry.path)
@@ -99,6 +102,40 @@ struct SidebarView: View {
       }
       return app.displayName(entry).localizedStandardContains(query) || entry.name.localizedStandardContains(query) ? entry : nil
     }
+  }
+}
+
+/// The open vault, like Notion's workspace switcher: the recent vaults, another one.
+struct VaultMenu: View {
+  @Environment(AppModel.self) private var app
+
+  var body: some View {
+    Menu {
+      Section("Vaults récents") {
+        ForEach(app.recentVaults, id: \.self) { url in
+          Button {
+            app.open(url)
+          } label: {
+            Label(url.lastPathComponent, systemImage: url.path.contains("/Mobile Documents/") ? "icloud" : "folder")
+          }
+          .disabled(url == app.vault?.root)
+        }
+      }
+      Divider()
+      Button("Ouvrir un vault…") { app.chooseVault() }
+      Button("Ouvrir un vault dans iCloud Drive…") { app.chooseVault(inICloud: true) }
+      Button("Afficher dans le Finder") { if let root = app.vault?.root { NSWorkspace.shared.activateFileViewerSelecting([root]) } }
+    } label: {
+      HStack(spacing: 8) {
+        Image(systemName: app.vault?.inICloud == true ? "icloud" : "books.vertical")
+          .foregroundStyle(.tint)
+        Text(app.vault?.name ?? "Aucun vault").fontWeight(.semibold).lineLimit(1)
+        Image(systemName: "chevron.up.chevron.down").font(.caption2).foregroundStyle(.secondary)
+      }
+    }
+    .menuStyle(.button)
+    .buttonStyle(.plain)
+    .help("Changer de vault")
   }
 }
 

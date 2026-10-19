@@ -35,6 +35,9 @@ final class AppModel {
 
   @ObservationIgnored private let defaults = UserDefaults.standard
 
+  /// Vaults opened lately, most recent first (their folders).
+  private(set) var recentVaults: [URL] = []
+
   private init() {
     theme = defaults.string(forKey: "theme") ?? "system"
     autosave = defaults.object(forKey: "autosave") as? Bool ?? true
@@ -46,6 +49,10 @@ final class AppModel {
     uiScale = defaults.object(forKey: "uiScale") as? Double ?? 1
     ticketColumns = defaults.array(forKey: "ticketColumns") as? [[String: String]] ?? []
     applyTheme()
+    recentVaults = (defaults.array(forKey: "recentVaults") as? [Data] ?? []).compactMap { data in
+      var stale = false
+      return try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale)
+    }
     if let bookmark = defaults.data(forKey: "vaultBookmark") {
       var stale = false
       if let url = try? URL(resolvingBookmarkData: bookmark, bookmarkDataIsStale: &stale) { open(url) }
@@ -63,10 +70,18 @@ final class AppModel {
     error = nil
     // A bookmark finds the folder again after it is moved or renamed.
     if let bookmark = try? url.bookmarkData() { defaults.set(bookmark, forKey: "vaultBookmark") }
+    recentVaults = Array(([vault.root] + recentVaults.filter { $0.standardizedFileURL != vault.root }).prefix(8))
+    defaults.set(recentVaults.compactMap { try? $0.bookmarkData() }, forKey: "recentVaults")
     watcher = VaultWatcher(url: vault.root) { [weak self] in self?.scheduleReload() }
     tree = []
     reload()
     for page in livePages { page.vaultChanged() }
+  }
+
+  /// Takes a vault off the recent list.
+  func forget(_ url: URL) {
+    recentVaults.removeAll { $0 == url }
+    defaults.set(recentVaults.compactMap { try? $0.bookmarkData() }, forKey: "recentVaults")
   }
 
   /// Asks for a vault folder (in iCloud Drive when asked).

@@ -54,6 +54,8 @@ declare global {
       run(operation: ShellOperation): Promise<{ path: string | null; renamed?: [string, string][] }>;
       /** A button of the page's toolbar, clicked in the native toolbar. */
       tool(id: string): void;
+      /** Writes the page's pending changes (before its tab closes). */
+      save(): Promise<void>;
       /** ⌘F / ⌥⌘F: find (and replace) in the note. */
       find(replace: boolean): void;
       /** ⌘⇧L: adds a link to the reading list. */
@@ -270,6 +272,9 @@ export function EmbedPage({ vaultName, git, initialPath, initialSettings }: { va
       refresh: () => void refresh(),
       run,
       tool: (id) => tools.run(id),
+      save: async () => {
+        await saver.current?.();
+      },
       find: (replace) => {
         const selection = window.getSelection()?.toString() ?? "";
         setFind((previous) => ({ query: selection.includes("\n") ? previous?.query ?? "" : selection || previous?.query || "", replace, nonce: Date.now() }));
