@@ -8,104 +8,120 @@ struct FlowNoteApp: App {
   init() {
     // Launched with `swift run` (no bundle): still a regular app with a Dock icon.
     NSApplication.shared.setActivationPolicy(.regular)
-    // New windows open as tabs of the current one, like Safari's or the Finder's.
-    // The tabs are the app's own, in the toolbar (TabStrip): no system tabs.
+    // The tabs are the app's own, in the toolbar: no system tabs.
     NSWindow.allowsAutomaticWindowTabbing = false
     // The Grammalecte companion stops with the app.
     NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) { _ in Grammar.shared.stop() }
   }
 
   var body: some Scene {
-    WindowGroup(id: "page", for: String.self) { $path in
-      WindowRoot(initialPath: path)
+    WindowGroup(id: "window") {
+      WindowRoot()
         .environment(app)
     }
     .windowToolbarStyle(.unified)
     .commands { AppCommands(app: app) }
-
-    Settings {
-      SettingsView()
-        .environment(app)
-    }
   }
 }
 
+/// The menus: each item calls the app, as its own shortcut would (App.tsx).
 struct AppCommands: Commands {
   let app: AppModel
-  @FocusedValue(\.page) private var page
-  @FocusedValue(\.tabs) private var tabs
+  @FocusedValue(\.window) private var window
   @Environment(\.openWindow) private var openWindow
 
+  private var open: Bool { window != nil && app.vault != nil }
+
   var body: some Commands {
+    CommandGroup(replacing: .appSettings) {
+      Button("Réglages…") { window?.call("settings") }
+        .keyboardShortcut(",")
+        .disabled(!open)
+    }
     CommandGroup(replacing: .newItem) {
-      Button("Nouvelle page…") { if let page { Task { await SidebarActions(page: page).newPage(in: nil) } } }
+      Button("Nouvelle page…") { window?.call("newPage") }
         .keyboardShortcut("n")
-        .disabled(page == nil || app.vault == nil)
-      Button("Aller à une page…") { page?.searching = true }
-        .keyboardShortcut("p")
-        .disabled(page == nil || app.vault == nil)
-      Button("Nouvel onglet") { if let tabs { tabs.open(nil) } else { openWindow(id: "page") } }
+        .disabled(!open)
+      Button("Nouvel onglet") { window?.call("newTab") }
         .keyboardShortcut("t")
-      Button("Nouvelle fenêtre") { openWindow(id: "page") }
+        .disabled(!open)
+      Button("Nouvelle fenêtre") { openWindow(id: "window") }
         .keyboardShortcut("n", modifiers: [.command, .shift])
-      Button("Fermer l'onglet") { if let tabs { Task { await tabs.close(tabs.active) } } else { NSApp.keyWindow?.performClose(nil) } }
-        .keyboardShortcut("w")
+      Button("Fermer l'onglet") {
+        if let window, window.tabs.count > 1, let active = window.active { window.call("closeTab", active) } else { NSApp.keyWindow?.performClose(nil) }
+      }
+      .keyboardShortcut("w")
       Divider()
       Button("Ouvrir un vault…") { app.chooseVault() }
         .keyboardShortcut("o")
       Button("Ouvrir un vault dans iCloud Drive…") { app.chooseVault(inICloud: true) }
     }
     CommandGroup(after: .textEditing) {
-      Button("Rechercher dans la page…") { page?.find(replace: false) }
+      Button("Aller à une page…") { window?.call("search") }
+        .keyboardShortcut("p")
+        .disabled(!open)
+      Button("Rechercher dans les notes…") { window?.call("vaultSearch") }
+        .keyboardShortcut("f", modifiers: [.command, .shift])
+        .disabled(!open)
+      Button("Rechercher dans la page…") { window?.call("find", false) }
         .keyboardShortcut("f")
-        .disabled(page == nil)
-      Button("Rechercher et remplacer…") { page?.find(replace: true) }
+        .disabled(!open)
+      Button("Rechercher et remplacer…") { window?.call("find", true) }
         .keyboardShortcut("f", modifiers: [.command, .option])
-        .disabled(page == nil)
+        .disabled(!open)
       Divider()
-      Button("Ajouter un lien à lire…") { page?.addLink() }
+      Button("Ajouter un lien à lire…") { window?.call("addLink") }
         .keyboardShortcut("l", modifiers: [.command, .shift])
-        .disabled(page == nil || app.vault == nil)
-    }
-    CommandGroup(after: .windowArrangement) {
-      Button("Onglet suivant") { tabs?.cycle(1) }
-        .keyboardShortcut("]", modifiers: [.command, .shift])
-        .disabled((tabs?.pages.count ?? 0) < 2)
-      Button("Onglet précédent") { tabs?.cycle(-1) }
-        .keyboardShortcut("[", modifiers: [.command, .shift])
-        .disabled((tabs?.pages.count ?? 0) < 2)
-      ForEach(1..<10) { n in
-        Button("Onglet \(n)") { tabs?.select(at: n == 9 ? (tabs?.pages.count ?? 1) - 1 : n - 1) }
-          .keyboardShortcut(KeyEquivalent(Character("\(n)")))
-      }
+        .disabled(!open)
     }
     CommandGroup(after: .sidebar) {
-      Button("Page précédente") { page?.goBack() }
+      Button("Page précédente") { window?.call("back") }
         .keyboardShortcut("[")
-        .disabled(page?.back.isEmpty ?? true)
-      Button("Page suivante") { page?.goForward() }
+        .disabled(!(window?.canBack ?? false))
+      Button("Page suivante") { window?.call("forward") }
         .keyboardShortcut("]")
-        .disabled(page?.forward.isEmpty ?? true)
+        .disabled(!(window?.canForward ?? false))
+      Divider()
+      Button("Git") { window?.call("git") }
+        .keyboardShortcut("g", modifiers: [.command, .shift])
+        .disabled(window?.gitChanges == nil)
+      Button("Mode focus") { window?.call("focus") }
+        .keyboardShortcut("m", modifiers: [.command, .shift])
+        .disabled(!open)
     }
+    CommandGroup(after: .windowArrangement) {
+      Button("Onglet suivant") { cycle(1) }
+        .keyboardShortcut("]", modifiers: [.command, .shift])
+      Button("Onglet précédent") { cycle(-1) }
+        .keyboardShortcut("[", modifiers: [.command, .shift])
+      ForEach(1..<10) { n in
+        Button("Onglet \(n)") {
+          guard let tabs = window?.tabs, !tabs.isEmpty else { return }
+          window?.call("switchTab", tabs[n == 9 ? tabs.count - 1 : min(n - 1, tabs.count - 1)].id)
+        }
+        .keyboardShortcut(KeyEquivalent(Character("\(n)")))
+      }
+    }
+    CommandGroup(replacing: .help) {
+      Button("Aide et raccourcis") { window?.call("help") }
+        .keyboardShortcut("/")
+        .disabled(!open)
+    }
+  }
+
+  private func cycle(_ step: Int) {
+    guard let window, let index = window.tabs.firstIndex(where: { $0.id == window.active }), window.tabs.count > 1 else { return }
+    window.call("switchTab", window.tabs[(index + step + window.tabs.count) % window.tabs.count].id)
   }
 }
 
-struct PageKey: FocusedValueKey {
-  typealias Value = PageModel
-}
-
-struct TabsKey: FocusedValueKey {
-  typealias Value = TabsModel
+struct WindowKey: FocusedValueKey {
+  typealias Value = WindowModel
 }
 
 extension FocusedValues {
-  var page: PageModel? {
-    get { self[PageKey.self] }
-    set { self[PageKey.self] = newValue }
-  }
-
-  var tabs: TabsModel? {
-    get { self[TabsKey.self] }
-    set { self[TabsKey.self] = newValue }
+  var window: WindowModel? {
+    get { self[WindowKey.self] }
+    set { self[WindowKey.self] = newValue }
   }
 }

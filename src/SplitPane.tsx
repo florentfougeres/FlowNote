@@ -1,4 +1,3 @@
-import { FindBar, type FindRequest } from "./FindBar";
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { NoteEditor } from "./editor/NoteEditor";
 import { titleHeadingOf } from "./editor/titleHeading";
@@ -81,9 +80,6 @@ export const SplitPane = memo(function SplitPane({
   onToggleReading,
   git,
   notify,
-  onState,
-  find,
-  onCloseFind,
 }: {
   vault: Vault;
   path: string;
@@ -100,12 +96,11 @@ export const SplitPane = memo(function SplitPane({
   isRow: boolean;
   onOpen: (path: string, newTab: boolean) => void;
   onRenameRow: (path: string, name: string) => Promise<boolean>;
-  /** Split view controls (absent in the native shell, which shows one page per tab). */
   /** Shows this page on the left (and the left one here). */
-  onSwap?: () => void;
+  onSwap: () => void;
   /** Moves this page to a tab of its own. */
-  onSeparate?: () => void;
-  onClose?: () => void;
+  onSeparate: () => void;
+  onClose: () => void;
   /** A file was written. */
   onSaved: () => void;
   /** Receives how to write pending changes now (before the sides are swapped). */
@@ -122,11 +117,6 @@ export const SplitPane = memo(function SplitPane({
   onToggleReading: () => void;
   git: GitApi | null;
   notify: (message: string) => void;
-  /** Unsaved changes and status message, for a host that draws them itself (the native shell). */
-  onState?: (state: { dirty: boolean; status: string }) => void;
-  /** Find (and replace) in the note, asked by the host (⌘F in the native shell). */
-  find?: FindRequest | null;
-  onCloseFind?: () => void;
 }) {
   const [page, setPage] = useState<Loaded | null>(null);
   const [status, setStatus] = useState("");
@@ -190,7 +180,6 @@ export const SplitPane = memo(function SplitPane({
   }, [vault, path, save]);
 
   const dirty = page !== null && page.markdown !== page.disk;
-  useEffect(() => onState?.({ dirty, status }), [onState, dirty, status]);
   useEffect(() => {
     if (!dirty || !autosave) return;
     const timer = window.setTimeout(() => void save(), AUTOSAVE_DELAY_MS);
@@ -381,21 +370,14 @@ export const SplitPane = memo(function SplitPane({
             <ToolButton icon="more" label="Exporter, copier…" onClick={(event) => setMenu(event.currentTarget.getBoundingClientRect())} active={menu !== null} disabled={raw || !page} />
           )}
           {!openOnLeft && <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin" : mindmap ? "Voir le fichier brut de la mind map" : base ? "Voir le fichier .base" : "Mode Markdown brut"} onClick={toggleRaw} active={raw} disabled={!page} />}
-          {onSeparate && onSwap && onClose && (
-            <>
-              <span className="split-pane-divider" />
-              <ToolButton icon="open" label="Ouvrir dans son propre onglet" onClick={onSeparate} />
-              <ToolButton icon="replace" label="Échanger les côtés" onClick={onSwap} />
-              <ToolButton icon="close" label="Fermer la page de droite (⌘⌥\)" onClick={onClose} />
-            </>
-          )}
+          <span className="split-pane-divider" />
+          <ToolButton icon="open" label="Ouvrir dans son propre onglet" onClick={onSeparate} />
+          <ToolButton icon="replace" label="Échanger les côtés" onClick={onSwap} />
+          <ToolButton icon="close" label="Fermer la page de droite (⌘⌥\)" onClick={onClose} />
         </div>
       </header>
       <div className="split-pane-main">
-        <div className="split-pane-body">
-          {find && note && !raw && onCloseFind && <FindBar editor={editor} request={find} onClose={onCloseFind} />}
-          {body ?? (status ? null : <p className="split-notice">Chargement…</p>)}
-        </div>
+        <div className="split-pane-body">{body ?? (status ? null : <p className="split-notice">Chargement…</p>)}</div>
         {presentation && showSlides && !raw && !openOnLeft && <SlidesPanel editor={editor} rendered={slides} onPresent={setPresenting} onClose={() => setShowSlides(false)} />}
         {((outline && note && !raw && !openOnLeft) || (history && git && page)) && (
           <div className={history && git ? "split-outline side-column with-history" : "split-outline"}>

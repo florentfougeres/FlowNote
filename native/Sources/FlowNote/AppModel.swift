@@ -2,7 +2,8 @@ import AppKit
 import FlowNoteCore
 import Observation
 
-/// What the whole app shares: the vault, its tree, the settings, the open tabs.
+/// What the whole app shares: the vault, its tree, the recent vaults, the windows.
+/// The settings belong to the web app (its Réglages page), as in the Tauri app.
 @MainActor @Observable
 final class AppModel {
   static let shared = AppModel()
@@ -10,81 +11,59 @@ final class AppModel {
   private(set) var vault: Vault?
   private(set) var tree: [VaultEntry] = []
   private(set) var error: String?
+  /// Vaults opened lately, most recent first.
+  private(set) var recentVaults: [URL] = []
   @ObservationIgnored private var watcher: VaultWatcher?
   @ObservationIgnored private var reloadTask: Task<Void, Never>?
-  @ObservationIgnored private var pages: [WeakPage] = []
-
-  // Settings, kept in the user defaults and sent to every page.
-  var theme: String { didSet { defaults.set(theme, forKey: "theme"); applyTheme(); sendSettings() } }
-  var autosave: Bool { didSet { defaults.set(autosave, forKey: "autosave"); sendSettings() } }
-  var ticketsFolder: String { didSet { defaults.set(ticketsFolder, forKey: "ticketsFolder"); sendSettings() } }
-  var showTitles: Bool { didSet { defaults.set(showTitles, forKey: "showTitles") } }
-  /// "grammalecte", "system" (WebKit's checker) or "off".
-  var spellChecker: String { didSet { defaults.set(spellChecker, forKey: "spellChecker"); sendSettings() } }
-  /// Titles of added links read from the web.
-  var fetchTitles: Bool { didSet { defaults.set(fetchTitles, forKey: "fetchTitles"); sendSettings() } }
-  /// Size of the pages (the web view's zoom, as ⌘+ in a browser).
-  var uiScale: Double { didSet { defaults.set(uiScale, forKey: "uiScale"); for page in livePages { page.applyZoom() } } }
-  /// Columns of the tickets board (`TicketColumn` in board.ts), set from the tickets view.
-  var ticketColumns: [[String: String]] { didSet { defaults.set(ticketColumns, forKey: "ticketColumns"); sendSettings() } }
-  var readingList: String { didSet { defaults.set(readingList, forKey: "readingList"); sendSettings() } }
-
-  /// The vault is in a git repository, and its number of changed files (the badge of "Git").
-  private(set) var isGitRepo = false
-  private(set) var gitChanges = 0
-
+  @ObservationIgnored private var windows: [WeakWindow] = []
   @ObservationIgnored private let defaults = UserDefaults.standard
 
-  /// Vaults opened lately, most recent first (their folders).
-  private(set) var recentVaults: [URL] = []
-
   private init() {
-    theme = defaults.string(forKey: "theme") ?? "system"
-    autosave = defaults.object(forKey: "autosave") as? Bool ?? true
-    ticketsFolder = defaults.string(forKey: "ticketsFolder") ?? "Tickets"
-    showTitles = defaults.object(forKey: "showTitles") as? Bool ?? true
-    readingList = defaults.string(forKey: "readingList") ?? "Lectures.md"
-    spellChecker = defaults.string(forKey: "spellChecker") ?? "grammalecte"
-    fetchTitles = defaults.object(forKey: "fetchTitles") as? Bool ?? true
-    uiScale = defaults.object(forKey: "uiScale") as? Double ?? 1
-    ticketColumns = defaults.array(forKey: "ticketColumns") as? [[String: String]] ?? []
-    applyTheme()
-    recentVaults = (defaults.array(forKey: "recentVaults") as? [Data] ?? []).compactMap { data in
-      var stale = false
-      return try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale)
-    }
-    if let bookmark = defaults.data(forKey: "vaultBookmark") {
-      var stale = false
-      if let url = try? URL(resolvingBookmarkData: bookmark, bookmarkDataIsStale: &stale) { open(url) }
-    }
+    recentVaults = (defaults.array(forKey: "recentVaults") as? [Data] ?? []).compactMap(Self.resolve)
+    if let bookmark = defaults.data(forKey: "vaultBookmark"), let url = Self.resolve(bookmark) { open(url, reloadWindows: false) }
   }
 
-  /// Settings as the page reads them (`ShellSettings` in EmbedPage.tsx).
-  var shellSettings: [String: Any] { ["theme": theme, "autosave": autosave, "ticketsFolder": ticketsFolder, "readingList": readingList, "spellChecker": spellChecker, "fetchTitles": fetchTitles, "ticketColumns": ticketColumns] }
+  private static func resolve(_ bookmark: Data) -> URL? {
+    var stale = false
+    return try? URL(resolvingBookmarkData: bookmark, bookmarkDataIsStale: &stale)
+  }
 
   // MARK: Vault
 
-  func open(_ url: URL) {
+  /// Opens a vault; the windows start again on it.
+  func open(_ url: URL, reloadWindows: Bool = true) {
     let vault = Vault(root: url)
     self.vault = vault
     error = nil
-    // A bookmark finds the folder again after it is moved or renamed.
+    // Bookmarks find the folders again after they are moved or renamed.
     if let bookmark = try? url.bookmarkData() { defaults.set(bookmark, forKey: "vaultBookmark") }
     recentVaults = Array(([vault.root] + recentVaults.filter { $0.standardizedFileURL != vault.root }).prefix(8))
-    defaults.set(recentVaults.compactMap { try? $0.bookmarkData() }, forKey: "recentVaults")
+    saveRecent()
     watcher = VaultWatcher(url: vault.root) { [weak self] in self?.scheduleReload() }
     tree = []
     reload()
-    for page in livePages { page.vaultChanged() }
+    if reloadWindows { for window in liveWindows { window.restart() } }
   }
 
-  /// Takes a vault off the recent list.
+  /// Back to the welcome screen (Réglages ▸ Changer de vault).
+  func close() {
+    vault = nil
+    tree = []
+    watcher = nil
+    defaults.removeObject(forKey: "vaultBookmark")
+    for window in liveWindows { window.restart() }
+  }
+
   func forget(_ url: URL) {
-    recentVaults.removeAll { $0 == url }
+    recentVaults.removeAll { $0.standardizedFileURL == url.standardizedFileURL }
+    saveRecent()
+  }
+
+  private func saveRecent() {
     defaults.set(recentVaults.compactMap { try? $0.bookmarkData() }, forKey: "recentVaults")
   }
 
-  /// Asks for a vault folder (in iCloud Drive when asked).
+  /// Asks for a vault folder (in iCloud Drive when asked), without blocking the app.
   func chooseVault(inICloud: Bool = false) {
     let panel = NSOpenPanel()
     panel.canChooseDirectories = true
@@ -93,23 +72,25 @@ final class AppModel {
     panel.prompt = "Ouvrir"
     panel.message = "Choisissez le dossier d'un vault Obsidian."
     if inICloud { panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs") }
-    if panel.runModal() == .OK, let url = panel.url { open(url) }
+    // Opened once the menu that asked for it has closed.
+    DispatchQueue.main.async {
+      panel.begin { [weak self] response in
+        if response == .OK, let url = panel.url { self?.open(url) }
+      }
+    }
   }
 
-  /// Reads the tree again; the pages are told when it changed.
+  /// Reads the tree again; when it changed, the pages read the vault again too.
   func reload() {
     guard let vault else { return }
     Task {
       let result = await Task.detached { Result { try vault.tree() } }.value
-      let git = await Task.detached { try? Git(root: vault.root).status() }.value
       guard vault.root == self.vault?.root else { return }
-      isGitRepo = git?.isRepo == true
-      gitChanges = git?.files.count ?? 0
       switch result {
       case .success(let tree):
         if tree != self.tree {
           self.tree = tree
-          for page in livePages { page.refresh() }
+          for window in liveWindows { window.call("refresh") }
         }
       case .failure(let error):
         self.error = error.localizedDescription
@@ -126,43 +107,30 @@ final class AppModel {
     }
   }
 
-  // MARK: Tabs
+  // MARK: Windows
 
-  func register(_ page: PageModel) {
-    pages.removeAll { $0.page == nil }
-    pages.append(WeakPage(page: page))
+  func register(_ window: WindowModel) {
+    windows.removeAll { $0.window == nil }
+    windows.append(WeakWindow(window: window))
   }
 
-  var livePages: [PageModel] { pages.compactMap(\.page) }
+  var liveWindows: [WindowModel] { windows.compactMap(\.window) }
 
-  /// Pages renamed or moved: every tab follows (its page and its history).
-  func follow(_ renames: [[String]]) {
-    let map = Dictionary(renames.compactMap { $0.count == 2 ? ($0[0], $0[1]) : nil }, uniquingKeysWith: { a, _ in a })
-    for page in livePages { page.follow(map) }
-    reload()
+  /// The window's appearance follows the theme chosen in the app's settings.
+  func applyTheme(_ theme: String) {
+    NSApp.appearance = theme == "light" ? NSAppearance(named: .aqua) : theme == "dark" ? NSAppearance(named: .darkAqua) : nil
   }
 
-  /// A page or folder was deleted: the tabs showing it become empty.
-  func closePages(under path: String) {
-    for page in livePages where page.path == path || page.path?.hasPrefix("\(path)/") == true || page.path?.hasPrefix("\(Self.subpageFolder(path))/") == true {
-      page.show(nil)
-    }
-    reload()
-  }
+  // MARK: Tree
 
-  private func sendSettings() {
-    for page in livePages { page.sendSettings() }
-  }
-
-  private func applyTheme() {
-    NSApp?.appearance = theme == "light" ? NSAppearance(named: .aqua) : theme == "dark" ? NSAppearance(named: .darkAqua) : nil
-  }
-
-  /// Folder of a page's sub-pages (`subpageFolder` in links.ts): its path without the extension.
-  static func subpageFolder(_ path: String) -> String {
-    for suffix in [".excalidraw.md", ".mindmap.md", ".md", ".base"] where path.hasSuffix(suffix) { return String(path.dropLast(suffix.count)) }
-    return path
-  }
+  /// The app's views, at the top of the sidebar (pseudo-paths of App.tsx; nil is the home page).
+  static let views: [(path: String?, title: String, icon: String)] = [
+    (nil, "Accueil", "house"),
+    ("flownote:tickets", "Tickets", "ticket"),
+    ("flownote:reading", "Lectures", "bookmark"),
+    ("flownote:graph", "Graphe", "point.3.filled.connected.trianglepath.dotted"),
+    ("flownote:docs", "Documentation", "book"),
+  ]
 
   /// Every folder of the tree, for "Déplacer vers".
   var folders: [String] {
@@ -187,25 +155,8 @@ final class AppModel {
     }
     return find(tree)
   }
-
-  /// The app's views, shown in a tab like a page (ShellView.tsx).
-  static let views: [(path: String, title: String, icon: String)] = [
-    ("flownote:home", "Accueil", "house"),
-    ("flownote:tickets", "Tickets", "ticket"),
-    ("flownote:graph", "Graphe", "point.3.filled.connected.trianglepath.dotted"),
-    ("flownote:reading", "Lectures", "bookmark"),
-    ("flownote:git", "Git", "arrow.triangle.branch"),
-    ("flownote:docs", "Documentation", "book"),
-  ]
-
-  func displayName(_ entry: VaultEntry) -> String {
-    if showTitles, let title = entry.title { return title }
-    // A drawing or a mind map is named without its kind (`noteTitle` in links.ts).
-    for suffix in [".excalidraw", ".mindmap"] where entry.name.lowercased().hasSuffix(suffix) { return String(entry.name.dropLast(suffix.count)) }
-    return entry.name
-  }
 }
 
-struct WeakPage {
-  weak var page: PageModel?
+struct WeakWindow {
+  weak var window: WindowModel?
 }

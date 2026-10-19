@@ -7,8 +7,8 @@ enum WebPage {
   /// The web app: built into the bundle (`Resources/web`), or a folder given by
   /// FLOWNOTE_WEB_DIR, or Vite's dev server given by FLOWNOTE_DEV_URL.
   static var startURL: URL {
-    if let dev = ProcessInfo.processInfo.environment["FLOWNOTE_DEV_URL"], let url = URL(string: dev)?.appendingPathComponent("embed.html") { return url }
-    return URL(string: "flownote://app/embed.html")!
+    if let dev = ProcessInfo.processInfo.environment["FLOWNOTE_DEV_URL"], let url = URL(string: dev)?.appendingPathComponent("index.html") { return url }
+    return URL(string: "flownote://app/index.html")!
   }
 
   static func make(bridge: Bridge) -> WKWebView {
@@ -37,7 +37,7 @@ final class SchemeHandler: NSObject, WKURLSchemeHandler {
 
   func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
     guard let url = task.request.url else { return }
-    let relative = url.path.isEmpty || url.path == "/" ? "embed.html" : String(url.path.dropFirst())
+    let relative = url.path.isEmpty || url.path == "/" ? "index.html" : String(url.path.dropFirst())
     let file = base.appendingPathComponent(relative).standardizedFileURL
     guard file.path.hasPrefix(base.path + "/"), let data = try? Data(contentsOf: file) else {
       task.didReceive(HTTPURLResponse(url: url, statusCode: 404, httpVersion: "HTTP/1.1", headerFields: nil)!)
@@ -59,10 +59,10 @@ final class SchemeHandler: NSObject, WKURLSchemeHandler {
 /// files, and what only the shell can do (tabs, dialogs, notices).
 @MainActor
 final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKUIDelegate, WKNavigationDelegate {
-  private weak var page: PageModel?
+  private weak var window: WindowModel?
 
-  init(page: PageModel) {
-    self.page = page
+  init(window: WindowModel) {
+    self.window = window
   }
 
   private var app: AppModel { AppModel.shared }
@@ -152,18 +152,14 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKUIDelegate, WKN
     case "save_export":
       return await saveExport(args)
     case "fetch_page_title":
-      guard app.fetchTitles else { return NSNull() }
       return await WebTitle.fetch(try string(args, "url")) ?? NSNull()
     case "open_url":
       let address = try string(args, "url")
       guard WebTitle.isWebURL(address) || address.lowercased().hasPrefix("mailto:"), let url = URL(string: address) else { throw VaultError("Lien refusé : \(address)") }
       NSWorkspace.shared.open(url)
       return nil
-    case "set_ticket_columns":
-      app.ticketColumns = (args["columns"] as? [[String: Any]] ?? []).map { $0.compactMapValues { $0 as? String } }
-      return nil
     case "print":
-      page?.print(title: args["title"] as? String ?? "FlowNote")
+      window?.print(title: args["title"] as? String ?? "FlowNote")
       return nil
     case "grammar_check":
       return try await Grammar.shared.check(args["paragraphs"] as? [String] ?? [])
@@ -171,35 +167,33 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKUIDelegate, WKN
     // Shell.
     case "shell_state":
       let git = await Task.detached { [root = app.vault?.root] in root.map { (try? Git(root: $0).status())?.isRepo == true } ?? false }.value
-      return ["vaultName": app.vault?.name ?? "", "git": git, "path": page?.path ?? NSNull(), "settings": app.shellSettings] as [String: Any]
-    case "open_path":
-      let path = try string(args, "path")
-      if args["newTab"] as? Bool == true { page?.openTab(path) } else { page?.show(path) }
+      return [
+        "vaultName": app.vault?.name ?? "",
+        "git": git,
+        "recent": app.recentVaults.map(\.path),
+        "open": ProcessInfo.processInfo.environment["FLOWNOTE_OPEN"] ?? NSNull(),
+      ] as [String: Any]
+    case "shell_update":
+      window?.update(args)
       return nil
-    case "ask_name":
-      let answer = await page?.askName(try string(args, "title"), initial: args["initial"] as? String ?? "")
-      return answer?.name ?? NSNull()
-    case "new_page":
-      if let page { await SidebarActions(page: page).newPage(in: nil, kind: args["kind"] as? String ?? "note") }
-      return nil
-    case "search":
-      page?.searching = true
-      return nil
-    case "notify":
-      page?.notify(try string(args, "message"))
+    case "appearance":
+      app.applyTheme(args["theme"] as? String ?? "system")
+      window?.webView.pageZoom = args["scale"] as? Double ?? 1
       return nil
     case "toggle_sidebar":
       NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
       return nil
-    case "toolbar":
-      page?.tools = (args["items"] as? [[String: Any]] ?? []).compactMap(PageTool.init)
+    case "choose_vault":
+      app.chooseVault()
       return nil
-    case "page_status":
-      page?.dirty = args["dirty"] as? Bool ?? false
-      if let status = args["status"] as? String, !status.isEmpty { page?.notify(status) }
+    case "open_vault":
+      app.open(URL(fileURLWithPath: try string(args, "path")))
       return nil
-    case "pages_moved":
-      app.follow(args["renames"] as? [[String]] ?? [])
+    case "forget_vault":
+      app.forget(URL(fileURLWithPath: try string(args, "path")))
+      return nil
+    case "close_vault":
+      app.close()
       return nil
     default:
       throw VaultError("Commande inconnue : \(command)")
@@ -240,18 +234,17 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKUIDelegate, WKN
   /// An exported file (HTML presentation, PNG mind map): saved where the user
   /// chooses, then opened. The path, or null when cancelled.
   private func saveExport(_ args: [String: Any]) async -> Any {
-    guard let data = Data(base64Encoded: args["base64"] as? String ?? ""), let window = page?.webView.window else { return NSNull() }
+    guard let data = Data(base64Encoded: args["base64"] as? String ?? ""), let host = window?.webView.window else { return NSNull() }
     let panel = NSSavePanel()
     panel.nameFieldStringValue = args["fileName"] as? String ?? "Export"
     if let ext = args["extension"] as? String, let type = UTType(filenameExtension: ext) { panel.allowedContentTypes = [type] }
     panel.canCreateDirectories = true
-    guard await panel.beginSheetModal(for: window) == .OK, let url = panel.url else { return NSNull() }
+    guard await panel.beginSheetModal(for: host) == .OK, let url = panel.url else { return NSNull() }
     do {
       try data.write(to: url, options: .atomic)
       NSWorkspace.shared.open(url)
       return url.path
     } catch {
-      page?.notify(error.localizedDescription)
       return NSNull()
     }
   }
@@ -266,7 +259,7 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKUIDelegate, WKN
   func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
     guard let url = action.request.url else { return .cancel }
     // The app itself (built or dev server) loads; links leave for the browser.
-    if url.scheme == "flownote" || url.scheme == "blob" || url.scheme == "about" || url.host == WebPage.startURL.host && url.port == WebPage.startURL.port { return .allow }
+    if url.scheme == "flownote" || url.scheme == "blob" || url.scheme == "about" || url.scheme == "data" || url.host == WebPage.startURL.host && url.port == WebPage.startURL.port { return .allow }
     if action.navigationType == .linkActivated || action.targetFrame?.isMainFrame == true { NSWorkspace.shared.open(url) }
     return .cancel
   }

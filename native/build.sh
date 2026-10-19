@@ -1,5 +1,6 @@
 #!/bin/sh
-# Builds the native shell: native/build/FlowNote.app (Apple Silicon, signed ad hoc).
+# Builds the native shell: native/build/FlowNote Swift.app (Apple Silicon, signed ad hoc),
+# installed beside the Tauri app ("FlowNote").
 #   native/build.sh          build the web app, then the shell
 #   native/build.sh --open   …and launch it
 set -e
@@ -9,7 +10,7 @@ export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Develope
 npx vite build
 swift build -c release --package-path native --product FlowNote
 
-app=native/build/FlowNote.app
+app="native/build/FlowNote Swift.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "native/.build/release/FlowNote" "$app/Contents/MacOS/FlowNote"
@@ -24,9 +25,9 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>FlowNote</string>
-  <key>CFBundleDisplayName</key><string>FlowNote</string>
-  <key>CFBundleIdentifier</key><string>com.flownote.native</string>
+  <key>CFBundleName</key><string>FlowNote Swift</string>
+  <key>CFBundleDisplayName</key><string>FlowNote Swift</string>
+  <key>CFBundleIdentifier</key><string>com.flownote.swift</string>
   <key>CFBundleExecutable</key><string>FlowNote</string>
   <key>CFBundleIconFile</key><string>FlowNote</string>
   <key>CFBundlePackageType</key><string>APPL</string>

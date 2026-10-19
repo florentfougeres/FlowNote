@@ -1,5 +1,4 @@
-import { useContext, useId, useLayoutEffect, type ReactNode } from "react";
-import { NativeToolsContext, ToolGroupContext } from "./nativeTools";
+import type { ReactNode } from "react";
 import { keys } from "./keys";
 import { Icon, type IconName } from "./Icon";
 
@@ -23,15 +22,6 @@ export function ToolButton({
   disabled?: boolean;
   badge?: number;
 }) {
-  const native = useContext(NativeToolsContext);
-  const group = useContext(ToolGroupContext);
-  const id = useId();
-  // In the native shell, the button is drawn by the shell (in its place in the page's order).
-  useLayoutEffect(() => {
-    native?.set(id, { icon, label: keys(label), active, disabled, group: group ?? undefined, run: onClick });
-  });
-  useLayoutEffect(() => (native ? () => native.remove(id) : undefined), [native, id]);
-  if (native) return <span hidden data-native-tool={id} />;
   return (
     <button className={active ? "tool-button active" : "tool-button"} onClick={onClick} disabled={disabled} title={keys(label)} aria-label={keys(label)} aria-pressed={active}>
       <Icon name={icon} />
@@ -41,12 +31,7 @@ export function ToolButton({
 }
 
 export function ToolGroup({ children }: { children: ReactNode }) {
-  const id = useId();
-  return (
-    <ToolGroupContext.Provider value={id}>
-      <div className="tool-group">{children}</div>
-    </ToolGroupContext.Provider>
-  );
+  return <div className="tool-group">{children}</div>;
 }
 
 export function Toolbar({ left, center, right }: { left: ReactNode; center: ReactNode; right: ReactNode }) {

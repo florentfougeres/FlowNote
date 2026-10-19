@@ -4,6 +4,7 @@
 
 ## Règles
 
+- **Deux applications** : FlowNote (Tauri) et FlowNote Swift (`native/`), livrées côte à côte, deux `.dmg` par release. Chaque fonctionnalité doit marcher dans les deux. L'interface est l'app web, partagée. Une nouvelle commande Rust (`invoke`) doit avoir sa jumelle Swift (`callNative`, `native/Sources/FlowNote/WebPage.swift`). Ne jamais refaire en natif une partie de l'interface web.
 - **Répondre en français.**
 - **Fidélité des fichiers avant tout** : tout reste du texte lisible dans Obsidian et propre dans Git. Une note non modifiée est réécrite à l'octet près ; une note modifiée ne change que dans les blocs touchés. Seule exception : les emoji restent en `:shortcode:`.
 - **Ne jamais modifier `.obsidian`** : il est en lecture seule.
@@ -38,7 +39,7 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 - Types de page, un dossier chacun : `base/` (`.base`), `drawing/` (`.excalidraw.md`), `mindmap/` (`.mindmap.md`), `ticket/` (`type: ticket`), `presentation/` (`marp: true`), plus `reading/` et `graph/`.
 - `src/App.tsx` : état global, onglets, choix du type de page. Les vues hors page sont des pseudo-chemins `flownote:tickets`, `flownote:graph`, `flownote:reading`, `flownote:settings`, `flownote:docs`.
 - Styles : `src/styles/*.css`, importés depuis `src/styles.css`.
-- `native/` (branche `feature/swift-shell`) : coquille SwiftUI qui remplace Tauri. Barre latérale, onglets, réglages et fichiers natifs, pages en WKWebView (`embed.html`, `src/embed/`, `nativeVault.ts`). Construire avec `native/build.sh --open` (Xcode requis, via `DEVELOPER_DIR`). Voir `docs/sous-le-capot.md`.
+- `native/` : **FlowNote Swift**, la coquille SwiftUI (macOS 26, Liquid Glass) qui fait tourner l'app web complète. Seuls la fenêtre, la barre latérale, les onglets, les menus et les commandes système sont natifs. `App.tsx` a un mode coquille (`SHELL`, `window.flownoteShell`, `shell_update`). Construire avec `native/build.sh --open` (Xcode requis). Voir `docs/sous-le-capot.md`.
 - `docs/sous-le-capot.md` : documentation technique du dépôt (bibliothèques, moteur de fidélité, formats des pages, backend). Hors de l'app. **La mettre à jour quand une bibliothèque ou un format change.**
 
 ## Pièges connus
@@ -49,7 +50,7 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 - **Versions figées** : TanStack Table en v8 (la v9 change d'API), mind-elixir 5.15.x. Marp avec `inlineSVG: false` (WebKit dessine mal `foreignObject`).
 - **Plotly 3+** n'affiche plus les titres écrits en texte simple (`title: Ventes`) : `src/editor/plotly.ts` les convertit en `{ text }` au dessin.
 - **Dependabot `glib` (Rust)** : tiré par la pile GTK de Tauri pour Linux, jamais compilé pour macOS. Toute alerte `glib`/`gtk` se ferme comme « non utilisé » (`gh api -X PATCH …/dependabot/alerts/N -f state=dismissed -f dismissed_reason=not_used`).
-- **Coquille Swift (`native/`)** : SwiftUI a besoin d'Xcode (macros absentes des Command Line Tools) : `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`, déjà mis par `native/build.sh`. Viser macOS 26 au moins, sinon SwiftPM inscrit un SDK ancien dans le binaire et l'app perd Liquid Glass. Pas de Swift Testing ni XCTest : `swift run --package-path native vault-checks`. Un appel Tauri ajouté côté web doit avoir son équivalent natif (`callNative`, commande dans `WebPage.swift`).
+- **Coquille Swift (`native/`)** : SwiftUI a besoin d'Xcode (macros absentes des Command Line Tools) : `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`, déjà mis par `native/build.sh`. Viser macOS 26 au moins, sinon SwiftPM inscrit un SDK ancien dans le binaire et l'app perd Liquid Glass. Pas de Swift Testing ni XCTest : `swift run --package-path native vault-checks`. 
 - **Thème sombre écrit deux fois** dans `base.css` (sombre du système et sombre choisi) : garder les deux listes identiques.
 - **Format des bases** (vérifié dans le code d'Obsidian 1.14.4) :
   - types de vue natifs : `table`, `cards`, `list`, `kanban` ;

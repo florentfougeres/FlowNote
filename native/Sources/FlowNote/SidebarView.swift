@@ -2,129 +2,200 @@ import AppKit
 import FlowNoteCore
 import SwiftUI
 
-/// The vault's pages and folders, with Notion's actions in native menus.
+/// The sidebar of the Tauri app, drawn natively: the vault, the views, the
+/// favorites, the pages, then Git, the settings and the help. Every action is
+/// the web sidebar's own (names asked, links followed, as in the Tauri app).
 struct SidebarView: View {
   @Environment(AppModel.self) private var app
-  let page: PageModel
-  @State private var filter = ""
+  let window: WindowModel
 
-  private var actions: SidebarActions { SidebarActions(page: page) }
-
+  /// Selected row: the active tab's page or view ("home" for the home page).
   private var selection: Binding<String?> {
     Binding(
-      get: { page.path },
-      set: { path in
+      get: { window.activeTab.map { $0.path ?? "home" } },
+      set: { id in
+        guard let id else { return }
+        if id == "home" { window.call("select", NSNull()) }
         // A folder only opens and closes.
-        if let path, path.hasPrefix("flownote:") || app.entry(path)?.isFolder == false { page.show(path) }
+        else if id.hasPrefix("flownote:") || app.entry(id)?.isFolder == false { window.call("select", id) }
       })
   }
 
   var body: some View {
-    List(selection: selection) {
-      VaultMenu()
-        .listRowSeparator(.hidden)
-        .selectionDisabled()
-      Section {
-        ForEach(AppModel.views.filter { $0.path != "flownote:git" || app.isGitRepo }, id: \.path) { view in
-          Label(view.title, systemImage: view.icon)
-            .badge(view.path == "flownote:git" ? app.gitChanges : 0)
-            .tag(view.path)
-        }
-      }
-      Section("Pages") {
-        OutlineGroup(filtered(app.tree), children: \.folderChildren) { entry in
-          SidebarRow(entry: entry)
-            .draggable(entry.path)
-            .dropDestination(for: String.self) { paths, _ in
-              guard entry.isFolder else { return false }
-              Task { for path in paths where path != entry.path { await actions.move(path, to: entry.path) } }
-              return true
-            }
-        }
-      }
-    }
-    .listStyle(.sidebar)
-    .searchable(text: $filter, placement: .sidebar, prompt: "Rechercher une page")
-    .contextMenu(forSelectionType: String.self) { paths in
-      if let path = paths.first, let entry = app.entry(path) { menu(for: entry) } else { rootMenu }
-    } primaryAction: { paths in
-      if let path = paths.first, app.entry(path)?.isFolder == false { page.openTab(path) }
-    }
-    .toolbar {
-      ToolbarItem {
-        Button { page.searching = true } label: { Label("Rechercher", systemImage: "magnifyingglass") }
-          .help("Aller à une page, chercher dans les notes (⌘P)")
-      }
-      ToolbarItem {
-        Button { Task { await actions.newPage(in: nil) } } label: { Label("Nouvelle page", systemImage: "square.and.pencil") }
+    VStack(spacing: 0) {
+      HStack {
+        VaultMenu(window: window)
+        Spacer()
+        Button { window.call("newPage") } label: { Image(systemName: "square.and.pencil") }
+          .buttonStyle(.borderless)
           .help("Nouvelle page (⌘N)")
       }
+      .padding(.horizontal, 14)
+      .padding(.vertical, 6)
+      // The views, flush with the vault's name (a list would indent them).
+      VStack(alignment: .leading, spacing: 2) {
+        ForEach(AppModel.views, id: \.title) { view in
+          BottomRow(title: view.title, icon: view.icon, active: window.activeTab.map { $0.path == view.path } ?? false) { window.call("select", view.path ?? NSNull()) }
+            .background(MiddleClick { window.call("select", view.path ?? NSNull(), true) })
+        }
+        BottomRow(title: "Rechercher", icon: "magnifyingglass") { window.call("search") }
+          .help("Rechercher une page (⌘P)")
+        BottomRow(title: "Rechercher dans les notes", icon: "text.magnifyingglass") { window.call("vaultSearch") }
+          .help("Rechercher dans les notes (⌘⇧F)")
+      }
+      .padding(.horizontal, 8)
+      list
+      VStack(alignment: .leading, spacing: 2) {
+        if let changes = window.gitChanges {
+          BottomRow(title: "Git", icon: "arrow.triangle.branch", active: window.gitOpen, badge: changes) { window.call("git") }
+            .help("Git (⌘⇧G)")
+        }
+        BottomRow(title: "Réglages", icon: "gearshape", active: window.activeTab?.path == "flownote:settings") { window.call("settings") }
+          .help("Réglages (⌘,)")
+        BottomRow(title: "Aide et raccourcis", icon: "questionmark.circle") { window.call("help") }
+          .help("Aide et raccourcis (⌘/)")
+      }
+      .padding(8)
     }
     .overlay {
       if let error = app.error { ContentUnavailableView("Vault illisible", systemImage: "exclamationmark.triangle", description: Text(error)) }
     }
   }
 
-  @ViewBuilder private var rootMenu: some View {
-    Button("Nouvelle page…") { Task { await actions.newPage(in: nil) } }
-    Button("Nouveau dossier…") { Task { await actions.newFolder(in: "") } }
+  private var list: some View {
+    List(selection: selection) {
+      if !window.favorites.isEmpty {
+        Section("Favoris") {
+          ForEach(window.favorites, id: \.self) { path in
+            if let entry = app.entry(path) { row(entry) }
+          }
+        }
+      }
+      Section("Pages") {
+        OutlineGroup(app.tree, children: \.folderChildren) { entry in row(entry) }
+      }
+    }
+    .listStyle(.sidebar)
+    .contextMenu(forSelectionType: String.self) { ids in
+      if let id = ids.first, let entry = app.entry(id) { menu(for: entry) } else if ids.isEmpty { rootMenu }
+    } primaryAction: { ids in
+      if let id = ids.first, app.entry(id)?.isFolder == false { window.call("select", id, true) }
+    }
   }
 
+  private func row(_ entry: VaultEntry) -> some View {
+    SidebarRow(entry: entry, title: window.title(of: entry))
+      .tag(entry.path)
+      .background(MiddleClick { if !entry.isFolder { window.call("select", entry.path, true) } })
+      .draggable(entry.path)
+      .dropDestination(for: String.self) { paths, _ in
+        guard entry.isFolder else { return false }
+        for path in paths where path != entry.path {
+          window.sidebar("onMove", ["path": path, "folder": app.entry(path)?.isFolder ?? false], entry.path)
+        }
+        return true
+      }
+  }
+
+  @ViewBuilder private var rootMenu: some View {
+    Button("Nouvelle page") { window.sidebar("onNewPageInFolder", "") }
+    Button("Nouveau dossier") { window.sidebar("onNewFolder", "") }
+  }
+
+  /// The menus of the Tauri sidebar (Sidebar.tsx).
   @ViewBuilder private func menu(for entry: VaultEntry) -> some View {
     if entry.isFolder {
-      Button("Nouvelle page dans ce dossier…") { Task { await actions.newPage(in: entry.path) } }
-      Button("Nouveau dossier…") { Task { await actions.newFolder(in: entry.path) } }
+      Button("Nouvelle page dans ce dossier") { window.sidebar("onNewPageInFolder", entry.path) }
+      Button("Nouveau sous-dossier") { window.sidebar("onNewFolder", entry.path) }
+      Button("Afficher dans le Finder") { window.sidebar("onReveal", entry.path) }
+      Divider()
+      Button("Renommer") { window.sidebar("onRenameFolder", entry.path) }
+      moveMenu(entry)
+      Button("Supprimer", role: .destructive) { window.sidebar("onDeleteFolder", entry.path) }
     } else {
-      Button("Ouvrir dans un nouvel onglet") { page.openTab(entry.path) }
-      Button("Nouvelle sous-page…") { Task { await actions.newSubpage(of: entry.path) } }
+      Button("Ouvrir dans un nouvel onglet") { window.call("select", entry.path, true) }
+      Button("Ouvrir à droite") { window.sidebar("onOpenRight", entry.path) }
+      Button("Ajouter une sous-page") { window.sidebar("onNewPage", entry.path) }
+      Button("Copier le lien") { window.sidebar("onCopyLink", entry.path) }
+      if entry.ticket != true && !entry.path.hasSuffix(".base") { Button("Dupliquer") { window.sidebar("onDuplicate", entry.path) } }
+      Button("Afficher dans le Finder") { window.sidebar("onReveal", entry.path) }
+      Divider()
+      Button("Renommer") { window.sidebar("onRename", entry.path) }
+      moveMenu(entry)
+      Button("Supprimer", role: .destructive) { window.sidebar("onDelete", entry.path) }
     }
-    Divider()
-    Button("Renommer…") { Task { await actions.rename(entry) } }
-    Menu("Déplacer vers") {
-      Button("Racine du vault") { Task { await actions.move(entry.path, to: "") } }
-      ForEach(app.folders.filter { $0 != entry.path && !$0.hasPrefix("\(entry.path)/") }, id: \.self) { folder in
-        Button(folder) { Task { await actions.move(entry.path, to: folder) } }
-      }
-    }
-    Button("Afficher dans le Finder") { actions.reveal(entry.path) }
-    Divider()
-    Button("Supprimer…", role: .destructive) { Task { await actions.delete(entry) } }
   }
 
-  /// The tree limited to the pages matching the search (and the folders holding them).
-  private func filtered(_ entries: [VaultEntry]) -> [VaultEntry] {
-    let query = filter.trimmingCharacters(in: .whitespaces)
-    guard !query.isEmpty else { return entries }
-    return entries.compactMap { entry in
-      if entry.isFolder {
-        let children = filtered(entry.children ?? [])
-        return children.isEmpty ? nil : VaultEntry(path: entry.path, name: entry.name, kind: entry.kind, children: children)
+  private func moveMenu(_ entry: VaultEntry) -> some View {
+    Menu("Déplacer vers") {
+      Button("Racine du vault") { window.sidebar("onMove", ["path": entry.path, "folder": entry.isFolder], "") }
+      ForEach(app.folders.filter { $0 != entry.path && !$0.hasPrefix("\(entry.path)/") }, id: \.self) { folder in
+        Button(folder) { window.sidebar("onMove", ["path": entry.path, "folder": entry.isFolder], folder) }
       }
-      return app.displayName(entry).localizedStandardContains(query) || entry.name.localizedStandardContains(query) ? entry : nil
     }
+  }
+}
+
+/// A row of the sidebar's views: a grey icon, as in the Tauri app.
+struct NavLabel: View {
+  let title: String
+  let icon: String
+
+  var body: some View {
+    Label {
+      Text(title)
+    } icon: {
+      Image(systemName: icon).foregroundStyle(.secondary)
+    }
+  }
+}
+
+/// Git, Réglages, Aide: the rows at the bottom of the sidebar.
+struct BottomRow: View {
+  let title: String
+  let icon: String
+  var active = false
+  var badge: Int?
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      HStack {
+        NavLabel(title: title, icon: icon)
+        Spacer()
+        if let badge, badge > 0 {
+          Text("\(badge)").font(.caption2.weight(.semibold)).padding(.horizontal, 6).padding(.vertical, 1).background(.tint, in: Capsule()).foregroundStyle(.white)
+        }
+      }
+      .padding(.horizontal, 8)
+      .padding(.vertical, 5)
+      .background(active ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear), in: RoundedRectangle(cornerRadius: 6))
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
   }
 }
 
 /// The open vault, like Notion's workspace switcher: the recent vaults, another one.
 struct VaultMenu: View {
   @Environment(AppModel.self) private var app
+  let window: WindowModel
 
   var body: some View {
     Menu {
       Section("Vaults récents") {
         ForEach(app.recentVaults, id: \.self) { url in
-          Button {
-            app.open(url)
-          } label: {
+          Button { app.open(url) } label: {
             Label(url.lastPathComponent, systemImage: url.path.contains("/Mobile Documents/") ? "icloud" : "folder")
           }
           .disabled(url == app.vault?.root)
         }
       }
       Divider()
-      Button("Ouvrir un vault…") { app.chooseVault() }
+      Button("Ouvrir un autre vault…") { app.chooseVault() }
       Button("Ouvrir un vault dans iCloud Drive…") { app.chooseVault(inICloud: true) }
-      Button("Afficher dans le Finder") { if let root = app.vault?.root { NSWorkspace.shared.activateFileViewerSelecting([root]) } }
+      Button("Changer de vault…") { app.close() }
+      Button("Réglages") { window.call("settings") }
     } label: {
       HStack(spacing: 8) {
         Image(systemName: app.vault?.inICloud == true ? "icloud" : "books.vertical")
@@ -135,17 +206,18 @@ struct VaultMenu: View {
     }
     .menuStyle(.button)
     .buttonStyle(.plain)
+    .fixedSize()
     .help("Changer de vault")
   }
 }
 
 struct SidebarRow: View {
-  @Environment(AppModel.self) private var app
   let entry: VaultEntry
+  let title: String
 
   var body: some View {
     Label {
-      Text(app.displayName(entry)).lineLimit(1)
+      Text(title).lineLimit(1)
     } icon: {
       if let icon = entry.icon { Text(icon) } else { Image(systemName: symbol).foregroundStyle(.secondary) }
     }
@@ -162,67 +234,5 @@ struct SidebarRow: View {
     if entry.ticket == true { return "ticket" }
     if entry.presentation == true { return "play.rectangle" }
     return "doc.text"
-  }
-}
-
-/// The sidebar's actions: names asked natively, the work done by the page
-/// (pageOps.ts) so that links, bases and sub-pages follow.
-@MainActor
-struct SidebarActions {
-  let page: PageModel
-  private var app: AppModel { AppModel.shared }
-
-  func newPage(in folder: String?, kind: String = "note") async {
-    guard let answer = await page.askName(folder.map { "Nouvelle page dans « \(($0 as NSString).lastPathComponent) »" } ?? "Nouvelle page", initial: "Sans titre", kinds: true, kind: kind) else { return }
-    await create(answer, folder: folder ?? "", parent: nil)
-  }
-
-  func newSubpage(of parent: String) async {
-    guard let answer = await page.askName("Nouvelle sous-page", initial: "Sans titre", kinds: true) else { return }
-    await create(answer, folder: AppModel.subpageFolder(parent), parent: parent)
-  }
-
-  private func create(_ answer: (name: String, kind: String), folder: String, parent: String?) async {
-    let result = await page.run(["op": "newPage", "kind": answer.kind, "name": answer.name, "folder": folder, "parent": parent ?? NSNull()])
-    app.reload()
-    if let path = result.path { page.show(path) }
-  }
-
-  func newFolder(in parent: String) async {
-    guard let answer = await page.askName("Nouveau dossier", initial: "Sans titre"), let vault = app.vault else { return }
-    do {
-      try vault.createFolder(parent.isEmpty ? answer.name : "\(parent)/\(answer.name)")
-      app.reload()
-    } catch {
-      page.notify(error.localizedDescription)
-    }
-  }
-
-  func rename(_ entry: VaultEntry) async {
-    guard let answer = await page.askName(entry.isFolder ? "Renommer le dossier" : "Renommer la page", initial: entry.name), answer.name != entry.name else { return }
-    let result = await page.run(entry.isFolder ? ["op": "renameFolder", "folder": entry.path, "title": answer.name] : ["op": "rename", "path": entry.path, "title": answer.name])
-    app.follow(result.renamed)
-  }
-
-  func move(_ path: String, to folder: String) async {
-    guard let entry = app.entry(path), (path as NSString).deletingLastPathComponent != folder else { return }
-    let result = await page.run(["op": "move", "path": path, "folder": folder, "isFolder": entry.isFolder])
-    app.follow(result.renamed)
-  }
-
-  func reveal(_ path: String) {
-    if let url = try? app.vault?.resolve(path) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
-  }
-
-  func delete(_ entry: VaultEntry) async {
-    let alert = NSAlert()
-    alert.messageText = entry.isFolder ? "Supprimer le dossier « \(entry.name) » et son contenu ?" : "Supprimer « \(app.displayName(entry)) » ?"
-    alert.informativeText = entry.isFolder ? "Il ira dans la corbeille." : "Elle ira dans la corbeille, avec ses sous-pages."
-    alert.addButton(withTitle: "Supprimer").hasDestructiveAction = true
-    alert.addButton(withTitle: "Annuler")
-    let answer = if let window = page.webView.window { await alert.beginSheetModal(for: window) } else { alert.runModal() }
-    guard answer == .alertFirstButtonReturn else { return }
-    _ = await page.run(entry.isFolder ? ["op": "deleteFolder", "folder": entry.path] : ["op": "delete", "path": entry.path])
-    app.closePages(under: entry.path)
   }
 }
