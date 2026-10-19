@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Icon } from "../Icon";
-import { applyModel, csvToData, parsePlot, PLOT_KINDS, toModel, type PlotModel } from "./plotModel";
+import { applyModel, csvToData, hasAxes, isPieKind, parsePlot, PLOT_KINDS, toModel, type PlotModel } from "./plotModel";
 
 interface Props {
   source: string;
@@ -69,7 +69,8 @@ function PlotEditor({ source, onChange, onEditText, onClose }: Props) {
     emitted.current = text;
     onChange(text);
   };
-  const pie = model.kind === "pie";
+  const pie = isPieKind(model.kind);
+  const axes = hasAxes(model.kind);
   const setValue = (row: number, column: number, value: number | null) =>
     change({ ...model, series: model.series.map((s, j) => (j === column ? { ...s, values: s.values.map((v, i) => (i === row ? value : v)) } : s)) });
   const addRow = () => change({ ...model, labels: [...model.labels, String(model.labels.length + 1)], series: model.series.map((s) => ({ ...s, values: [...s.values, null] })) });
@@ -99,8 +100,8 @@ function PlotEditor({ source, onChange, onEditText, onClose }: Props) {
               role="radio"
               aria-checked={model.kind === kind}
               className={model.kind === kind ? "selected" : ""}
-              // A pie has one series: the first one is kept.
-              onClick={() => change({ ...model, kind, series: kind === "pie" ? model.series.slice(0, 1) : model.series })}
+              // A pie or a donut has one series: the first one is kept.
+              onClick={() => change({ ...model, kind, series: isPieKind(kind) ? model.series.slice(0, 1) : model.series })}
             >
               {label}
             </button>
@@ -116,7 +117,7 @@ function PlotEditor({ source, onChange, onEditText, onClose }: Props) {
           Titre
           <input defaultValue={model.title} placeholder="Sans titre" onChange={(e) => change({ ...model, title: e.target.value })} />
         </label>
-        {!pie && (
+        {axes && (
           <>
             <label>
               Axe horizontal
@@ -134,7 +135,7 @@ function PlotEditor({ source, onChange, onEditText, onClose }: Props) {
         <table className="plot-editor-table">
           <thead>
             <tr>
-              <th>{pie ? "Part" : "Abscisse"}</th>
+              <th>{pie ? "Part" : model.kind === "radar" ? "Axe" : model.kind === "hbars" ? "Catégorie" : "Abscisse"}</th>
               {model.series.map((s, j) => (
                 <th key={j}>
                   <div className="plot-editor-series">

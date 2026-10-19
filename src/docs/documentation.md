@@ -180,7 +180,7 @@ statut: en cours
 - **Tableaux** : poignées de lignes et de colonnes pour insérer, déplacer, aligner ou supprimer. `Tab` passe à la cellule suivante, `↵` à celle du dessous.
 - **Code** : coloration syntaxique, langage choisi en haut du bloc ; `⌘↵` ou trois `↵` en sortent.
 - **Mermaid** : un bloc ```` ```mermaid ```` devient un diagramme.
-- **Graphiques Plotly** (`/graphique`) : au format du plugin obsidian-plotly, avec un éditeur visuel (type, titres, valeurs, import d'un CSV).
+- **Graphiques Plotly** (`/graphique`) : au format du plugin obsidian-plotly, avec un éditeur visuel (type, titres, valeurs, import d'un CSV). L'éditeur visuel propose lignes, barres (verticales, horizontales, empilées), aire, points, camembert, anneau et radar ; tous les autres types de Plotly (heatmap, 3D, sankey…) s'affichent aussi et s'écrivent en texte.
 - **Maths** : `$…$` en ligne, `$$…$$` en bloc.
 - **Sommaire** : un paragraphe `[TOC]` affiche les titres de la note, cliquables (comme en haut de cette page).
 

@@ -32,7 +32,7 @@ export function parsePlot(source: string): { spec: PlotSpec; format: PlotFormat 
   return { spec: value as unknown as PlotSpec, format };
 }
 
-export type PlotKind = "lines" | "bars" | "points" | "area" | "pie";
+export type PlotKind = "lines" | "bars" | "hbars" | "stacked" | "points" | "area" | "pie" | "donut" | "radar";
 
 export interface PlotModel {
   kind: PlotKind;
@@ -48,10 +48,27 @@ export interface PlotModel {
 export const PLOT_KINDS: [PlotKind, string][] = [
   ["lines", "Lignes"],
   ["bars", "Barres"],
+  ["hbars", "Horizontales"],
+  ["stacked", "Empilées"],
   ["area", "Aire"],
   ["points", "Points"],
   ["pie", "Camembert"],
+  ["donut", "Anneau"],
+  ["radar", "Radar"],
 ];
+
+/** A pie or a donut: one series, no axes. */
+export const isPieKind = (kind: PlotKind) => kind === "pie" || kind === "donut";
+/** Kinds drawn without x and y axes. */
+export const hasAxes = (kind: PlotKind) => !isPieKind(kind) && kind !== "radar";
+
+/** Where a kind keeps its row labels and its values in a Plotly trace. */
+function keysOf(kind: PlotKind): { labels: string; values: string } {
+  if (isPieKind(kind)) return { labels: "labels", values: "values" };
+  if (kind === "radar") return { labels: "theta", values: "r" };
+  if (kind === "hbars") return { labels: "y", values: "x" };
+  return { labels: "x", values: "y" };
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const isValue = (value: unknown): value is number | null => value === null || typeof value === "number";
@@ -65,10 +82,11 @@ function titleOf(value: unknown): string | null {
   return null;
 }
 
-function kindOf(trace: Record<string, unknown>): PlotKind | null {
+function kindOf(trace: Record<string, unknown>, layout: Record<string, unknown>): PlotKind | null {
   const type = trace.type ?? "scatter";
-  if (type === "pie") return "pie";
-  if (type === "bar") return "bars";
+  if (type === "pie") return typeof trace.hole === "number" && trace.hole > 0 ? "donut" : "pie";
+  if (type === "scatterpolar") return trace.fill === undefined || trace.fill === "toself" ? "radar" : null;
+  if (type === "bar") return trace.orientation === "h" ? "hbars" : layout.barmode === "stack" ? "stacked" : "bars";
   if (type !== "scatter") return null;
   if (trace.fill === "tozeroy" || trace.fill === "tonexty") return "area";
   return trace.mode === "markers" ? "points" : "lines";
@@ -82,34 +100,29 @@ export function toModel(spec: PlotSpec): PlotModel | null {
   const yTitle = titleOf(isRecord(layout.yaxis) ? layout.yaxis.title : undefined);
   if (title === null || xTitle === null || yTitle === null || spec.data.length === 0) return null;
 
-  const kinds = spec.data.map(kindOf);
+  const kinds = spec.data.map((trace) => kindOf(trace, layout));
   const kind = kinds[0];
   if (kind === null || kinds.some((k) => k !== kind)) return null;
+  if (isPieKind(kind) && spec.data.length !== 1) return null;
 
-  if (kind === "pie") {
-    const [trace] = spec.data;
-    if (spec.data.length !== 1 || !Array.isArray(trace.labels) || !Array.isArray(trace.values)) return null;
-    if (!trace.labels.every(isLabel) || !trace.values.every(isValue) || trace.labels.length !== trace.values.length) return null;
-    return { kind, title, xTitle, yTitle, labels: trace.labels.map(String), series: [{ name: typeof trace.name === "string" ? trace.name : "", values: trace.values }] };
-  }
-
-  const ys = spec.data.map((t) => t.y);
-  if (!ys.every((y): y is (number | null)[] => Array.isArray(y) && y.every(isValue))) return null;
-  // Every series shares the x values (or has none: rows are numbered).
-  const xs = spec.data.map((t) => t.x);
-  const x = xs[0];
-  if (x !== undefined && (!Array.isArray(x) || !x.every(isLabel))) return null;
-  if (xs.some((other) => JSON.stringify(other) !== JSON.stringify(x))) return null;
-  const rows = Math.max(...ys.map((y) => y.length), x?.length ?? 0);
-  const labels = x ? x.map(String) : Array.from({ length: rows }, (_, i) => String(i));
-  if (ys.some((y) => y.length !== labels.length)) return null;
+  const keys = keysOf(kind);
+  const columns = spec.data.map((t) => t[keys.values]);
+  if (!columns.every((v): v is (number | null)[] => Array.isArray(v) && v.every(isValue))) return null;
+  // Every series shares the labels (x values may be left out: rows are then numbered).
+  const all = spec.data.map((t) => t[keys.labels]);
+  const shared = all[0];
+  if (shared === undefined ? keys.labels !== "x" : !Array.isArray(shared) || !shared.every(isLabel)) return null;
+  const sharedLabels = shared as (string | number)[] | undefined;
+  if (all.some((other) => JSON.stringify(other) !== JSON.stringify(shared))) return null;
+  const labels = sharedLabels ? sharedLabels.map(String) : Array.from({ length: Math.max(...columns.map((v) => v.length)) }, (_, i) => String(i));
+  if (columns.some((v) => v.length !== labels.length)) return null;
   return {
     kind,
     title,
     xTitle,
     yTitle,
     labels,
-    series: spec.data.map((t, i) => ({ name: typeof t.name === "string" ? t.name : "", values: ys[i] })),
+    series: spec.data.map((t, i) => ({ name: typeof t.name === "string" ? t.name : "", values: columns[i] })),
   };
 }
 
@@ -123,16 +136,23 @@ function labelValues(labels: string[]): (string | number)[] {
 function traceFor(model: PlotModel, i: number, before: Record<string, unknown> = {}): Record<string, unknown> {
   const trace = { ...before };
   const series = model.series[i];
-  for (const key of ["x", "y", "labels", "values", "mode", "fill", "type"]) delete trace[key];
-  if (model.kind === "pie") Object.assign(trace, { labels: model.labels, values: series.values, type: "pie" });
-  else {
-    Object.assign(trace, { x: labelValues(model.labels), y: series.values });
-    if (model.kind === "bars") trace.type = "bar";
-    else {
-      trace.type = "scatter";
-      trace.mode = model.kind === "points" ? "markers" : "lines";
-      if (model.kind === "area") trace.fill = i === 0 ? "tozeroy" : "tonexty";
-    }
+  const { kind } = model;
+  for (const key of ["x", "y", "labels", "values", "r", "theta", "mode", "fill", "type", "orientation", "hole"]) delete trace[key];
+  const keys = keysOf(kind);
+  trace[keys.labels] = keys.labels === "x" || keys.labels === "y" ? labelValues(model.labels) : model.labels;
+  trace[keys.values] = series.values;
+  if (isPieKind(kind)) {
+    trace.type = "pie";
+    // A donut keeps the hole it had.
+    if (kind === "donut") trace.hole = typeof before.hole === "number" && before.hole > 0 ? before.hole : 0.5;
+  } else if (kind === "radar") Object.assign(trace, { type: "scatterpolar", fill: "toself" });
+  else if (kind === "bars" || kind === "stacked" || kind === "hbars") {
+    trace.type = "bar";
+    if (kind === "hbars") trace.orientation = "h";
+  } else {
+    trace.type = "scatter";
+    trace.mode = kind === "points" ? "markers" : "lines";
+    if (kind === "area") trace.fill = i === 0 ? "tozeroy" : "tonexty";
   }
   if (series.name) trace.name = series.name;
   else delete trace.name;
@@ -154,8 +174,10 @@ export function applyModel(source: string, model: PlotModel): string {
   const yaxis = isRecord(layout.yaxis) ? layout.yaxis : {};
   const titles: [string[], unknown][] = [
     [["title"], withTitle(layout.title, model.title)],
-    [["xaxis", "title"], withTitle(xaxis.title, model.kind === "pie" ? "" : model.xTitle)],
-    [["yaxis", "title"], withTitle(yaxis.title, model.kind === "pie" ? "" : model.yTitle)],
+    [["xaxis", "title"], withTitle(xaxis.title, hasAxes(model.kind) ? model.xTitle : "")],
+    [["yaxis", "title"], withTitle(yaxis.title, hasAxes(model.kind) ? model.yTitle : "")],
+    // Stacked bars are a layout setting; another kind drops it.
+    [["barmode"], model.kind === "stacked" ? "stack" : layout.barmode === "stack" ? undefined : layout.barmode],
   ];
 
   if (format === "json") {

@@ -129,7 +129,7 @@ Tout ce qui relève de l'affichage passe par des **décorations** ProseMirror, j
 
 - **Code** : lowlight (le moteur de highlight.js, langages courants) calcule des décorations, mises en cache par nœud.
 - **Mermaid** : rendu au thème de l'app, avec `securityLevel: "strict"`. Le fichier garde un simple bloc de code.
-- **Plotly** : blocs ```` ```plotly ```` en YAML ou JSON, au format du plugin [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly). Seules des données statiques sont dessinées, aucun JavaScript n'est exécuté. Plotly 3+ n'affichant plus les titres en texte simple, `plotly.ts` les convertit en `{ text }` au dessin. `PlotEditor.tsx` et `plotModel.ts` forment l'éditeur visuel.
+- **Plotly** : blocs ```` ```plotly ```` en YAML ou JSON, au format du plugin [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly). Seules des données statiques sont dessinées, aucun JavaScript n'est exécuté. Plotly 3+ n'affichant plus les titres en texte simple, `plotly.ts` les convertit en `{ text }` au dessin. `PlotEditor.tsx` et `plotModel.ts` forment l'éditeur visuel : un modèle « étiquettes + séries » pour les types qui y tiennent (`keysOf` dit où chacun range étiquettes et valeurs : `x`/`y`, `labels`/`values`, `theta`/`r`) ; les autres s'éditent en texte.
 - **Maths** : reconnues par `remark-math`.
 
 ## Les types de page

@@ -83,6 +83,28 @@ describe("plotly blocks", () => {
     expect(parsePlot(pie).spec.data).toEqual([{ labels: ["Jan", "Fév", "Mar", "Avr", "Mai"], values: [12, 18, 15, 22, 26], type: "pie", name: "Série 1" }]);
     expect(model(applyModel(pie, { ...model(pie)!, kind: "area" }))?.kind).toBe("area");
   });
+
+  it("reads and writes radars, horizontal and stacked bars, donuts", () => {
+    const radar = "data:\n  - type: scatterpolar\n    r: [4, 3, 5]\n    theta: [Vitesse, Confort, Prix]\n    fill: toself\n    name: A\n";
+    expect(model(radar)).toMatchObject({ kind: "radar", labels: ["Vitesse", "Confort", "Prix"], series: [{ name: "A", values: [4, 3, 5] }] });
+    expect(model("data:\n  - type: bar\n    orientation: h\n    x: [3, 4]\n    y: [A, B]\n")).toMatchObject({ kind: "hbars", labels: ["A", "B"], series: [{ values: [3, 4] }] });
+    expect(model("data:\n  - type: bar\n    x: [A]\n    y: [1]\nlayout:\n  barmode: stack\n")?.kind).toBe("stacked");
+    expect(model("data:\n  - type: pie\n    hole: 0.4\n    labels: [A]\n    values: [1]\n")?.kind).toBe("donut");
+
+    const base = model(PLOT_TEMPLATE)!;
+    const asRadar = parsePlot(applyModel(PLOT_TEMPLATE, { ...base, kind: "radar" })).spec;
+    expect(asRadar.data[0]).toMatchObject({ type: "scatterpolar", fill: "toself", theta: base.labels, r: base.series[0].values });
+    expect(asRadar.data[0].x).toBeUndefined();
+    const asHbars = parsePlot(applyModel(PLOT_TEMPLATE, { ...base, kind: "hbars" })).spec;
+    expect(asHbars.data[0]).toMatchObject({ type: "bar", orientation: "h", y: base.labels, x: base.series[0].values });
+    const stacked = applyModel(PLOT_TEMPLATE, { ...base, kind: "stacked" });
+    expect(parsePlot(stacked).spec.layout?.barmode).toBe("stack");
+    // Back to plain bars: the stacking goes, the donut's hole too.
+    expect(parsePlot(applyModel(stacked, { ...model(stacked)!, kind: "bars" })).spec.layout?.barmode).toBeUndefined();
+    const donut = applyModel(PLOT_TEMPLATE, { ...base, kind: "donut" });
+    expect(parsePlot(donut).spec.data[0].hole).toBe(0.5);
+    expect(parsePlot(applyModel(donut, { ...model(donut)!, kind: "pie" })).spec.data[0].hole).toBeUndefined();
+  });
 });
 
 describe("csvToData", () => {

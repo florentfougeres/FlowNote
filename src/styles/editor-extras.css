@@ -237,9 +237,15 @@
 
 .plot-editor-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+}
+
+/* Nine kinds: on a narrow page they go on two lines rather than overflowing. */
+.plot-editor-header .segmented {
+  flex-wrap: wrap;
+  row-gap: 2px;
 }
 
 .plot-editor-close {
