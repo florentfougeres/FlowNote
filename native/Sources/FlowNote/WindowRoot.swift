@@ -52,22 +52,33 @@ struct WindowRoot: View {
   }
 }
 
-/// The app's tabs, in the toolbar, like Safari's: they share the width; right click for the tab menu.
+/// The app's tabs, in the toolbar, like Safari's compact tab bar: one grey
+/// rounded track, tabs sharing its width with thin separators, the active one
+/// a white capsule. Right click for the tab menu.
 struct TabStrip: View {
   let window: WindowModel
   let width: CGFloat
 
   var body: some View {
-    HStack(spacing: 2) {
-      ForEach(window.tabs) { tab in
-        TabChip(tab: tab, active: tab.id == window.active, dirty: tab.id == window.active && window.dirty, closable: window.tabs.count > 1) {
-          window.call("switchTab", tab.id)
-        } close: {
-          window.call("closeTab", tab.id)
+    HStack(spacing: 6) {
+      HStack(spacing: 0) {
+        ForEach(Array(window.tabs.enumerated()), id: \.element.id) { index, tab in
+          // A separator between two tabs that are not the active one.
+          if index > 0 {
+            let near = tab.id == window.active || window.tabs[index - 1].id == window.active
+            Rectangle().fill(.separator).frame(width: 1, height: 16).opacity(near ? 0 : 1)
+          }
+          TabChip(tab: tab, active: tab.id == window.active, dirty: tab.id == window.active && window.dirty, closable: window.tabs.count > 1) {
+            window.call("switchTab", tab.id)
+          } close: {
+            window.call("closeTab", tab.id)
+          }
+          .contextMenu { menu(for: tab) }
         }
-        .contextMenu { menu(for: tab) }
       }
-      Button { window.call("newTab") } label: { Image(systemName: "plus").frame(width: 28, height: 28) }
+      .padding(2)
+      .background(Capsule().fill(Color.primary.opacity(0.07)))
+      Button { window.call("newTab") } label: { Image(systemName: "plus").frame(width: 26, height: 26) }
         .buttonStyle(.borderless)
         .help("Nouvel onglet (⌘T)")
     }
@@ -100,33 +111,49 @@ struct TabChip: View {
   let close: () -> Void
   @State private var hovered = false
 
+  /// The page's kind, as the sidebar shows it.
+  private var icon: String {
+    guard let path = tab.path?.lowercased() else { return "house" }
+    if let view = AppModel.views.first(where: { $0.path == tab.path }) { return view.icon }
+    if path == "flownote:settings" { return "gearshape" }
+    if path.hasSuffix(".base") { return "tablecells" }
+    if path.hasSuffix(".excalidraw.md") { return "scribble" }
+    if path.hasSuffix(".mindmap.md") { return "point.3.connected.trianglepath.dotted" }
+    return "doc.text"
+  }
+
   var body: some View {
-    HStack(spacing: 6) {
+    ZStack {
+      HStack(spacing: 5) {
+        Image(systemName: icon).font(.system(size: 11)).foregroundStyle(.secondary)
+        Text(tab.splitTitle.map { "\(tab.title) | \($0)" } ?? tab.title)
+          .font(.system(size: 12.5))
+          .foregroundStyle(active ? .primary : .secondary)
+          .lineLimit(1)
+          .truncationMode(.tail)
+        if dirty { Circle().fill(.secondary).frame(width: 5, height: 5) }
+      }
+      .padding(.horizontal, 26)
       // Close on the left, under the pointer (like Safari).
-      Button(action: close) { Image(systemName: "xmark").font(.system(size: 9, weight: .semibold)) }
-        .buttonStyle(.borderless)
-        .opacity(closable && hovered ? 1 : 0)
-        .disabled(!closable)
-        .help("Fermer l'onglet (⌘W)")
-      Spacer(minLength: 0)
-      Text(tab.splitTitle.map { "\(tab.title) | \($0)" } ?? tab.title)
-        .font(.system(size: 12, weight: active ? .medium : .regular))
-        .foregroundStyle(active ? .primary : .secondary)
-        .lineLimit(1)
-        .truncationMode(.tail)
-      if dirty { Circle().fill(.secondary).frame(width: 5, height: 5) }
-      Spacer(minLength: 0)
-      Color.clear.frame(width: 12)
+      HStack {
+        Button(action: close) { Image(systemName: "xmark").font(.system(size: 9, weight: .bold)).frame(width: 18, height: 18) }
+          .buttonStyle(.borderless)
+          .opacity(closable && hovered ? 1 : 0)
+          .disabled(!closable)
+          .help("Fermer l'onglet (⌘W)")
+        Spacer()
+      }
+      .padding(.leading, 6)
     }
-    .padding(.horizontal, 8)
     .frame(maxWidth: .infinity, minHeight: 28, maxHeight: 28)
-    // Safari's tabs: the active one raised and light, the others flat, lit under the pointer.
     .background {
-      RoundedRectangle(cornerRadius: 8, style: .continuous)
-        .fill(active ? AnyShapeStyle(.background) : hovered ? AnyShapeStyle(.primary.opacity(0.06)) : AnyShapeStyle(.clear))
-        .shadow(color: .black.opacity(active ? 0.12 : 0), radius: 1, y: 0.5)
+      if active {
+        Capsule().fill(.background).shadow(color: .black.opacity(0.15), radius: 1.5, y: 0.5)
+      } else if hovered {
+        Capsule().fill(Color.primary.opacity(0.06))
+      }
     }
-    .contentShape(RoundedRectangle(cornerRadius: 8))
+    .contentShape(Capsule())
     .onTapGesture(perform: select)
     .onHover { hovered = $0 }
     .background(MiddleClick { if closable { close() } })
