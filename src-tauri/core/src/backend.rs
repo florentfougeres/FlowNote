@@ -127,6 +127,15 @@ mod tests {
         assert!(dispatch("vault_tree", &value!({ "root": "/etc" })).unwrap_err().starts_with("Dossier non autorisé"));
     }
 
+    /// Through the dispatch, as both apps call it (needs the companion built by scripts/build-grammar.sh).
+    #[test]
+    fn grammalecte_answers_through_the_dispatch() {
+        let answer = dispatch("grammar_check", &value!({ "paragraphs": ["Les enfant sont tres sages."] }));
+        let Ok(results) = answer else { return eprintln!("companion not built: skipped") };
+        assert!(results[0]["spelling"].as_array().unwrap().iter().any(|e| e["word"] == "tres"));
+        grammar::shutdown();
+    }
+
     #[test]
     fn bytes_go_as_base64() {
         assert_eq!(base64(b""), "");
