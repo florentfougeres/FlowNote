@@ -8,11 +8,16 @@ import "../styles.css";
 import "./embed.css";
 
 installErrorReporting();
+// WKWebView ignores window.print(): the shell opens the system's print panel
+// (PDF ▸ Enregistrer au format PDF) on this page, print style sheet included.
+window.print = () => void callNative("print", { title: document.title }).catch(() => {});
 (window as Window & { EXCALIDRAW_ASSET_PATH?: string }).EXCALIDRAW_ASSET_PATH = "/excalidraw-assets/";
 
 /** What the shell gives a new tab: the vault's name, the page to show and the settings. */
 interface ShellState {
   vaultName: string;
+  /** The vault is in a git repository. */
+  git: boolean;
   path: string | null;
   settings: ShellSettings;
 }
@@ -21,7 +26,7 @@ void callNative<ShellState>("shell_state").then((state) => {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <ErrorBoundary>
-        <EmbedPage vaultName={state.vaultName} initialPath={state.path} initialSettings={state.settings} />
+        <EmbedPage vaultName={state.vaultName} git={state.git} initialPath={state.path} initialSettings={state.settings} />
       </ErrorBoundary>
     </StrictMode>,
   );

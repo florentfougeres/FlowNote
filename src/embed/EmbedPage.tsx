@@ -6,13 +6,19 @@ import { useHandlers } from "../hooks/useHandlers";
 import { useWidePages } from "../hooks/useWidePages";
 import { linkFromParent, planPage, ticketPathsOf } from "../pageCreate";
 import type { PageKind } from "../pageKinds";
-import { applyTheme, type Theme } from "../SettingsPage";
-import { DEFAULT_COLUMNS } from "../ticket/board";
+import { applyTheme, type SpellChecker, type Theme } from "../SettingsPage";
+import { useSpellChecking } from "../editor/useSpellChecking";
+import { DEFAULT_COLUMNS, normalizeColumns, type TicketColumn } from "../ticket/board";
+import { recordRecentPage } from "../dashboard/recents";
+import type { FindRequest } from "../FindBar";
+import { AddLinkDialog } from "../reading/AddLinkDialog";
+import { addLink, newReadingList, parseReadingList, readingTagsOf } from "../reading/readingList";
 import { DEFAULT_CONFIG, parseObsidianConfig, subpageFolder, type ObsidianConfig } from "../vault/links";
 import { callNative, nativeVault } from "../vault/nativeVault";
 import { deletePage, moveFolder, movePage, renameFolder, renamePage } from "../vault/pageOps";
 import type { VaultEntry } from "../vault/vault";
 import { isBasePath } from "../base/baseFile";
+import { SHELL_VIEWS, ShellView } from "./ShellView";
 import { NativeToolsContext, type NativeTool, type NativeTools } from "../nativeTools";
 
 /** Settings chosen in the shell's native Settings window. */
@@ -20,6 +26,10 @@ export interface ShellSettings {
   theme: Theme;
   autosave: boolean;
   ticketsFolder: string;
+  readingList: string;
+  spellChecker: SpellChecker;
+  fetchTitles: boolean;
+  ticketColumns: TicketColumn[];
 }
 
 /**
@@ -44,6 +54,10 @@ declare global {
       run(operation: ShellOperation): Promise<{ path: string | null; renamed?: [string, string][] }>;
       /** A button of the page's toolbar, clicked in the native toolbar. */
       tool(id: string): void;
+      /** ⌘F / ⌥⌘F: find (and replace) in the note. */
+      find(replace: boolean): void;
+      /** ⌘⇧L: adds a link to the reading list. */
+      addLink(): void;
     };
   }
 }
@@ -51,8 +65,8 @@ declare global {
 const systemDark = () => window.matchMedia("(prefers-color-scheme: dark)").matches;
 
 /** One page of the vault, inside a tab of the native shell. */
-export function EmbedPage({ vaultName, initialPath, initialSettings }: { vaultName: string; initialPath: string | null; initialSettings: ShellSettings }) {
-  const vault = useMemo(() => nativeVault(vaultName), [vaultName]);
+export function EmbedPage({ vaultName, git, initialPath, initialSettings }: { vaultName: string; git: boolean; initialPath: string | null; initialSettings: ShellSettings }) {
+  const vault = useMemo(() => nativeVault(vaultName, git), [vaultName, git]);
   const [path, setPath] = useState(initialPath);
   const [settings, setSettings] = useState(initialSettings);
   const [files, setFiles] = useState<string[]>([]);
@@ -60,8 +74,11 @@ export function EmbedPage({ vaultName, initialPath, initialSettings }: { vaultNa
   const [config, setConfig] = useState<ObsidianConfig>(DEFAULT_CONFIG);
   const [dark, setDark] = useState(systemDark);
   const [reading, setReading] = useState(false);
-  const [spelling, setSpelling] = useState(true);
+  const [spelling, toggleSpelling] = useSpellChecking(settings.spellChecker);
   const [reloads, setReloads] = useState(0);
+  const [find, setFind] = useState<FindRequest | null>(null);
+  const [adding, setAdding] = useState<{ themes: string[]; tags: string[] } | null>(null);
+  const [readingVersion, setReadingVersion] = useState(0);
   const [widePages, toggleWide, followWide] = useWidePages();
   const anchor = useRef<HTMLDivElement>(null);
   const tools = useMemo(() => nativeTools(anchor), []);
@@ -174,6 +191,27 @@ export function EmbedPage({ vaultName, initialPath, initialSettings }: { vaultNa
     [],
   );
 
+  const openAddLink = useCallback(async () => {
+    const sections = parseReadingList(await vault.read(settings.readingList).catch(() => ""));
+    setAdding({ themes: sections.flatMap((s) => (s.title ? [s.title] : [])), tags: readingTagsOf(sections) });
+  }, [vault, settings.readingList]);
+
+  /** Adds a link to the reading list note (created with its first link). */
+  const addReading = async (theme: string | null, title: string, url: string, tags: string[]) => {
+    const list = settings.readingList;
+    if (path === list) await saver.current?.().catch(() => {});
+    if (!filesRef.current.includes(list)) await vault.create(list, newReadingList(theme, title, url, tags));
+    else {
+      const text = await vault.read(list);
+      await vault.write(list, addLink(text, theme, title, url, tags), text);
+    }
+    await refresh();
+    setReadingVersion((v) => v + 1);
+    if (path === list) setReloads((n) => n + 1);
+  };
+
+  const columns = settings.ticketColumns?.length ? normalizeColumns(settings.ticketColumns) : DEFAULT_COLUMNS;
+
   const run = useCallback(
     async (operation: ShellOperation): Promise<{ path: string | null; renamed?: [string, string][] }> => {
       await saver.current?.().catch(() => {});
@@ -232,14 +270,25 @@ export function EmbedPage({ vaultName, initialPath, initialSettings }: { vaultNa
       refresh: () => void refresh(),
       run,
       tool: (id) => tools.run(id),
+      find: (replace) => {
+        const selection = window.getSelection()?.toString() ?? "";
+        setFind((previous) => ({ query: selection.includes("\n") ? previous?.query ?? "" : selection || previous?.query || "", replace, nonce: Date.now() }));
+      },
+      addLink: () => void openAddLink(),
     };
-  }, [refresh, run, tools]);
+  }, [refresh, run, tools, openAddLink]);
+
+  // The home page lists the pages opened lately.
+  useEffect(() => {
+    if (path && !path.startsWith("flownote:")) recordRecentPage(vaultName, path);
+    setFind(null);
+  }, [vaultName, path]);
 
   const handlers = useHandlers({
     onOpen: openPath,
     onRenameRow: renameRow,
     onSaved: () => void refresh(),
-    onToggleSpelling: () => setSpelling((on) => !on),
+    onToggleSpelling: toggleSpelling,
     onToggleFocus: () => void callNative("toggle_sidebar").catch(report),
     onToggleWide: () => path && toggleWide(path),
     onToggleReading: () => setReading((on) => !on),
@@ -247,12 +296,40 @@ export function EmbedPage({ vaultName, initialPath, initialSettings }: { vaultNa
     onState: (state: { dirty: boolean; status: string }) => void callNative("page_status", state).catch(() => {}),
   });
 
+  const closeFind = useCallback(() => setFind(null), []);
   const iconOf = (target: string) => findEntry(tree, target)?.icon ?? null;
   const isRow = (target: string) => files.some((f) => isBasePath(f) && target.startsWith(`${subpageFolder(f)}/`));
 
+  const dialog = adding && (
+    <AddLinkDialog themes={adding.themes} tags={adding.tags} fetchTitles={settings.fetchTitles} onAdd={(...args) => addReading(...args).catch(report)} onClose={() => setAdding(null)} />
+  );
   if (!path) return <div className="embed-empty">Choisissez une page dans la barre latérale.</div>;
+  if (SHELL_VIEWS.includes(path)) {
+    return (
+      <>
+      {dialog}
+      <ShellView
+        key={`${path}:${reloads}`}
+        view={path}
+        vault={vault}
+        files={files}
+        tree={tree}
+        dark={settings.theme === "dark" || (settings.theme === "system" && dark)}
+        readingList={settings.readingList}
+        onOpen={openPath}
+        onChanged={() => void refresh()}
+        beforeCommit={async () => {}}
+        readingVersion={readingVersion}
+        onAddLink={() => void openAddLink()}
+        columns={columns}
+        onColumns={(ticketColumns) => void callNative("set_ticket_columns", { columns: ticketColumns }).catch(report)}
+      />
+      </>
+    );
+  }
   return (
     <div className="embed-page">
+      {dialog}
       {/* Where menus of the native toolbar's buttons open: under the toolbar, on the right. */}
       <div ref={anchor} className="embed-menu-anchor" />
       <NativeToolsContext.Provider value={tools}>
@@ -263,17 +340,19 @@ export function EmbedPage({ vaultName, initialPath, initialSettings }: { vaultNa
         files={files}
         bridge={bridge}
         theme={settings.theme === "dark" || (settings.theme === "system" && dark) ? "dark" : "light"}
-        ticketColumns={DEFAULT_COLUMNS}
+        ticketColumns={columns}
         openOnLeft={false}
         autosave={settings.autosave}
         icon={iconOf(path)}
         isRow={isRow(path)}
         saver={saver}
-        spellingOn={spelling}
+        spellingOn={settings.spellChecker !== "off" ? spelling : null}
         focusOn={false}
         wide={widePages.has(path)}
         reading={reading}
-        git={null}
+        git={vault.git ?? null}
+        find={find}
+        onCloseFind={closeFind}
         {...handlers}
       />
       </NativeToolsContext.Provider>

@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { imageMime } from "../editor/bridge";
 import { isTauri } from "../vault/tauriVault";
+import { callNative, isNative, toBase64 } from "../vault/nativeVault";
 import { renderSlides, standaloneHtml, withLocalImages, type RenderedSlides } from "./slides";
 
 function dataUrl(bytes: Uint8Array, path: string): string {
@@ -31,6 +32,8 @@ export async function exportPresentation(markdown: string, title: string, notePa
  * null when cancelled.
  */
 export async function saveExport(blob: Blob, fileName: string, kind: string, extension: "html" | "png"): Promise<string | null> {
+  // The native shell asks where in its own save panel, then opens the file.
+  if (isNative()) return callNative<string | null>("save_export", { fileName, kind, extension, base64: toBase64(new Uint8Array(await blob.arrayBuffer())) });
   if (isTauri()) {
     const path = await save({ defaultPath: fileName, filters: [{ name: kind, extensions: [extension] }] });
     if (!path) return null;

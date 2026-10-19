@@ -10,6 +10,8 @@ struct NameRequest: Identifiable {
   var initial: String
   /// New page: the kind is chosen too.
   var kinds = false
+  /// The kind chosen first (new ticket from the tickets view).
+  var kind = "note"
   let done: (_ name: String?, _ kind: String) -> Void
 }
 
@@ -59,6 +61,7 @@ final class PageModel {
     self.path = path
     bridge = Bridge(page: self)
     webView = WebPage.make(bridge: bridge)
+    applyZoom()
     AppModel.shared.register(self)
   }
 
@@ -66,6 +69,7 @@ final class PageModel {
 
   var title: String {
     guard let path else { return app.vault?.name ?? "FlowNote" }
+    if let view = AppModel.views.first(where: { $0.path == path }) { return view.title }
     return app.entry(path).map(app.displayName) ?? (path as NSString).lastPathComponent
   }
 
@@ -105,6 +109,14 @@ final class PageModel {
 
   func refresh() { js("window.flownoteShell?.refresh()") }
 
+  func applyZoom() { webView.pageZoom = app.uiScale }
+
+  /// ⌘F (or ⌥⌘F with replace) in the page.
+  func find(replace: Bool) { js("window.flownoteShell?.find(\(replace))") }
+
+  /// ⌘⇧L: the page's dialog to add a link to the reading list.
+  func addLink() { js("window.flownoteShell?.addLink()") }
+
   func runTool(_ id: String) { js("window.flownoteShell?.tool(\(Self.json(id)))") }
 
   func sendSettings() { js("window.flownoteShell?.settings(\(Self.json(app.shellSettings)))") }
@@ -128,6 +140,25 @@ final class PageModel {
     }
   }
 
+  /// The system's print panel on the page (its PDF menu saves a vector PDF).
+  func print(title: String) {
+    guard let window = webView.window else { return }
+    let info = (NSPrintInfo.shared.copy() as? NSPrintInfo) ?? NSPrintInfo()
+    // The page's @page rule sets the sheet and its margins.
+    info.topMargin = 0
+    info.bottomMargin = 0
+    info.leftMargin = 0
+    info.rightMargin = 0
+    info.horizontalPagination = .fit
+    let operation = webView.printOperation(with: info)
+    operation.jobTitle = title
+    operation.showsPrintPanel = true
+    operation.showsProgressPanel = true
+    // Without a frame, WebKit prints blank pages.
+    operation.view?.frame = webView.bounds
+    operation.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
+  }
+
   func notify(_ message: String) {
     toast = message
     toastTask?.cancel()
@@ -138,9 +169,9 @@ final class PageModel {
   }
 
   /// Asks for a name in a sheet of this tab's window.
-  func askName(_ title: String, initial: String, kinds: Bool = false) async -> (name: String, kind: String)? {
+  func askName(_ title: String, initial: String, kinds: Bool = false, kind: String = "note") async -> (name: String, kind: String)? {
     await withCheckedContinuation { continuation in
-      nameRequest = NameRequest(title: title, initial: initial, kinds: kinds) { name, kind in
+      nameRequest = NameRequest(title: title, initial: initial, kinds: kinds, kind: kind) { name, kind in
         continuation.resume(returning: name.map { ($0, kind) })
       }
     }

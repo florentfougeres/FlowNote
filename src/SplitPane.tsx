@@ -1,3 +1,4 @@
+import { FindBar, type FindRequest } from "./FindBar";
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { NoteEditor } from "./editor/NoteEditor";
 import { titleHeadingOf } from "./editor/titleHeading";
@@ -81,6 +82,8 @@ export const SplitPane = memo(function SplitPane({
   git,
   notify,
   onState,
+  find,
+  onCloseFind,
 }: {
   vault: Vault;
   path: string;
@@ -121,6 +124,9 @@ export const SplitPane = memo(function SplitPane({
   notify: (message: string) => void;
   /** Unsaved changes and status message, for a host that draws them itself (the native shell). */
   onState?: (state: { dirty: boolean; status: string }) => void;
+  /** Find (and replace) in the note, asked by the host (⌘F in the native shell). */
+  find?: FindRequest | null;
+  onCloseFind?: () => void;
 }) {
   const [page, setPage] = useState<Loaded | null>(null);
   const [status, setStatus] = useState("");
@@ -386,7 +392,10 @@ export const SplitPane = memo(function SplitPane({
         </div>
       </header>
       <div className="split-pane-main">
-        <div className="split-pane-body">{body ?? (status ? null : <p className="split-notice">Chargement…</p>)}</div>
+        <div className="split-pane-body">
+          {find && note && !raw && onCloseFind && <FindBar editor={editor} request={find} onClose={onCloseFind} />}
+          {body ?? (status ? null : <p className="split-notice">Chargement…</p>)}
+        </div>
         {presentation && showSlides && !raw && !openOnLeft && <SlidesPanel editor={editor} rendered={slides} onPresent={setPresenting} onClose={() => setShowSlides(false)} />}
         {((outline && note && !raw && !openOnLeft) || (history && git && page)) && (
           <div className={history && git ? "split-outline side-column with-history" : "split-outline"}>

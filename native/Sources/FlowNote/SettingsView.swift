@@ -39,6 +39,13 @@ private struct GeneralSettings: View {
         Toggle("Enregistrement automatique", isOn: $app.autosave)
         Toggle("Afficher les titres des pages plutôt que les noms de fichier", isOn: $app.showTitles)
         TextField("Dossier des tickets", text: $app.ticketsFolder)
+        TextField("Note des lectures", text: $app.readingList)
+        Toggle("Lire le titre des liens ajoutés", isOn: $app.fetchTitles)
+        Picker("Correcteur", selection: $app.spellChecker) {
+          Text("Grammalecte (grammaire et orthographe)").tag("grammalecte")
+          Text("Orthographe de macOS").tag("system")
+          Text("Aucun").tag("off")
+        }
       }
     }
     .formStyle(.grouped)
@@ -57,6 +64,13 @@ private struct AppearanceSettings: View {
         Text("Sombre").tag("dark")
       }
       .pickerStyle(.segmented)
+      // The sizes of the web app (UI_SCALES in SettingsPage.tsx).
+      Picker("Taille des pages", selection: $app.uiScale) {
+        Text("Petite").tag(0.9)
+        Text("Normale").tag(1.0)
+        Text("Grande").tag(1.1)
+        Text("Très grande").tag(1.25)
+      }
     }
     .formStyle(.grouped)
   }

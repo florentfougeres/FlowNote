@@ -94,6 +94,62 @@ func trashIgnoresWhatIsAlreadyGone() throws {
   }
 }
 
+
+/// A git repository with the vault in a sub-folder, removed after the check.
+private func withRepo(_ body: (Git, URL) throws -> Void) throws {
+  let repo = FileManager.default.temporaryDirectory.appendingPathComponent("flownote-git-\(UUID().uuidString)")
+  let vault = repo.appendingPathComponent("Notes")
+  try FileManager.default.createDirectory(at: vault.appendingPathComponent(".obsidian"), withIntermediateDirectories: true)
+  defer { try? FileManager.default.removeItem(at: repo) }
+  let git = Git(root: vault)
+  try git.run(["init", "-q", "-b", "main"])
+  try git.run(["config", "user.email", "test@example.com"])
+  try git.run(["config", "user.name", "Test"])
+  try body(git, vault)
+}
+
+func gitStatusParsing() throws {
+  let raw = "# branch.oid abc\0# branch.head main\0# branch.upstream origin/main\0# branch.ab +2 -1\0" +
+    "1 .M N... 100644 100644 100644 a b Notes/Une note.md\0" + "2 R. N... 100644 100644 100644 a b R100 Notes/Nouveau.md\0Notes/Ancien.md\0" +
+    "? Notes/Neuf.md\0? Ailleurs.md\0"
+  let status = parseGitStatus(raw, prefix: "Notes/")
+  expect(status.branch == "main" && status.upstream == "origin/main" && status.ahead == 2 && status.behind == 1)
+  expect(status.files == [
+    GitFile(path: "Une note.md", origPath: nil, index: " ", worktree: "M"),
+    GitFile(path: "Nouveau.md", origPath: "Ancien.md", index: "R", worktree: " "),
+    GitFile(path: "Neuf.md", origPath: nil, index: "?", worktree: "?"),
+  ])
+  let json = String(decoding: try JSONEncoder().encode(GitStatus()), as: UTF8.self)
+  expect(json.contains("\"branch\":null"))
+}
+
+func gitStageCommitLogAndDiscard() throws {
+  try withRepo { git, vault in
+    try Data("un\n".utf8).write(to: vault.appendingPathComponent("Note.md"))
+    expect(try git.status().files.map(\.path) == ["Note.md"])
+    try git.stage(["Note.md"])
+    let summary = try git.commit("Premier commit\n\nCorps")
+    let short = try git.lastCommit()!.short
+    expect(summary.hasSuffix("] Premier commit") && summary.contains(short))
+    try Data("deux\n".utf8).write(to: vault.appendingPathComponent("Note.md"))
+    expect(try git.diff("Note.md", staged: false, untracked: false).contains("+deux"))
+    try git.discard(["Note.md"])
+    expect(try String(contentsOf: vault.appendingPathComponent("Note.md"), encoding: .utf8) == "un\n")
+    expect(try git.log("Note.md").map(\.subject) == ["Premier commit"])
+    expect(try git.show(git.lastCommit()!.hash, "Note.md") == "un\n")
+    expectThrows { _ = try git.show("HEAD;rm", "Note.md") }
+    expectThrows { try git.stage(["../x"]) }
+    expectThrows { try git.discard([".obsidian/app.json"]) }
+  }
+}
+
+func webTitles() throws {
+  expect(WebTitle.title(in: "<html><head><TITLE>\n  Bonjour &amp; bienvenue </title></head>") == "Bonjour & bienvenue")
+  expect(WebTitle.title(in: "<meta content='Titre OG' property=\"og:title\"><title>Autre</title>") == "Titre OG")
+  expect(WebTitle.title(in: "<p>rien</p>") == nil)
+  expect(!WebTitle.isWebURL("file:///etc/hosts"))
+}
+
 nonisolated(unsafe) var failures = 0
 nonisolated(unsafe) var current = ""
 
@@ -134,6 +190,9 @@ let checks: [(String, () throws -> Void)] = [
   ("treeHasTitlesIconsTicketsAndPresentations", treeHasTitlesIconsTicketsAndPresentations),
   ("searchFindsLinesUpToTheLimit", searchFindsLinesUpToTheLimit),
   ("trashIgnoresWhatIsAlreadyGone", trashIgnoresWhatIsAlreadyGone),
+  ("gitStatusParsing", gitStatusParsing),
+  ("gitStageCommitLogAndDiscard", gitStageCommitLogAndDiscard),
+  ("webTitles", webTitles),
 ]
 
 for (name, check) in checks {

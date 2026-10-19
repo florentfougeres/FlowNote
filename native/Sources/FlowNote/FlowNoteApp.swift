@@ -10,6 +10,10 @@ struct FlowNoteApp: App {
     NSApplication.shared.setActivationPolicy(.regular)
     // New windows open as tabs of the current one, like Safari's or the Finder's.
     NSWindow.allowsAutomaticWindowTabbing = true
+    // The app's own tabbing preference ("always"): ⌘T and "open in a new tab" add a tab, never a window.
+    UserDefaults.standard.register(defaults: ["AppleWindowTabbingMode": "always"])
+    // The Grammalecte companion stops with the app.
+    NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) { _ in Grammar.shared.stop() }
   }
 
   var body: some Scene {
@@ -46,6 +50,18 @@ struct AppCommands: Commands {
       Button("Ouvrir un vault…") { app.chooseVault() }
         .keyboardShortcut("o")
       Button("Ouvrir un vault dans iCloud Drive…") { app.chooseVault(inICloud: true) }
+    }
+    CommandGroup(after: .textEditing) {
+      Button("Rechercher dans la page…") { page?.find(replace: false) }
+        .keyboardShortcut("f")
+        .disabled(page == nil)
+      Button("Rechercher et remplacer…") { page?.find(replace: true) }
+        .keyboardShortcut("f", modifiers: [.command, .option])
+        .disabled(page == nil)
+      Divider()
+      Button("Ajouter un lien à lire…") { page?.addLink() }
+        .keyboardShortcut("l", modifiers: [.command, .shift])
+        .disabled(page == nil || app.vault == nil)
     }
     CommandGroup(after: .sidebar) {
       Button("Page précédente") { page?.goBack() }

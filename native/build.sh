@@ -15,6 +15,9 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "native/.build/release/FlowNote" "$app/Contents/MacOS/FlowNote"
 cp -R dist "$app/Contents/Resources/web"
 cp src-tauri/icons/icon.icns "$app/Contents/Resources/FlowNote.icns"
+# The Grammalecte companion (scripts/build-grammar.sh), started by Grammar.swift.
+grammar=$(ls src-tauri/binaries/flownote-grammar-* 2>/dev/null | head -1)
+[ -n "$grammar" ] && cp "$grammar" "$app/Contents/MacOS/flownote-grammar"
 version=$(node -p "require('./package.json').version")
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

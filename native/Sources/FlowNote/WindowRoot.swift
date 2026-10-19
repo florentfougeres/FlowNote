@@ -11,7 +11,7 @@ struct WindowRoot: View {
 
   init(initialPath: String?) {
     // FLOWNOTE_OPEN: a page shown at launch (development, screenshots).
-    _page = State(initialValue: PageModel(path: initialPath ?? ProcessInfo.processInfo.environment["FLOWNOTE_OPEN"]))
+    _page = State(initialValue: PageModel(path: initialPath ?? ProcessInfo.processInfo.environment["FLOWNOTE_OPEN"] ?? "flownote:home"))
   }
 
   var body: some View {
@@ -41,7 +41,7 @@ struct WindowRoot: View {
       }
     }
     .navigationTitle(page.title)
-    .navigationSubtitle(page.path.map { ($0 as NSString).deletingLastPathComponent } ?? "")
+    .navigationSubtitle(page.path.flatMap { $0.hasPrefix("flownote:") ? nil : ($0 as NSString).deletingLastPathComponent } ?? "")
     .focusedSceneValue(\.page, page)
     .sheet(item: $page.nameRequest) { request in NameSheet(request: request) }
     .sheet(isPresented: $page.searching) { SearchPanel(page: page) }
@@ -65,8 +65,11 @@ struct WindowTabbing: NSViewRepresentable {
   func makeNSView(context: Context) -> NSView {
     let view = NSView()
     DispatchQueue.main.async {
-      view.window?.tabbingMode = .preferred
-      view.window?.tabbingIdentifier = "FlowNote"
+      guard let window = view.window else { return }
+      window.tabbingMode = .preferred
+      window.tabbingIdentifier = "FlowNote"
+      // The tab bar stays shown, even with one tab (like Safari's setting).
+      if window.tabGroup?.isTabBarVisible == false { window.toggleTabBar(nil) }
     }
     return view
   }
@@ -194,12 +197,13 @@ struct NameSheet: View {
   let request: NameRequest
   @Environment(\.dismiss) private var dismiss
   @State private var name: String
-  @State private var kind = "note"
+  @State private var kind: String
   @State private var answered = false
 
   init(request: NameRequest) {
     self.request = request
     _name = State(initialValue: request.initial)
+    _kind = State(initialValue: request.kind)
   }
 
   var body: some View {

@@ -49,6 +49,7 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 - **Versions figées** : TanStack Table en v8 (la v9 change d'API), mind-elixir 5.15.x. Marp avec `inlineSVG: false` (WebKit dessine mal `foreignObject`).
 - **Plotly 3+** n'affiche plus les titres écrits en texte simple (`title: Ventes`) : `src/editor/plotly.ts` les convertit en `{ text }` au dessin.
 - **Dependabot `glib` (Rust)** : tiré par la pile GTK de Tauri pour Linux, jamais compilé pour macOS. Toute alerte `glib`/`gtk` se ferme comme « non utilisé » (`gh api -X PATCH …/dependabot/alerts/N -f state=dismissed -f dismissed_reason=not_used`).
+- **Coquille Swift (`native/`)** : SwiftUI a besoin d'Xcode (macros absentes des Command Line Tools) : `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`, déjà mis par `native/build.sh`. Viser macOS 26 au moins, sinon SwiftPM inscrit un SDK ancien dans le binaire et l'app perd Liquid Glass. Pas de Swift Testing ni XCTest : `swift run --package-path native vault-checks`. Un appel Tauri ajouté côté web doit avoir son équivalent natif (`callNative`, commande dans `WebPage.swift`).
 - **Thème sombre écrit deux fois** dans `base.css` (sombre du système et sombre choisi) : garder les deux listes identiques.
 - **Format des bases** (vérifié dans le code d'Obsidian 1.14.4) :
   - types de vue natifs : `table`, `cards`, `list`, `kanban` ;

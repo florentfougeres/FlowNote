@@ -37,3 +37,16 @@ body,
   height: 1px;
   pointer-events: none;
 }
+
+/* A view of the app (home, tickets, graph, reading list, git, documentation) filling the tab. */
+.embed-view {
+  height: 100%;
+  overflow: auto;
+  background: var(--bg);
+}
+
+.embed-git > * {
+  max-width: 980px;
+  height: 100%;
+  margin: 0 auto;
+}

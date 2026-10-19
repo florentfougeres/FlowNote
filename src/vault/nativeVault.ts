@@ -1,3 +1,4 @@
+import { commandGit } from "./git";
 import { ConflictError, encodeText, type Vault, type VaultEntry } from "./vault";
 
 /**
@@ -27,7 +28,7 @@ export function callNative<T>(command: string, args: Record<string, unknown> = {
   return handler.postMessage({ command, args }) as Promise<T>;
 }
 
-const toBase64 = (bytes: Uint8Array) => {
+export const toBase64 = (bytes: Uint8Array) => {
   let binary = "";
   for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(binary);
@@ -35,9 +36,10 @@ const toBase64 = (bytes: Uint8Array) => {
 
 const fromBase64 = (text: string) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 
-export function nativeVault(name: string): Vault {
+export function nativeVault(name: string, git: boolean): Vault {
   return {
     name,
+    git: git ? commandGit(callNative) : undefined,
     tree: () => callNative<VaultEntry[]>("vault_tree"),
     read: (path) => callNative<string>("vault_read", { path }),
     write: async (path, content, expected) => {

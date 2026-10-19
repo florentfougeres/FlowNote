@@ -15,12 +15,19 @@ struct SidebarView: View {
       get: { page.path },
       set: { path in
         // A folder only opens and closes.
-        if let path, app.entry(path)?.isFolder == false { page.show(path) }
+        if let path, path.hasPrefix("flownote:") || app.entry(path)?.isFolder == false { page.show(path) }
       })
   }
 
   var body: some View {
     List(selection: selection) {
+      Section {
+        ForEach(AppModel.views.filter { $0.path != "flownote:git" || app.isGitRepo }, id: \.path) { view in
+          Label(view.title, systemImage: view.icon)
+            .badge(view.path == "flownote:git" ? app.gitChanges : 0)
+            .tag(view.path)
+        }
+      }
       Section(app.vault?.name ?? "Vault") {
         OutlineGroup(filtered(app.tree), children: \.folderChildren) { entry in
           SidebarRow(entry: entry)
@@ -128,8 +135,8 @@ struct SidebarActions {
   let page: PageModel
   private var app: AppModel { AppModel.shared }
 
-  func newPage(in folder: String?) async {
-    guard let answer = await page.askName(folder.map { "Nouvelle page dans « \(($0 as NSString).lastPathComponent) »" } ?? "Nouvelle page", initial: "Sans titre", kinds: true) else { return }
+  func newPage(in folder: String?, kind: String = "note") async {
+    guard let answer = await page.askName(folder.map { "Nouvelle page dans « \(($0 as NSString).lastPathComponent) »" } ?? "Nouvelle page", initial: "Sans titre", kinds: true, kind: kind) else { return }
     await create(answer, folder: folder ?? "", parent: nil)
   }
 

@@ -89,8 +89,9 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKUIDelegate, WKN
     return try result.get().map(Self.sendable) ?? NSNull()
   }
 
-  /// Codable values become JSON objects for WebKit.
+  /// Codable values become JSON objects for WebKit; a command returning nothing (Void) answers null.
   private static func sendable(_ value: Any) -> Any {
+    if value is Void { return NSNull() }
     if let value = value as? Encodable, !(value is String), let data = try? JSONEncoder().encode(value) {
       return (try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])) ?? NSNull()
     }
@@ -144,9 +145,33 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKUIDelegate, WKN
       let limit = args["limit"] as? Int ?? 200
       return try await off { $0.search(query, caseSensitive: caseSensitive, limit: limit) }
 
+    // Git (same commands as src-tauri/src/git.rs), in the vault folder.
+    case let git where git.hasPrefix("git_"):
+      return try await handleGit(git, args)
+
+    case "save_export":
+      return await saveExport(args)
+    case "fetch_page_title":
+      guard app.fetchTitles else { return NSNull() }
+      return await WebTitle.fetch(try string(args, "url")) ?? NSNull()
+    case "open_url":
+      let address = try string(args, "url")
+      guard WebTitle.isWebURL(address) || address.lowercased().hasPrefix("mailto:"), let url = URL(string: address) else { throw VaultError("Lien refusé : \(address)") }
+      NSWorkspace.shared.open(url)
+      return nil
+    case "set_ticket_columns":
+      app.ticketColumns = (args["columns"] as? [[String: Any]] ?? []).map { $0.compactMapValues { $0 as? String } }
+      return nil
+    case "print":
+      page?.print(title: args["title"] as? String ?? "FlowNote")
+      return nil
+    case "grammar_check":
+      return try await Grammar.shared.check(args["paragraphs"] as? [String] ?? [])
+
     // Shell.
     case "shell_state":
-      return ["vaultName": app.vault?.name ?? "", "path": page?.path ?? NSNull(), "settings": app.shellSettings] as [String: Any]
+      let git = await Task.detached { [root = app.vault?.root] in root.map { (try? Git(root: $0).status())?.isRepo == true } ?? false }.value
+      return ["vaultName": app.vault?.name ?? "", "git": git, "path": page?.path ?? NSNull(), "settings": app.shellSettings] as [String: Any]
     case "open_path":
       let path = try string(args, "path")
       if args["newTab"] as? Bool == true { page?.openTab(path) } else { page?.show(path) }
@@ -154,6 +179,12 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKUIDelegate, WKN
     case "ask_name":
       let answer = await page?.askName(try string(args, "title"), initial: args["initial"] as? String ?? "")
       return answer?.name ?? NSNull()
+    case "new_page":
+      if let page { await SidebarActions(page: page).newPage(in: nil, kind: args["kind"] as? String ?? "note") }
+      return nil
+    case "search":
+      page?.searching = true
+      return nil
     case "notify":
       page?.notify(try string(args, "message"))
       return nil
@@ -172,6 +203,56 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKUIDelegate, WKN
       return nil
     default:
       throw VaultError("Commande inconnue : \(command)")
+    }
+  }
+
+  private func handleGit(_ command: String, _ args: [String: Any]) async throws -> Any? {
+    let paths = args["paths"] as? [String] ?? []
+    let path = args["path"] as? String ?? ""
+    let changes: Set<String> = ["git_stage", "git_unstage", "git_discard", "git_commit", "git_pull", "git_resolve", "git_merge_continue", "git_merge_abort"]
+    defer { if changes.contains(command) { app.scheduleReload() } }
+    return try await off { vault in
+      let git = Git(root: vault.root)
+      switch command {
+      case "git_status": return try git.status()
+      case "git_diff": return try git.diff(path, staged: args["staged"] as? Bool ?? false, untracked: args["untracked"] as? Bool ?? false)
+      case "git_stage": try git.stage(paths)
+      case "git_unstage": try git.unstage(paths)
+      case "git_discard": try git.discard(paths)
+      case "git_commit": return try git.commit(args["message"] as? String ?? "")
+      case "git_fetch": try git.fetch()
+      case "git_pull": return try git.pull()
+      case "git_push": return try git.push()
+      case "git_activity": return try git.activity(days: args["days"] as? Int ?? 365)
+      case "git_last_commit": return try git.lastCommit() ?? NSNull()
+      case "git_log": return try git.log(path, limit: args["limit"] as? Int ?? 200)
+      case "git_show": return try git.show(args["hash"] as? String ?? "", path)
+      case "git_conflict": return try git.conflict(path)
+      case "git_resolve": try git.resolve(path, args["content"] as? String)
+      case "git_merge_continue": return try git.continueMerge()
+      case "git_merge_abort": try git.abortMerge()
+      default: throw VaultError("Commande inconnue : \(command)")
+      }
+      return nil
+    }
+  }
+
+  /// An exported file (HTML presentation, PNG mind map): saved where the user
+  /// chooses, then opened. The path, or null when cancelled.
+  private func saveExport(_ args: [String: Any]) async -> Any {
+    guard let data = Data(base64Encoded: args["base64"] as? String ?? ""), let window = page?.webView.window else { return NSNull() }
+    let panel = NSSavePanel()
+    panel.nameFieldStringValue = args["fileName"] as? String ?? "Export"
+    if let ext = args["extension"] as? String, let type = UTType(filenameExtension: ext) { panel.allowedContentTypes = [type] }
+    panel.canCreateDirectories = true
+    guard await panel.beginSheetModal(for: window) == .OK, let url = panel.url else { return NSNull() }
+    do {
+      try data.write(to: url, options: .atomic)
+      NSWorkspace.shared.open(url)
+      return url.path
+    } catch {
+      page?.notify(error.localizedDescription)
+      return NSNull()
     }
   }
 
