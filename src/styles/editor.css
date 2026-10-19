@@ -533,6 +533,22 @@ li.drag-ghost {
   line-height: inherit;
 }
 
+/* An empty heading's placeholder goes after its #, which stay where they are. */
+.note.ProseMirror-focused .is-empty:has(> .heading-mark)::before {
+  display: none;
+}
+
+.note .heading-mark {
+  position: relative;
+}
+
+.note .heading-mark[data-placeholder]::after {
+  content: attr(data-placeholder);
+  position: absolute;
+  left: calc(100% + 0.3em);
+  white-space: nowrap;
+}
+
 .note .code-mark {
   font-size: 0.85em;
 }

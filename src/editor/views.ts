@@ -6,6 +6,7 @@ import type { BridgeRef } from "./bridge";
 import { isImage } from "./bridge";
 import { basename, dirname, noteTitle, resolveLink } from "../vault/links";
 import { calloutIconSvg, calloutInfo, calloutPicker } from "./callouts";
+import { HEADING_PLACEHOLDERS } from "./syntaxMarks";
 
 /**
  * Node views for blocks that need controls outside the editable text. None of
@@ -593,8 +594,6 @@ export function tagPlugin(): Plugin {
     },
   });
 }
-
-const HEADING_PLACEHOLDERS = ["Titre 1", "Titre 2", "Titre 3", "Titre 4", "Titre 5", "Titre 6"];
 
 /** Placeholders for the empty block holding the cursor, and for empty callout titles. */
 export function placeholderPlugin(): Plugin {
