@@ -223,6 +223,39 @@ Le backend est volontairement petit, et **unique** : la bibliothèque `flownote-
 
 **Sécurité** : `check_root` limite toutes les commandes (vault et git) à un dossier qui contient `.obsidian` ou qui a été choisi par l'utilisateur dans le sélecteur natif (`vault_pick`, liste dans `trusted-vaults.json` des données de l'app). La **CSP** (`tauri.conf.json`) n'autorise que les scripts de l'app ; une nouvelle bibliothèque qui charge une ressource externe doit y être ajoutée.
 
+## FlowNote Swift : la coquille native macOS (`native/`)
+
+FlowNote existe en deux applications, maintenues côte à côte : **FlowNote** (Tauri, la porte ouverte aux autres systèmes) et **FlowNote Swift** (une app SwiftUI pour macOS 26 et plus, avec Liquid Glass). La release produit un `.dmg` pour chacune.
+
+**Principe : une seule app web.** Chaque fenêtre de FlowNote Swift fait tourner l'app web complète (`index.html`, `App.tsx`), la même que dans Tauri. La coquille ne dessine que ce qui doit être natif :
+- la fenêtre ;
+- la barre latérale (vault, vues, favoris, pages, Git, Réglages, Aide) ;
+- la ligne d'onglets avec les boutons de l'historique ;
+- les menus et les raccourcis.
+
+Tout le reste est l'app web : fil d'Ariane et barre de page, éditeur, compte de mots, colonne Git, dialogues, split view, Réglages, accueil et onboarding. Une fonctionnalité ajoutée à l'app web arrive donc dans les deux versions.
+
+- **Le mode coquille (`App.tsx`)** : quand le vault vient de la coquille, l'app masque sa barre de titre et sa barre latérale HTML. Le contrat est typé dans `src/shell.ts` :
+  - la coquille appelle l'app par `window.flownoteShell.call(nom, …)` (`ShellCalls`) : choisir une page, gérer les onglets, lancer une action de la barre latérale web (`onRename`, `onMove`…), demander un menu ;
+  - l'app lui renvoie son état par `shell_update` (`ShellState`) : onglets, onglet actif, modifications, historique, Git, favoris, titres, page en cours.
+
+  `src/shell.test.ts` lit le code Swift et vérifie chaque nom utilisé. La démo (vault en mémoire) garde l'interface web complète.
+- **Les menus** (pages, dossiers, racine, onglets) sont écrits une fois, dans `src/menus.ts`. La coquille demande les entrées à l'app (`menu`), les affiche dans un `NSMenu`, puis fait exécuter l'entrée choisie (`runMenu`).
+- **Le backend est celui de Tauri** : `native/ffi` compile `src-tauri/core` en bibliothèque statique, avec cinq fonctions C (`flownote_init`, `flownote_trust`, `flownote_call`, `flownote_free`, `flownote_shutdown`).
+  - `backend()` (`platform.ts`) envoie la commande à la coquille, qui y ajoute la racine de son vault (la page ne nomme jamais de dossier) et appelle `flownote_call`, hors du fil principal.
+  - Swift ne garde que ce qui est propre à la fenêtre : panneau d'enregistrement (l'écriture du fichier reste au backend), panneau d'impression (WKWebView ignore `window.print()`), thème et zoom, choix du vault (signets, vaults récents, `flownote_trust`).
+  - Il demande aussi à iCloud de télécharger les notes restées dans le nuage (`.Note.md.icloud`), et surveille le dossier (FSEvents) pour prévenir l'app des changements.
+- **Liquid Glass** : l'app vise macOS 26. Liée à un SDK plus ancien, elle garderait l'ancien style : SwiftPM inscrit la cible minimale comme version du SDK.
+
+Ce qui se maintient à deux endroits (barre latérale, onglets, raccourcis, fenêtre) est listé dans `CLAUDE.md`, section « Deux applications ».
+
+```sh
+native/build.sh --open          # construit le web, la bibliothèque Rust et native/build/FlowNote Swift.app, puis le lance
+open --env FLOWNOTE_OPEN="Note.md" "native/build/FlowNote Swift.app"   # ouvre une page au lancement
+```
+
+SwiftUI a besoin d'Xcode : ses macros ne sont pas dans les Command Line Tools.
+
 ## Le correcteur Grammalecte
 
 [Grammalecte](https://grammalecte.net) est écrit en Python, sous licence GPL v3. Pour que FlowNote reste sous licence MIT, il tourne comme un **programme séparé** :

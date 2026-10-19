@@ -1,7 +1,6 @@
-import { backend } from "../platform";
+import { backend, hasBackend } from "../platform";
 import { useEffect } from "react";
 import { setGrammarChecker, setSystemSpellcheck, type ParagraphResult } from "./grammar";
-import { isTauri } from "../vault/tauriVault";
 import { usePersistentFlag } from "../hooks/usePersistentFlag";
 import type { SpellChecker } from "../SettingsPage";
 
@@ -13,10 +12,10 @@ export function useSpellChecking(chosen: SpellChecker) {
   const [on, setOn] = usePersistentFlag("flownote:spelling", true, ["on", "off"]);
   useEffect(() => {
     const spellChecker = on ? chosen : "off";
-    const grammalecte = isTauri() && spellChecker === "grammalecte";
+    const grammalecte = hasBackend() && spellChecker === "grammalecte";
     setGrammarChecker(grammalecte ? (paragraphs) => backend<ParagraphResult[]>("grammar_check", { paragraphs }) : null);
     // Outside the desktop app, the Grammalecte choice falls back to the system checker.
-    setSystemSpellcheck(spellChecker === "system" || (spellChecker === "grammalecte" && !isTauri()));
+    setSystemSpellcheck(spellChecker === "system" || (spellChecker === "grammalecte" && !hasBackend()));
   }, [chosen, on]);
   return [on, () => setOn((current) => !current)] as const;
 }
