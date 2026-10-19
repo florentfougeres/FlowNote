@@ -2,6 +2,19 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.15.3] - 2026-10-19
+
+### Ajouté
+- Recette avant chaque release : la liste des fonctionnalités à vérifier dans l'app (`docs/recette.md`).
+
+### Modifié
+- Sous le capot : le backend Rust devient une bibliothèque à part (`flownote-core`) servie par un aiguillage unique ; les menus des pages, dossiers et onglets sont écrits une seule fois pour la barre latérale et la barre d'onglets.
+- Dépendances mises à jour (Tauri 2.12.4, dialogue 2.8.3, outils de test).
+
+### Corrigé
+- Le filigrane d'un titre vide (« Titre 2 »…) ne se superpose plus aux `#` : il s'affiche juste après, en gras comme le titre.
+- Les emoji d'une seule lettre proposés par le menu (`:x:` ❌, `:o:` ⭕…) s'affichent enfin.
+
 ## [0.15.2] - 2026-10-19
 
 ### Ajouté
