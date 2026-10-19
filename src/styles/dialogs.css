@@ -161,6 +161,10 @@
   left: 36px;
   width: min(340px, calc(100% - 36px));
   box-sizing: border-box;
+  /* Opaque: inside the dialog (itself blurred), a menu's blur sees nothing behind it and stays see-through. */
+  background: var(--bg-elevated);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .name-dialog-folder-filter {
