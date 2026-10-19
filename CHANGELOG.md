@@ -2,6 +2,23 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.16.0] - 2026-10-19
+
+### Ajouté
+- Graphiques : l'éditeur visuel propose aussi radar, barres horizontales, barres empilées et anneau.
+- Accueil : un clic sur un tag de la carte Vault liste les pages qui le portent (dans le texte ou dans la propriété `tags`).
+- Du texte simple collé dans une note est lu comme du Markdown (liens, images, listes, titres) ; ce qui est copié d'une page web garde sa mise en forme.
+- L'aide des raccourcis (⌘/) liste aussi `⌘\` (barre latérale).
+
+### Modifié
+- Propriétés : les valeurs de texte prennent toute la largeur et passent à la ligne au lieu d'être coupées.
+- Propriétés : des tags écrits sur une ligne (`tags: projet, perso`) s'affichent en pastilles, comme dans Obsidian.
+- Sous le capot : raccourcis clavier écrits une seule fois (`shortcuts.ts`), opérations sur les pages sorties d'`App.tsx` (`usePageOps`), vues de l'éditeur découpées en un fichier chacune ; restes de FlowNote Swift et code mort retirés.
+
+### Corrigé
+- `[texte](url)` et `![texte](url)` tapés dans l'éditeur deviennent un lien et une image, au lieu d'être enregistrés avec des crochets échappés (`\[texte\]`).
+- Le menu des dossiers de la fenêtre « Nouvelle page » est opaque (il était presque transparent).
+
 ## [0.15.3] - 2026-10-19
 
 ### Ajouté
