@@ -72,6 +72,9 @@ describe("locations", () => {
   it("unique names and Obsidian naming", () => {
     expect(uniquePath("Archive", "Stack.md", FILES)).toBe("Archive/Stack 1.md");
     expect(uniquePath("", "Nouvelle.md", FILES)).toBe("Nouvelle.md");
+    // Drawings and mind maps keep their double suffix.
+    expect(uniquePath("", "Sans titre.excalidraw.md", ["Sans titre.excalidraw.md"])).toBe("Sans titre 1.excalidraw.md");
+    expect(uniquePath("", "Idées.mindmap.md", ["Idées.mindmap.md", "Idées 1.mindmap.md"])).toBe("Idées 2.mindmap.md");
     expect(pastedImageName(new Date(2026, 9, 13, 19, 5, 3), "png")).toBe("Pasted image 20261013190503.png");
     expect(sanitizeName("a/b: c?")).toBe("a b c");
     expect(relativePath("Projets/Mon Notion.md", "Projets/img/a.png")).toBe("img/a.png");

@@ -137,7 +137,7 @@ Les raccourcis Markdown marchent aussi à la frappe :
 
 - `[[` insère un lien vers une note, avec autocomplétion ; `![[` intègre une note, une image ou une base. Les liens suivent les réglages d'Obsidian.
 - `⌘K` sur un texte sélectionné demande l'adresse d'un lien web ; sur un lien existant, il le modifie ou le retire. Coller une URL sur un texte sélectionné en fait aussi un lien. Une adresse tapée (`https://…`, `www.…`) devient un lien dès qu'on la quitte ; le fichier garde l'adresse telle quelle.
-- Un **clic** sur un lien l'ouvre : dans le navigateur pour une adresse web, dans l'app pour une note. Au **survol**, une barre affiche l'adresse avec Modifier, Copier et Retirer.
+- Un **clic** sur un lien l'ouvre : dans le navigateur pour une adresse web, dans l'app pour une note. Un **clic molette** l'ouvre dans un nouvel onglet. Au **survol**, une barre affiche l'adresse avec Modifier, Copier et Retirer.
 - Coller ou déposer une image l'enregistre dans le dossier des pièces jointes d'Obsidian et l'intègre à la note.
 
 ### Les callouts et les admonitions

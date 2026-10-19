@@ -126,9 +126,10 @@ export function sanitizeName(name: string): string {
   return name.replace(/[\\/:*?"<>|#^[\]]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-/** `folder/name.ext`, suffixed with " 1", " 2"... when the path is taken. */
+/** `folder/name.ext`, suffixed with " 1", " 2"... when the path is taken (before `.excalidraw.md` or `.mindmap.md` as a whole). */
 export function uniquePath(folder: string, name: string, files: string[]): string {
-  const dot = name.lastIndexOf(".");
+  const compound = /\.(excalidraw|mindmap)\.md$/i.exec(name);
+  const dot = compound ? compound.index : name.lastIndexOf(".");
   const stem = dot > 0 ? name.slice(0, dot) : name;
   const ext = dot > 0 ? name.slice(dot) : "";
   const taken = new Set(files.map((f) => f.toLowerCase()));

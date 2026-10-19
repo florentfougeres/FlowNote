@@ -111,9 +111,47 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         return true;
       },
       handleDOMEvents: {
+        // A middle click on a link (or a [[link]]) opens its page in a new tab; a web address in the browser.
+        auxclick: (view, event) => {
+          if (event.button !== 1) return false;
+          const target = event.target as Element;
+          const current = wiring.bridge.current;
+          const link = target.closest?.("a[href]");
+          let path: string | null = null;
+          if (link && view.dom.contains(link)) {
+            const href = link.getAttribute("href") ?? "";
+            if (/^(https?|mailto):/i.test(href)) {
+              openUrl(href);
+              event.preventDefault();
+              return true;
+            }
+            let decoded = href;
+            try {
+              decoded = decodeURI(href);
+            } catch {
+              // A malformed address: kept as written.
+            }
+            path = resolveLink(decoded, current.files, current.notePath);
+          } else {
+            const wikilink = target.closest?.(".wikilink");
+            if (!wikilink || !view.dom.contains(wikilink)) return false;
+            const pos = view.posAtDOM(wikilink, 0);
+            const node = [pos, pos - 1].map((p) => view.state.doc.nodeAt(Math.max(0, p))).find((n) => n?.type.name === "wikilink");
+            if (node) path = resolveLink(node.attrs.target, current.files, current.notePath);
+          }
+          if (!path) return false;
+          event.preventDefault();
+          current.openPath(path, true);
+          return true;
+        },
         // A click in the empty space under the last block: the cursor goes to an
         // empty line at the end (added when needed), like in Notion.
         mousedown: (view, event) => {
+          // A middle click on a link opens it (auxclick), without moving the cursor or scrolling.
+          if (event.button === 1 && (event.target as Element).closest?.("a[href], .wikilink")) {
+            event.preventDefault();
+            return true;
+          }
           if (event.button !== 0 || event.target !== view.dom || !view.editable) return false;
           const last = view.dom.lastElementChild;
           if (!last || event.clientY <= last.getBoundingClientRect().bottom) return false;

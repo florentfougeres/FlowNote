@@ -2,6 +2,22 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.15.2] - 2026-10-19
+
+### Ajouté
+- Une adresse web tapée (`https://…`, `www.…`) devient un lien cliquable dès qu'on la quitte ; le fichier garde l'adresse telle quelle.
+- `⇥` dans un paragraphe en fait un élément de liste, rangé sous la liste du dessus s'il y en a une ; `⇧⇥` le ressort.
+- Clic molette sur un lien ou un `[[lien]]` : la page s'ouvre dans un nouvel onglet.
+- Guide pour publier une version soi-même (`docs/publier-une-version.md`).
+
+### Modifié
+- Les `#` d'un titre s'affichent au début de la ligne, et non plus dans la marge.
+
+### Corrigé
+- Une note contenant une adresse entre crochets (`[https://…]`) ne s'ouvrait plus (« mdast node without position »).
+- Pleine largeur : avec le plan affiché, la page devenait plus étroite qu'en largeur normale ; la marge de 96 px est retirée.
+- Un deuxième croquis ou une deuxième mind map du même nom perdait son type (`Sans titre.excalidraw 1.md` au lieu de `Sans titre 1.excalidraw.md`).
+
 ## [0.15.1] - 2026-10-16
 
 ### Ajouté
