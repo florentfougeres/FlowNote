@@ -169,6 +169,9 @@ describe("emoji", () => {
     expect(save()).toBe("Note : à 12:30 :tada: fin\n");
     const { editor: other } = openEditor("Attention :warning: et `:warning:` et 10:100:5 et :inconnu:\n");
     expect(findShortcodes(other.state.doc).map((s) => s.emoji)).toEqual(["⚠️"]);
+    // One-letter shortcodes too (:x: ❌, :o: ⭕), never inside a word (a:b:c).
+    const { editor: short } = openEditor("Non :x: et :o: mais a:b:c\n");
+    expect(findShortcodes(short.state.doc).map((s) => s.emoji)).toEqual(["❌\u{FE0F}", "⭕\u{FE0F}"]);
   });
 
   it("existing shortcodes are displayed as emoji, and revealed under the cursor", async () => {

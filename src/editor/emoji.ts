@@ -130,7 +130,7 @@ export const EmojiSuggest = Extension.create<{ store: MenuStore<EmojiItem> }>({
 
 /* ---- Shortcodes displayed as emoji ---- */
 
-const SHORTCODE = /(?<![\w:]):([a-z0-9_+-]{2,}):(?!:)/gi;
+const SHORTCODE = /(?<![\w:]):([a-z0-9_+-]+):(?!:)/gi;
 
 interface Shortcode {
   from: number;

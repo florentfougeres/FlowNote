@@ -547,6 +547,8 @@ li.drag-ghost {
   position: absolute;
   left: calc(100% + 0.3em);
   white-space: nowrap;
+  /* The heading's weight, not the # marks' regular one. */
+  font-weight: bold;
 }
 
 .note .code-mark {
