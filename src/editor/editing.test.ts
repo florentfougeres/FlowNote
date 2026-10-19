@@ -300,3 +300,21 @@ describe("Copy", () => {
     expect(markdownForClipboard(editor.state.selection.content())).toBe("`def` g");
   });
 });
+
+describe("Tab in a paragraph indents it, like Notion", () => {
+  it("under a list: nested in its last item", () => {
+    const { editor, save } = open("- un\n- deux\n\ntrois\n");
+    press(editor, "Tab");
+    expect(save()).toBe("- un\n- deux\n  - trois\n");
+    type(editor, "!");
+    expect(save()).toBe("- un\n- deux\n  - trois!\n");
+  });
+
+  it("elsewhere: a bullet item, Shift-Tab bringing the text back", () => {
+    const { editor, save } = open("Avant\n\nligne\n");
+    press(editor, "Tab");
+    expect(save()).toBe("Avant\n\n- ligne\n");
+    press(editor, "Shift-Tab");
+    expect(save()).toBe("Avant\n\nligne\n");
+  });
+});

@@ -525,10 +525,9 @@ li.drag-ghost {
   display: none;
 }
 
-/* A heading's #, in the margin: the text does not move. */
+/* A heading's #, at the start of its line. */
 .note .heading-mark {
-  position: absolute;
-  transform: translateX(calc(-100% - 0.3em));
+  margin-right: 0.3em;
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;

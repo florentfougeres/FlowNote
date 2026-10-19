@@ -6,7 +6,7 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
  * Markdown marks shown around the cursor, to change a heading level or remove
  * inline code without the raw view (like Obsidian's live preview, without
  * ever turning the block back into text):
- * - in a heading, its `##` appear in grey in the margin; at the start of the
+ * - in a heading, its `##` appear in grey at the start of the line; at the start of the
  *   heading Backspace removes one (H1 becomes text) and `#` adds one;
  * - in inline code, its backticks appear around it; → at the end steps over
  *   the closing backtick, after which Backspace removes the code (the text

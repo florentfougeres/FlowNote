@@ -50,7 +50,7 @@ Au-dessus de chaque page : le fil d'Ariane (cliquable, avec le menu des dossiers
 | Correction | active ou coupe le correcteur |
 | Présentation | transforme la note en présentation (sur une présentation : miniatures, Présenter, export HTML) |
 | Historique | les versions Git de la note, à comparer ou restaurer |
-| Pleine largeur | la page occupe toute la fenêtre, avec des marges où tiennent les `###` des titres (retenu pour chaque page) |
+| Pleine largeur | la page occupe toute la fenêtre (retenu pour chaque page) |
 | Mode focus `⌘⇧M` | masque tout sauf la page |
 | « … » | export PDF, copie en HTML |
 | Markdown brut `⌘⇧E` | le fichier tel quel, avec ses numéros de ligne |
@@ -123,7 +123,8 @@ Les raccourcis Markdown marchent aussi à la frappe :
 
 - `⌥↑` / `⌥↓` déplacent le bloc, `⌘D` le duplique.
 - `↵` en fin de liste vide en sort ; `⇧↵` passe à la ligne dans le même bloc.
-- **Niveau d'un titre** : curseur dans un titre, ses `#` s'affichent en gris dans la marge. Au début du titre, `⌫` en retire un (un titre 1 redevient du texte) et `#` en ajoute un.
+- `⇥` indente : dans une liste, l'élément passe sous celui du dessus ; dans un paragraphe, la ligne devient un élément de liste, rangé sous la liste du dessus s'il y en a une (Markdown n'a pas de texte indenté : quatre espaces en feraient du code). `⇧⇥` désindente.
+- **Niveau d'un titre** : curseur dans un titre, ses `#` s'affichent en gris au début de la ligne. Au début du titre, `⌫` en retire un (un titre 1 redevient du texte) et `#` en ajoute un.
 - `⌫` au début d'une ligne la remonte au bout de la ligne du dessus, même sous une liste, une citation ou un callout. Sous un tableau, le curseur va dans la dernière cellule ; sous un séparateur, celui-ci est sélectionné (un second `⌫` le supprime).
 
 ### La mise en forme
@@ -135,7 +136,7 @@ Les raccourcis Markdown marchent aussi à la frappe :
 ### Les liens
 
 - `[[` insère un lien vers une note, avec autocomplétion ; `![[` intègre une note, une image ou une base. Les liens suivent les réglages d'Obsidian.
-- `⌘K` sur un texte sélectionné demande l'adresse d'un lien web ; sur un lien existant, il le modifie ou le retire. Coller une URL sur un texte sélectionné en fait aussi un lien.
+- `⌘K` sur un texte sélectionné demande l'adresse d'un lien web ; sur un lien existant, il le modifie ou le retire. Coller une URL sur un texte sélectionné en fait aussi un lien. Une adresse tapée (`https://…`, `www.…`) devient un lien dès qu'on la quitte ; le fichier garde l'adresse telle quelle.
 - Un **clic** sur un lien l'ouvre : dans le navigateur pour une adresse web, dans l'app pour une note. Au **survol**, une barre affiche l'adresse avec Modifier, Copier et Retirer.
 - Coller ou déposer une image l'enregistre dans le dossier des pièces jointes d'Obsidian et l'intègre à la note.
 

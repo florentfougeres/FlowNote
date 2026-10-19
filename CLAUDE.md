@@ -7,7 +7,7 @@
 - **Répondre en français.**
 - **Fidélité des fichiers avant tout** : tout reste du texte lisible dans Obsidian et propre dans Git. Une note non modifiée est réécrite à l'octet près ; une note modifiée ne change que dans les blocs touchés. Seule exception : les emoji restent en `:shortcode:`.
 - **Ne jamais modifier `.obsidian`** : il est en lecture seule.
-- **Commit, push, merge ou release seulement sur demande** (« commit et push », « merge », « release »). Fin des messages de commit : `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- **Commit, push ou merge seulement sur demande** (« commit et push », « merge »). Les releases, c'est l'utilisateur qui les fait. Fin des messages de commit : `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Grosse fonctionnalité** : poser des questions avant de coder.
 - **Style Notion partout** : pas de `<select>` bruts, des menus cohérents avec l'app, des fenêtres qui ne débordent pas, des alignements soignés.
 - **Bugs propres à WebKit** : les vérifier dans l'app de bureau, pas seulement dans Chrome.
@@ -61,10 +61,7 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 ## Publier une version
 
-1. Mettre la version et ses changements en tête de `CHANGELOG.md`, et mettre à jour le README si besoin.
-2. Changer la version dans `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `src-tauri/Cargo.lock`.
-3. Commit « Version X.Y.Z », merge dans `main`, puis `git tag vX.Y.Z && git push origin vX.Y.Z`.
-4. Le workflow `release.yml` construit le `.dmg` et crée une release en **brouillon**. L'utilisateur la publie lui-même.
+**L'utilisateur publie lui-même** (version, CHANGELOG, tag) en suivant `docs/publier-une-version.md`. Ne pas le faire à sa place ; tenir ce document à jour si le processus change.
 
 ## État actuel (16 octobre 2026)
 

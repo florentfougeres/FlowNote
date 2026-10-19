@@ -15,6 +15,7 @@ import { findPlugin } from "./find";
 import { tocPlugin } from "./toc";
 import { backtickPlugin } from "./backticks";
 import { removeCodeAround, syntaxMarksPlugin } from "./syntaxMarks";
+import { autolinkPlugin } from "./autolink";
 import { grammarPlugin } from "./grammar";
 import { titleHeadingPlugin } from "./titleHeading";
 import { dueDatePlugin } from "../ticket/dueDates";
@@ -23,7 +24,7 @@ import { NULL_BRIDGE, type BridgeRef } from "./bridge";
 const Editing = Extension.create({
   priority: 150,
   name: "editing",
-  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin(), codeHighlightPlugin(), findPlugin(), grammarPlugin(), dueDatePlugin(), tocPlugin(), backtickPlugin(), syntaxMarksPlugin()],
+  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin(), codeHighlightPlugin(), findPlugin(), grammarPlugin(), dueDatePlugin(), tocPlugin(), backtickPlugin(), syntaxMarksPlugin(), autolinkPlugin()],
   addKeyboardShortcuts() {
     return {
       "Mod-z": () => undo(this.editor.state, this.editor.view.dispatch),

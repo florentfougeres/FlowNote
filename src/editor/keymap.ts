@@ -15,6 +15,36 @@ function lastTextblock(node: PMNode, pos: number): { node: PMNode; pos: number }
 }
 
 /**
+ * Tab in a top-level paragraph, like Notion: under a list it becomes an item
+ * nested in the last one, otherwise a bullet item (Markdown has no indented
+ * text: 4 spaces before a paragraph make it code).
+ */
+export function indentLine(state: EditorState): Transaction | null {
+  const { $from } = state.selection;
+  const line = $from.parent;
+  const { list, listItem } = state.schema.nodes;
+  if ($from.depth !== 1 || line.type.name !== "paragraph") return null;
+  const index = $from.index(0);
+  const above = index > 0 ? state.doc.child(index - 1) : null;
+  const lineStart = $from.before(1);
+  if (above?.type !== list) {
+    const range = state.doc.resolve(lineStart + 1).blockRange(state.doc.resolve(lineStart + line.nodeSize - 1))!;
+    const tr = state.tr.wrap(range, [{ type: list, attrs: { ordered: false, bullet: "-" } }, { type: listItem }]);
+    return tr.setSelection(TextSelection.create(tr.doc, $from.pos + 2));
+  }
+  // The line joins the list as its last item, then sinks under the one before.
+  const insertAt = lineStart - 1;
+  const tr = state.tr.delete(lineStart, lineStart + line.nodeSize).insert(insertAt, listItem.create(null, line));
+  tr.setSelection(TextSelection.create(tr.doc, insertAt + 2 + $from.parentOffset));
+  let sunk: Transaction | null = null;
+  sinkListItem(listItem)(state.apply(tr), (t) => (sunk = t));
+  if (!sunk) return tr;
+  const nested: Transaction = sunk;
+  nested.steps.forEach((step) => tr.step(step));
+  return tr.setSelection(TextSelection.create(tr.doc, nested.selection.from));
+}
+
+/**
  * Backspace at the start of a top-level line whose previous block is a
  * container or an atom (ProseMirror would pull the line into the list or
  * quote as a new item, or delete the atom):
@@ -260,7 +290,9 @@ export const BlockKeymap = Extension.create({
           dispatch(editor.state.tr.insertText("\t"));
           return true;
         }
-        sinkListItem(types().listItem)(editor.state, dispatch);
+        const indented = indentLine(editor.state);
+        if (indented) dispatch(indented);
+        else sinkListItem(types().listItem)(editor.state, dispatch);
         return true; // keep the focus in the editor
       },
       "Shift-Tab": () => {

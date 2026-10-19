@@ -417,11 +417,13 @@ function addMark(marks: PMMark[], mark: PMMark): PMMark[] {
 function collectInline(nodes: PhrasingContent[], src: string, marks: PMMark[]): Segment[] {
   const out: Segment[] = [];
   for (const n of nodes) {
-    const [start, end] = span(n);
-    const raw = src.slice(start, end);
+    // GFM finds URLs that its tokenizer missed (`[https://…]`) by splitting text
+    // nodes after parsing: those pieces (text and literal links) have no position.
+    const positionless = !n.position && (n.type === "text" || n.type === "link");
+    const raw = positionless ? "" : src.slice(...span(n));
     switch (n.type) {
       case "text":
-        if (n.value) out.push(withMarks({ type: "text", text: n.value, raw }, marks));
+        if (n.value) out.push(withMarks({ type: "text", text: n.value, raw: positionless ? undefined : raw }, marks));
         break;
       case "emphasis":
         out.push(...collectInline(n.children, src, addMark(marks, { type: "italic", attrs: { marker: raw[0] } })));

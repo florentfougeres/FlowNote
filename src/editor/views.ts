@@ -540,7 +540,7 @@ function tagDecorations(doc: PMNode, from: number, to: number): Decoration[] {
 }
 
 /** Ranges of the new document touched by a transaction. */
-function changedRanges(tr: Transaction): [number, number][] {
+export function changedRanges(tr: Transaction): [number, number][] {
   const ranges: [number, number][] = [];
   tr.mapping.maps.forEach((map, i) => {
     const rest = tr.mapping.slice(i + 1);

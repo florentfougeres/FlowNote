@@ -114,6 +114,15 @@ describe("Obsidian syntax is recognised", () => {
     expect(paragraph.content!.every((n) => n.type === "text")).toBe(true);
   });
 
+  it("URLs between brackets are literal links that serialize back", () => {
+    for (const source of ["Voir [https://a.io/x] ici", "[[https://a.io/x]]"]) {
+      const { doc, layout } = loadMarkdown(source);
+      const [paragraph] = doc.content!;
+      expect(paragraph.content!.some((n) => n.marks?.some((m) => m.type === "link" && m.attrs?.kind === "literal"))).toBe(true);
+      expect(serializeTopLevelBlockWithReport(paragraph, layout.context)).toMatchObject({ exact: true });
+    }
+  });
+
   it("callouts carry type and fold state", () => {
     const [callout] = parseFragment("> [!faq]- Question\n> Réponse");
     expect(callout.type).toBe("callout");
