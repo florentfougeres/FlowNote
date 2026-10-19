@@ -55,7 +55,7 @@ Le principe qui guide tout le reste : **le vault Obsidian reste la seule source 
 | Bases | [TanStack Table](https://tanstack.com/table) v8 | `src/base/TableView.tsx` | Vue tableau des bases `.base` |
 | Graphe | [d3-force](https://d3js.org/d3-force) | `src/graph/GraphView.tsx` | Disposition du graphe des liens |
 | Animations | [Motion](https://motion.dev) | `src/editor/dragMotion.ts` | Animation du glisser-déposer des blocs |
-| Correcteur | [Grammalecte](https://grammalecte.net) 2.3.0 | `grammar/`, `src-tauri/src/grammar.rs` | Grammaire et orthographe françaises |
+| Correcteur | [Grammalecte](https://grammalecte.net) 2.3.0 | `grammar/`, `src-tauri/core/src/grammar.rs` | Grammaire et orthographe françaises |
 | Côté Rust | `serde`, `trash`, `ureq`, `tauri-plugin-dialog` | `src-tauri/` | Échanges JSON, corbeille du système, titre d'une page web, sélecteur de dossier |
 | Outils | Vite, Vitest + jsdom, oxlint, TypeScript 7 | | Build, tests, lint, types |
 
@@ -206,9 +206,15 @@ Autour de cette interface :
 - **`backlinks.ts`**, **`search.ts`** : notes liées et recherche dans le vault.
 - **`conflicts.ts`** : lecture des marqueurs de conflit Git (`<<<<<<<`, `=======`, `>>>>>>>`, y compris le style diff3) pour l'outil de résolution.
 
-## Le backend Rust (`src-tauri/`)
+## Le backend Rust (`src-tauri/core/`)
 
-Le backend est volontairement petit. Les commandes sont déclarées avec `#[tauri::command]` et appelées depuis TypeScript par `invoke()`.
+Le backend est volontairement petit, et **unique** : la bibliothèque `flownote-core` (`src-tauri/core/`) ne dépend pas de Tauri.
+- **Un seul aiguillage** : `backend::dispatch(commande, arguments)` sert toutes les commandes. Leur liste est la constante `COMMANDS`.
+- **Côté web** : on l'appelle toujours par `backend()` (`src/platform.ts`).
+- **Côté Tauri** : l'app (`src-tauri/src/lib.rs`) l'expose par une seule commande `backend`, exécutée hors du fil de l'interface. Elle ne garde en propre que ce qui touche sa fenêtre : le sélecteur de dossier (`vault_pick`), la lecture binaire brute (`vault_read_binary`, sans passage par JSON), `startup_note` et `log_frontend`.
+- **Contrat testé** : `src/platform.test.ts` vérifie que chaque commande appelée par le web existe dans `COMMANDS`, et que chaque `invoke` direct est déclaré par l'app Tauri.
+
+**Ajouter une commande** : une fonction dans le bon module de `core/`, une ligne dans `dispatch` et dans `COMMANDS`, puis un appel `backend("…")` côté web. Rien d'autre.
 
 - **`vault.rs`** : les fichiers. Les chemins reçus sont relatifs au vault et vérifiés ; les entrées cachées (`.obsidian`, `.git`, `.trash`…) ne sont jamais listées, lues ni écrites. L'écriture est **atomique** (fichier temporaire puis `rename`, pour qu'Obsidian ou un client de synchronisation ne voie jamais un fichier à moitié écrit) et **contrôlée** : elle n'a lieu que si le fichier contient encore ce que l'app avait chargé, sinon l'erreur commence par `CONFLICT:`. La suppression passe par la corbeille du système (crate `trash`). L'arbre renvoie aussi, pour chaque note, ce que l'interface affiche sans la lire en entier (ticket, présentation, icône, titre), à partir des 4 premiers Ko du fichier.
 - **`git.rs`** : le gestionnaire Git lance le **`git` du système** (avec la configuration, les identifiants et les hooks de l'utilisateur), avec `-C <vault>` et `core.fsmonitor=false`. Il gère statut, diff, indexation, commit, historique, fetch, pull, push et résolution des conflits de fusion.
@@ -216,6 +222,39 @@ Le backend est volontairement petit. Les commandes sont déclarées avec `#[taur
 - **`web.rs`** : ouvre les liens `http(s)` et `mailto:` dans le navigateur (et rien d'autre), lit le titre d'une page web (`ureq`, 6 s au plus), écrit les exports (`.html`, `.png`) là où l'utilisateur l'a choisi.
 
 **Sécurité** : `check_root` limite toutes les commandes (vault et git) à un dossier qui contient `.obsidian` ou qui a été choisi par l'utilisateur dans le sélecteur natif (`vault_pick`, liste dans `trusted-vaults.json` des données de l'app). La **CSP** (`tauri.conf.json`) n'autorise que les scripts de l'app ; une nouvelle bibliothèque qui charge une ressource externe doit y être ajoutée.
+
+## FlowNote Swift : la coquille native macOS (`native/`)
+
+FlowNote existe en deux applications, maintenues côte à côte : **FlowNote** (Tauri, la porte ouverte aux autres systèmes) et **FlowNote Swift** (une app SwiftUI pour macOS 26 et plus, avec Liquid Glass). La release produit un `.dmg` pour chacune.
+
+**Principe : une seule app web.** Chaque fenêtre de FlowNote Swift fait tourner l'app web complète (`index.html`, `App.tsx`), la même que dans Tauri. La coquille ne dessine que ce qui doit être natif :
+- la fenêtre ;
+- la barre latérale (vault, vues, favoris, pages, Git, Réglages, Aide) ;
+- la ligne d'onglets avec les boutons de l'historique ;
+- les menus et les raccourcis.
+
+Tout le reste est l'app web : fil d'Ariane et barre de page, éditeur, compte de mots, colonne Git, dialogues, split view, Réglages, accueil et onboarding. Une fonctionnalité ajoutée à l'app web arrive donc dans les deux versions.
+
+- **Le mode coquille (`App.tsx`)** : quand le vault vient de la coquille, l'app masque sa barre de titre et sa barre latérale HTML. Le contrat est typé dans `src/shell.ts` :
+  - la coquille appelle l'app par `window.flownoteShell.call(nom, …)` (`ShellCalls`) : choisir une page, gérer les onglets, lancer une action de la barre latérale web (`onRename`, `onMove`…), demander un menu ;
+  - l'app lui renvoie son état par `shell_update` (`ShellState`) : onglets, onglet actif, modifications, historique, Git, favoris, titres, page en cours.
+
+  `src/shell.test.ts` lit le code Swift et vérifie chaque nom utilisé. La démo (vault en mémoire) garde l'interface web complète.
+- **Les menus** (pages, dossiers, racine, onglets) sont écrits une fois, dans `src/menus.ts`. La coquille demande les entrées à l'app (`menu`), les affiche dans un `NSMenu`, puis fait exécuter l'entrée choisie (`runMenu`).
+- **Le backend est celui de Tauri** : `native/ffi` compile `src-tauri/core` en bibliothèque statique, avec cinq fonctions C (`flownote_init`, `flownote_trust`, `flownote_call`, `flownote_free`, `flownote_shutdown`).
+  - `backend()` (`platform.ts`) envoie la commande à la coquille, qui y ajoute la racine de son vault (la page ne nomme jamais de dossier) et appelle `flownote_call`, hors du fil principal.
+  - Swift ne garde que ce qui est propre à la fenêtre : panneau d'enregistrement (l'écriture du fichier reste au backend), panneau d'impression (WKWebView ignore `window.print()`), thème et zoom, choix du vault (signets, vaults récents, `flownote_trust`).
+  - Il demande aussi à iCloud de télécharger les notes restées dans le nuage (`.Note.md.icloud`), et surveille le dossier (FSEvents) pour prévenir l'app des changements.
+- **Liquid Glass** : l'app vise macOS 26. Liée à un SDK plus ancien, elle garderait l'ancien style : SwiftPM inscrit la cible minimale comme version du SDK.
+
+Ce qui se maintient à deux endroits (barre latérale, onglets, raccourcis, fenêtre) est listé dans `CLAUDE.md`, section « Deux applications ».
+
+```sh
+native/build.sh --open          # construit le web, la bibliothèque Rust et native/build/FlowNote Swift.app, puis le lance
+open --env FLOWNOTE_OPEN="Note.md" "native/build/FlowNote Swift.app"   # ouvre une page au lancement
+```
+
+SwiftUI a besoin d'Xcode : ses macros ne sont pas dans les Command Line Tools.
 
 ## Le correcteur Grammalecte
 

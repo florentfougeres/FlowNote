@@ -1,43 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ConflictError, encodeText, type Vault, type VaultEntry } from "./vault";
-import { tauriGit } from "./git";
+import type { Vault } from "./vault";
+import { backendVault } from "./backendVault";
 
 const LAST_VAULT_KEY = "flownote:last-vault";
 const RECENT_VAULTS_KEY = "flownote:recent-vaults";
 
-export function isTauri(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
+export { isTauri } from "../platform";
 
 export function tauriVault(root: string): Vault {
-  return {
-    name: root.split("/").filter(Boolean).pop() ?? root,
-    git: tauriGit(root),
-    tree: () => invoke<VaultEntry[]>("vault_tree", { root }),
-    read: (path) => invoke<string>("vault_read", { root, path }),
-    write: async (path, content, expected) => {
-      try {
-        await invoke("vault_write", { root, path, content, expected });
-      } catch (error) {
-        const message = String(error);
-        if (message.startsWith("CONFLICT:")) throw new ConflictError(message.slice("CONFLICT:".length));
-        throw new Error(message);
-      }
-    },
-    files: () => invoke<string[]>("vault_files", { root }),
-    readBinary: async (path) => new Uint8Array(await invoke<ArrayBuffer>("vault_read_binary", { root, path })),
-    create: (path, content) =>
-      invoke("vault_create", { root, path, content: Array.from(typeof content === "string" ? encodeText(content) : content) }),
-    createFolder: (path) => invoke("vault_create_dir", { root, path }),
-    reveal: (path) => invoke("vault_reveal", { root, path }),
-    obsidianConfig: () => invoke<string>("vault_config", { root }),
-    rename: (from, to) => invoke("vault_rename", { root, from, to }),
-    remove: (path) => invoke("vault_trash", { root, path }),
-    search: (query, caseSensitive, limit) => invoke("vault_search", { root, query, caseSensitive, limit }),
-    readNotes: () => invoke<[string, string][]>("vault_read_notes", { root }),
-    stats: () => invoke<{ path: string; ctime: number; mtime: number }[]>("vault_stats", { root }),
-    bookmarks: () => invoke<string>("vault_bookmarks", { root }),
-  };
+  return backendVault(root.split("/").filter(Boolean).pop() ?? root, root, true);
 }
 
 /** Asks for a vault folder; resolves to null if the dialog is cancelled. */

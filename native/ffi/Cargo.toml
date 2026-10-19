@@ -1,0 +1,14 @@
+[package]
+name = "flownote-ffi"
+version = "0.1.0"
+description = "FlowNote's backend (src-tauri/core) as a C library, for the native shell (FlowNote Swift)"
+edition = "2024"
+rust-version = "1.90"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+flownote-core = { path = "../../src-tauri/core" }
+serde_json = "1.0"

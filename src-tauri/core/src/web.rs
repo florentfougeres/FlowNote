@@ -11,7 +11,6 @@ fn is_web_url(url: &str) -> bool {
     lower.starts_with("https://") || lower.starts_with("http://")
 }
 
-#[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
     let lower = url.trim().to_ascii_lowercase();
     if !is_web_url(&url) && !lower.starts_with("mailto:") {
@@ -27,7 +26,6 @@ fn is_export(path: &str) -> bool {
 }
 
 /// Writes an export where the user chose to save it (.html or .png only).
-#[tauri::command]
 pub fn save_export(path: String, content: Vec<u8>) -> Result<(), String> {
     if !is_export(&path) {
         return Err(format!("Export refusé : {path}"));
@@ -36,7 +34,6 @@ pub fn save_export(path: String, content: Vec<u8>) -> Result<(), String> {
 }
 
 /// Opens an export with its default app (browser for HTML, Preview for PNG).
-#[tauri::command]
 pub fn open_export(path: String) -> Result<(), String> {
     if !is_export(&path) || !std::path::Path::new(&path).is_file() {
         return Err(format!("Fichier introuvable : {path}"));
@@ -46,21 +43,16 @@ pub fn open_export(path: String) -> Result<(), String> {
 
 /// Title of a web page (`og:title`, else `<title>`), or None. Reads at most
 /// 512 KB, gives up after a few seconds.
-#[tauri::command]
-pub async fn fetch_page_title(url: String) -> Option<String> {
+/// Blocking: the caller runs it away from the UI thread.
+pub fn fetch_page_title(url: String) -> Option<String> {
     if !is_web_url(&url) {
         return None;
     }
-    tauri::async_runtime::spawn_blocking(move || {
-        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(6)).redirects(5).build();
-        let response = agent.get(url.trim()).set("User-Agent", "Mozilla/5.0 (Macintosh) FlowNote").call().ok()?;
-        let mut bytes = Vec::new();
-        response.into_reader().take(512 * 1024).read_to_end(&mut bytes).ok()?;
-        title_of(&String::from_utf8_lossy(&bytes))
-    })
-    .await
-    .ok()
-    .flatten()
+    let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(6)).redirects(5).build();
+    let response = agent.get(url.trim()).set("User-Agent", "Mozilla/5.0 (Macintosh) FlowNote").call().ok()?;
+    let mut bytes = Vec::new();
+    response.into_reader().take(512 * 1024).read_to_end(&mut bytes).ok()?;
+    title_of(&String::from_utf8_lossy(&bytes))
 }
 
 fn title_of(html: &str) -> Option<String> {
@@ -123,7 +115,7 @@ mod tests {
     #[test]
     #[ignore]
     fn fetches_a_real_page_title() {
-        let title = tauri::async_runtime::block_on(fetch_page_title("https://example.com".into()));
+        let title = fetch_page_title("https://example.com".into());
         assert_eq!(title.as_deref(), Some("Example Domain"));
     }
 

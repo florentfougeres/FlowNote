@@ -25,7 +25,7 @@ fn companion_path() -> Option<PathBuf> {
     if beside.is_file() {
         return Some(beside);
     }
-    let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("binaries");
+    let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../binaries");
     std::fs::read_dir(dev).ok()?.flatten().map(|e| e.path()).find(|p| {
         p.file_name().is_some_and(|n| n.to_string_lossy().starts_with(NAME))
     })
@@ -68,9 +68,9 @@ fn exchange(companion: &mut Companion, paragraphs: &[String]) -> Result<Value, S
 }
 
 /// Errors of each paragraph: `[{ grammar: [...], spelling: [...] }, ...]`.
-#[tauri::command]
-pub async fn grammar_check(paragraphs: Vec<String>) -> Result<Value, String> {
-    tauri::async_runtime::spawn_blocking(move || {
+/// Blocking: the caller runs it away from the UI thread.
+pub fn grammar_check(paragraphs: Vec<String>) -> Result<Value, String> {
+    {
         let mut slot = COMPANION.lock().map_err(|e| e.to_string())?;
         if slot.is_none() {
             *slot = Some(start()?);
@@ -83,9 +83,7 @@ pub async fn grammar_check(paragraphs: Vec<String>) -> Result<Value, String> {
             }
         }
         result
-    })
-    .await
-    .map_err(|e| e.to_string())?
+    }
 }
 
 /// Stops the companion when the app quits.
@@ -109,7 +107,7 @@ mod tests {
             return;
         }
         let paragraphs = vec!["Les enfant sont tres sages.".to_string(), "Tout va bien.".to_string()];
-        let results = tauri::async_runtime::block_on(grammar_check(paragraphs)).expect("check");
+        let results = grammar_check(paragraphs).expect("check");
         let first = &results[0];
         assert!(first["spelling"].as_array().unwrap().iter().any(|e| e["word"] == "tres"));
         assert!(first["grammar"].as_array().unwrap().iter().any(|e| e["suggestions"][0] == "enfants"));

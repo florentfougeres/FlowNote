@@ -1,0 +1,13 @@
+[package]
+name = "flownote-core"
+version = "0.1.0"
+description = "FlowNote's backend (vault, Git, Grammalecte), shared by the Tauri app and the native shell"
+edition = "2024"
+rust-version = "1.90"
+publish = false # never released on its own: its version does not follow the app's
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+trash = "5"
+ureq = "2"

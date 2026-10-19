@@ -126,7 +126,9 @@ pub fn load_trusted(file: PathBuf) {
     state.file = Some(file);
 }
 
-fn trust(root: &str) {
+/// Trusts a folder chosen in the app's folder picker: it opens even when it is
+/// not an Obsidian vault yet (no `.obsidian`).
+pub fn trust(root: &str) {
     let mut state = trusted().lock().unwrap_or_else(|e| e.into_inner());
     if !state.roots.insert(root.to_string()) {
         return;
@@ -153,18 +155,6 @@ pub fn check_root(root: &str) -> Result<&Path, String> {
     } else {
         Err(format!("Dossier non autorisé : {root}. Choisissez-le avec « Ouvrir un vault »."))
     }
-}
-
-/// The folder picker for a vault. The chosen folder is trusted: it opens even
-/// when it is not an Obsidian vault yet. Picked natively here, so the page
-/// cannot add a folder of its choice.
-#[tauri::command]
-pub async fn vault_pick(app: tauri::AppHandle) -> Option<String> {
-    use tauri_plugin_dialog::DialogExt;
-    let picked = app.dialog().file().set_title("Choisir un vault Obsidian").blocking_pick_folder()?;
-    let root = picked.into_path().ok()?.to_string_lossy().into_owned();
-    trust(&root);
-    Some(root)
 }
 
 /// Resolves a vault-relative path, refusing anything that escapes the root or
@@ -225,12 +215,10 @@ fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
     Ok(entries)
 }
 
-#[tauri::command]
 pub fn vault_tree(root: String) -> Result<Vec<VaultEntry>, String> {
     list(check_root(&root)?, "")
 }
 
-#[tauri::command]
 pub fn vault_read(root: String, path: String) -> Result<String, String> {
     let file = resolve(&root, &path)?;
     fs::read_to_string(&file).map_err(|e| format!("{path}: {e}"))
@@ -239,7 +227,6 @@ pub fn vault_read(root: String, path: String) -> Result<String, String> {
 /// Writes `content` only if the file still holds `expected`; the error message
 /// starts with `CONFLICT:` otherwise. The write goes through a temporary file
 /// and a rename so that Obsidian or a sync client never sees a partial file.
-#[tauri::command]
 pub fn vault_write(root: String, path: String, content: String, expected: Option<String>) -> Result<(), String> {
     let file = resolve(&root, &path)?;
     if let Some(expected) = expected {
@@ -276,7 +263,6 @@ fn collect_files(dir: &Path, prefix: &str, out: &mut Vec<String>) {
 }
 
 /// Every non-hidden file of the vault (notes and attachments), for link resolution.
-#[tauri::command]
 pub fn vault_files(root: String) -> Vec<String> {
     let Ok(base) = check_root(&root) else { return Vec::new() };
     let mut files = Vec::new();
@@ -294,7 +280,6 @@ pub struct SearchFile {
 
 /// Lines of every note containing `query` (case-insensitive unless asked),
 /// at most `limit` lines in total. Positions within lines are computed by the frontend.
-#[tauri::command]
 pub fn vault_search(root: String, query: String, case_sensitive: bool, limit: usize) -> Vec<SearchFile> {
     let Ok(base) = check_root(&root) else { return Vec::new() };
     let mut files = Vec::new();
@@ -326,15 +311,13 @@ pub fn vault_search(root: String, query: String, case_sensitive: bool, limit: us
     results
 }
 
-/// Raw bytes of a file (images and other attachments), sent without JSON encoding.
-#[tauri::command]
-pub fn vault_read_binary(root: String, path: String) -> Result<tauri::ipc::Response, String> {
+/// Raw bytes of a file (images and other attachments).
+pub fn vault_read_binary(root: String, path: String) -> Result<Vec<u8>, String> {
     let file = resolve(&root, &path)?;
-    fs::read(&file).map(tauri::ipc::Response::new).map_err(|e| format!("{path}: {e}"))
+    fs::read(&file).map_err(|e| format!("{path}: {e}"))
 }
 
 /// Creates a new file; never overwrites an existing one.
-#[tauri::command]
 pub fn vault_create(root: String, path: String, content: Vec<u8>) -> Result<(), String> {
     use std::io::Write;
     let file = resolve(&root, &path)?;
@@ -350,7 +333,6 @@ pub fn vault_create(root: String, path: String, content: Vec<u8>) -> Result<(), 
 }
 
 /// Creates an empty folder; never takes the place of an existing file or folder.
-#[tauri::command]
 pub fn vault_create_dir(root: String, path: String) -> Result<(), String> {
     let dir = resolve(&root, &path)?;
     if dir.exists() {
@@ -360,7 +342,6 @@ pub fn vault_create_dir(root: String, path: String) -> Result<(), String> {
 }
 
 /// Shows a note or folder of the vault in the Finder, selected.
-#[tauri::command]
 pub fn vault_reveal(root: String, path: String) -> Result<(), String> {
     let target = resolve(&root, &path)?;
     if !target.exists() {
@@ -370,7 +351,6 @@ pub fn vault_reveal(root: String, path: String) -> Result<(), String> {
 }
 
 /// Obsidian settings (`.obsidian/app.json`), read only; "{}" when absent.
-#[tauri::command]
 pub fn vault_config(root: String) -> String {
     let Ok(base) = check_root(&root) else { return "{}".into() };
     fs::read_to_string(base.join(".obsidian").join("app.json")).unwrap_or_else(|_| "{}".into())
@@ -378,7 +358,6 @@ pub fn vault_config(root: String) -> String {
 
 /// Every note of the vault with its content, in one call (dashboard statistics).
 /// Notes over 1 MB are skipped.
-#[tauri::command]
 pub fn vault_read_notes(root: String) -> Vec<(String, String)> {
     let Ok(base) = check_root(&root) else { return Vec::new() };
     let mut files = Vec::new();
@@ -410,7 +389,6 @@ fn millis(time: std::io::Result<std::time::SystemTime>) -> f64 {
     time.ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0.0, |d| d.as_millis() as f64)
 }
 
-#[tauri::command]
 pub fn vault_stats(root: String) -> Vec<FileStat> {
     let Ok(base) = check_root(&root) else { return Vec::new() };
     let mut files = Vec::new();
@@ -428,14 +406,12 @@ pub fn vault_stats(root: String) -> Vec<FileStat> {
 }
 
 /// Obsidian's bookmarks (.obsidian/bookmarks.json), read only; "{}" when absent.
-#[tauri::command]
 pub fn vault_bookmarks(root: String) -> String {
     let Ok(base) = check_root(&root) else { return "{}".into() };
     fs::read_to_string(base.join(".obsidian").join("bookmarks.json")).unwrap_or_else(|_| "{}".into())
 }
 
 /// Renames a note or a folder; never overwrites an existing path.
-#[tauri::command]
 pub fn vault_rename(root: String, from: String, to: String) -> Result<(), String> {
     let source = resolve(&root, &from)?;
     let target = resolve(&root, &to)?;
@@ -453,7 +429,6 @@ pub fn vault_rename(root: String, from: String, to: String) -> Result<(), String
 }
 
 /// Moves a note or folder to the system trash (recoverable).
-#[tauri::command]
 pub fn vault_trash(root: String, path: String) -> Result<(), String> {
     let target = resolve(&root, &path)?;
     // Already gone (deleted elsewhere, or a deletion done halfway): nothing to do.

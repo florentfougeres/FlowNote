@@ -1,3 +1,4 @@
+import { folderMenu as folderMenuItems, pageMenu as pageMenuItems, rootMenu } from "./menus";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { VaultEntry } from "./vault/vault";
 import { Icon, type IconName } from "./Icon";
@@ -271,19 +272,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
     setMenu({ anchor: new DOMRect(event.clientX, event.clientY - 4, 0, 0), items });
   };
 
-  const reveal = (path: string): MenuItem[] => (props.onReveal ? [{ label: "Afficher dans le Finder", icon: "folder", run: () => props.onReveal!(path) }] : []);
-
-  /** Tickets are numbered and bases share their rows' folder: neither is duplicated. */
-  const pageMenu = (path: string, ticket = false): MenuItem[] => [
-    { label: "Ouvrir dans un nouvel onglet", icon: "open", run: () => props.onSelect(path, true) },
-    { label: "Ouvrir à droite", icon: "split", run: () => props.onOpenRight(path) },
-    { label: "Ajouter une sous-page", icon: "plus", run: () => props.onNewPage(path) },
-    { label: "Copier le lien", icon: "link", run: () => props.onCopyLink(path) },
-    ...(ticket || isBasePath(path) ? [] : [{ label: "Dupliquer", icon: "copy" as IconName, run: () => props.onDuplicate(path) }]),
-    ...reveal(path),
-    { label: "Renommer", icon: "pencil", run: () => props.onRename(path) },
-    { label: "Supprimer", icon: "trash", danger: true, run: () => props.onDelete(path) },
-  ];
+  const pageMenu = (path: string, ticket = false): MenuItem[] => pageMenuItems(path, ticket, props);
 
   /** Where an item may be dropped: a plain folder other than its own (and not inside itself), or the root. */
   /** In the tickets folder (the vault root holds everything, so it does not count). */
@@ -363,20 +352,15 @@ export const Sidebar = memo(function Sidebar(props: Props) {
     window.addEventListener("keydown", key, true);
   };
 
-  const folderMenu = (folder: string): MenuItem[] => [
-    { label: "Nouvelle page dans ce dossier", icon: "plus", run: () => props.onNewPageInFolder(folder) },
-    {
-      label: "Nouveau sous-dossier",
-      icon: "folderAdd",
-      run: () => {
-        setExpanded((open) => new Set(open).add(folder));
-        props.onNewFolder(folder);
+  const folderMenu = (folder: string): MenuItem[] =>
+    folderMenuItems(folder, {
+      ...props,
+      // The folder opens to show its new sub-folder.
+      onNewFolder: (parent) => {
+        setExpanded((open) => new Set(open).add(parent));
+        props.onNewFolder(parent);
       },
-    },
-    ...reveal(folder),
-    { label: "Renommer", icon: "pencil", run: () => props.onRenameFolder(folder) },
-    { label: "Supprimer", icon: "trash", danger: true, run: () => props.onDeleteFolder(folder) },
-  ];
+    });
 
   const render = (list: Page[], depth: number) => (
     <ul className="tree">
@@ -537,10 +521,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
         }}
         onContextMenu={(event) =>
           // Right click in the empty space of the tree: create at the vault root.
-          openContextMenu(event, [
-            { label: "Nouvelle page", icon: "plus", run: () => props.onNewPageInFolder("") },
-            { label: "Nouveau dossier", icon: "folderAdd", run: () => props.onNewFolder("") },
-          ])
+          openContextMenu(event, rootMenu(props))
         }
       >
         {render(pages, 0)}

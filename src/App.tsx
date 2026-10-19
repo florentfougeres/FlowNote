@@ -1,3 +1,5 @@
+import { folderMenu as folderMenuOf, pageMenu as pageMenuOf, rootMenu as rootMenuOf, tabMenu as tabMenuOf } from "./menus";
+import type { ShellCalls, ShellLaunch, ShellState } from "./shell";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { keys } from "./keys";
 import { NoteEditor } from "./editor/NoteEditor";
@@ -56,6 +58,8 @@ import { exportMindmapPng, exportPdf, exportSlidesHtml, type ExportedPage } from
 import { useSystemDark } from "./hooks/useSystemDark";
 import { hasConflictMarkers } from "./vault/conflicts";
 import { currentTauriVault, forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
+import { callNative, isNative } from "./platform";
+import { backendVault } from "./vault/backendVault";
 import { Welcome } from "./Welcome";
 import { TabBar, type Tab } from "./TabBar";
 import { joinTab as joinTabs, nextPageTab, separateTab as separateTabs, splitOf as splitIn, swapReading, withReading, withSplit } from "./tabs";
@@ -107,6 +111,20 @@ const VIEWS: Record<string, { title: string; icon: IconName }> = {
 const isView = (path: string | null) => path !== null && path in VIEWS;
 
 let tabCounter = 0;
+/**
+ * The native macOS shell (native/, "FlowNote Swift"): it draws the window, the
+ * sidebar and the tabs, and serves the files; the app draws everything else,
+ * exactly as in the Tauri app. It drives the app through `window.flownoteShell`
+ * and is told the tabs' state (`shell_update`).
+ */
+const SHELL = isNative();
+
+declare global {
+  interface Window {
+    flownoteShell?: { call(name: string, ...args: unknown[]): unknown };
+  }
+}
+
 const newTabId = () => `tab-${Date.now().toString(36)}-${(tabCounter++).toString(36)}`;
 
 interface Dialog {
@@ -229,7 +247,16 @@ export function App() {
     setShowOutline((shown) => !shown);
   };
   const [sidebarOpen, setSidebarOpen] = usePersistentFlag("flownote:sidebar", true, ["shown", "hidden"]);
-  const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [setSidebarOpen]);
+  /** The vault is the native shell's: its window, sidebar and tabs are native. */
+  const [shellChrome, setShellChrome] = useState(false);
+  const shellChromeRef = useRef(false);
+  shellChromeRef.current = shellChrome;
+  const [shellRecent, setShellRecent] = useState<string[]>([]);
+  const shellOpen = useRef<string | null>(null);
+  const toggleSidebar = useCallback(() => {
+    if (shellChromeRef.current) void callNative("toggle_sidebar").catch(() => {});
+    else setSidebarOpen((open) => !open);
+  }, [setSidebarOpen]);
   /** Focus mode: no sidebar, tabs and page bar faded until the pointer comes back. */
   const [focusMode, setFocusMode] = useState(false);
   const toggleFocus = useCallback(() => setFocusMode((on) => !on), []);
@@ -249,7 +276,11 @@ export function App() {
   const { peek, setPeek, openPeek, closePeekSoon } = useSidebarPeek();
   const frontmatter = useRef<FrontmatterControl | null>(null);
   useEffect(() => applyTheme(settings.theme, isTauri()), [settings.theme]);
-  useEffect(() => applyScale(settings.uiScale, isTauri()), [settings.uiScale]);
+  // In the native shell, the window takes the theme and the web view zooms (like Tauri's).
+  useEffect(() => {
+    if (SHELL) void callNative("appearance", { theme: settings.theme, scale: settings.uiScale }).catch(() => {});
+    else applyScale(settings.uiScale, isTauri());
+  }, [settings.theme, settings.uiScale]);
   // The desktop window is transparent so the sidebar can show the native macOS material.
   useEffect(() => {
     document.documentElement.classList.toggle("native-vibrancy", isTauri());
@@ -301,7 +332,7 @@ export function App() {
     setBookmarks(bookmarkedFiles(bookmarksJson).filter((p) => newFiles.includes(p)));
   }, []);
 
-  const open = async (pending: Vault | null | Promise<Vault | null>) => {
+  const open = async (pending: Vault | null | Promise<Vault | null>, native = false) => {
     const picked = await pending;
     if (!picked) return;
     // The views reading every note (dashboard, graph, tickets, bases, backlinks) share one copy of them.
@@ -312,6 +343,7 @@ export function App() {
       images.current.forEach((url) => URL.revokeObjectURL(url));
       images.current.clear();
       setVault(opened);
+      setShellChrome(native);
       setNote(null);
       // A vault opens on the dashboard, in a single tab (FLOWNOTE_OPEN opens a page, for debugging).
       const first = { id: newTabId(), path: null };
@@ -321,7 +353,7 @@ export function App() {
       activeRef.current = first.id;
       setTabs([first]);
       setActiveTab(first.id);
-      const forced = isTauri() ? await invoke<string | null>("startup_note").catch(() => null) : null;
+      const forced = isTauri() ? await invoke<string | null>("startup_note").catch(() => null) : shellOpen.current;
       if (forced) setPendingOpen(forced);
     } catch (error) {
       setStatus(`Impossible d'ouvrir le vault : ${String(error)}`);
@@ -331,6 +363,14 @@ export function App() {
   // In the desktop app, reopen the last vault on launch.
   useEffect(() => {
     if (isTauri()) void open(lastTauriVault());
+    // The native shell names its vault (none: the welcome screen, with its recent vaults).
+    else if (SHELL)
+      void callNative<ShellLaunch>("shell_state").then((state) => {
+        setShellRecent(state.recent);
+        shellOpen.current = state.open;
+        // The shell adds its vault's folder to every command: the page never names it.
+        if (state.vaultName) void open(backendVault(state.vaultName, null, state.git), true);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -810,7 +850,7 @@ export function App() {
     const pages = filesRef.current.filter((f) => f.startsWith(`${folder}/`) && (f.endsWith(".md") || f.endsWith(".base"))).length;
     const others = filesRef.current.filter((f) => f.startsWith(`${folder}/`)).length - pages;
     const content = [pages ? `${pages} page${pages > 1 ? "s" : ""}` : "", others ? `${others} autre${others > 1 ? "s" : ""} fichier${others > 1 ? "s" : ""}` : ""].filter(Boolean).join(" et ");
-    const where = isTauri() ? "Il ira dans la corbeille." : "Cette suppression est définitive.";
+    const where = isTauri() || shellChromeRef.current ? "Il ira dans la corbeille." : "Cette suppression est définitive.";
     const message = `Supprimer le dossier « ${folder.slice(folder.lastIndexOf("/") + 1)} »${content ? ` et son contenu (${content})` : ""} ? ${where}`;
     if (!(await askConfirm(message, "Supprimer"))) return;
     if (noteRef.current?.path.startsWith(`${folder}/`)) await saveNow().catch(() => {});
@@ -831,7 +871,7 @@ export function App() {
   const removePage = async (path: string) => {
     if (!vault) return;
     const children = subpagesOf(path, filesRef.current).length;
-    const where = isTauri() ? "Elle ira dans la corbeille." : "Cette suppression est définitive.";
+    const where = isTauri() || shellChromeRef.current ? "Elle ira dans la corbeille." : "Cette suppression est définitive.";
     const withChildren = children === 0 ? "" : children === 1 ? " et sa sous-page" : ` et ses ${children} sous-pages`;
     const message = `Supprimer « ${noteTitle(path)} »${withChildren} ? ${where}`;
     if (!(await askConfirm(message, "Supprimer"))) return;
@@ -1119,6 +1159,13 @@ export function App() {
   /** Back to the welcome screen: recent vaults, or another folder. */
   const changeVault = () => {
     setModal(null);
+    // The shell closes its vault: every window goes back to the welcome screen.
+    if (shellChromeRef.current) {
+      void saveNow()
+        .catch(() => {})
+        .then(() => callNative("close_vault"));
+      return;
+    }
     void saveNow()
       .catch(() => {})
       .then(() => {
@@ -1401,18 +1448,122 @@ export function App() {
     onPickVault: isTauri() ? () => void saveNow().catch(() => {}).then(() => open(pickTauriVault())) : undefined,
   });
 
+  // ---- The native shell: what it can ask, and what it is told. ----
+  const tabTitle = (tab: Tab) => (tab.path === null ? "Accueil" : (VIEWS[tab.path]?.title ?? shownName(tab.path)));
+  const shellCalls = useRef<ShellCalls | null>(null);
+  const shellMenu = useRef<MenuItem[]>([]);
+  shellCalls.current = {
+    select: (path: string | null, newTabRequested = false) => (path === null || isView(path) ? openView(path, newTabRequested) : void select(path, "push", newTabRequested)),
+    switchTab: (id: string) => void switchTab(id),
+    reorderTab: (id: string, before: string | null) => reorderTab(id, before),
+    closeTab: (id: string) => void closeTab(id),
+    newTab: () => void newTab(null),
+    back: goBack,
+    forward: goForward,
+    // The split view, from the menu bar.
+    swapSplit: () => void swapSplit(),
+    separateTab: (id: string) => void separateTab(id),
+    toggleSplit,
+    // The sidebar's actions, as the web sidebar does them (names asked, links followed…).
+    sidebar: (name: string, args: unknown[]) => (sidebarHandlers as unknown as Record<string, ((...a: unknown[]) => void) | undefined>)[name]?.(...args),
+    // The menus of menus.ts, shown natively: the same entries as the web sidebar's and tab bar's.
+    menu: (kind, target) => {
+      const items =
+        kind === "tab" ? tabMenuItems(target ?? "")
+        : kind === "page" ? pageMenuOf(target ?? "", ticketPaths.has(target ?? ""), sidebarHandlers)
+        : kind === "folder" ? folderMenuOf(target ?? "", sidebarHandlers)
+        : rootMenuOf(sidebarHandlers);
+      shellMenu.current = items;
+      return items.map((item) => ({ label: item.label, danger: Boolean(item.danger) }));
+    },
+    runMenu: (index) => shellMenu.current[index]?.run(),
+    newPage: () => void newPage(null),
+    search: () => setModal("switcher"),
+    vaultSearch: () => setModal("search"),
+    addLink: () => void openAddLink(),
+    find: (replace: boolean) => openFind(replace),
+    help: () => setModal("help"),
+    git: () => toggleGit(),
+    settings: () => void select(SETTINGS_VIEW, "push", false),
+    focus: toggleFocus,
+    // Files changed on disk (Obsidian, git, iCloud, another window).
+    refresh: () => vault && void refresh(vault),
+  };
+  useEffect(() => {
+    if (SHELL) window.flownoteShell = { call: (name, ...args) => (shellCalls.current?.[name as keyof ShellCalls] as ((...a: unknown[]) => unknown) | undefined)?.(...args) };
+  }, []);
+  const shellReport = useRef("");
+  useEffect(() => {
+    if (!shellChrome) return;
+    const state: ShellState = {
+      tabs: tabs.map((tab) => ({
+        id: tab.id,
+        title: tabTitle(tab),
+        path: tab.path,
+        icon: tab.path && !isView(tab.path) ? iconOf(tab.path) : null,
+        ticket: tab.path ? ticketPaths.has(tab.path) : false,
+        presentation: tab.path && !isView(tab.path) ? isPresentation(tab.path) : false,
+        split: tab.split ?? null,
+        splitTitle: tab.split ? shownName(tab.split) : null,
+        splitIcon: tab.split ? iconOf(tab.split) : null,
+      })),
+      active: activeTab,
+      dirty,
+      canBack: back.current.length > 0,
+      canForward: forward.current.length > 0,
+      gitOpen,
+      gitChanges: vault?.git ? gitChanges : null,
+      focus: focusMode,
+      // What the native sidebar shows as the web one does.
+      view: activePath,
+      favorites: bookmarks,
+      showTitles: settings.showTitles,
+      titles: settings.showTitles ? Object.fromEntries(treeTitles) : {},
+      // The open page's icon and title as typed, before it is saved (as the web sidebar shows them).
+      live: sidebarLiveIcon ?? null,
+      ticketsFolder: settings.ticketsFolder,
+    };
+    const json = JSON.stringify(state);
+    if (json === shellReport.current) return;
+    shellReport.current = json;
+    void callNative("shell_update", state).catch(() => {});
+  });
+
   if (!vault) {
     return (
       <Welcome
-        recent={isTauri() ? recentTauriVaults() : []}
-        onOpenVault={isTauri() ? () => void open(pickTauriVault()) : browserVaultSupported() ? () => void open(openBrowserVault()) : null}
-        onOpenRecent={(root) => void open(openTauriVault(root))}
-        onForgetRecent={forgetTauriVault}
+        recent={isTauri() ? recentTauriVaults() : SHELL ? shellRecent : []}
+        onOpenVault={isTauri() ? () => void open(pickTauriVault()) : SHELL ? () => void callNative("choose_vault") : browserVaultSupported() ? () => void open(openBrowserVault()) : null}
+        onOpenRecent={(root) => (SHELL ? void callNative("open_vault", { path: root }) : void open(openTauriVault(root)))}
+        onForgetRecent={(root) => {
+          if (!SHELL) return forgetTauriVault(root);
+          setShellRecent((recent) => recent.filter((r) => r !== root));
+          void callNative("forget_vault", { path: root });
+        }}
         onTryDemo={() => void open(createMemoryVault("Démo", DEMO_FILES, DEMO_REMOTE))}
         status={status}
       />
     );
   }
+
+  /** A tab's menu (menus.ts): the split view's actions, then closing it. */
+  const tabMenuItems = (id: string) => {
+    const tab = tabs.find((t) => t.id === id);
+    return tabMenuOf({
+      path: tab?.path ?? null,
+      split: tab?.split,
+      isActive: id === activeTab,
+      activeTitle: activePath === null ? "Accueil" : (VIEWS[activePath]?.title ?? noteTitle(activePath)),
+      otherPage: tabs.some((t) => t.id !== activeTab && t.path !== null && !isView(t.path)),
+      isView,
+      swapSplit: () => void swapSplit(),
+      separate: () => void separateTab(id),
+      closeSplit: () => setTabSplit(id, null),
+      join: () => joinTab(id),
+      toggleSplit,
+      close: () => void closeTab(id),
+    });
+  };
 
   const sidebar = (
     <Sidebar
@@ -1433,8 +1584,10 @@ export function App() {
   );
 
   return (
-    <div className={`layout${sidebarOpen && !focusMode ? "" : " no-sidebar"}${focusMode ? " focus-mode" : ""}`}>
+    <div className={`layout${sidebarOpen && !focusMode && !shellChrome ? "" : " no-sidebar"}${focusMode ? " focus-mode" : ""}${shellChrome ? " native-shell" : ""}`}>
       {/* "deep": the window moves from any empty spot of the bar, not only from the bar itself (Tauri leaves buttons, fields and tabs alone). */}
+      {/* In the native shell, the window draws the tabs and the history buttons. */}
+      {!shellChrome && (
       <header className="titlebar" data-tauri-drag-region="deep">
         <div className="titlebar-controls">
           <button
@@ -1475,29 +1628,13 @@ export function App() {
           <PopoverMenu
             anchor={tabMenu.anchor}
             onClose={() => setTabMenu(null)}
-            items={(() => {
-              const tab = tabs.find((t) => t.id === tabMenu.id);
-              const page = tab?.path !== null && tab?.path !== undefined && !isView(tab.path);
-              const isActive = tabMenu.id === activeTab;
-              const items: MenuItem[] = [];
-              if (tab?.split) {
-                if (isActive) items.push({ label: "Échanger les côtés", icon: "replace", run: () => void swapSplit() });
-                items.push({ label: "Séparer en deux onglets", icon: "split", run: () => void separateTab(tabMenu.id) });
-                items.push({ label: "Fermer la page de droite", icon: "close", run: () => setTabSplit(tabMenu.id, null) });
-              } else if (page && !isActive) {
-                const activeTitle = activePath === null ? "Accueil" : (VIEWS[activePath]?.title ?? noteTitle(activePath));
-                items.push({ label: `Afficher à droite de « ${activeTitle} »`, icon: "split", run: () => joinTab(tabMenu.id) });
-              } else if (isActive && tabs.some((t) => t.id !== activeTab && t.path !== null && !isView(t.path))) {
-                items.push({ label: "Diviser avec l'onglet suivant", icon: "split", run: toggleSplit });
-              }
-              items.push({ label: "Fermer l'onglet", icon: "close", run: () => void closeTab(tabMenu.id) });
-              return items;
-            })()}
+            items={tabMenuItems(tabMenu.id)}
           />
         )}
       </header>
+      )}
       <div className="workspace">
-        {sidebarOpen && !focusMode ? (
+        {shellChrome ? null : sidebarOpen && !focusMode ? (
           <div className="sidebar-dock">{sidebar}</div>
         ) : (
           <>
@@ -1717,7 +1854,7 @@ export function App() {
                 key={activeTab}
                 settings={settings}
                 vaultName={vault.name}
-                grammarAvailable={isTauri()}
+                grammarAvailable={isTauri() || SHELL}
                 onChange={(next) => {
                   setSettings(next);
                   saveSettings(next);
