@@ -1,0 +1,39 @@
+/* The native shell's tab: one page filling the web view (SplitPane without the split view). */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+.embed-page {
+  display: flex;
+  height: 100%;
+}
+
+.embed-page > .split-pane {
+  flex: 1;
+  min-width: 0;
+}
+
+.embed-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--faint);
+  font-size: 14px;
+  background: var(--bg);
+}
+
+/* The page's toolbar is drawn natively (nativeTools.ts): only the page remains. */
+.embed-page .split-pane-bar {
+  display: none;
+}
+
+.embed-menu-anchor {
+  position: fixed;
+  top: 0;
+  right: 16px;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}

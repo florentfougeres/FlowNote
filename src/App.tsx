@@ -5,12 +5,12 @@ import { imageMime, NULL_BRIDGE, type VaultBridge } from "./editor/bridge";
 import DOCUMENTATION from "./docs/documentation.md?raw";
 import { docsBridge } from "./docs/docsBridge";
 import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
-import { DRAWING_SUFFIX, isDrawingPath, newDrawingFile } from "./drawing/format";
+import { isDrawingPath } from "./drawing/format";
 import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
 import { DRAWING_TOOLS } from "./drawing/tools";
-import { isMindmapPath, MINDMAP_SUFFIX, newMindmapFile } from "./mindmap/format";
+import { isMindmapPath } from "./mindmap/format";
 import { MindmapEditor, type MindmapControls } from "./mindmap/MindmapEditor";
-import { BASE_SUFFIX, isBasePath, newBaseFile, parseBase, serializeBase, writeColumn, type SelectOption } from "./base/baseFile";
+import { isBasePath, parseBase, serializeBase, writeColumn, type SelectOption } from "./base/baseFile";
 import { BaseView } from "./base/BaseView";
 import { baseOfNote, baseProperties, RowProperties, type RowBase } from "./base/RowProperties";
 import { columnInfo } from "./base/columns";
@@ -44,7 +44,7 @@ import { useSpellChecking } from "./editor/useSpellChecking";
 import type { Editor } from "@tiptap/core";
 import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
-import { DEFAULT_CONFIG, dirname, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./vault/links";
+import { DEFAULT_CONFIG, dirname, linkTextFor, newNoteFolder, noteTitle, parseObsidianConfig, sanitizeName, subpageFolder, type ObsidianConfig } from "./vault/links";
 import { DEMO_FILES, DEMO_REMOTE } from "./demo";
 import { GitDrawer, useGitDrawer } from "./GitDrawer";
 import { usePersistentFlag } from "./hooks/usePersistentFlag";
@@ -62,13 +62,13 @@ import { joinTab as joinTabs, nextPageTab, separateTab as separateTabs, splitOf 
 import { Dashboard } from "./Dashboard";
 import { TicketView } from "./ticket/TicketView";
 import { TicketsView } from "./ticket/TicketsView";
-import { isTicketMarkdown, newTicketFile, nextTicketId } from "./ticket/format";
-import { isPresentationMarkdown, newPresentationFile } from "./presentation/format";
+import { isTicketMarkdown } from "./ticket/format";
+import { isPresentationMarkdown } from "./presentation/format";
 import { slideAt, useSlides } from "./presentation/useSlides";
 import { SlidesPanel } from "./presentation/SlidesPanel";
 import { Presenter } from "./presentation/Presenter";
 import { SplitPane } from "./SplitPane";
-import { ticketInfo } from "./ticket/agenda";
+import { linkFromParent, planPage, ticketPathsOf } from "./pageCreate";
 import { moveRecentPage, recordRecentPage } from "./dashboard/recents";
 import { countWords, readingMinutes } from "./markdown/wordCount";
 import { bookmarkedFiles } from "./dashboard/stats";
@@ -905,24 +905,11 @@ export function App() {
       kind = result.kind;
       if (chooseFolder) folder = result.folder;
     }
-    const title = sanitizeName(name) || "Sans titre";
-    // Tickets go to their folder, numbered: "Tickets/12 - Titre.md".
-    const usedIds =
-      kind === "ticket" ? await Promise.all([...ticketPaths].map((p) => vault.read(p).then((text) => ticketInfo(p, text).id ?? 0, () => 0))) : [];
-    const ticketId = kind === "ticket" ? nextTicketId(filesRef.current, settings.ticketsFolder, usedIds) : 0;
-    const path =
-      kind === "ticket"
-        ? uniquePath(settings.ticketsFolder, `${ticketId} - ${title}.md`, filesRef.current)
-        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : kind === "base" ? BASE_SUFFIX : ".md"}`, filesRef.current);
     try {
+      const { path, content } = await planPage(vault, filesRef.current, ticketPaths, { kind, name, folder, ticketsFolder: settings.ticketsFolder });
       await saveNow();
-      // A base's rows are the notes of the folder named after it, next to it (like sub-pages).
-      await createFile(path, kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : `# ${title}\n`);
-      if (parent) {
-        const content = await vault.read(parent);
-        const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";
-        await vault.write(parent, `${content}${separator}[[${linkTextFor(path, filesRef.current)}]]\n`, content);
-      }
+      await createFile(path, content);
+      if (parent) await linkFromParent(vault, parent, path, filesRef.current);
       await select(path);
     } catch (error) {
       setStatus(String(error));
@@ -1083,12 +1070,7 @@ export function App() {
     }
   };
   const activePath = tabs.find((t) => t.id === activeTab)?.path ?? null;
-  const ticketPaths = useMemo(() => {
-    const found = new Set<string>();
-    const walk = (entries: VaultEntry[]) => entries.forEach((e) => (e.ticket ? found.add(e.path) : e.children && walk(e.children)));
-    walk(tree);
-    return found;
-  }, [tree]);
+  const ticketPaths = useMemo(() => ticketPathsOf(tree), [tree]);
 
   const readingPath = settings.readingList || "Lectures.md";
   /** "Ajouter un lien": the dialog lists the themes and tags of the reading list. */

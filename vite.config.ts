@@ -2,7 +2,7 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 /**
  * Excalidraw's fonts, served and bundled locally (the library would otherwise
@@ -45,5 +45,7 @@ export default defineConfig({
   plugins: [react(), excalidrawAssets()],
   clearScreen: false,
   server: { port: 1420, strictPort: true },
+  // embed.html: one page inside a tab of the native macOS shell (native/).
+  build: { rollupOptions: { input: { main: resolve(__dirname, "index.html"), embed: resolve(__dirname, "embed.html") } } },
   test: { environment: "node", include: ["src/**/*.test.ts"] },
 });

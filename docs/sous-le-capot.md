@@ -217,6 +217,25 @@ Le backend est volontairement petit. Les commandes sont déclarées avec `#[taur
 
 **Sécurité** : `check_root` limite toutes les commandes (vault et git) à un dossier qui contient `.obsidian` ou qui a été choisi par l'utilisateur dans le sélecteur natif (`vault_pick`, liste dans `trusted-vaults.json` des données de l'app). La **CSP** (`tauri.conf.json`) n'autorise que les scripts de l'app ; une nouvelle bibliothèque qui charge une ressource externe doit y être ajoutée.
 
+## La coquille native macOS (`native/`, branche d'essai)
+
+Une app SwiftUI qui remplace Tauri : la barre latérale, les onglets (onglets de fenêtre macOS), les réglages et les fichiers sont natifs ; chaque onglet affiche une page dans une `WKWebView`.
+
+- **Côté web** : `embed.html` (second point d'entrée Vite) monte `src/embed/EmbedPage.tsx`, une page seule bâtie sur `SplitPane`. Le vault passe par `src/vault/nativeVault.ts`, qui appelle Swift par `window.webkit.messageHandlers.flownote` (réponse en promesse). La coquille pilote la page par `window.flownoteShell` : `open`, `settings`, `refresh` et `run`, ce dernier pour les opérations de la barre latérale (création, renommage, déplacement, suppression). Ces opérations s'exécutent dans la page avec `pageOps.ts` et `pageCreate.ts`, pour que liens et bases suivent comme dans l'app web.
+- **`FlowNoteCore/Vault.swift`** : portage de `vault.rs`. Mêmes règles : chemins relatifs, entrées cachées refusées, `.obsidian` en lecture seule, écriture atomique avec contrôle de conflit **octet par octet**, corbeille. En plus : lectures et écritures coordonnées (`NSFileCoordinator`), fichiers iCloud pas encore téléchargés (`.Note.md.icloud`) listés puis téléchargés. Le dossier du vault est choisi par le panneau natif et retenu par un signet ; la page n'envoie jamais de racine.
+- **Liquid Glass** : la coquille cible macOS 26. Liée à un SDK plus ancien, l'app garderait l'ancien style : SwiftPM inscrit la cible minimale comme version du SDK. La barre d'outils de la page est native : chaque `ToolButton` s'inscrit auprès de `NativeToolsContext` (`src/nativeTools.ts`) au lieu de se dessiner. La coquille reçoit la liste dans l'ordre de la page (commande `toolbar`) et l'affiche en boutons et interrupteurs de verre ; les outils de dessin forment un choix segmenté. Un clic rappelle le bouton web (`flownoteShell.tool`). Les modifications non enregistrées s'affichent par le point natif du bouton de fermeture (`page_status`).
+- **`FlowNote/`** : `AppModel` (vault, arbre, réglages en `UserDefaults`, surveillance FSEvents), `PageModel` (un onglet : page, historique, WebView), `WebPage.swift` (schéma `flownote://` qui sert `Resources/web`, pont des commandes, liens web ouverts dans le navigateur), les vues.
+- Pas encore : Git, Grammalecte, vues hors page (accueil, tickets, graphe, lectures), recherche plein texte native, export PDF.
+
+```sh
+native/build.sh --open          # construit le web et native/build/FlowNote.app, puis le lance
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run --package-path native vault-checks
+FLOWNOTE_DEV_URL=http://localhost:1420 native/build/FlowNote.app/Contents/MacOS/FlowNote   # avec le serveur Vite
+FLOWNOTE_OPEN="Note.md" native/build/FlowNote.app/Contents/MacOS/FlowNote              # ouvre une page au lancement
+```
+
+SwiftUI a besoin d'Xcode (ses macros ne sont pas dans les Command Line Tools) ; `vault-checks` est un exécutable de vérification, pour la même raison (Swift Testing et XCTest viennent avec Xcode).
+
 ## Le correcteur Grammalecte
 
 [Grammalecte](https://grammalecte.net) est écrit en Python, sous licence GPL v3. Pour que FlowNote reste sous licence MIT, il tourne comme un **programme séparé** :

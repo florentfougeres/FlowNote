@@ -38,6 +38,7 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 - Types de page, un dossier chacun : `base/` (`.base`), `drawing/` (`.excalidraw.md`), `mindmap/` (`.mindmap.md`), `ticket/` (`type: ticket`), `presentation/` (`marp: true`), plus `reading/` et `graph/`.
 - `src/App.tsx` : état global, onglets, choix du type de page. Les vues hors page sont des pseudo-chemins `flownote:tickets`, `flownote:graph`, `flownote:reading`, `flownote:settings`, `flownote:docs`.
 - Styles : `src/styles/*.css`, importés depuis `src/styles.css`.
+- `native/` (branche `feature/swift-shell`) : coquille SwiftUI qui remplace Tauri. Barre latérale, onglets, réglages et fichiers natifs, pages en WKWebView (`embed.html`, `src/embed/`, `nativeVault.ts`). Construire avec `native/build.sh --open` (Xcode requis, via `DEVELOPER_DIR`). Voir `docs/sous-le-capot.md`.
 - `docs/sous-le-capot.md` : documentation technique du dépôt (bibliothèques, moteur de fidélité, formats des pages, backend). Hors de l'app. **La mettre à jour quand une bibliothèque ou un format change.**
 
 ## Pièges connus
