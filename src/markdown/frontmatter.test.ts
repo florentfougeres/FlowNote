@@ -27,6 +27,13 @@ describe("reading properties", () => {
     ]);
   });
 
+  it("reads tags written on one line as a list, as Obsidian does", () => {
+    expect(readProperties("---\ntags: projet, perso  idée\n---").properties).toEqual([{ key: "tags", type: "list", value: ["projet", "perso", "idée"] }]);
+    // Another text property keeps its commas; edited tags become a YAML list.
+    expect(readProperties("---\nlieu: Paris, France\n---").properties[0]).toEqual({ key: "lieu", type: "text", value: "Paris, France" });
+    expect(setProperty("---\ntags: projet, perso\n---", "tags", ["projet", "perso", "neuf"])).toContain("neuf");
+  });
+
   it("reports invalid YAML instead of guessing", () => {
     const result = readProperties("---\ntags: [non fermé\n---");
     expect(result.error).not.toBeNull();

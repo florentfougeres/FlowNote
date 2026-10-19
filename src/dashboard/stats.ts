@@ -14,6 +14,8 @@ export interface VaultStats {
   tagCount: number;
   /** Most used tags (at most 12). */
   tags: [string, number][];
+  /** Pages carrying each tag (in the text or the `tags` property), sorted. */
+  tagPages: Record<string, string[]>;
   brokenLinks: { from: string; target: string }[];
   orphans: string[];
 }
@@ -49,6 +51,12 @@ export function noteLinkTargets(text: string): string[] {
 
 export function computeStats(notes: [string, string][], files: string[]): VaultStats {
   const tagCounts = new Map<string, number>();
+  const tagPages = new Map<string, Set<string>>();
+  const count = (tag: string, path: string) => {
+    const key = tag.toLowerCase();
+    tagCounts.set(key, (tagCounts.get(key) ?? 0) + 1);
+    tagPages.set(key, (tagPages.get(key) ?? new Set()).add(path));
+  };
   const brokenLinks: VaultStats["brokenLinks"] = [];
   const linked = new Set<string>();
   let drawings = 0;
@@ -59,8 +67,8 @@ export function computeStats(notes: [string, string][], files: string[]): VaultS
     }
     const { body, tags } = frontmatter(text);
     const prose = withoutCode(body);
-    for (const tag of tags) tagCounts.set(tag.toLowerCase(), (tagCounts.get(tag.toLowerCase()) ?? 0) + 1);
-    for (const match of prose.matchAll(TAG)) tagCounts.set(match[1].toLowerCase(), (tagCounts.get(match[1].toLowerCase()) ?? 0) + 1);
+    for (const tag of tags) count(tag, path);
+    for (const match of prose.matchAll(TAG)) count(match[1], path);
     for (const target of noteLinkTargets(text)) {
       const resolved = resolveLink(target, files, path);
       if (resolved) {
@@ -74,6 +82,7 @@ export function computeStats(notes: [string, string][], files: string[]): VaultS
     drawings,
     tagCount: tagCounts.size,
     tags: [...tagCounts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "fr")).slice(0, 12),
+    tagPages: Object.fromEntries([...tagPages].map(([tag, paths]) => [tag, [...paths].sort((a, b) => a.localeCompare(b, "fr"))])),
     brokenLinks,
     orphans: pages.filter((p) => !linked.has(p)).sort((a, b) => a.localeCompare(b, "fr")),
   };

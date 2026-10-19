@@ -101,6 +101,28 @@
   box-shadow: 0 0 0 1px var(--accent-line);
 }
 
+/* Text values wrap and grow (a long title is not cut); the row then lines up at the top. */
+.property-text {
+  display: block;
+  /* A form field keeps its default width in the grid: it takes the whole column, as the tags do. */
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.property:has(.property-text) {
+  align-items: start;
+}
+
+.property:has(.property-text) > .property-icon,
+.property:has(.property-text) > .property-remove {
+  margin-top: 5px;
+}
+
 .property-value.readonly {
   color: var(--muted);
   font-family: var(--font-mono);
@@ -199,6 +221,7 @@
   display: none;
 }
 
-.property-editor.readonly input::placeholder {
+.property-editor.readonly input::placeholder,
+.property-editor.readonly textarea::placeholder {
   color: transparent;
 }

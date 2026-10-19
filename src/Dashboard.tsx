@@ -133,6 +133,8 @@ export function Dashboard({
     };
   }, [vault, readingList, readingVersion, files]);
   const [open, setOpen] = useState<"broken" | "orphans" | null>(null);
+  /** Tag whose pages are listed under the tags. */
+  const [openTag, setOpenTag] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -357,9 +359,22 @@ export function Dashboard({
               {stats.tags.length > 0 && (
                 <div className="dash-tags">
                   {stats.tags.map(([tag, count]) => (
-                    <span key={tag} className="dash-tag" title={`${count} usage${count > 1 ? "s" : ""}`}>
+                    <button
+                      key={tag}
+                      className={openTag === tag ? "dash-tag selected" : "dash-tag"}
+                      aria-pressed={openTag === tag}
+                      title={`${count} usage${count > 1 ? "s" : ""} : afficher les pages`}
+                      onClick={() => setOpenTag(openTag === tag ? null : tag)}
+                    >
                       #{tag} <small>{count}</small>
-                    </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {openTag && (
+                <div className="dash-list">
+                  {(stats.tagPages[openTag] ?? []).map((p) => (
+                    <PageLink iconOf={iconOf} key={p} path={p} onOpen={onOpen} />
                   ))}
                 </div>
               )}

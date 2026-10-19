@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon, type IconName } from "../Icon";
 import { DateField } from "../DatePicker";
 import { addProperty, readProperties, renameProperty, setProperty, type Property, type PropertyType, type PropertyValue } from "../markdown/frontmatter";
@@ -37,6 +37,41 @@ function CommitInput({ value, onCommit, type = "text", placeholder, className }:
       onBlur={() => draft !== value && onCommit(draft)}
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") setDraft(value);
+      }}
+    />
+  );
+}
+
+/**
+ * A text value on as many lines as it needs (a long title is not cut), still
+ * one line in the YAML: Enter commits, pasted line breaks become spaces.
+ */
+function TextValue({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  const area = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => setDraft(value), [value]);
+  useLayoutEffect(() => {
+    const el = area.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [draft]);
+  return (
+    <textarea
+      ref={area}
+      className="property-value property-text"
+      rows={1}
+      value={draft}
+      placeholder="Vide"
+      spellCheck={false}
+      onChange={(e) => setDraft(e.target.value.replace(/\s*\n\s*/g, " "))}
+      onBlur={() => draft !== value && onCommit(draft)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
         if (e.key === "Escape") setDraft(value);
       }}
     />
@@ -100,7 +135,7 @@ function ValueEditor({ property, onChange }: { property: Property; onChange: (v:
     case "other":
       return <span className="property-value readonly">{String(value)}</span>;
     default:
-      return <CommitInput className="property-value" value={String(value ?? "")} placeholder="Vide" onCommit={(v) => onChange(v === "" ? null : v)} />;
+      return <TextValue value={String(value ?? "")} onCommit={(v) => onChange(v === "" ? null : v)} />;
   }
 }
 

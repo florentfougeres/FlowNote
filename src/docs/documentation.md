@@ -22,7 +22,7 @@ FlowNote édite votre vault Obsidian comme Notion : par blocs, avec un menu `/`,
 4. **Retrouvez une page** avec `⌘P`, ou un mot dans tout le vault avec `⌘⇧F`.
 5. **Tout s'enregistre seul** : la pastille en bas à droite indique « Enregistré ». Le fichier est lisible tel quel dans Obsidian.
 
-L'**Accueil** rassemble les raccourcis de création, les pages récentes, les tâches à faire (échéances des tickets et des notes), les tickets ouverts, les liens à lire et l'état de Git.
+L'**Accueil** rassemble les raccourcis de création, les pages récentes, les tâches à faire (échéances des tickets et des notes), les tickets ouverts, les liens à lire et l'état de Git. Un clic sur un tag de la carte Vault liste les pages qui le portent (dans le texte ou dans la propriété `tags`).
 
 ![[accueil.webp]]
 
@@ -163,7 +163,7 @@ Une admonition `success`, écrite `:::success` dans le fichier.
 
 ### Les propriétés
 
-Les propriétés YAML (le frontmatter) s'affichent sous le titre, comme dans Obsidian : texte, liste, nombre, case à cocher, date, date et heure. Sur une note sans propriétés, « Ajouter des propriétés » en crée une. Les dates se choisissent dans le calendrier de l'app (tapez aussi `jj/mm/aaaa`).
+Les propriétés YAML (le frontmatter) s'affichent sous le titre, comme dans Obsidian : texte, liste, nombre, case à cocher, date, date et heure. Les tags s'affichent en pastilles, même écrits sur une ligne (`tags: projet, site`) ; les modifier les réécrit en liste YAML. Sur une note sans propriétés, « Ajouter des propriétés » en crée une. Les dates se choisissent dans le calendrier de l'app (tapez aussi `jj/mm/aaaa`).
 
 L'icône de la page est un emoji choisi au-dessus du titre. Dans le fichier :
 

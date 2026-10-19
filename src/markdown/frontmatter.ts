@@ -54,6 +54,16 @@ function typeOf(value: unknown): { type: PropertyType; value: PropertyValue } {
   return { type: "other", value: JSON.stringify(value) };
 }
 
+/**
+ * Tags written on one line (`tags: projet, perso` or `tags: projet perso`)
+ * are a list for Obsidian too: shown as tags, written back as a YAML list
+ * only when they are edited.
+ */
+function tagsAsList(key: string, value: unknown): unknown {
+  if ((key !== "tags" && key !== "tag") || typeof value !== "string" || !value.trim()) return value;
+  return value.split(/[,\s]+/).map((t) => t.replace(/^#/, "")).filter(Boolean);
+}
+
 export function readProperties(raw: string | null): Properties {
   if (!raw) return { properties: [], error: null };
   const doc = parse(raw);
@@ -65,7 +75,7 @@ export function readProperties(raw: string | null): Properties {
     const key = String(isScalar(pair.key) ? pair.key.value : pair.key);
     const json = doc.getIn([key]) as unknown;
     const plain = isSeq(json) || isMap(json) ? (json as { toJSON(): unknown }).toJSON() : isScalar(json) ? (json as Scalar).value : json;
-    return { key, ...typeOf(plain) };
+    return { key, ...typeOf(tagsAsList(key, plain)) };
   });
   return { properties, error: null };
 }
