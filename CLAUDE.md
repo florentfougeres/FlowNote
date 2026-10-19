@@ -65,8 +65,10 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 **L'utilisateur publie lui-même** (version, CHANGELOG, tag) en suivant `docs/publier-une-version.md`. Ne pas le faire à sa place ; tenir ce document à jour si le processus change.
 
-## État actuel (16 octobre 2026)
+## État actuel (19 octobre 2026)
 
+- Depuis la v0.15.2 (pas encore publié) : backend Rust sorti en bibliothèque `flownote-core` avec un aiguillage unique, menus partagés (`menus.ts`), API vault/Git construites une fois, recette avant release (`docs/recette.md`) ; filigrane des titres vides après les `#`, emoji d'une lettre (`:x:`). FlowNote Swift essayé puis retiré.
+- v0.15.2 : liens tapés cliquables, Tab dans un paragraphe, `#` des titres en ligne, guide de release (`docs/publier-une-version.md`). v0.15.1 : favoris, réglages de la barre latérale.
 - v0.15.0 : titre et nom de fichier indépendants (`titleHeading.ts`, `title` dans l'arbre, réglage `showTitles`), mode lecture par onglet, panneau Git compact, puces dessinées en CSS (marqueurs WebKit). v0.14.1 (CSP activée, barre latérale et panneau de droite mémoïsés, `tabs.ts` et `pageExport.ts` sortis d'`App.tsx`). La 0.14.0 a apporté le split view en un onglet, les marques # et `, les liens cliquables, la copie en Markdown et la documentation illustrée. Le workflow de release crée un brouillon à publier.
 - Sécurité côté Rust : `check_root` limite toutes les commandes (vault et git) à un dossier avec `.obsidian` ou choisi par `vault_pick` (sélecteur natif, liste dans `trusted-vaults.json` des données de l'app). git tourne avec `core.fsmonitor=false`.
 - Pistes ouvertes :
@@ -75,10 +77,11 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
     - Côté web, une branche HTTP dans `platform.ts` ; `backendVault(nom, null)` existe déjà.
     - Déploiement retenu : Docker (`Dockerfile` avec l'app web, le serveur, Grammalecte pour Linux et git ; `docker compose` qui monte le vault, publie un port et lit un mot de passe dans `.env`). L'image pourrait être publiée par la CI sur ghcr.io.
     - Points à régler : un mot de passe au minimum ; les identifiants Git montés en lecture seule et l'utilisateur du conteneur égal au propriétaire du vault ; Grammalecte recompilé pour Linux (ou le correcteur du navigateur) ; les liens et exports qui s'ouvrent côté navigateur. Le contrôle de conflit protège déjà deux navigateurs sur la même note.
-  - `App.tsx` (~1 830 lignes) à continuer de découper au fil des modifications (déjà sortis : `useSplitWidth`, `useSidebarPeek`, `tabs.ts`, `pageExport.ts`) ;
+  - `App.tsx` (~1 890 lignes) à découper après la release : opérations sur les fichiers (`usePageOps`) et navigation des onglets (`useTabs`) (déjà sortis : `useSplitWidth`, `useSidebarPeek`, `tabs.ts`, `pageExport.ts`) ;
+  - idées rapides : note du jour (`.obsidian/daily-notes.json`), nouvelle page depuis un modèle (`.obsidian/templates.json`), `/page` qui écrit `# Titre` comme « Nouvelle page » ;
   - CSP active depuis octobre 2026, validée dans Chrome : à vérifier dans l'app de bureau (protocoles `ipc:` et `asset:`) ;
   - **iPad / app native (idée pour plus tard)** : piste retenue, l'**hybride**. Une coquille Swift native (barre latérale, onglets, fichiers, iCloud, réglages) qui affiche l'éditeur et les vues lourdes (Excalidraw, Plotly, Mermaid, KaTeX, Marp, mind maps) dans une WKWebView. Ressenti plus natif que Tauri, pour un effort intermédiaire. Chemin prévu : d'abord Tauri 2 sur iPad (cible iOS, vault par le sélecteur de dossiers et signets de sécurité, Git par libgit2, Grammalecte en version JS), puis remplacer les morceaux par du natif un par un. Une réécriture tout en Swift est écartée : pas d'équivalent natif à ProseMirror ni au moteur de fidélité remark. Une coquille SwiftUI pour macOS (« FlowNote Swift », `native/`) a été essayée en octobre 2026 puis retirée : trop lourde à tenir à parité, rendu jugé moins beau. Code récupérable au commit `58f9768` ;
-  - branche `feature/notebooks` (notebooks Python marimo) jamais fusionnée, 41 commits de retard ;
+  - branche `feature/notebooks` (notebooks Python marimo) jamais fusionnée, très en retard sur `main` ; `feature/swift-shell-historique` garde l'historique de l'essai Swift ;
   - suppression d'une base « en plusieurs fois » dans l'app de bureau : rendue robuste mais pas reproduite, à confirmer ;
   - kanban et calendrier des bases à vérifier dans Obsidian ;
   - retours d'usage d'octobre (split view, sélecteur de date, taille de l'interface par le zoom de la webview, touche morte `` ` ``, menu du croquis, netteté de la mind map) testés dans Chrome seulement, à vérifier dans l'app de bureau ;
