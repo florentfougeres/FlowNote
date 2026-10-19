@@ -117,11 +117,19 @@ struct TabStrip: View {
       }
       .padding(2)
       .background(Capsule().fill(Color.primary.opacity(0.07)))
+      // One catcher for the whole track (the toolbar does not give each tab its own frame):
+      // the tab is found from where the click is, the tabs sharing the width equally.
+      .overlay(MouseCatcher(rightAt: { at in if let tab = tab(at: at) { window.showMenu("tab", tab.id) } }, middleAt: { at in if let tab = tab(at: at) { window.call("closeTab", tab.id) } }))
       Button { window.call("newTab") } label: { Image(systemName: "plus").frame(width: 26, height: 26) }
         .buttonStyle(.borderless)
         .help("Nouvel onglet (⌘T)")
     }
     .frame(width: width)
+  }
+
+  private func tab(at fraction: Double) -> ShellTab? {
+    guard !window.tabs.isEmpty else { return nil }
+    return window.tabs[max(0, min(window.tabs.count - 1, Int(fraction * Double(window.tabs.count))))]
   }
 
   /// Dropped after a drag: the tab moves to where it was let go (`reorderTab` in App.tsx).
@@ -190,8 +198,6 @@ struct TabChip: View {
     .contentShape(Capsule())
     .onTapGesture(perform: select)
     .onHover { hovered = $0 }
-    // The toolbar keeps right clicks for itself: the tab catches them first (menus.ts's tab menu).
-    .overlay(MouseCatcher(right: { window.showMenu("tab", tab.id) }, middle: close))
     .help(tab.split.map { "\(tab.path ?? "Accueil")  |  \($0)" } ?? tab.path ?? "Accueil")
   }
 }
@@ -221,33 +227,60 @@ struct PageIconView: View {
 }
 
 /// Right click and middle click on the view it covers; plain clicks go through.
+/// The clicks are caught by a local event monitor, before the window hands them
+/// out: in the toolbar, the window would otherwise show the toolbar's own menu.
+/// Only the visible part counts (a row scrolled away does not take clicks).
 struct MouseCatcher: NSViewRepresentable {
   var right: (() -> Void)?
   var middle: (() -> Void)?
+  /// Same, told where the click is across the view (0 at the left edge, 1 at the right).
+  var rightAt: ((Double) -> Void)?
+  var middleAt: ((Double) -> Void)?
 
   final class View: NSView {
     var right: (() -> Void)?
     var middle: (() -> Void)?
+    var rightAt: ((Double) -> Void)?
+    var middleAt: ((Double) -> Void)?
+    private var monitor: Any?
 
-    override func hitTest(_ point: NSPoint) -> NSView? {
-      guard let event = NSApp.currentEvent else { return nil }
-      switch event.type {
-      case .rightMouseDown, .rightMouseUp: return right == nil ? nil : super.hitTest(point)
-      case .otherMouseDown, .otherMouseUp: return middle == nil ? nil : super.hitTest(point)
-      default: return nil
+    private func across(_ event: NSEvent) -> Double {
+      bounds.width > 0 ? Double(convert(event.locationInWindow, from: nil).x / bounds.width) : 0
+    }
+
+    /// Never in the way of plain clicks, hovering or dragging.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    func covers(_ event: NSEvent) -> Bool {
+      guard let window, event.window === window, !isHiddenOrHasHiddenAncestor else { return false }
+      // Inside the view, and not clipped away (a row scrolled under the list's edges).
+      // The toolbar does not clip its views: there, the visible rect is the whole window.
+      let point = convert(event.locationInWindow, from: nil)
+      return bounds.contains(point) && visibleRect.contains(point)
+    }
+
+    override func viewDidMoveToWindow() {
+      if let monitor { NSEvent.removeMonitor(monitor) }
+      monitor = nil
+      guard window != nil else { return }
+      monitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown, .otherMouseDown, .otherMouseUp]) { [weak self] event in
+        guard let self, self.covers(event) else { return event }
+        switch event.type {
+        case .rightMouseDown:
+          if let rightAt = self.rightAt { rightAt(self.across(event)) } else if let right = self.right { right() } else { return event }
+          return nil
+        case .otherMouseDown where event.buttonNumber == 2 && (self.middle != nil || self.middleAt != nil):
+          return nil
+        case .otherMouseUp where event.buttonNumber == 2:
+          if let middleAt = self.middleAt { middleAt(self.across(event)) } else if let middle = self.middle { middle() } else { return event }
+          return nil
+        default:
+          return event
+        }
       }
     }
 
-    override func rightMouseDown(with event: NSEvent) { right?() }
-
-    // The press is kept here too, so that the list (or the toolbar) does not take the gesture.
-    override func otherMouseDown(with event: NSEvent) {
-      if event.buttonNumber != 2 { super.otherMouseDown(with: event) }
-    }
-
-    override func otherMouseUp(with event: NSEvent) {
-      if event.buttonNumber == 2 { middle?() } else { super.otherMouseUp(with: event) }
-    }
+    deinit { if let monitor { NSEvent.removeMonitor(monitor) } }
   }
 
   func makeNSView(context: Context) -> View {
@@ -259,6 +292,8 @@ struct MouseCatcher: NSViewRepresentable {
   func updateNSView(_ view: View, context: Context) {
     view.right = right
     view.middle = middle
+    view.rightAt = rightAt
+    view.middleAt = middleAt
   }
 }
 
@@ -285,13 +320,18 @@ struct EmptySpaceMenu: NSViewRepresentable {
         let point = self.convert(event.locationInWindow, from: nil)
         guard self.bounds.contains(point) else { return event }
         // A row (or a tab) catches its own right clicks.
-        if window.contentView?.hitTest(event.locationInWindow) is MouseCatcher.View { return event }
+        if Self.catchers(in: window.contentView).contains(where: { ($0.right != nil || $0.rightAt != nil) && $0.covers(event) }) { return event }
         self.show()
         return nil
       }
     }
 
     deinit { if let monitor { NSEvent.removeMonitor(monitor) } }
+
+    static func catchers(in view: NSView?) -> [MouseCatcher.View] {
+      guard let view else { return [] }
+      return (view as? MouseCatcher.View).map { [$0] } ?? view.subviews.flatMap { catchers(in: $0) }
+    }
   }
 
   func makeNSView(context: Context) -> View {
