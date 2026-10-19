@@ -14,6 +14,9 @@ git status            # rien en attente
 
 ## 2. Vérifier
 
+Faire la recette dans les deux apps : `docs/recette.md`, toutes les fonctionnalités à cocher.
+
+
 ```sh
 npm run lint
 npm run typecheck

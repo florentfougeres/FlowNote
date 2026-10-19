@@ -104,6 +104,7 @@ Deux tests le gardent : `src/shell.test.ts` lit le code Swift et vérifie chaque
 6. Une nouvelle information que la barre native doit afficher : un champ dans `ShellState` (`shell.ts`), envoyé par `App.tsx`, lu par `WindowModel.swift`.
 7. Un nouvel appel de la coquille vers l'app : une méthode dans `ShellCalls` et dans `shellCalls` (`App.tsx`).
 8. Lancer `npm test` (contrats compris), `cargo test --workspace` et `native/build.sh`.
+9. Ajouter la fonctionnalité à `docs/recette.md`, la liste à vérifier dans les deux apps avant chaque release (⚑ si elle est dessinée en natif dans Swift).
 
 ## Publier une version
 
