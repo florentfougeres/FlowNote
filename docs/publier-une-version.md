@@ -1,6 +1,6 @@
 # Publier une version
 
-Pousser un tag `vX.Y.Z` déclenche `.github/workflows/release.yml`. Le workflow lance les tests (`ci.yml`), construit le `.dmg` pour Apple Silicon, puis crée une release GitHub en **brouillon**. Il ne reste plus qu'à la publier.
+Pousser un tag `X.Y.Z` (sans `v`) déclenche `.github/workflows/release.yml`. Le workflow lance les tests (`ci.yml`), construit le `.dmg` pour Apple Silicon, puis crée une release GitHub en **brouillon**, dont le texte est la section de la version dans `CHANGELOG.md` (`scripts/release-notes.sh`). Il ne reste plus qu'à la publier.
 
 Toutes les commandes se lancent depuis la racine du dépôt.
 
@@ -73,23 +73,23 @@ git log --oneline "$(git describe --tags --abbrev=0)"..HEAD
 git add -A
 git commit -m "Version $V"
 git push origin main
-git tag "v$V"
-git push origin "v$V"
+git tag "$V"
+git push origin "$V"
 ```
 
 ## 6. Publier la release
 
 1. Suivre le build : `gh run watch` (ou l'onglet *Actions* sur GitHub).
-2. Ouvrir le brouillon : `gh release view "v$V" --web`.
-3. Vérifier les notes, puis cliquer sur **Publish release**.
+2. Ouvrir le brouillon : `gh release view "$V" --web`.
+3. Vérifier les notes (reprises du CHANGELOG), puis cliquer sur **Publish release**.
 
 ## En cas de problème
 
 - **Le build échoue** : corriger sur `main`, supprimer le brouillon s'il existe, puis déplacer le tag sur le nouveau commit :
   ```sh
-  gh release delete "v$V" --yes
-  git tag -d "v$V" && git push origin ":refs/tags/v$V"
-  git tag "v$V" && git push origin "v$V"
+  gh release delete "$V" --yes
+  git tag -d "$V" && git push origin ":refs/tags/$V"
+  git tag "$V" && git push origin "$V"
   ```
 - **Relancer un build sans rien changer** : `gh run list --workflow release.yml`, puis `gh run rerun <id> --failed`.
 - **Construire le `.dmg` en local**, sans GitHub : voir le README.

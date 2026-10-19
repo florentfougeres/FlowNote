@@ -1,10 +1,11 @@
 # Builds the macOS .dmg (Apple Silicon) and prepares a draft GitHub release
-# when a version tag is pushed (git tag v0.1.0 && git push origin v0.1.0).
+# when a version tag is pushed (git tag 0.1.0 && git push origin 0.1.0). The
+# release's body is the version's section of CHANGELOG.md.
 name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["[0-9]*"]
   workflow_dispatch:
 
 permissions:
@@ -34,16 +35,21 @@ jobs:
         with:
           version: "0.13.0" # pinned: looking up "latest" can fail on a GitHub API hiccup
       - run: npm ci
+      - name: Release notes from CHANGELOG.md
+        id: notes
+        run: |
+          {
+            echo "body<<EOF_NOTES"
+            scripts/release-notes.sh "$(node -p "require('./package.json').version")"
+            echo "EOF_NOTES"
+          } >> "$GITHUB_OUTPUT"
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: FlowNote ${{ github.ref_name }}
-          releaseBody: |
-            Pour Mac Apple Silicon (M1 et suivants).
-
-            Premier lancement : l'application n'est pas signée par Apple. Ouvrez *Réglages Système → Confidentialité et sécurité* puis **Ouvrir quand même**, ou lancez `xattr -cr /Applications/FlowNote.app`.
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: --bundles dmg

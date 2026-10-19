@@ -184,7 +184,7 @@ Le guide complet est dans [docs/publier-une-version.md](docs/publier-une-version
 
 1. Ajoutez la version et ses changements en tête de `CHANGELOG.md`.
 2. Mettez à jour la version dans `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `src-tauri/Cargo.lock`.
-3. Commitez, puis poussez un tag : `git tag vX.Y.Z && git push origin vX.Y.Z`.
+3. Commitez, puis poussez un tag : `git tag X.Y.Z && git push origin X.Y.Z` (sans `v`).
 4. Le workflow GitHub Actions lance les tests, construit le `.dmg` et prépare une release en brouillon. Relisez-la, puis publiez-la sur GitHub.
 
 ## Licence
