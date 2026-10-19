@@ -44,6 +44,7 @@ struct WindowRoot: View {
     .navigationSubtitle(page.path.map { ($0 as NSString).deletingLastPathComponent } ?? "")
     .focusedSceneValue(\.page, page)
     .sheet(item: $page.nameRequest) { request in NameSheet(request: request) }
+    .sheet(isPresented: $page.searching) { SearchPanel(page: page) }
     .background(WindowTabbing(edited: page.dirty))
     .onAppear { page.openTab = { path in if let path { openWindow(id: "page", value: path) } else { openWindow(id: "page") } } }
     .frame(minWidth: 720, minHeight: 480)
@@ -97,7 +98,7 @@ struct PageToolbar: ToolbarContent {
       }
     }
     ToolbarItemGroup(placement: .primaryAction) {
-      ForEach(buttons) { tool in
+      ForEach(buttons.filter { Self.direct.contains($0.icon) }) { tool in
         if let active = tool.active {
           Toggle(isOn: Binding(get: { active }, set: { _ in page.runTool(tool.id) })) {
             Label(tool.label, systemImage: symbol(tool.icon))
@@ -110,8 +111,30 @@ struct PageToolbar: ToolbarContent {
             .disabled(tool.disabled)
         }
       }
+      let others = buttons.filter { !Self.direct.contains($0.icon) }
+      if !others.isEmpty {
+        Menu {
+          ForEach(others) { tool in
+            if let active = tool.active {
+              Toggle(isOn: Binding(get: { active }, set: { _ in page.runTool(tool.id) })) {
+                Label(tool.label, systemImage: symbol(tool.icon))
+              }
+              .disabled(tool.disabled)
+            } else {
+              Button { page.runTool(tool.id) } label: { Label(tool.label, systemImage: symbol(tool.icon)) }
+                .disabled(tool.disabled)
+            }
+          }
+        } label: {
+          Label("Plus d'actions", systemImage: "ellipsis")
+        }
+        .help("Plus d'actions")
+      }
     }
   }
+
+  /// Shown as buttons; the other actions go in the "…" menu, to keep the toolbar light.
+  private static let direct: Set<String> = ["outline", "eye", "raw", "play", "center"]
 }
 
 /// SF Symbol for an icon of the web app (Icon.tsx).
@@ -119,7 +142,7 @@ func symbol(_ icon: String) -> String {
   let symbols = [
     "outline": "list.bullet.indent", "eye": "eye", "spelling": "textformat.abc.dottedunderline",
     "slides": "rectangle.on.rectangle", "play": "play", "export": "square.and.arrow.up", "clock": "clock.arrow.circlepath",
-    "width": "arrow.left.and.right", "more": "ellipsis", "raw": "chevron.left.forwardslash.chevron.right", "center": "scope",
+    "width": "arrow.left.and.right", "more": "square.and.arrow.up.on.square", "raw": "chevron.left.forwardslash.chevron.right", "center": "scope",
     "pointer": "cursorarrow", "hand": "hand.raised", "rectangle": "rectangle", "diamond": "diamond", "ellipse": "circle",
     "arrow": "arrow.right", "line": "line.diagonal", "pencil": "pencil", "text": "textformat", "image": "photo", "eraser": "eraser",
   ]

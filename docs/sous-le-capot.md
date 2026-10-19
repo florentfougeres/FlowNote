@@ -225,7 +225,8 @@ Une app SwiftUI qui remplace Tauri : la barre latérale, les onglets (onglets de
 - **`FlowNoteCore/Vault.swift`** : portage de `vault.rs`. Mêmes règles : chemins relatifs, entrées cachées refusées, `.obsidian` en lecture seule, écriture atomique avec contrôle de conflit **octet par octet**, corbeille. En plus : lectures et écritures coordonnées (`NSFileCoordinator`), fichiers iCloud pas encore téléchargés (`.Note.md.icloud`) listés puis téléchargés. Le dossier du vault est choisi par le panneau natif et retenu par un signet ; la page n'envoie jamais de racine.
 - **Liquid Glass** : la coquille cible macOS 26. Liée à un SDK plus ancien, l'app garderait l'ancien style : SwiftPM inscrit la cible minimale comme version du SDK. La barre d'outils de la page est native : chaque `ToolButton` s'inscrit auprès de `NativeToolsContext` (`src/nativeTools.ts`) au lieu de se dessiner. La coquille reçoit la liste dans l'ordre de la page (commande `toolbar`) et l'affiche en boutons et interrupteurs de verre ; les outils de dessin forment un choix segmenté. Un clic rappelle le bouton web (`flownoteShell.tool`). Les modifications non enregistrées s'affichent par le point natif du bouton de fermeture (`page_status`).
 - **`FlowNote/`** : `AppModel` (vault, arbre, réglages en `UserDefaults`, surveillance FSEvents), `PageModel` (un onglet : page, historique, WebView), `WebPage.swift` (schéma `flownote://` qui sert `Resources/web`, pont des commandes, liens web ouverts dans le navigateur), les vues.
-- Pas encore : Git, Grammalecte, vues hors page (accueil, tickets, graphe, lectures), recherche plein texte native, export PDF.
+- ⌘P (`SearchPanel.swift`) : aller à une page par son titre ou son nom, et recherche plein texte du vault (`Vault.search`) dès trois lettres.
+- Pas encore : Git, Grammalecte, vues hors page (accueil, tickets, graphe, lectures), export PDF.
 
 ```sh
 native/build.sh --open          # construit le web et native/build/FlowNote.app, puis le lance

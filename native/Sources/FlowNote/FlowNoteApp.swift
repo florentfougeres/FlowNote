@@ -37,6 +37,9 @@ struct AppCommands: Commands {
       Button("Nouvelle page…") { if let page { Task { await SidebarActions(page: page).newPage(in: nil) } } }
         .keyboardShortcut("n")
         .disabled(page == nil || app.vault == nil)
+      Button("Aller à une page…") { page?.searching = true }
+        .keyboardShortcut("p")
+        .disabled(page == nil || app.vault == nil)
       Button("Nouvel onglet") { openWindow(id: "page") }
         .keyboardShortcut("t")
       Divider()

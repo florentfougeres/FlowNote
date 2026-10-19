@@ -42,6 +42,10 @@ struct SidebarView: View {
     }
     .toolbar {
       ToolbarItem {
+        Button { page.searching = true } label: { Label("Rechercher", systemImage: "magnifyingglass") }
+          .help("Aller à une page, chercher dans les notes (⌘P)")
+      }
+      ToolbarItem {
         Button { Task { await actions.newPage(in: nil) } } label: { Label("Nouvelle page", systemImage: "square.and.pencil") }
           .help("Nouvelle page (⌘N)")
       }

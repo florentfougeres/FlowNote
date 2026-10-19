@@ -47,6 +47,8 @@ final class PageModel {
   /// Unsaved changes (the dot in the window's close button).
   var dirty = false
   var nameRequest: NameRequest?
+  /// The ⌘P panel is open.
+  var searching = false
   @ObservationIgnored private(set) var webView: WKWebView!
   @ObservationIgnored private var bridge: Bridge!
   @ObservationIgnored private var toastTask: Task<Void, Never>?
