@@ -15,9 +15,13 @@ struct SidebarView: View {
       get: { window.activeTab.map { $0.path ?? "home" } },
       set: { id in
         guard let id else { return }
-        if id == "home" { window.call("select", NSNull()) }
+        // As in the Tauri sidebar: ⌥-click opens the page on the right (split view), ⌘-click in a new tab.
+        let flags = NSApp.currentEvent?.modifierFlags ?? []
+        if id == "home" { window.call("select", NSNull(), flags.contains(.command)) }
         // A folder only opens and closes.
-        else if id.hasPrefix("flownote:") || app.entry(id)?.isFolder == false { window.call("select", id) }
+        else if id.hasPrefix("flownote:") || app.entry(id)?.isFolder == false {
+          if flags.contains(.option) && !id.hasPrefix("flownote:") { window.sidebar("onOpenRight", id) } else { window.call("select", id, flags.contains(.command)) }
+        }
       })
   }
 
@@ -33,15 +37,14 @@ struct SidebarView: View {
       .padding(.horizontal, 14)
       .padding(.vertical, 6)
       // The views, flush with the vault's name (a list would indent them).
+      // The Tauri sidebar's order (Sidebar.tsx).
       VStack(alignment: .leading, spacing: 2) {
-        ForEach(AppModel.views, id: \.title) { view in
-          BottomRow(title: view.title, icon: view.icon, active: window.activeTab.map { $0.path == view.path } ?? false) { window.call("select", view.path ?? NSNull()) }
-            .background(MiddleClick { window.call("select", view.path ?? NSNull(), true) })
-        }
+        viewRow(AppModel.views[0])
         BottomRow(title: "Rechercher", icon: "magnifyingglass") { window.call("search") }
           .help("Rechercher une page (⌘P)")
         BottomRow(title: "Rechercher dans les notes", icon: "text.magnifyingglass") { window.call("vaultSearch") }
           .help("Rechercher dans les notes (⌘⇧F)")
+        ForEach(AppModel.views.dropFirst(), id: \.title) { view in viewRow(view) }
       }
       .padding(.horizontal, 8)
       list
@@ -62,6 +65,14 @@ struct SidebarView: View {
     }
   }
 
+  /// A view of the app (⌘-click or middle click: in a new tab).
+  private func viewRow(_ view: (path: String?, title: String, icon: String)) -> some View {
+    BottomRow(title: view.title, icon: view.icon, active: window.activeTab.map { $0.path == view.path } ?? false) {
+      window.call("select", view.path ?? NSNull(), NSApp.currentEvent?.modifierFlags.contains(.command) ?? false)
+    }
+    .background(MiddleClick { window.call("select", view.path ?? NSNull(), true) })
+  }
+
   private var list: some View {
     List(selection: selection) {
       if !window.favorites.isEmpty {
@@ -71,8 +82,10 @@ struct SidebarView: View {
           }
         }
       }
-      Section("Pages") {
+      Section {
         OutlineGroup(app.tree, children: \.folderChildren) { entry in row(entry) }
+      } header: {
+        PagesHeader(window: window)
       }
     }
     .listStyle(.sidebar)
@@ -83,18 +96,25 @@ struct SidebarView: View {
     }
   }
 
-  private func row(_ entry: VaultEntry) -> some View {
-    SidebarRow(entry: entry, title: window.title(of: entry))
+  @ViewBuilder private func row(_ entry: VaultEntry) -> some View {
+    let live = window.live.flatMap { $0.path == entry.path ? $0 : nil }
+    let content = SidebarRow(window: window, entry: entry, title: window.title(of: entry), emoji: live != nil ? live!.icon : entry.icon) { menu(for: entry) }
       .tag(entry.path)
       .background(MiddleClick { if !entry.isFolder { window.call("select", entry.path, true) } })
-      .draggable(entry.path)
-      .dropDestination(for: String.self) { paths, _ in
-        guard entry.isFolder else { return false }
-        for path in paths where path != entry.path {
-          window.sidebar("onMove", ["path": path, "folder": app.entry(path)?.isFolder ?? false], entry.path)
-        }
-        return true
-      }
+      .dropDestination(for: String.self) { paths, _ in drop(paths, into: entry.path, folder: entry.isFolder) }
+    // Tickets and their folder stay where the app numbers them (Sidebar.tsx).
+    if entry.ticket == true || window.inTickets(entry.path) { content } else { content.draggable(entry.path) }
+  }
+
+  /// Pages or folders dropped on a folder (or on "Pages": the vault's root), as the web sidebar moves them.
+  private func drop(_ paths: [String], into target: String, folder: Bool) -> Bool {
+    guard folder, !window.inTickets(target) else { return false }
+    for path in paths where path != target && (path as NSString).deletingLastPathComponent != target {
+      let isFolder = app.entry(path)?.isFolder ?? false
+      if isFolder && target.hasPrefix("\(path)/") { continue }
+      window.sidebar("onMove", ["path": path, "folder": isFolder], target)
+    }
+    return true
   }
 
   @ViewBuilder private var rootMenu: some View {
@@ -136,6 +156,38 @@ struct SidebarView: View {
   }
 }
 
+/// "Pages", with the Tauri sidebar's buttons: titles or file names, a new page or folder; a drop here goes to the root.
+struct PagesHeader: View {
+  let window: WindowModel
+
+  var body: some View {
+    HStack(spacing: 6) {
+      Text("Pages")
+      Spacer()
+      Button { window.sidebar("onToggleTitles") } label: { Image(systemName: "textformat").foregroundStyle(window.showTitles ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary)) }
+        .buttonStyle(.borderless)
+        .help(window.showTitles ? "Afficher les noms de fichier" : "Afficher les titres des pages")
+      Menu {
+        Button("Nouvelle page") { window.sidebar("onNewPageInFolder", "") }
+        Button("Nouveau dossier") { window.sidebar("onNewFolder", "") }
+      } label: {
+        Image(systemName: "plus")
+      }
+      .menuStyle(.button)
+      .buttonStyle(.borderless)
+      .menuIndicator(.hidden)
+      .fixedSize()
+      .help("Nouvelle page ou nouveau dossier")
+    }
+    .dropDestination(for: String.self) { paths, _ in
+      for path in paths where path.contains("/") {
+        window.sidebar("onMove", ["path": path, "folder": AppModel.shared.entry(path)?.isFolder ?? false], "")
+      }
+      return true
+    }
+  }
+}
+
 /// A row of the sidebar's views: a grey icon, as in the Tauri app.
 struct NavLabel: View {
   let title: String
@@ -145,7 +197,8 @@ struct NavLabel: View {
     Label {
       Text(title)
     } icon: {
-      Image(systemName: icon).foregroundStyle(.secondary)
+      // One width for every icon: the labels line up.
+      Image(systemName: icon).foregroundStyle(.secondary).frame(width: 18)
     }
   }
 }
@@ -211,16 +264,39 @@ struct VaultMenu: View {
   }
 }
 
-struct SidebarRow: View {
+struct SidebarRow<Menu: View>: View {
+  let window: WindowModel
   let entry: VaultEntry
   let title: String
+  /// The page's emoji (as typed, for the open page).
+  let emoji: String?
+  @ViewBuilder let menu: () -> Menu
+  @State private var hovered = false
 
   var body: some View {
-    Label {
-      Text(title).lineLimit(1)
-    } icon: {
-      if let icon = entry.icon { Text(icon) } else { Image(systemName: symbol).foregroundStyle(.secondary) }
+    HStack(spacing: 4) {
+      Label {
+        Text(title).lineLimit(1)
+      } icon: {
+        if let emoji { Text(emoji) } else { Image(systemName: symbol).foregroundStyle(.secondary) }
+      }
+      Spacer(minLength: 0)
+      // As in the Tauri sidebar, under the pointer: the actions, a sub-page or a page in the folder.
+      if hovered {
+        SwiftUI.Menu { menu() } label: { Image(systemName: "ellipsis") }
+          .menuStyle(.button)
+          .buttonStyle(.borderless)
+          .menuIndicator(.hidden)
+          .fixedSize()
+          .help("Plus d'actions")
+        Button {
+          if entry.isFolder { window.sidebar("onNewPageInFolder", entry.path) } else { window.sidebar("onNewPage", entry.path) }
+        } label: { Image(systemName: "plus") }
+          .buttonStyle(.borderless)
+          .help(entry.isFolder ? "Nouvelle page dans ce dossier" : "Ajouter une sous-page")
+      }
     }
+    .onHover { hovered = $0 }
     .help(entry.cloud == true ? "En cours de téléchargement depuis iCloud" : entry.path)
   }
 

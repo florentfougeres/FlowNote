@@ -1,4 +1,4 @@
-import { commandGit } from "./git";
+import { isUntracked, MergeConflictError, type ConflictVersions, type GitApi, type GitCommit, type GitStatus } from "./git";
 import { ConflictError, encodeText, type Vault, type VaultEntry } from "./vault";
 
 /**
@@ -39,7 +39,7 @@ const fromBase64 = (text: string) => Uint8Array.from(atob(text), (c) => c.charCo
 export function nativeVault(name: string, git: boolean): Vault {
   return {
     name,
-    git: git ? commandGit(callNative) : undefined,
+    git: git ? nativeGit() : undefined,
     tree: () => callNative<VaultEntry[]>("vault_tree"),
     read: (path) => callNative<string>("vault_read", { path }),
     write: async (path, content, expected) => {
@@ -63,5 +63,36 @@ export function nativeVault(name: string, git: boolean): Vault {
     readNotes: () => callNative<[string, string][]>("vault_read_notes"),
     stats: () => callNative<{ path: string; ctime: number; mtime: number }[]>("vault_stats"),
     bookmarks: () => callNative<string>("vault_bookmarks"),
+  };
+}
+
+/** Git through the shell's Swift port of git.rs (same commands and arguments as Tauri's). */
+function nativeGit(): GitApi {
+  return {
+    status: () => callNative<GitStatus>("git_status"),
+    diff: (file, staged) => callNative<string>("git_diff", { path: file.path, staged, untracked: isUntracked(file) }),
+    stage: (paths) => callNative("git_stage", { paths }),
+    unstage: (paths) => callNative("git_unstage", { paths }),
+    discard: (paths) => callNative("git_discard", { paths }),
+    activity: (days) => callNative<[string, number][]>("git_activity", { days }),
+    lastCommit: () => callNative<GitCommit | null>("git_last_commit"),
+    commit: (message) => callNative<string>("git_commit", { message }),
+    fetch: () => callNative("git_fetch"),
+    pull: async () => {
+      try {
+        return await callNative<string>("git_pull");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.startsWith("CONFLICT:")) throw new MergeConflictError(message.slice("CONFLICT:".length));
+        throw new Error(message);
+      }
+    },
+    push: () => callNative<string>("git_push"),
+    log: (path) => callNative<GitCommit[]>("git_log", { path, limit: 200 }),
+    show: (hash, path) => callNative<string>("git_show", { hash, path }),
+    conflict: (path) => callNative<ConflictVersions>("git_conflict", { path }),
+    resolve: (path, content) => callNative("git_resolve", { path, content }),
+    continueMerge: () => callNative<string>("git_merge_continue"),
+    abortMerge: () => callNative("git_merge_abort"),
   };
 }

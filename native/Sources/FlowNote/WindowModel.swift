@@ -12,6 +12,11 @@ struct ShellTab: Identifiable, Equatable {
   /// The page on the right of a split view.
   let split: String?
   let splitTitle: String?
+  /// The pages' emoji (their `icon` property), and their kinds, for the tab's icons.
+  let icon: String?
+  let splitIcon: String?
+  let ticket: Bool
+  let presentation: Bool
 
   init?(_ item: [String: Any]) {
     guard let id = item["id"] as? String, let title = item["title"] as? String else { return nil }
@@ -20,6 +25,10 @@ struct ShellTab: Identifiable, Equatable {
     path = item["path"] as? String
     split = item["split"] as? String
     splitTitle = item["splitTitle"] as? String
+    icon = item["icon"] as? String
+    splitIcon = item["splitIcon"] as? String
+    ticket = item["ticket"] as? Bool ?? false
+    presentation = item["presentation"] as? Bool ?? false
   }
 }
 
@@ -39,6 +48,14 @@ final class WindowModel {
   private(set) var favorites: [String] = []
   private(set) var showTitles = true
   private(set) var titles: [String: String] = [:]
+  /// The open page's icon and title as typed (before it is saved).
+  private(set) var live: (path: String, icon: String?, title: String?)?
+  /// Tickets stay in this folder, where the app numbers them.
+  private(set) var ticketsFolder = "Tickets"
+  /// Focus mode: no sidebar, as in the Tauri app.
+  private(set) var focus = false
+  /// The sidebar is shown (⌘\, the toolbar button); hidden in focus mode.
+  var sidebarShown = true
   @ObservationIgnored private(set) var webView: WKWebView!
   @ObservationIgnored private var bridge: Bridge!
 
@@ -64,10 +81,24 @@ final class WindowModel {
     favorites = state["favorites"] as? [String] ?? []
     showTitles = state["showTitles"] as? Bool ?? true
     titles = state["titles"] as? [String: String] ?? [:]
+    if let live = state["live"] as? [String: Any], let path = live["path"] as? String {
+      self.live = (path, live["icon"] as? String, live["title"] as? String)
+    } else {
+      live = nil
+    }
+    ticketsFolder = state["ticketsFolder"] as? String ?? "Tickets"
+    let focus = state["focus"] as? Bool ?? false
+    if focus != self.focus { self.focus = focus }
+  }
+
+  /// In the tickets folder: tickets are neither moved nor dropped there (Sidebar.tsx).
+  func inTickets(_ path: String) -> Bool {
+    !ticketsFolder.isEmpty && (path == ticketsFolder || path.hasPrefix("\(ticketsFolder)/"))
   }
 
   /// A page's name in the sidebar: its title (as the app shows it), else its file name without its kind.
   func title(of entry: VaultEntry) -> String {
+    if let live, live.path == entry.path, showTitles, let title = live.title { return title }
     if showTitles, let title = titles[entry.path] ?? entry.title { return title }
     for suffix in [".excalidraw", ".mindmap"] where entry.name.lowercased().hasSuffix(suffix) { return String(entry.name.dropLast(suffix.count)) }
     return entry.name

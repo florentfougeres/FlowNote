@@ -100,42 +100,34 @@ export function autoCommitMessage(paths: string[], date = new Date()): string {
   return `${subject}\n\n${listed.join("\n")}\n\nCommit créé avec FlowNote.`;
 }
 
-/** Calls a git command of a backend (Tauri's Rust, or the native shell's Swift). */
-export type GitCall = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
-
-/** The git API over a backend's commands (same names and arguments in both backends). */
-export function commandGit(call: GitCall): GitApi {
+export function tauriGit(root: string): GitApi {
   return {
-    status: () => call<GitStatus>("git_status"),
-    diff: (file, staged) => call<string>("git_diff", { path: file.path, staged, untracked: isUntracked(file) }),
-    stage: (paths) => call("git_stage", { paths }),
-    unstage: (paths) => call("git_unstage", { paths }),
-    discard: (paths) => call("git_discard", { paths }),
-    activity: (days) => call<[string, number][]>("git_activity", { days }),
-    lastCommit: () => call<GitCommit | null>("git_last_commit"),
-    commit: (message) => call<string>("git_commit", { message }),
-    fetch: () => call("git_fetch"),
+    status: () => invoke<GitStatus>("git_status", { root }),
+    diff: (file, staged) => invoke<string>("git_diff", { root, path: file.path, staged, untracked: isUntracked(file) }),
+    stage: (paths) => invoke("git_stage", { root, paths }),
+    unstage: (paths) => invoke("git_unstage", { root, paths }),
+    discard: (paths) => invoke("git_discard", { root, paths }),
+    activity: (days) => invoke<[string, number][]>("git_activity", { root, days }),
+    lastCommit: () => invoke<GitCommit | null>("git_last_commit", { root }),
+    commit: (message) => invoke<string>("git_commit", { root, message }),
+    fetch: () => invoke("git_fetch", { root }),
     pull: async () => {
       try {
-        return await call<string>("git_pull");
+        return await invoke<string>("git_pull", { root });
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = String(error);
         if (message.startsWith("CONFLICT:")) throw new MergeConflictError(message.slice("CONFLICT:".length));
         throw new Error(message);
       }
     },
-    push: () => call<string>("git_push"),
-    log: (path) => call<GitCommit[]>("git_log", { path, limit: 200 }),
-    show: (hash, path) => call<string>("git_show", { hash, path }),
-    conflict: (path) => call<ConflictVersions>("git_conflict", { path }),
-    resolve: (path, content) => call("git_resolve", { path, content }),
-    continueMerge: () => call<string>("git_merge_continue"),
-    abortMerge: () => call("git_merge_abort"),
+    push: () => invoke<string>("git_push", { root }),
+    log: (path) => invoke<GitCommit[]>("git_log", { root, path, limit: 200 }),
+    show: (hash, path) => invoke<string>("git_show", { root, hash, path }),
+    conflict: (path) => invoke<ConflictVersions>("git_conflict", { root, path }),
+    resolve: (path, content) => invoke("git_resolve", { root, path, content }),
+    continueMerge: () => invoke<string>("git_merge_continue", { root }),
+    abortMerge: () => invoke("git_merge_abort", { root }),
   };
-}
-
-export function tauriGit(root: string): GitApi {
-  return commandGit((command, args) => invoke(command, { root, ...args }));
 }
 
 // ---------------------------------------------------------------------------

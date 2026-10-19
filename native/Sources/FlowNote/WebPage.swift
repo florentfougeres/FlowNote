@@ -181,7 +181,10 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKUIDelegate, WKN
       window?.webView.pageZoom = args["scale"] as? Double ?? 1
       return nil
     case "toggle_sidebar":
-      NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: nil)
+      window?.sidebarShown.toggle()
+      return nil
+    case "log_frontend":
+      NSLog("FlowNote (page) : %@", args["message"] as? String ?? "")
       return nil
     case "choose_vault":
       app.chooseVault()

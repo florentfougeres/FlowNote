@@ -47,8 +47,9 @@ struct AppCommands: Commands {
         .disabled(!open)
       Button("Nouvelle fenêtre") { openWindow(id: "window") }
         .keyboardShortcut("n", modifiers: [.command, .shift])
+      // As in the Tauri app: ⌘W closes the tab, never the window.
       Button("Fermer l'onglet") {
-        if let window, window.tabs.count > 1, let active = window.active { window.call("closeTab", active) } else { NSApp.keyWindow?.performClose(nil) }
+        if let window, let active = window.active { window.call("closeTab", active) } else { NSApp.keyWindow?.performClose(nil) }
       }
       .keyboardShortcut("w")
       Divider()
@@ -81,6 +82,15 @@ struct AppCommands: Commands {
       Button("Page suivante") { window?.call("forward") }
         .keyboardShortcut("]")
         .disabled(!(window?.canForward ?? false))
+      Divider()
+      // Split view, as in the Tauri app (⌘⌥\, the tab menu, ⌥-click in the sidebar).
+      Button(window?.activeTab?.split == nil ? "Diviser avec l'onglet suivant" : "Fermer la page de droite") { window?.call("toggleSplit") }
+        .keyboardShortcut("\\", modifiers: [.command, .option])
+        .disabled(!open)
+      Button("Échanger les côtés") { window?.call("swapSplit") }
+        .disabled(window?.activeTab?.split == nil)
+      Button("Séparer en deux onglets") { if let id = window?.active { window?.call("separateTab", id) } }
+        .disabled(window?.activeTab?.split == nil)
       Divider()
       Button("Git") { window?.call("git") }
         .keyboardShortcut("g", modifiers: [.command, .shift])
