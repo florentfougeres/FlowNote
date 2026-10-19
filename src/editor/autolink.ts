@@ -28,6 +28,8 @@ export function findUrls(text: string): { from: number; to: number; href: string
     // A domain needs a dot between two letters or digits.
     if (!/[\p{L}\p{N}]\.[\p{L}\p{N}]/u.test(url)) continue;
     const from = match.index;
+    // The destination of a Markdown link or image being typed, `[text](…)`: its input rule makes it one.
+    if (text.slice(Math.max(0, from - 2), from) === "](") continue;
     urls.push({ from, to: from + url.length, href: /^www\./i.test(url) ? `http://${url}` : url });
   }
   return urls;

@@ -1,3 +1,4 @@
+import { pasteMarkdown } from "./pasteMarkdown";
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { MutableRefObject, ReactNode } from "react";
@@ -183,9 +184,13 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         const url = event.clipboardData?.getData("text/plain").trim() ?? "";
         const { selection, schema, doc } = view.state;
         const linkable = !selection.empty && selection.$from.sameParent(selection.$to) && selection.$from.parent.isTextblock && !selection.$from.parent.type.spec.code;
-        if (!/^https?:\/\/\S+$/i.test(url) || !linkable || doc.rangeHasMark(selection.from, selection.to, schema.marks.code)) return false;
-        view.dispatch(view.state.tr.removeMark(selection.from, selection.to, schema.marks.link).addMark(selection.from, selection.to, schema.marks.link.create({ href: url, title: null, kind: "inline" })));
-        return true;
+        if (/^https?:\/\/\S+$/i.test(url) && linkable && !doc.rangeHasMark(selection.from, selection.to, schema.marks.code)) {
+          view.dispatch(view.state.tr.removeMark(selection.from, selection.to, schema.marks.link).addMark(selection.from, selection.to, schema.marks.link.create({ href: url, title: null, kind: "inline" })));
+          return true;
+        }
+        // Plain text (no HTML: a text file, a terminal, Obsidian's source) is read as Markdown.
+        if (event.clipboardData?.types.includes("text/html")) return false;
+        return pasteMarkdown(view, event.clipboardData?.getData("text/plain") ?? "");
       },
     },
     onUpdate: ({ editor }) => {

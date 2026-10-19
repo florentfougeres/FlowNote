@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TextSelection } from "@tiptap/pm/state";
 import { cursorAtStartOf, destroyEditors, openEditor as open, press, type } from "./testUtils";
 import { linkTarget } from "./LinkPrompt";
+import { pasteMarkdown } from "./pasteMarkdown";
 import { codeFromPreceding } from "./backticks";
 import { markdownForClipboard } from "./clipboard";
 
@@ -316,5 +317,48 @@ describe("Tab in a paragraph indents it, like Notion", () => {
     expect(save()).toBe("Avant\n\n- ligne\n");
     press(editor, "Shift-Tab");
     expect(save()).toBe("Avant\n\nligne\n");
+  });
+});
+
+describe("Markdown links and images typed in text", () => {
+  it("an image at its closing parenthesis, saved as typed", () => {
+    const { editor, save } = open("");
+    type(editor, "Voir ![Voiture](https://ex.com/a.png) ici");
+    expect(editor.getJSON().content?.[0].content?.[1]).toMatchObject({ type: "image", attrs: { src: "https://ex.com/a.png", alt: "Voiture" } });
+    expect(save()).toBe("Voir ![Voiture](https://ex.com/a.png) ici\n");
+  });
+
+  it("a link, with or without a title", () => {
+    const { editor, save } = open("");
+    type(editor, '[doc](https://ex.com "Titre") et [site](https://ex.org)');
+    expect(save()).toBe('[doc](https://ex.com "Titre") et [site](https://ex.org)\n');
+  });
+
+  it("leaves wiki links and plain brackets alone", () => {
+    const { editor, save } = open("");
+    type(editor, "[[Note]] (voir) [a] (b)");
+    expect(save()).not.toContain("](");
+  });
+});
+
+describe("Plain text pasted is read as Markdown", () => {
+  const url = "https://sf2.sportauto.fr/wp-content/uploads/sportauto/2025/11/voiture-plus-chere-au-monde-4.png";
+
+  it("an image, saved exactly as pasted", () => {
+    const { editor, save } = open("Avant\n");
+    pasteMarkdown(editor.view, `![image](${url})`);
+    expect(save()).toBe(`Avant![image](${url})\n`);
+    expect(editor.view.dom.querySelector("img")).not.toBeNull();
+  });
+
+  it("several blocks become blocks", () => {
+    const { editor, save } = open("");
+    pasteMarkdown(editor.view, "## Titre\n\n- un\n- [lien](https://ex.com)\n");
+    expect(save()).toBe("## Titre\n\n- un\n- [lien](https://ex.com)\n");
+  });
+
+  it("stays text in a code block", () => {
+    const { editor } = open("```\nx\n```\n");
+    expect(pasteMarkdown(editor.view, "**a**")).toBe(false);
   });
 });

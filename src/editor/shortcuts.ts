@@ -97,6 +97,23 @@ export const MarkdownShortcuts = Extension.create({
       },
     });
 
+    // `![alt](url)` and `[text](url)` typed in text become an image and a link at the
+    // closing parenthesis; otherwise the brackets would be saved escaped (`\[text\]`).
+    const destination = String.raw`\(([^()\s]+)(?:\s+"([^"]*)")?\)$`;
+    const imageRule = new InputRule({
+      find: new RegExp(String.raw`!\[([^[\]]*)\]` + destination),
+      handler: ({ state, range, match }) => {
+        state.tr.replaceWith(range.from, range.to, nodes.image.create({ src: match[2], alt: match[1], title: match[3] ?? null }));
+      },
+    });
+    const linkRule = new InputRule({
+      find: new RegExp(String.raw`(?<![!\[])\[([^[\]]+)\]` + destination),
+      handler: ({ state, range, match }) => {
+        const link = marks.link.create({ href: match[2], title: match[3] ?? null, kind: "inline" });
+        state.tr.replaceWith(range.from, range.to, state.schema.text(match[1], [link]));
+      },
+    });
+
     const mark = (find: RegExp, type: (typeof marks)[string], marker?: string) =>
       markInputRule({ find, type, getAttributes: marker ? { marker } : undefined });
 
@@ -124,6 +141,8 @@ export const MarkdownShortcuts = Extension.create({
       calloutRule,
       containerRule,
       dividerRule,
+      imageRule,
+      linkRule,
       // Delimiters may follow punctuation (l'*italique*) but not a letter (snake_case).
       mark(/(?<=^|[^\p{L}\p{N}*])(\*\*(?!\s)([^*]+?)\*\*)$/u, marks.bold, "**"),
       mark(/(?<=^|[^\p{L}\p{N}_])(__(?!\s)([^_]+?)__)$/u, marks.bold, "__"),

@@ -54,6 +54,9 @@ describe("findUrls", () => {
     ["www.a.io, puis", "www.a.io"],
     ["https:// rien", null],
     ["xhttps://a.io", null],
+    // A Markdown link's destination being typed is left to its input rule.
+    ["[doc](https://a.io/x", null],
+    ["![image](https://a.io/x.png", null],
   ])("%s", (text, url) => {
     expect(findUrls(text)[0] ? text.slice(findUrls(text)[0].from, findUrls(text)[0].to) : null).toBe(url);
   });
