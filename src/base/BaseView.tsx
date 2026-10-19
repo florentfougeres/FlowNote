@@ -100,7 +100,7 @@ function SortMenu({ view, properties, label, onChange, onClose }: { view: View; 
 }
 
 export type ViewType = "table" | "board" | "cards" | "calendar";
-export const VIEW_TYPES: [ViewType, string, IconName][] = [
+const VIEW_TYPES: [ViewType, string, IconName][] = [
   ["table", "Tableau", "table"],
   ["board", "Kanban", "board"],
   ["cards", "Galerie", "gallery"],

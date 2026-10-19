@@ -33,7 +33,7 @@ function spans(children: HastNode[], classes: string[], offset: { at: number }, 
   }
 }
 
-export function highlightSpans(code: string, language: string): Span[] {
+function highlightSpans(code: string, language: string): Span[] {
   const name = ALIASES[language.toLowerCase()] ?? language.toLowerCase();
   if (!name || !lowlight.registered(name)) return [];
   const out: Span[] = [];

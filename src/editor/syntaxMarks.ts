@@ -14,7 +14,7 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
  */
 
 /** The inline code around the cursor (empty selection), with its range. */
-export function codeAround(state: EditorState): { from: number; to: number; ticks: number } | null {
+function codeAround(state: EditorState): { from: number; to: number; ticks: number } | null {
   const { selection, schema } = state;
   const code = schema.marks.code;
   if (!selection.empty || !code) return null;
@@ -42,7 +42,7 @@ export function headingLevelDown(state: EditorState): Transaction | null {
 }
 
 /** `#` typed at the start of a heading: one level more (up to 6). */
-export function headingLevelUp(state: EditorState): Transaction | null {
+function headingLevelUp(state: EditorState): Transaction | null {
   const { $from, empty } = state.selection;
   const heading = $from.parent;
   if (!empty || heading.type.name !== "heading" || $from.parentOffset !== 0 || heading.attrs.level >= 6) return null;

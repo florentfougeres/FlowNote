@@ -96,7 +96,7 @@ export function cellValue(row: BaseRow, id: string, formulas: Record<string, str
 }
 
 /** Rows in the view's manual order (new rows at the end, by name). */
-export function inManualOrder(rows: BaseRow[], order: string[]): BaseRow[] {
+function inManualOrder(rows: BaseRow[], order: string[]): BaseRow[] {
   const rank = new Map(order.map((p, i) => [p, i]));
   return [...rows].sort((a, b) => (rank.get(a.path) ?? Infinity) - (rank.get(b.path) ?? Infinity) || a.name.localeCompare(b.name, "fr", { numeric: true }));
 }
@@ -135,7 +135,7 @@ export function optionsOf(meta: ColumnMeta, property: string, rows: BaseRow[]): 
 }
 
 /** Text of a value, for search, sort and display. */
-export function textOf(value: PropertyValue | undefined): string {
+function textOf(value: PropertyValue | undefined): string {
   if (value === null || value === undefined) return "";
   if (Array.isArray(value)) return value.join(", ");
   return String(value);
@@ -149,7 +149,7 @@ const valueOf = (row: BaseRow, property: string): PropertyValue | undefined => {
   return v as PropertyValue;
 };
 
-export function matches(row: BaseRow, filter: SimpleFilter): boolean {
+function matches(row: BaseRow, filter: SimpleFilter): boolean {
   const value = valueOf(row, filter.property);
   const list = Array.isArray(value) ? value.map(String) : value === null || value === undefined || value === "" ? [] : [String(value)];
   switch (filter.op) {

@@ -9,7 +9,7 @@ use serde_json::Value;
 /// Every command `dispatch` knows: src/platform.test.ts checks that the web
 /// app only calls these.
 pub const COMMANDS: &[&str] = &[
-    "vault_tree", "vault_read", "vault_write", "vault_files", "vault_read_binary", "vault_create", "vault_create_dir",
+    "vault_tree", "vault_read", "vault_write", "vault_files", "vault_create", "vault_create_dir",
     "vault_reveal", "vault_config", "vault_rename", "vault_trash", "vault_search", "vault_read_notes", "vault_stats",
     "vault_bookmarks", "git_status", "git_diff", "git_stage", "git_unstage", "git_discard", "git_commit", "git_log",
     "git_show", "git_fetch", "git_pull", "git_push", "git_conflict", "git_resolve", "git_merge_continue",
@@ -55,8 +55,6 @@ pub fn dispatch(command: &str, args: &Value) -> Result<Value, String> {
         "vault_read" => json(vault::vault_read(root()?, path()?)?),
         "vault_write" => json(vault::vault_write(root()?, path()?, string(args, "content")?, optional_string(args, "expected"))?),
         "vault_files" => json(vault::vault_files(root()?)),
-        // Through a C function, bytes travel as base64 (Tauri has a raw command for them).
-        "vault_read_binary" => json(base64(&vault::vault_read_binary(root()?, path()?)?)),
         "vault_create" => json(vault::vault_create(root()?, path()?, bytes(args, "content"))?),
         "vault_create_dir" => json(vault::vault_create_dir(root()?, path()?)?),
         "vault_reveal" => json(vault::vault_reveal(root()?, path()?)?),
@@ -93,18 +91,6 @@ pub fn dispatch(command: &str, args: &Value) -> Result<Value, String> {
     }
 }
 
-fn base64(bytes: &[u8]) -> String {
-    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
-    for chunk in bytes.chunks(3) {
-        let n = (chunk[0] as u32) << 16 | (*chunk.get(1).unwrap_or(&0) as u32) << 8 | *chunk.get(2).unwrap_or(&0) as u32;
-        for i in 0..4 {
-            out.push(if i <= chunk.len() { TABLE[(n >> (18 - 6 * i) & 63) as usize] as char } else { '=' });
-        }
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,7 +112,7 @@ mod tests {
         assert!(dispatch("vault_tree", &value!({ "root": "/etc" })).unwrap_err().starts_with("Dossier non autorisé"));
     }
 
-    /// Through the dispatch, as both apps call it (needs the companion built by scripts/build-grammar.sh).
+    /// Through the dispatch, as the app calls it (needs the companion built by scripts/build-grammar.sh).
     #[test]
     fn grammalecte_answers_through_the_dispatch() {
         let answer = dispatch("grammar_check", &value!({ "paragraphs": ["Les enfant sont tres sages."] }));
@@ -135,11 +121,4 @@ mod tests {
         grammar::shutdown();
     }
 
-    #[test]
-    fn bytes_go_as_base64() {
-        assert_eq!(base64(b""), "");
-        assert_eq!(base64(b"f"), "Zg==");
-        assert_eq!(base64(b"fo"), "Zm8=");
-        assert_eq!(base64(b"foobar"), "Zm9vYmFy");
-    }
 }

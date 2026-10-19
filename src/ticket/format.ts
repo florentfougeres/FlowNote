@@ -28,7 +28,7 @@
  * "## Notes" added in Obsidian…) and the line endings are kept.
  */
 
-export const COMMENTS_HEADING = "## Commentaires";
+const COMMENTS_HEADING = "## Commentaires";
 
 export interface TicketComment {
   /** As written after `[!comment]` (e.g. "14/10/2026 13:42"). */

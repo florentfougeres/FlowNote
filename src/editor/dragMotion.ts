@@ -27,7 +27,7 @@ const THROW = { type: "spring", bounce: 0.12, duration: 0.38 } as const;
 
 const VELOCITY_WINDOW_MS = 100;
 
-export function prefersReducedMotion(): boolean {
+function prefersReducedMotion(): boolean {
   return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 

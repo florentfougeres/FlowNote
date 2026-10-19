@@ -37,7 +37,7 @@ const kind = (k: BlockKind, type?: string) => (editor: Editor, range: Range) => 
   turnInto(editor, k, range, type);
 };
 
-export const SLASH_ITEMS: SlashItem[] = [
+const SLASH_ITEMS: SlashItem[] = [
   { key: "paragraph", title: "Texte", description: "Paragraphe simple", icon: "¶", keywords: ["texte", "paragraphe", "text"], run: kind("paragraph") },
   { key: "heading1", title: "Titre 1", description: "Grand titre de section", icon: "H1", keywords: ["titre", "heading", "h1"], run: kind("heading1") },
   { key: "heading2", title: "Titre 2", description: "Titre de section moyen", icon: "H2", keywords: ["titre", "heading", "h2"], run: kind("heading2") },
@@ -174,7 +174,7 @@ export const SLASH_ITEMS: SlashItem[] = [
 const FRECENCY_KEY = "flownote:slash-frecency";
 type Frecency = Record<string, { count: number; last: number }>;
 
-export function loadFrecency(): Frecency {
+function loadFrecency(): Frecency {
   try {
     return JSON.parse(localStorage.getItem(FRECENCY_KEY) ?? "{}") as Frecency;
   } catch {
@@ -223,7 +223,7 @@ export function filterSlashItems(query: string, items: SlashItem[] = SLASH_ITEMS
 export class SlashMenuStore extends MenuStore<SlashItem> {}
 
 /** Position of a `/` that was just typed, while it can still open the menu. */
-export const freshSlashKey = new PluginKey<number | null>("freshSlash");
+const freshSlashKey = new PluginKey<number | null>("freshSlash");
 
 function freshSlashPlugin(): Plugin<number | null> {
   return new Plugin<number | null>({

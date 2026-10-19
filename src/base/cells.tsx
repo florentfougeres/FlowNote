@@ -16,7 +16,7 @@ export const TYPE_ICONS: Record<ColumnType | "name", IconName> = {
   url: "link",
 };
 
-export const COLOR_LABELS: Record<OptionColor, string> = {
+const COLOR_LABELS: Record<OptionColor, string> = {
   default: "Par défaut",
   gray: "Gris",
   brown: "Marron",

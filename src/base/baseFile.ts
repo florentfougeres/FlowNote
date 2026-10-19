@@ -111,7 +111,7 @@ export const BASE_SUFFIX = ".base";
 export const isBasePath = (path: string) => path.toLowerCase().endsWith(BASE_SUFFIX);
 
 /** "note.statut" → "statut"; "file.name" stays. */
-export const propertyOf = (id: string) => (id.startsWith("note.") ? id.slice(5) : id);
+const propertyOf = (id: string) => (id.startsWith("note.") ? id.slice(5) : id);
 /** "statut" → "note.statut" (how the file refers to a note property). */
 const idOf = (property: string) => (property === NAME || property.includes(".") ? property : `note.${property}`);
 

@@ -26,7 +26,7 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 - `src-tauri/core/` : **le backend**, bibliothèque `flownote-core` sans Tauri. Elle couvre les fichiers du vault (`vault.rs` : lecture, écriture atomique avec contrôle de conflit, corbeille, arbre, `vault_stats`), Git (`git.rs`), Grammalecte (`grammar.rs`) et le web (`web.rs`). Un aiguillage unique, `backend.rs` (`dispatch` et `COMMANDS`), sert toutes les commandes. Côté web, on passe toujours par `backend()` dans `src/platform.ts`. `src-tauri/src/lib.rs` n'expose que la commande `backend`, plus ce qui est propre à Tauri (sélecteur de dossier, lecture binaire brute, `startup_note`, `log_frontend`).
 - `src/menus.ts` : menus des pages, des dossiers et des onglets, écrits une fois (barre latérale et barre d'onglets).
-- `src/vault/backendVault.ts` et `backendGit` (`git.ts`) : l'API du vault et de Git, construites une fois sur `backend()`. `tauriVault(root)` passe la racine ; un hôte qui la connaît lui-même passe `null`.
+- `tauriVault(root)` (`src/vault/tauriVault.ts`) et `backendGit(root)` (`git.ts`) : l'API du vault et de Git sur `backend()`, la racine envoyée avec chaque commande. Les octets des pièces jointes passent par la commande Tauri `vault_read_binary`, sans JSON.
 - `src/markdown/` : moteur de fidélité (remark/mdast, re-sérialisation bloc par bloc).
 - `src/editor/` : Tiptap/ProseMirror. Les vues de nœuds sont dans `views.ts`, le pont vers l'app dans `bridge.ts`.
 - `src/vault/` : accès au vault, résolution des liens façon Obsidian (`links.ts`), opérations sur les pages (`pageOps.ts`), notes liées (`backlinks.ts`), copie des notes en mémoire (`noteCache.ts` : le vault ouvert est enveloppé, ses écritures tiennent la copie à jour).
@@ -67,14 +67,14 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 ## État actuel (19 octobre 2026)
 
-- Depuis la v0.15.2 (pas encore publié) : backend Rust sorti en bibliothèque `flownote-core` avec un aiguillage unique, menus partagés (`menus.ts`), API vault/Git construites une fois, recette avant release (`docs/recette.md`) ; filigrane des titres vides après les `#`, emoji d'une lettre (`:x:`). FlowNote Swift essayé puis retiré.
+- v0.15.3 : backend Rust sorti en bibliothèque `flownote-core` avec un aiguillage unique, menus partagés (`menus.ts`), API vault/Git construites une fois, recette avant release (`docs/recette.md`) ; filigrane des titres vides après les `#`, emoji d'une lettre (`:x:`). FlowNote Swift essayé puis retiré.
 - v0.15.2 : liens tapés cliquables, Tab dans un paragraphe, `#` des titres en ligne, guide de release (`docs/publier-une-version.md`). v0.15.1 : favoris, réglages de la barre latérale.
 - v0.15.0 : titre et nom de fichier indépendants (`titleHeading.ts`, `title` dans l'arbre, réglage `showTitles`), mode lecture par onglet, panneau Git compact, puces dessinées en CSS (marqueurs WebKit). v0.14.1 (CSP activée, barre latérale et panneau de droite mémoïsés, `tabs.ts` et `pageExport.ts` sortis d'`App.tsx`). La 0.14.0 a apporté le split view en un onglet, les marques # et `, les liens cliquables, la copie en Markdown et la documentation illustrée. Le workflow de release crée un brouillon à publier.
 - Sécurité côté Rust : `check_root` limite toutes les commandes (vault et git) à un dossier avec `.obsidian` ou choisi par `vault_pick` (sélecteur natif, liste dans `trusted-vaults.json` des données de l'app). git tourne avec `core.fsmonitor=false`.
 - Pistes ouvertes :
   - **FlowNote web sur le réseau local (idée pour plus tard)** : servir l'app depuis le serveur Ubuntu où le vault est cloné, pour y accéder depuis n'importe quel navigateur du réseau.
     - Un petit serveur Rust (`server/`) sert `dist/` et expose `POST /backend`, qui appelle le même `backend::dispatch` que Tauri. La racine du vault est fixée côté serveur, jamais envoyée par le navigateur.
-    - Côté web, une branche HTTP dans `platform.ts` ; `backendVault(nom, null)` existe déjà.
+    - Côté web, une branche HTTP dans `platform.ts` (le serveur impose sa propre racine, quelle que soit celle reçue).
     - Déploiement retenu : Docker (`Dockerfile` avec l'app web, le serveur, Grammalecte pour Linux et git ; `docker compose` qui monte le vault, publie un port et lit un mot de passe dans `.env`). L'image pourrait être publiée par la CI sur ghcr.io.
     - Points à régler : un mot de passe au minimum ; les identifiants Git montés en lecture seule et l'utilisateur du conteneur égal au propriétaire du vault ; Grammalecte recompilé pour Linux (ou le correcteur du navigateur) ; les liens et exports qui s'ouvrent côté navigateur. Le contrôle de conflit protège déjà deux navigateurs sur la même note.
   - `App.tsx` (~1 890 lignes) à découper après la release : opérations sur les fichiers (`usePageOps`) et navigation des onglets (`useTabs`) (déjà sortis : `useSplitWidth`, `useSidebarPeek`, `tabs.ts`, `pageExport.ts`) ;

@@ -1,5 +1,5 @@
 /** macOS (and iOS): shortcuts are shown with ⌘ ⌥ ⇧; elsewhere Ctrl, Alt, Shift. */
-export const IS_MAC = /Mac|iPhone|iPad/.test(globalThis.navigator?.platform || globalThis.navigator?.userAgent || "");
+const IS_MAC = /Mac|iPhone|iPad/.test(globalThis.navigator?.platform || globalThis.navigator?.userAgent || "");
 
 /**
  * Shortcut text for this platform. Labels are written the Mac way

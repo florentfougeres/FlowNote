@@ -19,7 +19,7 @@ function lastTextblock(node: PMNode, pos: number): { node: PMNode; pos: number }
  * nested in the last one, otherwise a bullet item (Markdown has no indented
  * text: 4 spaces before a paragraph make it code).
  */
-export function indentLine(state: EditorState): Transaction | null {
+function indentLine(state: EditorState): Transaction | null {
   const { $from } = state.selection;
   const line = $from.parent;
   const { list, listItem } = state.schema.nodes;
@@ -55,7 +55,7 @@ export function indentLine(state: EditorState): Transaction | null {
  *   is selected, a second Backspace deleting it.
  * Null for the other cases, left to the default behaviour.
  */
-export function backspaceIntoAbove(state: EditorState): Transaction | null {
+function backspaceIntoAbove(state: EditorState): Transaction | null {
   const { $from } = state.selection;
   const index = $from.index(0);
   const above = state.doc.child(index - 1);

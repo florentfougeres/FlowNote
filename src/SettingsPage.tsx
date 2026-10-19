@@ -36,7 +36,7 @@ const SCALE_KEY = "flownote:ui-scale";
 const SHOW_TITLES_KEY = "flownote:show-titles";
 
 /** Sizes offered for the interface: text, buttons and spacing grow together. */
-export const UI_SCALES: [number, string][] = [
+const UI_SCALES: [number, string][] = [
   [0.9, "Petite"],
   [1, "Normale"],
   [1.1, "Grande"],

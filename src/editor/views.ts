@@ -45,7 +45,7 @@ function updateAttrs(editor: Editor, getPos: () => number | undefined, attrs: Re
 }
 
 /** List items, with a clickable checkbox for tasks. */
-export const listItemView: NodeViewRenderer = ({ node, editor, getPos }) => {
+const listItemView: NodeViewRenderer = ({ node, editor, getPos }) => {
   const dom = element("li");
   const content = element("div", "li-content");
   let checkbox: HTMLElement | null = null;
@@ -90,7 +90,7 @@ export const listItemView: NodeViewRenderer = ({ node, editor, getPos }) => {
  * Callouts, with the icon and color of their type (clicking the icon changes
  * the type); foldable ones (`[!type]-` / `[!type]+`) get a toggle arrow.
  */
-export const calloutView: NodeViewRenderer = ({ node, editor, getPos }) => {
+const calloutView: NodeViewRenderer = ({ node, editor, getPos }) => {
   const dom = element("div", "callout");
   const toggle = element("button", "callout-fold");
   toggle.contentEditable = "false";
@@ -156,7 +156,7 @@ export const calloutView: NodeViewRenderer = ({ node, editor, getPos }) => {
  * the block; a chart stays interactive (zoom, hover) and is edited with its
  * header buttons: the visual editor or the text.
  */
-export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
+const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   const dom = element("div", "code-block");
   const header = element("div", "code-header");
   header.contentEditable = "false";
@@ -364,7 +364,7 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
 };
 
 /** Markdown kept verbatim (tables, HTML, math...): double-click to edit its source. */
-export const rawBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
+const rawBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   const dom = element("div", "raw-block");
   dom.dataset.kind = node.attrs.kind;
   const pre = element("pre");

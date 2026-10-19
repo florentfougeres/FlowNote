@@ -45,7 +45,7 @@ export function statusFor(label: string, columns: TicketColumn[]): string {
 }
 
 /** Cards in their manual order; never moved ones after, soonest due date then highest number first. */
-export function byBoardOrder(a: TicketInfo, b: TicketInfo): number {
+function byBoardOrder(a: TicketInfo, b: TicketInfo): number {
   if (a.order !== null && b.order !== null && a.order !== b.order) return a.order - b.order;
   if ((a.order === null) !== (b.order === null)) return a.order === null ? 1 : -1;
   if (a.due && b.due && a.due !== b.due) return a.due.localeCompare(b.due);

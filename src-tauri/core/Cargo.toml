@@ -1,7 +1,7 @@
 [package]
 name = "flownote-core"
 version = "0.1.0"
-description = "FlowNote's backend (vault, Git, Grammalecte), shared by the Tauri app and the native shell"
+description = "FlowNote's backend (vault, Git, Grammalecte), without Tauri"
 edition = "2024"
 rust-version = "1.90"
 publish = false # never released on its own: its version does not follow the app's

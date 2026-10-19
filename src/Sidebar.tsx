@@ -33,7 +33,7 @@ interface Page {
   row?: boolean;
 }
 
-export function toPages(entries: VaultEntry[], rows = false): Page[] {
+function toPages(entries: VaultEntry[], rows = false): Page[] {
   const dirs = new Map(entries.filter((e) => e.kind === "dir").map((e) => [e.name, e]));
   const usedDirs = new Set<string>();
   const pages: Page[] = [];
@@ -51,7 +51,7 @@ export function toPages(entries: VaultEntry[], rows = false): Page[] {
 }
 
 /** The tree without the entries the app shows elsewhere (tickets folder, reading list). */
-export function withoutPaths(entries: VaultEntry[], hidden: Set<string>): VaultEntry[] {
+function withoutPaths(entries: VaultEntry[], hidden: Set<string>): VaultEntry[] {
   return entries.filter((e) => !hidden.has(e.path)).map((e) => (e.kind === "dir" && e.children ? { ...e, children: withoutPaths(e.children, hidden) } : e));
 }
 

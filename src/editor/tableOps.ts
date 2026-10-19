@@ -20,7 +20,7 @@ export function tableAt(editor: Editor, pos: number): TableRef | null {
 }
 
 /** Position of the cell at (row, col). */
-export function cellPos(table: TableRef, row: number, col: number): number {
+function cellPos(table: TableRef, row: number, col: number): number {
   let pos = table.pos + 1;
   for (let r = 0; r < row; r++) pos += table.node.child(r).nodeSize;
   pos += 1;

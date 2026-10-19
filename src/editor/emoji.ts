@@ -54,7 +54,7 @@ export function loadEmojis(): Promise<EmojiEntry[]> {
   return loading;
 }
 
-export function emojiForCode(code: string): string | undefined {
+function emojiForCode(code: string): string | undefined {
   return byCode.get(code.toLowerCase());
 }
 

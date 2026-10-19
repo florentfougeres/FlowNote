@@ -48,7 +48,7 @@ export function linkItems(query: string, files: string[], embed: boolean): LinkI
 }
 
 /** Inserts a link to `path` in place of `range` (the typed `[[query`). */
-export function insertLink(editor: Editor, bridge: VaultBridge, range: Range, path: string, embed: boolean, alias: string | null) {
+function insertLink(editor: Editor, bridge: VaultBridge, range: Range, path: string, embed: boolean, alias: string | null) {
   const { schema } = editor;
   if (bridge.config.useMarkdownLinks) {
     const href = encodeURI(relativePath(bridge.notePath, path));

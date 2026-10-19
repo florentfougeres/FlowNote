@@ -1,7 +1,7 @@
 use flownote_core::{backend, grammar, vault};
 
 /// Every backend command (files, Git, Grammalecte, web), through the one
-/// dispatch shared with the native shell (src-tauri/core). Run away from the UI thread.
+/// dispatch of src-tauri/core. Run away from the UI thread.
 #[tauri::command]
 async fn backend(command: String, args: serde_json::Value) -> Result<serde_json::Value, String> {
   tauri::async_runtime::spawn_blocking(move || backend::dispatch(&command, &args)).await.map_err(|e| e.to_string())?

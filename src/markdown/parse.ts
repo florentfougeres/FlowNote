@@ -100,7 +100,7 @@ const FENCE = /^ {0,3}(`{3,}|~{3,})/;
  * markdown-it, a container closes at the first line of at least as many colons;
  * one never closed stays plain text. Lines inside code fences are skipped.
  */
-export function maskContainers(src: string): { masked: string; containers: Map<number, number> } {
+function maskContainers(src: string): { masked: string; containers: Map<number, number> } {
   const containers = new Map<number, number>();
   if (!src.includes(":::")) return { masked: src, containers };
   const lines = src.split("\n");
@@ -273,7 +273,7 @@ function convertQuote(raw: string, ctx: ParseContext): PMJSON {
 }
 
 /** Inline content of a single line that is not a paragraph of its own (callout titles). */
-export function parseInlineText(text: string, ctx: ParseContext = NO_CONTEXT): PMJSON[] {
+function parseInlineText(text: string, ctx: ParseContext = NO_CONTEXT): PMJSON[] {
   if (text.trim() === "") return [];
   const blocks = parseFragment(text, ctx);
   if (blocks.length === 1 && blocks[0].type === "paragraph") return blocks[0].content ?? [];

@@ -82,7 +82,7 @@ type Node =
 
 const PRECEDENCE: Record<string, number> = { "||": 1, "&&": 2, "==": 3, "!=": 3, "<": 4, ">": 4, "<=": 4, ">=": 4, "+": 5, "-": 5, "*": 6, "/": 6, "%": 6 };
 
-export function parseFormula(source: string): Node {
+function parseFormula(source: string): Node {
   const tokens = tokenize(source);
   let pos = 0;
   const peek = () => tokens[pos];
@@ -213,7 +213,7 @@ function formatDate(d: FDate, pattern = "YYYY-MM-DD"): string {
     .replace(/mm/g, pad(x.getMinutes()));
 }
 
-export function evaluate(node: Node, scope: FormulaScope): FValue {
+function evaluate(node: Node, scope: FormulaScope): FValue {
   const ev = (n: Node) => evaluate(n, scope);
   switch (node.k) {
     case "lit":

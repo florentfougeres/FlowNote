@@ -100,35 +100,34 @@ export function autoCommitMessage(paths: string[], date = new Date()): string {
   return `${subject}\n\n${listed.join("\n")}\n\nCommit créé avec FlowNote.`;
 }
 
-/** Git through the backend (system git); `root` as for backendVault. */
-export function backendGit(root: string | null): GitApi {
-  const at = root === null ? {} : { root };
+/** Git through the backend (system git), in the vault folder `root`. */
+export function backendGit(root: string): GitApi {
   return {
-    status: () => backend<GitStatus>("git_status", at),
-    diff: (file, staged) => backend<string>("git_diff", { ...at, path: file.path, staged, untracked: isUntracked(file) }),
-    stage: (paths) => backend("git_stage", { ...at, paths }),
-    unstage: (paths) => backend("git_unstage", { ...at, paths }),
-    discard: (paths) => backend("git_discard", { ...at, paths }),
-    activity: (days) => backend<[string, number][]>("git_activity", { ...at, days }),
-    lastCommit: () => backend<GitCommit | null>("git_last_commit", at),
-    commit: (message) => backend<string>("git_commit", { ...at, message }),
-    fetch: () => backend("git_fetch", at),
+    status: () => backend<GitStatus>("git_status", { root }),
+    diff: (file, staged) => backend<string>("git_diff", { root, path: file.path, staged, untracked: isUntracked(file) }),
+    stage: (paths) => backend("git_stage", { root, paths }),
+    unstage: (paths) => backend("git_unstage", { root, paths }),
+    discard: (paths) => backend("git_discard", { root, paths }),
+    activity: (days) => backend<[string, number][]>("git_activity", { root, days }),
+    lastCommit: () => backend<GitCommit | null>("git_last_commit", { root }),
+    commit: (message) => backend<string>("git_commit", { root, message }),
+    fetch: () => backend("git_fetch", { root }),
     pull: async () => {
       try {
-        return await backend<string>("git_pull", at);
+        return await backend<string>("git_pull", { root });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (message.startsWith("CONFLICT:")) throw new MergeConflictError(message.slice("CONFLICT:".length));
         throw new Error(message);
       }
     },
-    push: () => backend<string>("git_push", at),
-    log: (path) => backend<GitCommit[]>("git_log", { ...at, path, limit: 200 }),
-    show: (hash, path) => backend<string>("git_show", { ...at, hash, path }),
-    conflict: (path) => backend<ConflictVersions>("git_conflict", { ...at, path }),
-    resolve: (path, content) => backend("git_resolve", { ...at, path, content }),
-    continueMerge: () => backend<string>("git_merge_continue", at),
-    abortMerge: () => backend("git_merge_abort", at),
+    push: () => backend<string>("git_push", { root }),
+    log: (path) => backend<GitCommit[]>("git_log", { root, path, limit: 200 }),
+    show: (hash, path) => backend<string>("git_show", { root, hash, path }),
+    conflict: (path) => backend<ConflictVersions>("git_conflict", { root, path }),
+    resolve: (path, content) => backend("git_resolve", { root, path, content }),
+    continueMerge: () => backend<string>("git_merge_continue", { root }),
+    abortMerge: () => backend("git_merge_abort", { root }),
   };
 }
 

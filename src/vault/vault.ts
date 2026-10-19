@@ -78,7 +78,7 @@ function noteMeta(head: string, path: string): Pick<VaultEntry, "ticket" | "icon
 }
 
 /** Folders never shown nor touched: Obsidian config, Git data, trash. */
-export function isHiddenName(name: string): boolean {
+function isHiddenName(name: string): boolean {
   return name.startsWith(".") || name === "node_modules";
 }
 
@@ -278,7 +278,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
 }
 
 /** Builds the sidebar tree from a flat list of note paths, plus `folders` shown even when empty. */
-export function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultEntry, "ticket" | "icon" | "presentation" | "title"> = () => ({}), folders: string[] = []): VaultEntry[] {
+function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultEntry, "ticket" | "icon" | "presentation" | "title"> = () => ({}), folders: string[] = []): VaultEntry[] {
   const root: VaultEntry[] = [];
   // A folder is walked like the path of a note inside it, without the note.
   for (const path of [...paths, ...folders.map((f) => `${f}/`)]) {

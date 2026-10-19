@@ -39,8 +39,6 @@ export interface LoadedNote {
   layout: NoteLayout;
 }
 
-export const EMPTY_LAYOUT: NoteLayout = { frontmatter: null, leading: "", trailing: "\n", origins: [], context: NO_CONTEXT, eol: "\n", bom: "" };
-
 function detectEol(text: string): "\n" | "\r\n" {
   const crlf = text.split("\r\n").length - 1;
   return crlf > 0 && crlf === text.split("\n").length - 1 ? "\r\n" : "\n";

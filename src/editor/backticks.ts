@@ -28,7 +28,7 @@ function plainText(state: EditorState, from: number, to: number): string | null 
 }
 
 /** The selected text becomes inline code; the cursor goes after it. */
-export function codeFromSelection(state: EditorState, from: number, to: number): Transaction | null {
+function codeFromSelection(state: EditorState, from: number, to: number): Transaction | null {
   const text = plainText(state, from, to);
   if (text === null || text.includes("`")) return null;
   const tr = state.tr.replaceWith(from, to, state.schema.text(text, [state.schema.marks.code.create()]));
@@ -39,7 +39,7 @@ export function codeFromSelection(state: EditorState, from: number, to: number):
  * A backtick at `pos` (already typed when `typed`) before text that a backtick
  * closes, on the same line: that text becomes inline code.
  */
-export function codeFromFollowing(state: EditorState, pos: number, typed = false): Transaction | null {
+function codeFromFollowing(state: EditorState, pos: number, typed = false): Transaction | null {
   const start = typed ? pos + 1 : pos;
   const $start = state.doc.resolve(start);
   const parent = $start.parent;
@@ -76,7 +76,7 @@ export function codeFromPreceding(state: EditorState, at: number): Transaction |
  * text between it and another backtick, or the text it replaced. Null when the
  * change is not one or two typed characters with a backtick.
  */
-export function codeFromChange(before: PMNode, state: EditorState): Transaction | null {
+function codeFromChange(before: PMNode, state: EditorState): Transaction | null {
   const { doc } = state;
   const start = before.content.findDiffStart(doc.content);
   const end = before.content.findDiffEnd(doc.content);

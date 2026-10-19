@@ -26,7 +26,7 @@ export type CreateKind = PageKind;
 const folderOf = (path: string) => (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
 const relative = new Intl.RelativeTimeFormat("fr", { numeric: "auto" });
-export function timeAgo(at: number, now = Date.now()): string {
+function timeAgo(at: number, now = Date.now()): string {
   const seconds = Math.round((at - now) / 1000);
   const steps: [Intl.RelativeTimeFormatUnit, number][] = [
     ["year", 31536000],

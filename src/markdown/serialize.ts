@@ -81,7 +81,7 @@ function prefixLines(text: string): string {
 /** Blocks that can directly follow a paragraph line inside a tight list item. */
 const INTERRUPTS_PARAGRAPH = new Set(["list", "blockquote", "callout", "heading"]);
 
-export function joinBlocks(children: PMJSON[], v: Variant, tight: boolean): string {
+function joinBlocks(children: PMJSON[], v: Variant, tight: boolean): string {
   const nonEmpty = children.length > 1 ? children.filter((c) => !isEmptyParagraph(c)) : children;
   let out = "";
   nonEmpty.forEach((child, i) => {
@@ -256,7 +256,7 @@ interface OpenMark {
  * `escapes` lists characters the author escaped in the original block; they are
  * escaped again even when not strictly necessary, to avoid noise in diffs.
  */
-export function serializeInline(nodes: PMJSON[], v: Variant, escapes = ""): string {
+function serializeInline(nodes: PMJSON[], v: Variant, escapes = ""): string {
   let out = "";
   let pendingSpace = "";
   const active: OpenMark[] = [];

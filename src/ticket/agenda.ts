@@ -6,7 +6,7 @@ import { isTicketMarkdown, ticketTitle } from "./format";
  * tickets with a `due:` date. Also the tickets themselves, for the list view.
  */
 
-export const DUE_DATE = /📅️?[ \t]*(\d{4}-\d{2}-\d{2})/;
+const DUE_DATE = /📅️?[ \t]*(\d{4}-\d{2}-\d{2})/;
 
 export interface AgendaItem {
   kind: "task" | "ticket";
