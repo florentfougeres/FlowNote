@@ -168,9 +168,11 @@ Sans passer par GitHub Actions, sur un Mac Apple Silicon :
 
 ```sh
 npm install
-npm run tauri build -- --bundles dmg   # FlowNote : src-tauri/target/release/bundle/dmg/FlowNote_x.y.z_aarch64.dmg
+CI=true npm run tauri build -- --bundles dmg   # FlowNote : src-tauri/target/release/bundle/dmg/FlowNote_x.y.z_aarch64.dmg
 native/build.sh                        # FlowNote Swift : native/build/FlowNote Swift.app
 ```
+
+`CI=true` saute la mise en page de la fenêtre du `.dmg` par le Finder (comme dans la CI). Sans lui, la construction échoue sur `bundle_dmg.sh` si le Terminal n'a pas le droit de piloter le Finder (*Réglages Système → Confidentialité et sécurité → Automatisation*). Après un échec, supprimer l'image temporaire `rw.*.dmg` laissée dans `src-tauri/target/release/bundle/macos/`.
 
 Pour emballer FlowNote Swift en `.dmg` :
 
