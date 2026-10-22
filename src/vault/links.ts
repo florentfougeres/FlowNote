@@ -56,7 +56,7 @@ const fileStem = (path: string) => basename(path).replace(/\.md$/i, "");
 
 /** Title shown for a page: file name without ".md" (drawings and mind maps: without ".excalidraw.md", ".mindmap.md"). */
 export function noteTitle(path: string): string {
-  return basename(path).replace(/\.(?:excalidraw|mindmap)\.md$/i, "").replace(/\.(?:md|base)$/i, "");
+  return basename(path).replace(/\.(?:excalidraw|mindmap)\.md$/i, "").replace(/\.(?:md|base|canvas)$/i, "");
 }
 
 function join(folder: string, name: string): string {

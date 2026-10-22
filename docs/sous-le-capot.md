@@ -51,15 +51,16 @@ Le principe qui guide tout le reste : **le vault Obsidian reste la seule source 
 | Emoji | [emojibase-data](https://emojibase.dev) | `src/editor/emoji.ts` | Recherche `:nom` (en français) et `:shortcode:` |
 | Croquis | [Excalidraw](https://excalidraw.com), [lz-string](https://github.com/pieroxy/lz-string) | `src/drawing/` | Dessins `.excalidraw.md` |
 | Mind maps | [Mind Elixir](https://mind-elixir.com) 5.15.x | `src/mindmap/` | Cartes `.mindmap.md` |
+| Canevas | [React Flow](https://reactflow.dev) (`@xyflow/react`) 12.11.x | `src/canvas/` | Tableau blanc `.canvas` (cartes, flèches, zoom) |
 | Présentations | [Marp](https://marp.app) (`@marp-team/marp-core`) | `src/presentation/` | Diapos des notes `marp: true` |
 | Bases | [TanStack Table](https://tanstack.com/table) v8 | `src/base/TableView.tsx` | Vue tableau des bases `.base` |
 | Graphe | [d3-force](https://d3js.org/d3-force) | `src/graph/GraphView.tsx` | Disposition du graphe des liens |
 | Animations | [Motion](https://motion.dev) | `src/editor/dragMotion.ts` | Animation du glisser-déposer des blocs |
 | Correcteur | [Grammalecte](https://grammalecte.net) 2.3.0 | `grammar/`, `src-tauri/core/src/grammar.rs` | Grammaire et orthographe françaises |
-| Côté Rust | `serde`, `trash`, `ureq`, `tauri-plugin-dialog` | `src-tauri/` | Échanges JSON, corbeille du système, titre d'une page web, sélecteur de dossier |
+| Côté Rust | `serde`, `trash`, `ureq`, `tauri-plugin-dialog` | `src-tauri/` | Échanges JSON, corbeille du système, titre et aperçu d'une page web, sélecteur de dossier |
 | Outils | Vite, Vitest + jsdom, oxlint, TypeScript 7 | | Build, tests, lint, types |
 
-Les bibliothèques lourdes (Excalidraw, Mind Elixir, Mermaid, Plotly, Marp, l'impression, les données d'emoji) sont chargées par `import()` dynamique, à la première utilisation : ouvrir une note simple ne les charge pas.
+Les bibliothèques lourdes (Excalidraw, Mind Elixir, React Flow, Mermaid, Plotly, Marp, l'impression, les données d'emoji) sont chargées par `import()` dynamique, à la première utilisation : ouvrir une note simple ne les charge pas.
 
 Deux versions sont figées volontairement : TanStack Table reste en v8 (la v9 change d'API) et Mind Elixir en 5.15.x.
 
@@ -142,6 +143,7 @@ Chaque type a son dossier et un format de fichier compatible avec Obsidian ou se
 | Base | `*.base` | TanStack Table, `yaml` | Format natif des Bases d'Obsidian |
 | Dessin | `*.excalidraw.md` | Excalidraw | Format du plugin Obsidian Excalidraw |
 | Mind map | `*.mindmap.md` | Mind Elixir | Plan lisible et JSON de la carte |
+| Canevas | `*.canvas` | React Flow | JSON Canvas, écrit comme Obsidian |
 | Ticket | note avec `type: ticket` | Tiptap | Note et commentaires en callouts |
 | Présentation | note avec `marp: true` | Marp | Diapos séparées par `---` |
 | Lectures | une note | | Titres = thèmes, tâches = liens |
@@ -176,6 +178,10 @@ FlowNote lit aussi le JSON compressé (`compressed-json`, décodé avec lz-strin
 ### Mind maps (`src/mindmap/`)
 
 Une note `Nom.mindmap.md` éditée avec **Mind Elixir**. Le fichier contient un plan en liste (régénéré, c'est ce qu'Obsidian affiche) puis le JSON de la carte entre `%%`, pour qu'Obsidian le masque en lecture. Mind Elixir écrit son zoom en `translate3d(…) scale(…)` dans le style ; l'affichage passe par une variable CSS (`--map-transform`) en 2D et en pixels entiers, pour rester net au zoom.
+
+### Canevas (`src/canvas/`)
+
+Un fichier `Nom.canvas` au format **JSON Canvas** d'Obsidian, affiché avec **React Flow**. `format.ts` lit le fichier (les flèches sans côté prennent celui qui fait face à l'autre carte, comme Obsidian) et l'écrit comme Obsidian 1.14 (vérifié dans son code) : indentation par tabulations, un objet dont toutes les valeurs sont simples tient sur une ligne, clés dans l'ordre d'Obsidian (`id, x, y, width, height, color, type`, puis le contenu ; `fromEnd`, `toEnd`, `color`, `label` après les côtés d'une flèche), clés inconnues gardées en tête, clés du fichier à leur place. Les cartes de texte et de note sont des `NoteEditor` (lecture seule, ou édition au double-clic). Une carte de lien demande au backend le titre et l'image d'aperçu de la page (`fetch_page_preview` : `og:title`, `og:image`, rendue absolue), une fois par adresse. La mention « React Flow » reste affichée, comme son éditeur le demande hors abonnement Pro.
 
 ### Tickets (`src/ticket/`)
 
@@ -219,7 +225,7 @@ Le backend est volontairement petit, et **unique** : la bibliothèque `flownote-
 - **`vault.rs`** : les fichiers. Les chemins reçus sont relatifs au vault et vérifiés ; les entrées cachées (`.obsidian`, `.git`, `.trash`…) ne sont jamais listées, lues ni écrites. L'écriture est **atomique** (fichier temporaire puis `rename`, pour qu'Obsidian ou un client de synchronisation ne voie jamais un fichier à moitié écrit) et **contrôlée** : elle n'a lieu que si le fichier contient encore ce que l'app avait chargé, sinon l'erreur commence par `CONFLICT:`. La suppression passe par la corbeille du système (crate `trash`). L'arbre renvoie aussi, pour chaque note, ce que l'interface affiche sans la lire en entier (ticket, présentation, icône, titre), à partir des 4 premiers Ko du fichier.
 - **`git.rs`** : le gestionnaire Git lance le **`git` du système** (avec la configuration, les identifiants et les hooks de l'utilisateur), avec `-C <vault>` et `core.fsmonitor=false`. Il gère statut, diff, indexation, commit, historique, fetch, pull, push et résolution des conflits de fusion.
 - **`grammar.rs`** : lance le compagnon Grammalecte au premier besoin et le garde ouvert.
-- **`web.rs`** : ouvre les liens `http(s)` et `mailto:` dans le navigateur (et rien d'autre), lit le titre d'une page web (`ureq`, 6 s au plus), écrit les exports (`.html`, `.png`) là où l'utilisateur l'a choisi.
+- **`web.rs`** : ouvre les liens `http(s)` et `mailto:` dans le navigateur (et rien d'autre), lit le titre et l'image d'aperçu d'une page web (`ureq`, 6 s et 512 Ko au plus), écrit les exports (`.html`, `.png`) là où l'utilisateur l'a choisi.
 
 **Sécurité** : `check_root` limite toutes les commandes (vault et git) à un dossier qui contient `.obsidian` ou qui a été choisi par l'utilisateur dans le sélecteur natif (`vault_pick`, liste dans `trusted-vaults.json` des données de l'app). La **CSP** (`tauri.conf.json`) n'autorise que les scripts de l'app ; une nouvelle bibliothèque qui charge une ressource externe doit y être ajoutée.
 

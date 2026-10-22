@@ -276,6 +276,18 @@ Des cartes mentales (`Idées.mindmap.md`) : `Tab` ajoute un enfant, `↵` un fr�
 
 ![[mindmap.webp]]
 
+### Canevas
+
+Le tableau blanc d'Obsidian (`Plan.canvas`) : des cartes posées librement et reliées par des flèches.
+
+- **Ajouter** avec la barre du bas : une carte de texte (Markdown), une note ou une image du vault (son contenu s'affiche dans la carte ; un clic sur son titre l'ouvre dans un nouvel onglet), un lien web (dans l'app de bureau, la carte montre le titre et l'image d'aperçu de la page ; une vidéo YouTube montre sa miniature, ▶ la lit dans la carte), un groupe. Un double-clic sur le fond crée une carte de texte à cet endroit.
+- **Écrire** : double-clic dans une carte de texte ; `esc` ou un clic à côté pour finir.
+- **Relier** : tirer depuis un des points qui apparaissent au bord d'une carte jusqu'à une autre. Double-clic sur une flèche pour lui donner un libellé.
+- **Organiser** : glisser les cartes (un groupe emporte les cartes qu'il contient), les redimensionner par leurs poignées, les colorer, les grouper ou les supprimer avec la barre qui apparaît en haut quand une carte ou une flèche est sélectionnée.
+- Les flèches de la barre du bas, ou `⌘Z` / `⌘⇧Z`, annulent et rétablissent ; la molette ou le pavé déplace le tableau, les boutons en bas à gauche zooment et recadrent.
+
+Le fichier est écrit exactement comme Obsidian l'écrit : un canevas modifié dans les deux applications donne des diffs propres dans Git.
+
 ### Présentations
 
 Une note avec `marp: true` devient une présentation Marp : diapos séparées par `---`, notes de l'orateur en commentaires, miniatures à jour à côté du texte, mode Présenter (`⌘⇧P`) et export HTML ou PDF. « Transformer en présentation » dans la barre de page convertit une note existante.

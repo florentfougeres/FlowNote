@@ -1,6 +1,7 @@
 //! Links to the web: opening one in the default browser, and reading a page's
-//! title for the reading list (the only request the app makes on its own,
-//! and only when the user adds a link).
+//! title (reading list) or title and preview image (link cards of a canvas).
+//! These are the only requests the app makes on its own: when a link is added
+//! to the reading list, or when a canvas shows a link card.
 
 use std::io::Read;
 use std::time::Duration;
@@ -41,36 +42,83 @@ pub fn open_export(path: String) -> Result<(), String> {
     std::process::Command::new("open").arg(&path).spawn().map(|_| ()).map_err(|e| e.to_string())
 }
 
-/// Title of a web page (`og:title`, else `<title>`), or None. Reads at most
-/// 512 KB, gives up after a few seconds.
+/// The beginning of a web page (at most 512 KB), or None. Gives up after a few seconds.
 /// Blocking: the caller runs it away from the UI thread.
-pub fn fetch_page_title(url: String) -> Option<String> {
-    if !is_web_url(&url) {
+fn read_page(url: &str) -> Option<String> {
+    if !is_web_url(url) {
         return None;
     }
     let agent: ureq::Agent = ureq::Agent::config_builder().timeout_global(Some(Duration::from_secs(6))).max_redirects(5).build().into();
     let mut response = agent.get(url.trim()).header("User-Agent", "Mozilla/5.0 (Macintosh) FlowNote").call().ok()?;
     let mut bytes = Vec::new();
     response.body_mut().as_reader().take(512 * 1024).read_to_end(&mut bytes).ok()?;
-    title_of(&String::from_utf8_lossy(&bytes))
+    Some(String::from_utf8_lossy(&bytes).into_owned())
 }
 
-fn title_of(html: &str) -> Option<String> {
+/// Title of a web page (`og:title`, else `<title>`), or None.
+pub fn fetch_page_title(url: String) -> Option<String> {
+    title_of(&read_page(&url)?)
+}
+
+/// What a link card shows: the page's title and its preview image (absolute URL).
+#[derive(serde::Serialize, Debug, PartialEq)]
+pub struct PagePreview {
+    pub title: Option<String>,
+    pub image: Option<String>,
+}
+
+pub fn fetch_page_preview(url: String) -> Option<PagePreview> {
+    let html = read_page(&url)?;
+    Some(PagePreview { title: title_of(&html), image: image_of(&html).and_then(|image| absolute(&url, &image)) })
+}
+
+/// Content of the first `<meta>` whose property or name is one of `names`, attributes in either order.
+fn meta(html: &str, names: &[&str]) -> Option<String> {
     let lower = html.to_ascii_lowercase();
-    // <meta property="og:title" content="…">, attributes in either order.
     let mut from = 0;
     while let Some(at) = lower[from..].find("<meta") {
         let start = from + at;
         let end = start + lower[start..].find('>').unwrap_or(lower.len() - start);
         let tag = &html[start..end];
         let tag_lower = &lower[start..end];
-        if tag_lower.contains("og:title") {
+        let named = ["property", "name"].iter().filter_map(|key| attribute(tag, tag_lower, key)).any(|value| names.contains(&value.to_ascii_lowercase().as_str()));
+        if named {
             if let Some(value) = attribute(tag, tag_lower, "content") {
-                return clean(&value);
+                return Some(value);
             }
         }
         from = end;
     }
+    None
+}
+
+fn image_of(html: &str) -> Option<String> {
+    meta(html, &["og:image", "og:image:url", "og:image:secure_url", "twitter:image", "twitter:image:src"]).map(|src| src.trim().replace("&amp;", "&")).filter(|src| !src.is_empty())
+}
+
+/// An image address of the page made absolute ("/a.png", "//cdn/a.png"); only web addresses are kept.
+fn absolute(page: &str, src: &str) -> Option<String> {
+    let page = page.trim();
+    let scheme_end = page.find("://")? + 3;
+    let origin = &page[..scheme_end + page[scheme_end..].find('/').unwrap_or(page.len() - scheme_end)];
+    let url = if src.starts_with("//") {
+        format!("{}{src}", &page[..scheme_end - 2])
+    } else if src.starts_with('/') {
+        format!("{origin}{src}")
+    } else if is_web_url(src) {
+        src.to_string()
+    } else {
+        let base = &page[..page.rfind('/').filter(|&i| i >= scheme_end).map_or(page.len(), |i| i + 1)];
+        if base.ends_with('/') { format!("{base}{src}") } else { format!("{base}/{src}") }
+    };
+    is_web_url(&url).then_some(url)
+}
+
+fn title_of(html: &str) -> Option<String> {
+    if let Some(value) = meta(html, &["og:title"]) {
+        return clean(&value);
+    }
+    let lower = html.to_ascii_lowercase();
     let start = lower.find("<title")?;
     let open = start + lower[start..].find('>')? + 1;
     let close = open + lower[open..].find("</title")?;
@@ -111,12 +159,34 @@ mod tests {
         assert_eq!(title_of("<title>  </title>"), None);
     }
 
+    #[test]
+    fn reads_the_preview_image_of_a_page() {
+        let html = r#"<meta content="/img/a.png" property="og:image"><meta name="twitter:image" content="https://x.y/b.png">"#;
+        assert_eq!(image_of(html).as_deref(), Some("/img/a.png"));
+        assert_eq!(absolute("https://site.fr/blog/post", "/img/a.png").as_deref(), Some("https://site.fr/img/a.png"));
+        assert_eq!(absolute("https://site.fr/blog/post", "//cdn.fr/a.png").as_deref(), Some("https://cdn.fr/a.png"));
+        assert_eq!(absolute("https://site.fr/blog/post", "a.png").as_deref(), Some("https://site.fr/blog/a.png"));
+        assert_eq!(absolute("https://site.fr", "a.png").as_deref(), Some("https://site.fr/a.png"));
+        assert_eq!(absolute("https://site.fr/", "javascript:alert(1)").as_deref(), Some("https://site.fr/javascript:alert(1)"));
+        assert_eq!(image_of(r#"<meta name="twitter:image:src" content="https://x.y/c.png?a=1&amp;b=2">"#).as_deref(), Some("https://x.y/c.png?a=1&b=2"));
+        assert_eq!(image_of("<title>x</title>"), None);
+    }
+
     /// Needs the network: cargo test -- --ignored
     #[test]
     #[ignore]
     fn fetches_a_real_page_title() {
         let title = fetch_page_title("https://example.com".into());
         assert_eq!(title.as_deref(), Some("Example Domain"));
+    }
+
+    /// Needs the network: cargo test -- --ignored
+    #[test]
+    #[ignore]
+    fn fetches_a_real_page_preview() {
+        let preview = fetch_page_preview("https://github.com/obsidianmd/jsoncanvas".into()).unwrap();
+        assert!(preview.title.is_some());
+        assert!(preview.image.is_some_and(|image| image.starts_with("https://")));
     }
 
     #[test]

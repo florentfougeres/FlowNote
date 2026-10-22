@@ -108,8 +108,8 @@ export async function openBrowserVault(): Promise<Vault> {
         const children = await list(handle as DirectoryHandle, path);
         // An empty folder is shown (just created); one holding only attachments is not.
         if (children.length > 0 || (await isEmptyDir(handle as DirectoryHandle))) entries.push({ path, name: handle.name, kind: "dir", children });
-      } else if (handle.name.endsWith(".base")) {
-        entries.push({ path, name: handle.name.slice(0, -5), kind: "file" });
+      } else if (handle.name.endsWith(".base") || handle.name.endsWith(".canvas")) {
+        entries.push({ path, name: handle.name.replace(/\.(base|canvas)$/, ""), kind: "file" });
       } else if (handle.name.endsWith(".md")) {
         // Only the beginning is read to recognise tickets and icons.
         const head = await (await (handle as FileSystemFileHandle).getFile()).slice(0, 4096).text();
@@ -231,7 +231,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
     name,
     git: memoryGit(contents, remote),
     tree: async () => {
-      const notes = [...contents.keys()].filter((p) => !hidden(p) && (p.endsWith(".md") || p.endsWith(".base")));
+      const notes = [...contents.keys()].filter((p) => !hidden(p) && (p.endsWith(".md") || p.endsWith(".base") || p.endsWith(".canvas")));
       const text = (v: string | Uint8Array | undefined) => (typeof v === "string" ? v : v ? new TextDecoder().decode(v) : "");
       return buildTree(notes, (p) => (p.endsWith(".md") ? noteMeta(text(contents.get(p)), p) : {}), [...folders]);
     },
@@ -297,7 +297,7 @@ function buildTree(paths: string[], metaOf: (path: string) => Pick<VaultEntry, "
       const sub = parts.slice(0, i + 1).join("/");
       if (i === parts.length - 1) {
         if (part === "") return;
-        level.push({ path: sub, name: part.replace(/\.(md|base)$/, ""), kind: "file", ...metaOf(sub) });
+        level.push({ path: sub, name: part.replace(/\.(md|base|canvas)$/, ""), kind: "file", ...metaOf(sub) });
         return;
       }
       let dir = level.find((e) => e.kind === "dir" && e.path === sub);

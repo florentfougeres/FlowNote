@@ -53,7 +53,7 @@ export function Breadcrumbs({
   };
 
   const pagesIn = (folder: string) =>
-    files.filter((f) => (f.endsWith(".md") || f.endsWith(".base")) && dirname(f) === folder).sort((a, b) => noteTitle(a).localeCompare(noteTitle(b), "fr"));
+    files.filter((f) => (f.endsWith(".md") || f.endsWith(".base") || f.endsWith(".canvas")) && dirname(f) === folder).sort((a, b) => noteTitle(a).localeCompare(noteTitle(b), "fr"));
 
   return (
     <div className="breadcrumbs" ref={ref}>

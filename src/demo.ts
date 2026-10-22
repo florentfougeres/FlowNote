@@ -125,6 +125,19 @@ export const DEMO_FILES = {
   "Voyages/Montréal.md": trip("Fait", "Canada", day(-12), 1300, "Le festival de jazz."),
   "Voyages/Islande.md": trip("Idée", "Islande", day(3), 1800, "En van, le tour de l'île."),
   "Idées.mindmap.md": ideasMap(),
+  "Plan du projet.canvas": `{
+	"nodes":[
+		{"id":"5a1e0c2b9d3f4e61","x":-60,"y":-80,"width":1000,"height":520,"color":"5","type":"group","label":"Lancement du site"},
+		{"id":"8c3f1a7e2b6d4091","x":-20,"y":0,"width":280,"height":150,"color":"4","type":"text","text":"## Objectif\\n\\nMettre le site en ligne **avant décembre**."},
+		{"id":"2e9b4d7c1a8f3065","x":360,"y":-20,"width":400,"height":420,"type":"file","file":"Projets/Site web.md"},
+		{"id":"b7d2e5f8a1c94360","x":-20,"y":230,"width":280,"height":130,"type":"link","url":"https://help.obsidian.md/canvas"},
+		{"id":"f1a4c7e0d3b65829","x":1060,"y":40,"width":320,"height":300,"type":"file","file":"Exemple.md"}
+	],
+	"edges":[
+		{"id":"c4e7a0d3f6b91825","fromNode":"8c3f1a7e2b6d4091","fromSide":"right","toNode":"2e9b4d7c1a8f3065","toSide":"left","label":"suivi dans"},
+		{"id":"9d2f5b8e1c4a7360","fromNode":"2e9b4d7c1a8f3065","fromSide":"right","toNode":"f1a4c7e0d3b65829","toSide":"left","color":"6","label":"exemple"}
+	]
+}`,
   "Bilan du trimestre.md": PRESENTATION,
   "Lectures.md": READING,
   "Croquis.excalidraw.md": demoDrawing(),

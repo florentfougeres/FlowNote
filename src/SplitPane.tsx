@@ -6,6 +6,8 @@ import { isDrawingPath } from "./drawing/format";
 import { DrawingEditor } from "./drawing/DrawingEditor";
 import { isMindmapPath } from "./mindmap/format";
 import { MindmapEditor } from "./mindmap/MindmapEditor";
+import { isCanvasPath } from "./canvas/format";
+import { CanvasEditor } from "./canvas/CanvasEditor";
 import { isBasePath } from "./base/baseFile";
 import { BaseView } from "./base/BaseView";
 import { TicketView } from "./ticket/TicketView";
@@ -215,12 +217,14 @@ export const SplitPane = memo(function SplitPane({
   }, [save]);
 
   const onMarkdown = useCallback((markdown: string) => setPage((p) => (p ? { ...p, markdown } : p)), []);
+  const readFile = useCallback((file: string) => vault.read(file), [vault]);
   const key = `${path}#${page?.reloads ?? 0}`;
   const drawing = isDrawingPath(path);
   const mindmap = isMindmapPath(path);
   const base = isBasePath(path);
-  const ticket = page !== null && !drawing && !mindmap && !base && isTicketMarkdown(page.loaded);
-  const note = !drawing && !mindmap && !base;
+  const canvas = isCanvasPath(path);
+  const ticket = page !== null && !drawing && !mindmap && !base && !canvas && isTicketMarkdown(page.loaded);
+  const note = !drawing && !mindmap && !base && !canvas;
   const presentation = page !== null && note && !ticket && isPresentationMarkdown(page.markdown);
   const reading = readingOn && note && !raw;
   /** The note's first `# heading`, shown as its title (titleHeading.ts). */
@@ -293,6 +297,12 @@ export const SplitPane = memo(function SplitPane({
     body = (
       <div className="drawing-pane">
         <MindmapEditor key={key} source={page.loaded} onMarkdown={onMarkdown} title={noteTitle(path)} theme={theme} editable={editable} onControls={setMindmapControls} />
+      </div>
+    );
+  } else if (page && canvas) {
+    body = (
+      <div className="drawing-pane">
+        <CanvasEditor key={key} source={page.loaded} onChange={onMarkdown} bridge={bridge} readFile={readFile} theme={theme} editable={editable} />
       </div>
     );
   } else if (page && base) {
@@ -373,10 +383,10 @@ export const SplitPane = memo(function SplitPane({
           {git && <ToolButton icon="clock" label="Historique de la note" onClick={() => setHistory(!history)} active={history} />}
           {note && !presentation && <ToolButton icon="width" label={wide ? "Largeur normale" : "Pleine largeur"} onClick={onToggleWide} active={wide} />}
           <ToolButton icon="focus" label={focusOn ? "Quitter le mode focus (⌘⇧M)" : "Mode focus (⌘⇧M)"} onClick={onToggleFocus} active={focusOn} />
-          {!base && !ticket && !openOnLeft && (
+          {!base && !ticket && !canvas && !openOnLeft && (
             <ToolButton icon="more" label="Exporter, copier…" onClick={(event) => setMenu(event.currentTarget.getBoundingClientRect())} active={menu !== null} disabled={raw || !page} />
           )}
-          {!openOnLeft && <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin" : mindmap ? "Voir le fichier brut de la mind map" : base ? "Voir le fichier .base" : "Mode Markdown brut"} onClick={toggleRaw} active={raw} disabled={!page} />}
+          {!openOnLeft && <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin" : mindmap ? "Voir le fichier brut de la mind map" : base ? "Voir le fichier .base" : canvas ? "Voir le fichier .canvas" : "Mode Markdown brut"} onClick={toggleRaw} active={raw} disabled={!page} />}
           <span className="split-pane-divider" />
           <ToolButton icon="open" label="Ouvrir dans son propre onglet" onClick={onSeparate} />
           <ToolButton icon="replace" label="Échanger les côtés" onClick={onSwap} />

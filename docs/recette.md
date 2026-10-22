@@ -108,13 +108,14 @@ Toutes les fonctionnalités de FlowNote, à vérifier **dans l'app de bureau** a
 
 | Fonctionnalité | OK |
 | --- | --- |
-| Création de chaque type (`⌘N`) : note, base, dessin, mind map, ticket, présentation ; deux pages du même nom gardent leur type (`Sans titre 1.excalidraw.md`) | ☐ |
+| Création de chaque type (`⌘N`) : note, base, dessin, mind map, canevas, ticket, présentation ; deux pages du même nom gardent leur type (`Sans titre 1.excalidraw.md`) | ☐ |
 | Base : vues tableau, kanban, galerie, calendrier ; filtres, tris, groupes ; calculs, formules | ☐ |
 | Base : sélections colorées, dates, saisie, glisser colonnes / lignes / cartes, « Nouveau », `![[X.base]]` dans une note ; le YAML garde ses clés inconnues | ☐ |
 | Ticket : état, tags, échéance, tâches, commentaires | ☐ |
 | Vue Tickets : liste (filtres, tris, recherche) et tableau (glisser, colonnes personnalisées) | ☐ |
 | Dessin Excalidraw : outils dans la barre de page, menu au clic droit, enregistrement | ☐ |
 | Mind map : `Tab`, `↵`, double-clic, glisser, disposition, zoom, recentrer, export PNG | ☐ |
+| Canevas : cartes de texte, de note, d'image et de lien, groupe qui emporte ses cartes, flèches et libellés, couleurs, redimensionner, `⌘Z` ; le fichier ouvert dans Obsidian | ☐ |
 | Présentation : miniatures, Présenter `⌘⇧P` (plein écran), export HTML et PDF | ☐ |
 
 ## Vues et outils

@@ -1,0 +1,466 @@
+/* Canvases (Obsidian's .canvas): cards and arrows on a dotted board, in the app's materials. */
+
+.canvas-page,
+.canvas-board {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-board {
+  --canvas-dot: color-mix(in srgb, var(--text) 16%, transparent);
+  --canvas-edge: color-mix(in srgb, var(--text) 45%, transparent);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.canvas-board .react-flow {
+  --xy-background-color: var(--bg);
+  --xy-node-boxshadow-selected: none;
+  --xy-handle-background-color: var(--accent);
+  --xy-handle-border-color: var(--bg);
+  --xy-selection-background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+  --xy-selection-border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  --xy-edge-label-background-color: var(--bg);
+  --xy-controls-button-background-color: var(--menu-material);
+  --xy-controls-button-background-color-hover: var(--hover);
+  --xy-controls-button-color: var(--text);
+  --xy-controls-button-border-color: var(--border);
+  font-family: var(--font-ui);
+}
+
+.canvas-board .react-flow__controls {
+  overflow: hidden;
+  border-radius: 10px;
+  box-shadow: var(--shadow-menu);
+}
+
+.dash-create-icon.canvas {
+  color: #d35400;
+  background: color-mix(in srgb, #d35400 13%, transparent);
+}
+
+/* Cards */
+.canvas-card {
+  --card-color: var(--border-strong, var(--border));
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--card-color);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.canvas-card.colored {
+  background: color-mix(in srgb, var(--card-color) 9%, var(--bg));
+}
+
+.react-flow__node.selected > .canvas-card {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.canvas-handle.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--bg);
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.react-flow__node:hover .canvas-handle,
+.react-flow__node.selected .canvas-handle,
+.react-flow__handle.connectingfrom {
+  opacity: 1;
+}
+
+.canvas-resize-handle.react-flow__resize-control.handle {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--accent);
+  border-radius: 3px;
+  background: var(--bg);
+}
+
+.canvas-resize-line.react-flow__resize-control.line {
+  border-color: transparent;
+}
+
+/* Markdown inside a card: the note editor, smaller, without its page margins. */
+.canvas-markdown {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px 14px;
+  cursor: default;
+}
+
+.canvas-markdown.editing {
+  overflow: auto;
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.canvas-markdown .note {
+  max-width: none;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.canvas-markdown .note > :first-child {
+  margin-top: 0;
+}
+
+.canvas-file-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+  font: 600 13px var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.canvas-file-title:hover span:first-of-type {
+  text-decoration: underline;
+}
+
+.canvas-subpath {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.canvas-file-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.canvas-file-body img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.canvas-muted {
+  margin: 12px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.canvas-link {
+  overflow: hidden;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.canvas-link.with-image {
+  justify-content: flex-start;
+}
+
+/* The page's preview image (og:image), filling the top of the card. */
+.canvas-link-image {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  object-fit: cover;
+  border-bottom: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
+}
+
+.canvas-link-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.canvas-link strong {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.canvas-url {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-open {
+  margin-top: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  box-shadow: none;
+  color: var(--text);
+  font: 12.5px var(--font-ui);
+}
+
+.canvas-open:hover {
+  background: var(--hover);
+}
+
+/* Groups: a tinted area with its name above. */
+.canvas-group {
+  border-style: solid;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--card-color) 5%, transparent);
+  box-shadow: none;
+}
+
+.canvas-group.colored {
+  background: color-mix(in srgb, var(--card-color) 10%, transparent);
+}
+
+.canvas-group-label {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 2px;
+  max-width: 100%;
+  padding: 2px 8px;
+  border: none;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--card-color) 18%, var(--bg));
+  color: var(--text);
+  font: 600 14px var(--font-ui);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+input.canvas-group-label {
+  width: 220px;
+  outline: 2px solid var(--accent);
+}
+
+/* Toolbars: adding cards at the bottom, the selection's actions at the top. */
+.canvas-toolbar,
+.canvas-selection-bar {
+  position: absolute;
+  left: 50%;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--menu-material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow: var(--shadow-menu);
+  transform: translateX(-50%);
+}
+
+.canvas-toolbar {
+  bottom: 18px;
+}
+
+.canvas-selection-bar {
+  top: 14px;
+}
+
+.canvas-toolbar > button,
+.canvas-selection-bar > button:not(.canvas-swatch) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+}
+
+/* Undo and redo stay readable when there is nothing to undo yet: dimmed, not hidden. */
+.canvas-toolbar > button:disabled {
+  color: var(--text);
+  opacity: 0.4;
+}
+
+.canvas-toolbar > button:disabled:hover {
+  background: none;
+}
+
+.canvas-toolbar > button:hover,
+.canvas-toolbar > button.active,
+.canvas-selection-bar > button:not(.canvas-swatch):hover {
+  background: var(--hover);
+}
+
+.canvas-swatch {
+  width: 18px;
+  height: 18px;
+  margin: 0 3px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
+  border-radius: 50%;
+  box-shadow: none;
+}
+
+.canvas-swatch.none {
+  background: linear-gradient(135deg, var(--bg) 45%, var(--danger) 45% 55%, var(--bg) 55%);
+}
+
+.canvas-swatch:hover {
+  transform: scale(1.15);
+}
+
+.canvas-bar-separator {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--border);
+}
+
+/* Above the toolbar: more specific than the bases' popover (database.css comes later), which opens below. */
+.canvas-toolbar > .canvas-picker {
+  top: auto;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  width: 320px;
+  margin-left: -160px;
+}
+
+.canvas-picker-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.canvas-picker-list > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.canvas-picker-list > button.selected {
+  background: var(--hover);
+}
+
+.canvas-picker-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-picker-folder {
+  flex: none;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.canvas-label-input {
+  position: fixed;
+  z-index: 60;
+  width: 180px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  box-shadow: var(--shadow-menu);
+  color: var(--text);
+  font: 13px var(--font-ui);
+  outline: none;
+}
+
+.canvas-error {
+  padding: 40px;
+  color: var(--danger);
+  text-align: center;
+}
+
+/* React Flow's own look for its "group" type is not used: the card draws the group. */
+.canvas-board .react-flow__node-group {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  text-align: left;
+}
+
+.canvas-board .react-flow__node-group.selected,
+.canvas-board .react-flow__node-group:focus {
+  box-shadow: none;
+}
+
+.canvas-board .react-flow__attribution {
+  background: none;
+  opacity: 0.5;
+  font-size: 9px;
+}
+
+/* A YouTube card: the thumbnail with a play button, then the player in place. */
+.canvas-video {
+  padding: 0;
+  border: none;
+  background: #000 center / cover no-repeat;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+iframe.canvas-link-image {
+  border: none;
+}
+
+.canvas-play {
+  display: inline-block;
+  width: 56px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.72);
+  transition: background 120ms;
+}
+
+.canvas-play::after {
+  content: "";
+  display: block;
+  margin: 12px 0 0 23px;
+  border: 8px solid transparent;
+  border-left: 13px solid #fff;
+}
+
+.canvas-video:hover .canvas-play {
+  background: #ff0033;
+}

@@ -10,6 +10,8 @@ import { isDrawingPath } from "./drawing/format";
 import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
 import { DRAWING_TOOLS } from "./drawing/tools";
 import { isMindmapPath } from "./mindmap/format";
+import { isCanvasPath } from "./canvas/format";
+import { CanvasEditor } from "./canvas/CanvasEditor";
 import { MindmapEditor, type MindmapControls } from "./mindmap/MindmapEditor";
 import { isBasePath, parseBase, serializeBase, writeColumn, type SelectOption } from "./base/baseFile";
 import { BaseView } from "./base/BaseView";
@@ -797,16 +799,18 @@ export function App() {
   /** The open page is a ticket (front matter type: ticket), read from the loaded text. */
   /** The open page is a mind map (Name.mindmap.md). */
   const mindmap = note !== null && isMindmapPath(note.path);
+  /** The open page is a canvas (Name.canvas). */
+  const canvasPage = note !== null && isCanvasPath(note.path);
   /** The open page is a base (Name.base, Obsidian's format). */
   const basePage = note !== null && isBasePath(note.path);
-  const ticketPage = note !== null && !drawing && !mindmap && !basePage && isTicketMarkdown(note.loaded);
+  const ticketPage = note !== null && !drawing && !mindmap && !canvasPage && !basePage && isTicketMarkdown(note.loaded);
   /** Reading mode (per tab, ⌘⇧R): notes, tickets and presentations, nothing editable. */
-  const readable = note !== null && !drawing && !mindmap && !basePage;
+  const readable = note !== null && !drawing && !mindmap && !canvasPage && !basePage;
   const readingOn = Boolean(tabs.find((t) => t.id === activeTab)?.reading);
   const reading = readable && readingOn && !rawMode;
   const toggleReading = () => replaceTabs(withReading(tabsRef.current, activeTab, "page", !readingOn));
   /** The open page is a presentation (`marp: true`), read from the current text so a conversion shows at once. */
-  const presentationPage = note !== null && !drawing && !mindmap && !basePage && !ticketPage && isPresentationMarkdown(note.markdown);
+  const presentationPage = note !== null && !drawing && !mindmap && !canvasPage && !basePage && !ticketPage && isPresentationMarkdown(note.markdown);
   /**
    * A note's title is its first `# heading` (the file name without one): editing the
    * title writes that heading, never renames the file (titleHeading.ts).
@@ -825,7 +829,7 @@ export function App() {
     if (tr) editor!.view.dispatch(tr);
     return true;
   };
-  const outlineShown = showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && !basePage;
+  const outlineShown = showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && !canvasPage && !basePage;
   const historyShown = showHistory && Boolean(vault?.git);
   const slides = useSlides(presentationPage ? note.markdown : "", note?.path ?? "", files, loadImage, presentationPage);
   /** Bases embedded in the open note (`![[X.base]]`), rendered with the app's current files. */
@@ -862,7 +866,7 @@ export function App() {
       live = false;
     };
   }, [vault, baseFiles, note?.path]);
-  const rowBase = note !== null && !drawing && !mindmap && !basePage && !ticketPage ? baseOfNote(note.path, bases) : null;
+  const rowBase = note !== null && !drawing && !mindmap && !canvasPage && !basePage && !ticketPage ? baseOfNote(note.path, bases) : null;
   /** Saves a select's options in the base file of the open row. */
   const setRowOptions = async (property: string, options: SelectOption[]) => {
     if (!vault || !rowBase) return;
@@ -1096,7 +1100,7 @@ export function App() {
   };
 
   // Words and reading time of a plain note (not a drawing, mind map nor base).
-  const words = note && !drawing && !mindmap && !basePage ? countWords(note.markdown) : null;
+  const words = note && !drawing && !mindmap && !canvasPage && !basePage ? countWords(note.markdown) : null;
   /**
    * Status pill, at the bottom right of the page like Obsidian's status bar:
    * the save state and the words, or a passing message. It takes no room and
@@ -1326,7 +1330,7 @@ export function App() {
                       <ToolButton icon="export" label="Exporter en image (PNG)" onClick={() => void exportMindmap()} disabled={!mindmapControls} />
                     </>
                   )}
-                  {!drawing && !mindmap && !basePage && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
+                  {!drawing && !mindmap && !canvasPage && !basePage && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
                   {readable && <ToolButton icon="eye" label={reading ? "Quitter le mode lecture (⌘⇧R)" : "Mode lecture (⌘⇧R)"} onClick={toggleReading} active={reading} disabled={rawMode} />}
                   {readable && !reading && settings.spellChecker !== "off" && (
                     <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={toggleSpelling} active={spellingOn} />
@@ -1338,16 +1342,16 @@ export function App() {
                     <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportCurrent()} />
                   </>
                 )}
-                {!drawing && !mindmap && !basePage && !ticketPage && !presentationPage && !reading && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
+                {!drawing && !mindmap && !canvasPage && !basePage && !ticketPage && !presentationPage && !reading && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
                 {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
-                  {!drawing && !mindmap && !basePage && !presentationPage && (
+                  {!drawing && !mindmap && !canvasPage && !basePage && !presentationPage && (
                     <ToolButton icon="width" label={widePages.has(note.path) ? "Largeur normale" : "Pleine largeur"} onClick={() => toggleWide(note.path)} active={widePages.has(note.path)} />
                   )}
                   <ToolButton icon="focus" label={focusMode ? "Quitter le mode focus (⌘⇧M)" : "Mode focus (⌘⇧M)"} onClick={toggleFocus} active={focusMode} />
-                  {!basePage && !ticketPage && (
+                  {!basePage && !ticketPage && !canvasPage && (
                     <ToolButton icon="more" label="Exporter, copier…" onClick={(event) => setPageMenu(event.currentTarget.getBoundingClientRect())} active={pageMenu !== null} disabled={rawMode} />
                   )}
-                  <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : mindmap ? "Voir le fichier brut de la mind map (⌘⇧E)" : basePage ? "Voir le fichier .base (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
+                  <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : mindmap ? "Voir le fichier brut de la mind map (⌘⇧E)" : basePage ? "Voir le fichier .base (⌘⇧E)" : canvasPage ? "Voir le fichier .canvas (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
                 </div>
               )
             }
@@ -1358,13 +1362,13 @@ export function App() {
               onClose={() => setPageMenu(null)}
               items={[
                 { label: "Exporter en PDF…", icon: "export", run: () => void exportCurrentPdf() },
-                ...(!drawing && !mindmap && !presentationPage ? [{ label: "Copier en HTML", icon: "copy", run: () => void copyAsHtml() } satisfies MenuItem] : []),
+                ...(!drawing && !mindmap && !canvasPage && !presentationPage ? [{ label: "Copier en HTML", icon: "copy", run: () => void copyAsHtml() } satisfies MenuItem] : []),
               ]}
             />
           )}
           {note ? (
             <>
-              {findRequest && !rawMode && !drawing && !mindmap && !basePage && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
+              {findRequest && !rawMode && !drawing && !mindmap && !canvasPage && !basePage && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
               <div className="panes">
                 {drawing && !rawMode ? (
                   <div className="drawing-pane">
@@ -1377,6 +1381,18 @@ export function App() {
                       editable={!hasConflictMarkers(note.disk) && !reading}
                       onControls={setDrawingControls}
                       onToolChange={setDrawingTool}
+                    />
+                  </div>
+                ) : canvasPage && !rawMode ? (
+                  <div className="drawing-pane">
+                    <CanvasEditor
+                      key={`${note.path}#${note.reloads ?? 0}`}
+                      source={note.loaded}
+                      onChange={onMarkdown}
+                      bridge={bridge}
+                      readFile={(path) => vault.read(path)}
+                      theme={settings.theme === "dark" || (settings.theme === "system" && systemDark) ? "dark" : "light"}
+                      editable={!hasConflictMarkers(note.disk) && !reading}
                     />
                   </div>
                 ) : basePage && !rawMode ? (

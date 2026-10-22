@@ -5,6 +5,7 @@ import { Icon, type IconName } from "./Icon";
 import { isDrawingPath } from "./drawing/format";
 import { isMindmapPath } from "./mindmap/format";
 import { isBasePath } from "./base/baseFile";
+import { isCanvasPath } from "./canvas/format";
 import { dirname, noteTitle } from "./vault/links";
 import { keys } from "./keys";
 
@@ -68,7 +69,7 @@ export function PageIcon({ path, icon, ticket, presentation, row, size = 14 }: {
       </span>
     );
   }
-  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isBasePath(path) ? "database" : ticket ? "ticket" : presentation ? "slides" : row ? "baseRow" : "doc";
+  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isCanvasPath(path) ? "canvas" : isBasePath(path) ? "database" : ticket ? "ticket" : presentation ? "slides" : row ? "baseRow" : "doc";
   return <Icon name={name} size={size} />;
 }
 

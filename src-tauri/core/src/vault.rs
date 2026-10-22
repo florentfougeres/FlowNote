@@ -205,6 +205,9 @@ fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
         } else if let Some(stem) = name.strip_suffix(".base") {
             // A base (Obsidian's format): shown as a page whose rows are its folder's notes.
             entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket: false, presentation: false, icon: None, title: None });
+        } else if let Some(stem) = name.strip_suffix(".canvas") {
+            // A canvas (Obsidian's JSON Canvas): cards and arrows on a board.
+            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket: false, presentation: false, icon: None, title: None });
         }
     }
     entries.sort_by(|a, b| {
@@ -570,9 +573,11 @@ mod tests {
         assert!(vault_create_dir(root.clone(), "Projets".into()).is_err());
         assert!(vault_create_dir(root.clone(), ".cache".into()).is_err());
         fs::write(dir.join("Projets/2026/.DS_Store"), [0]).unwrap();
+        fs::write(dir.join("Plan.canvas"), "{}").unwrap();
         let tree = vault_tree(root).unwrap();
-        // The attachments folder stays hidden; the new folders are shown.
-        assert_eq!(tree.iter().map(|e| e.path.as_str()).collect::<Vec<_>>(), vec!["Projets"]);
+        // The attachments folder stays hidden; the new folders and the canvas are shown.
+        assert_eq!(tree.iter().map(|e| e.path.as_str()).collect::<Vec<_>>(), vec!["Projets", "Plan.canvas"]);
+        assert_eq!(tree[1].name, "Plan");
         assert_eq!(tree[0].children.as_ref().unwrap()[0].path, "Projets/2026");
         fs::remove_dir_all(&dir).unwrap();
     }

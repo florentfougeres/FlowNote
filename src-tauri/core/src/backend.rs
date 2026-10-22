@@ -13,7 +13,7 @@ pub const COMMANDS: &[&str] = &[
     "vault_reveal", "vault_config", "vault_rename", "vault_trash", "vault_search", "vault_read_notes", "vault_stats",
     "vault_bookmarks", "git_status", "git_diff", "git_stage", "git_unstage", "git_discard", "git_commit", "git_log",
     "git_show", "git_fetch", "git_pull", "git_push", "git_conflict", "git_resolve", "git_merge_continue",
-    "git_merge_abort", "git_activity", "git_last_commit", "grammar_check", "fetch_page_title", "open_url", "save_export",
+    "git_merge_abort", "git_activity", "git_last_commit", "grammar_check", "fetch_page_title", "fetch_page_preview", "open_url", "save_export",
     "open_export",
 ];
 
@@ -84,6 +84,7 @@ pub fn dispatch(command: &str, args: &Value) -> Result<Value, String> {
         "git_last_commit" => json(git::git_last_commit(root()?)?),
         "grammar_check" => grammar::grammar_check(strings(args, "paragraphs")),
         "fetch_page_title" => json(web::fetch_page_title(string(args, "url")?)),
+        "fetch_page_preview" => json(web::fetch_page_preview(string(args, "url")?)),
         "open_url" => json(web::open_url(string(args, "url")?)?),
         "save_export" => json(web::save_export(path()?, bytes(args, "content"))?),
         "open_export" => json(web::open_export(path()?)?),

@@ -4,6 +4,7 @@ import { moveRecentPage } from "../dashboard/recents";
 import type { NameResult, PageKind } from "../Dialogs";
 import { DRAWING_SUFFIX, newDrawingFile } from "../drawing/format";
 import { MINDMAP_SUFFIX, newMindmapFile } from "../mindmap/format";
+import { CANVAS_SUFFIX, newCanvasFile } from "../canvas/format";
 import { newPresentationFile } from "../presentation/format";
 import type { Settings } from "../SettingsPage";
 import { ticketInfo } from "../ticket/agenda";
@@ -163,7 +164,7 @@ export function usePageOps(ctx: PageOpsContext) {
     if (!vault) return;
     try {
       await ctx.saveNow();
-      const extension = /\.(?:excalidraw|mindmap)\.md$|\.base$|\.md$/i.exec(path)?.[0] ?? "";
+      const extension = /\.(?:excalidraw|mindmap)\.md$|\.base$|\.canvas$|\.md$/i.exec(path)?.[0] ?? "";
       const stem = path.slice(0, path.length - extension.length);
       let copy = "";
       for (let i = 1; !copy || filesRef.current.some((f) => f.toLowerCase() === copy.toLowerCase()); i++) copy = `${stem} ${i}${extension}`;
@@ -188,7 +189,7 @@ export function usePageOps(ctx: PageOpsContext) {
   /** Removes a folder and everything in it, after confirmation. */
   const removeFolder = async (folder: string) => {
     if (!vault) return;
-    const pages = filesRef.current.filter((f) => f.startsWith(`${folder}/`) && (f.endsWith(".md") || f.endsWith(".base"))).length;
+    const pages = filesRef.current.filter((f) => f.startsWith(`${folder}/`) && (f.endsWith(".md") || f.endsWith(".base") || f.endsWith(".canvas"))).length;
     const others = filesRef.current.filter((f) => f.startsWith(`${folder}/`)).length - pages;
     const content = [pages ? `${pages} page${pages > 1 ? "s" : ""}` : "", others ? `${others} autre${others > 1 ? "s" : ""} fichier${others > 1 ? "s" : ""}` : ""].filter(Boolean).join(" et ");
     const where = isTauri() ? "Il ira dans la corbeille." : "Cette suppression est définitive.";
@@ -272,11 +273,11 @@ export function usePageOps(ctx: PageOpsContext) {
     const path =
       kind === "ticket"
         ? uniquePath(settings.ticketsFolder, `${ticketId} - ${title}.md`, filesRef.current)
-        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : kind === "base" ? BASE_SUFFIX : ".md"}`, filesRef.current);
+        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : kind === "canvas" ? CANVAS_SUFFIX : kind === "base" ? BASE_SUFFIX : ".md"}`, filesRef.current);
     try {
       await ctx.saveNow();
       // A base's rows are the notes of the folder named after it, next to it (like sub-pages).
-      await createFile(path, kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : `# ${title}\n`);
+      await createFile(path, kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "canvas" ? newCanvasFile() : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : `# ${title}\n`);
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";
