@@ -3,12 +3,13 @@ import { linkItems, type LinkItem } from "./editor/wikilinks";
 import { Icon } from "./Icon";
 import { keys } from "./keys";
 
-/** Cmd+P / Cmd+K: open a note by name, or create it. */
+/** Cmd+P / Cmd+K: open a note by name, or create it; « > » goes to the command palette. */
 export function QuickSwitcher({
   files,
   iconOf,
   onOpen,
   onCreate,
+  onCommands,
   onClose,
 }: {
   files: string[];
@@ -16,6 +17,8 @@ export function QuickSwitcher({
   iconOf: (path: string) => ReactNode;
   onOpen: (path: string) => void;
   onCreate: (name: string) => void;
+  /** « > » typed first: the command palette instead, like in VS Code. */
+  onCommands?: () => void;
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -44,7 +47,7 @@ export function QuickSwitcher({
             autoFocus
             placeholder="Rechercher une page…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => (e.target.value === ">" && onCommands ? onCommands() : setQuery(e.target.value))}
             onKeyDown={(e) => {
               if (e.key === "ArrowDown") setIndex((i) => Math.min(i + 1, items.length - 1));
               else if (e.key === "ArrowUp") setIndex((i) => Math.max(i - 1, 0));

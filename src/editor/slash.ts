@@ -166,7 +166,63 @@ const SLASH_ITEMS: SlashItem[] = [
     keywords: ["maths", "équation", "latex", "math"],
     run: (editor, range) => insertRawBlock(editor, "$$\n\n$$", "math", range),
   },
+  {
+    key: "footnote",
+    title: "Note de bas de page",
+    description: "Appel [^1] ici, la note en bas",
+    icon: "¹",
+    keywords: ["note", "bas de page", "footnote", "référence", "renvoi"],
+    run: (editor, range) => insertFootnote(editor, range),
+  },
+  {
+    key: "embed",
+    title: "Intégrer une note",
+    description: "![[Note]] : son contenu dans celle-ci",
+    icon: "⧉",
+    keywords: ["intégrer", "embed", "transclusion", "inclure", "note"],
+    run: (editor, range) => editor.chain().focus().deleteRange(range).insertContent("![[").run(),
+  },
+  {
+    key: "dataview",
+    title: "Requête Dataview",
+    description: "Liste ou tableau de notes (plugin Dataview)",
+    icon: "⊞",
+    keywords: ["dataview", "requête", "query", "tableau", "liste"],
+    run: (editor, range) => {
+      turnInto(editor, "code", range);
+      editor.commands.updateAttributes("codeBlock", { language: "dataview" });
+      editor.commands.insertContent('TABLE file.mtime AS "Modifiée"\nFROM #projet\nSORT file.mtime DESC');
+    },
+  },
+  {
+    key: "tasks",
+    title: "Requête Tasks",
+    description: "Tâches de tout le vault (plugin Tasks)",
+    icon: "☑",
+    keywords: ["tasks", "tâches", "requête", "todo", "échéance"],
+    run: (editor, range) => {
+      turnInto(editor, "code", range);
+      editor.commands.updateAttributes("codeBlock", { language: "tasks" });
+      editor.commands.insertContent("not done\ndue before in 7 days\nsort by due");
+    },
+  },
 ];
+
+/** Inserts a footnote: its call `[^n]` at the cursor, its text at the end of the note (double-click to write it). */
+function insertFootnote(editor: Editor, range: Range) {
+  const used = new Set<string>();
+  editor.state.doc.descendants((node) => {
+    const label = /^\[\^([^\]]+)\]/.exec(String(node.attrs.source ?? ""))?.[1];
+    if (label && (node.attrs.kind === "footnoteReference" || node.attrs.kind === "footnoteDefinition")) used.add(label);
+  });
+  let n = 1;
+  while (used.has(String(n))) n++;
+  const { schema } = editor.state;
+  editor.chain().focus().deleteRange(range).insertContent({ type: "inlineRaw", attrs: { source: `[^${n}]`, kind: "footnoteReference" } }).run();
+  const { tr } = editor.state;
+  tr.insert(tr.doc.content.size, schema.nodes.rawBlock.create({ source: `[^${n}]: Texte de la note.`, kind: "footnoteDefinition" }));
+  editor.view.dispatch(tr);
+}
 
 // ---------------------------------------------------------------------------
 // Ranking: matches first, then frecency (frequency weighted by recency).

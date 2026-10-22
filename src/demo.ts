@@ -110,15 +110,98 @@ const READING = `# Lectures
 - [ ] [Prendre des notes efficacement](https://example.com/notes) #méthode #video
 `;
 
+const LAUNCH_NOTE = `---
+tags: [projet]
+statut: en cours
+budget: 1200
+---
+# Lancement
+
+Responsable:: [[Mon Notion]]
+
+## À faire
+
+- [ ] Écrire l'annonce #com 📅 ${day(-1)} ⏫
+- [ ] Préparer les visuels #design 📅 ${day(0)}
+- [ ] Relire les pages ⏳ ${day(2)} 📅 ${day(5)}
+- [ ] Faire le point de la semaine 🔁 every week 📅 ${day(6)}
+- [x] Réserver le nom de domaine ✅ ${day(-3)}
+
+## Décisions
+
+Le site sera publié en français d'abord, l'anglais viendra ensuite. ^decision
+`;
+
+/** What FlowNote reads like Obsidian and its plugins: embeds, footnotes, Dataview and Tasks. */
+const OBSIDIAN_NOTE = `# Fonctionnalités Obsidian
+
+Cette note montre ce que FlowNote lit et affiche comme Obsidian et ses plugins. Cliquez dans un bloc de requête pour voir sa source.
+
+## Intégrer une note
+
+Une section d'une autre note, toujours à jour :
+
+![[Site web#Étapes]]
+
+Un seul bloc, repéré par son identifiant \`^decision\` :
+
+![[Lancement#^decision]]
+
+## Notes de bas de page
+
+FlowNote affiche les notes de bas de page[^1] d'Obsidian : survolez l'appel pour lire la note, cliquez pour y aller[^2].
+
+## Dataview
+
+Les voyages, avec leurs propriétés :
+
+\`\`\`dataview
+TABLE pays AS "Pays", depart AS "Départ", budget AS "Budget", statut AS "Statut"
+FROM "Voyages"
+SORT depart ASC
+\`\`\`
+
+Les projets en cours :
+
+\`\`\`dataview
+LIST statut
+FROM #projet
+WHERE statut = "en cours"
+\`\`\`
+
+## Tasks
+
+Ce qui est à faire d'ici une semaine, dans tout le vault (cochez une tâche : sa note est modifiée) :
+
+\`\`\`tasks
+not done
+due before in 7 days
+sort by due
+\`\`\`
+
+Les tâches des projets, par note (requête Dataview TASK) :
+
+\`\`\`dataview
+TASK
+FROM #projet
+WHERE !completed
+\`\`\`
+
+[^1]: Écrites \`[^1]\` dans le texte et \`[^1]: …\` en bas de la note.
+[^2]: Le menu \`/\` en ajoute une : « Note de bas de page ».
+`;
+
 /** The simulated remote changed the same line of "Projets.md": edit it locally, commit, then pull to see a conflict. */
 export const DEMO_REMOTE = { "Projets.md": "# Projets\n\n[[Mon Notion]] — modifié sur un autre ordinateur\n" };
 
 export const DEMO_FILES = {
-  ".obsidian/bookmarks.json": JSON.stringify({ items: [{ type: "file", path: "Exemple.md" }, { type: "file", path: "Projets/Site web.md" }] }),
+  ".obsidian/bookmarks.json": JSON.stringify({ items: [{ type: "file", path: "Exemple.md" }, { type: "file", path: "Projets/Site web.md" }, { type: "file", path: "Fonctionnalités Obsidian.md" }] }),
   "Exemple.md": FULL_NOTE,
   "Projets.md": "# Projets\n\n[[Mon Notion]]\n",
   "Projets/Mon Notion.md": "Une sous-page de [[Projets]].\n",
   "Projets/Site web.md": PROJECT_NOTE,
+  "Projets/Lancement.md": LAUNCH_NOTE,
+  "Fonctionnalités Obsidian.md": OBSIDIAN_NOTE,
   "Voyages.base": tripsBase(),
   "Voyages/Lisbonne.md": trip("Réservé", "Portugal", day(9), 650, "Quatre jours en ville, puis la côte."),
   "Voyages/Kyoto.md": trip("Idée", "Japon", day(24), 2400, "Au printemps, pour les cerisiers."),

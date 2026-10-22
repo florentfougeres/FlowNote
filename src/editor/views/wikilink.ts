@@ -4,7 +4,10 @@ import { type BridgeRef, isImage } from "../bridge";
 import { basename, noteTitle, resolveLink } from "../../vault/links";
 import { element } from "./dom";
 
-/** `[[links]]` and `![[embeds]]`: images are displayed, notes become cards, unresolved links are dimmed. */
+/** Notes embedded inside embedded notes stop at this depth (a note embedding itself). */
+const EMBED_DEPTH = 3;
+
+/** `[[links]]` and `![[embeds]]`: images, bases and notes are displayed, other files become cards, unresolved links are dimmed. */
 export function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
   return ({ node }) => {
     const dom = element("span");
@@ -28,6 +31,27 @@ export function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
         const box = element("div");
         dom.append(box);
         unmount = bridge.current.mountBase(box, resolved);
+      } else if (embed && resolved && /\.md$/i.test(resolved) && !/\.(excalidraw|mindmap)\.md$/i.test(resolved) && bridge.current.readNote && (bridge.current.embedDepth ?? 0) < EMBED_DEPTH) {
+        // A note in the note: its text (or one section or block), read only; the title opens it.
+        dom.className = "embed-note";
+        const subpath = target.includes("#") ? target.slice(target.indexOf("#") + 1) : "";
+        const title = element("button", "embed-note-title");
+        title.type = "button";
+        title.textContent = `${alias && !/^\d+(x\d+)?$/.test(alias) ? alias : noteTitle(resolved)}${subpath ? ` › ${subpath.replace(/^\^/, "")}` : ""}`;
+        title.title = "Ouvrir la note (⌘-clic : dans un nouvel onglet)";
+        title.addEventListener("click", (event) => bridge.current.openPath(resolved, event.metaKey || event.ctrlKey));
+        const body = element("div", "embed-note-body");
+        dom.append(title, body);
+        let gone = false;
+        const current = bridge.current;
+        unmount = () => {
+          gone = true;
+        };
+        void import("./noteEmbed").then(({ mountNoteEmbed }) => {
+          if (gone) return;
+          const remove = mountNoteEmbed(body, resolved, subpath, current);
+          unmount = remove;
+        });
       } else if (embed && resolved && isImage(resolved)) {
         dom.className = "embed-image";
         const img = element("img");
@@ -56,8 +80,8 @@ export function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
         render(n);
         return true;
       },
-      // Clicks and keys inside an embedded base belong to it, not to the editor.
-      stopEvent: () => dom.classList.contains("embed-base"),
+      // Clicks and keys inside an embedded base or note belong to it, not to the editor.
+      stopEvent: () => dom.classList.contains("embed-base") || dom.classList.contains("embed-note"),
       ignoreMutation: () => true,
       destroy: () => unmount?.(),
     };

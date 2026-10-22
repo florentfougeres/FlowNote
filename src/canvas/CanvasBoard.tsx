@@ -305,6 +305,9 @@ function useStable(bridge: VaultBridge, readFile: (path: string) => Promise<stri
       openPath: (path) => current().openPath(path, true),
       askName: (title, initial) => current().askName(title, initial),
       createFile: (path, content) => current().createFile(path, content),
+      readNote: (path) => current().readNote!(path),
+      queryVault: () => current().queryVault!(),
+      toggleTask: (path, line, done) => current().toggleTask!(path, line, done),
     };
     return { bridge: stable, readFile: (path: string) => latest.current.readFile(path) };
   }, []);

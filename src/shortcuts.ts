@@ -6,6 +6,7 @@
 
 export type GlobalAction =
   | "switcher"
+  | "palette"
   | "newPage"
   | "back"
   | "forward"
@@ -51,6 +52,7 @@ const digits = Array.from({ length: 9 }, (_, i): [Key, GlobalAction] => [{ key: 
 
 export const SHORTCUTS: Shortcut[] = [
   { keys: "⌘P / ⌘K", label: "Rechercher une page", run: [[{ key: "p" }, "switcher"], [{ key: "k", shift: "any", unhandled: true }, "switcher"], [{ key: "o", shift: "any" }, "switcher"]] },
+  { keys: "⌘⇧P", label: "Palette de commandes (aussi « > » dans ⌘P)", run: [[{ key: "p", shift: true }, "palette"]] },
   { keys: "⌘N", label: "Nouvelle page", run: [[{ key: "n" }, "newPage"]] },
   { keys: "⌘[ / ⌘]", label: "Page précédente / suivante", run: [[{ key: "[" }, "back"], [{ key: "]" }, "forward"]] },
   { keys: "⌘T / ⌘W", label: "Nouvel onglet / fermer l'onglet", run: [[{ key: "t" }, "newTab"], [{ key: "w" }, "closeTab"]] },
@@ -61,7 +63,7 @@ export const SHORTCUTS: Shortcut[] = [
   { keys: "⌘⌥\\", label: "Ouvrir ou fermer le panneau de droite", run: [[{ code: "Backslash", alt: true, shift: "any" }, "split"]] },
   { keys: "⌘⇧G", label: "Panneau Git", run: [[{ key: "g", shift: true }, "git"]] },
   { keys: "⌘⇧L", label: "Ajouter un lien à lire", run: [[{ key: "l", shift: true }, "addLink"]] },
-  { keys: "⌘⇧P", label: "Présenter (présentation ouverte)", run: [[{ key: "p", shift: true }, "present"]] },
+  { keys: "⌘⌥P", label: "Présenter (présentation ouverte)", run: [[{ code: "KeyP", alt: true }, "present"]] },
   { keys: "⌘F / ⌘⌥F", label: "Rechercher / remplacer dans la note", run: [[{ code: "KeyF" }, "find"], [{ code: "KeyF", alt: true }, "replace"]] },
   { keys: "⌘⇧F", label: "Rechercher dans tout le vault", run: [[{ code: "KeyF", shift: true }, "vaultSearch"]] },
   { keys: "⌘⇧E", label: "Mode Markdown brut", run: [[{ key: "e", shift: true }, "raw"]] },
@@ -84,6 +86,17 @@ export const SHORTCUTS: Shortcut[] = [
   { keys: "⇧↵", label: "Retour à la ligne dans un bloc" },
   { keys: "⌘Z / ⌘⇧Z", label: "Annuler / rétablir" },
 ];
+
+/** The keys of an action, as the help shows them (one side of « ⌘[ / ⌘] »), for the command palette. */
+export function shortcutOf(action: GlobalAction): string | undefined {
+  for (const shortcut of SHORTCUTS) {
+    const index = shortcut.run?.findIndex(([, a]) => a === action) ?? -1;
+    if (index < 0) continue;
+    const parts = shortcut.keys.split(" / ");
+    return parts.length === shortcut.run!.length ? parts[index] : parts[0];
+  }
+  return undefined;
+}
 
 type KeyEvent = Pick<KeyboardEvent, "key" | "code" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey" | "defaultPrevented">;
 

@@ -1,14 +1,17 @@
 import type { NodeViewRenderer } from "@tiptap/core";
 import { element, onThemeChange, updateAttrs } from "./dom";
+import type { BridgeRef } from "../bridge";
+import type { QueryLanguage } from "../../query/render";
 
 /**
  * Code blocks with an editable language label. Mermaid blocks also show their
- * diagram, and plotly blocks their chart (format of the Obsidian plugin
- * "obsidian-plotly"). A diagram's source shows only while the cursor is in
- * the block; a chart stays interactive (zoom, hover) and is edited with its
- * header buttons: the visual editor or the text.
+ * diagram, plotly blocks their chart (format of the Obsidian plugin
+ * "obsidian-plotly"), and dataview and tasks blocks the results of their
+ * query (plugins Dataview and Tasks). A diagram's or a query's source shows
+ * only while the cursor is in the block; a chart stays interactive (zoom,
+ * hover) and is edited with its header buttons: the visual editor or the text.
  */
-export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
+export const codeBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, editor, getPos }) => {
   const dom = element("div", "code-block");
   const header = element("div", "code-header");
   header.contentEditable = "false";
@@ -45,9 +48,16 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
   let rendered: string | null = null;
   let renderedKind: string | null = null;
   let timer = 0;
-  const kindOf = (): "mermaid" | "plotly" | null => {
+  const kindOf = (): "mermaid" | "plotly" | QueryLanguage | null => {
     const lang = String(current.attrs.language).trim().toLowerCase();
-    return lang === "mermaid" || lang === "plotly" ? lang : null;
+    return lang === "mermaid" || lang === "plotly" || lang === "dataview" || lang === "dataviewjs" || lang === "tasks" ? lang : null;
+  };
+  const isQuery = (kind: string | null): kind is QueryLanguage => kind === "dataview" || kind === "dataviewjs" || kind === "tasks";
+  /** Runs the block's query again (a task checked, the window back in front). */
+  const rerun = () => {
+    if (!isQuery(kindOf())) return;
+    rendered = null;
+    render();
   };
 
   /** The visual editor of a chart, mounted while open. */
@@ -112,6 +122,12 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
     if (source === rendered) return;
     timer = window.setTimeout(() => {
       rendered = source;
+      if (isQuery(kind)) {
+        void import("../../query/render").then(({ renderQueryBlock }) => {
+          if (rendered === source) void renderQueryBlock(diagram, kind, source, bridge.current, rerun);
+        });
+        return;
+      }
       if (!source.trim()) {
         if (kind === "plotly") void import("../plotly").then(({ purgePlot }) => purgePlot(diagram));
         showMessage("mermaid-empty", kind === "mermaid" ? "Diagramme Mermaid vide : cliquez pour l'écrire." : "Graphique vide : cliquez sur « Texte » pour l'écrire.");
@@ -164,12 +180,15 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
     rendered = null;
     render();
   });
+  // Other notes may have changed while the window was behind: queries are run again.
+  window.addEventListener("focus", rerun);
   language.addEventListener("focus", syncEditing);
   language.addEventListener("blur", syncEditing);
 
-  // A diagram is edited by clicking it; a chart keeps the click for zoom and hover.
+  // A diagram or a query is edited by clicking it (not its links and boxes); a chart keeps the click for zoom and hover.
   diagram.addEventListener("mousedown", (event) => {
-    if (kindOf() !== "mermaid") return;
+    const kind = kindOf();
+    if (kind !== "mermaid" && !(isQuery(kind) && !(event.target as Element).closest("a, input, button"))) return;
     const pos = getPos();
     if (pos === undefined || !editor.isEditable) return;
     event.preventDefault();
@@ -180,6 +199,7 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
     const kind = kindOf();
     dom.classList.toggle("is-mermaid", kind !== null);
     dom.classList.toggle("is-plotly", kind === "plotly");
+    dom.classList.toggle("is-query", isQuery(kind));
   };
   syncKind();
   render();
@@ -211,6 +231,7 @@ export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
       editor.off("focus", syncEditing);
       editor.off("blur", syncEditing);
       stopThemeWatch();
+      window.removeEventListener("focus", rerun);
     },
   };
 };

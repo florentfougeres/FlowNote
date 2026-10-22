@@ -13,7 +13,7 @@
 
 FlowNote est une application de bureau macOS qui ouvre un dossier de notes Obsidian et permet de les éditer comme dans Notion : blocs, menu `/`, glisser-déposer, tableaux, callouts… Il n'y a ni base de données ni format caché : chaque note reste un fichier `.md` que vous pouvez continuer à ouvrir dans Obsidian, sans plugin.
 
-Autour de l'éditeur : des bases façon Notion (tableau, kanban, galerie, calendrier), des dessins Excalidraw, des mind maps, des tickets façon GitHub avec un tableau kanban, une liste de lectures, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. Tout reste du texte, lisible dans Obsidian et propre dans Git.
+Autour de l'éditeur : des bases façon Notion (tableau, kanban, galerie, calendrier), des canevas Obsidian, des dessins Excalidraw, des mind maps, des tickets façon GitHub avec un tableau kanban, une liste de lectures, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. FlowNote lit aussi les requêtes des plugins **Dataview** et **Tasks**, les notes intégrées (`![[Note#Section]]`) et les notes de bas de page. Tout reste du texte, lisible dans Obsidian et propre dans Git.
 
 Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 
@@ -37,6 +37,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Onglets en haut de la fenêtre, barre latérale avec le vault (et ses vaults récents), Accueil, Rechercher, Tickets, Lectures, Graphe, Documentation et l'arbre des pages
 - **Split view** : deux pages côte à côte (`⌥-clic` sur une page, `⌘⌥\` pour fermer le panneau)
 - Documentation intégrée de toutes les fonctionnalités
+- **Palette de commandes** (`⌘⇧P`, ou `>` dans `⌘P`) : toutes les actions de l'app par leur nom, avec leur raccourci
 - Arbre des pages : menu « … » ou clic droit (renommer, supprimer, dupliquer, copier le lien, afficher dans le Finder, sous-page, nouveau dossier), glisser-déposer des pages et des dossiers, liens mis à jour à chaque déplacement
 - Favoris d'Obsidian en haut de la barre latérale
 - Pastille d'état en bas à droite de la page : enregistrement, nombre de mots, messages
@@ -57,7 +58,18 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Blocs de code avec coloration syntaxique, diagrammes **Mermaid**, maths, emoji (`:calendrier`), date du jour (`/date`)
 - **Graphiques Plotly** (`/graphique`) au format du plugin Obsidian [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) : blocs ```` ```plotly ```` en YAML ou JSON, graphiques interactifs, éditeur visuel (lignes, barres, aire, points, camembert, anneau, radar ; titres, tableau des valeurs, import d'un CSV), tous les types de Plotly en texte
 - Propriétés YAML (frontmatter) éditables, tags, `[[wikilinks]]` et `![[embeds]]` avec autocomplétion
+- **Notes intégrées** : `![[Note]]`, `![[Note#Section]]` et `![[Note#^bloc]]` affichent le contenu de l'autre note, toujours à jour
+- **Notes de bas de page** `[^1]` : appel en exposant (texte au survol), note numérotée en bas, `/note de bas de page` pour en ajouter une
 - Sous-pages et arborescence dans la barre latérale
+
+**Requêtes Dataview et Tasks**
+- Blocs ```` ```dataview ```` du plugin [Dataview](https://blacksmithgu.github.io/obsidian-dataview/) : `LIST`, `TABLE` et `TASK`, avec `FROM`, `WHERE`, `SORT`, `GROUP BY`, `LIMIT`, les propriétés, les champs `clé:: valeur` et les dates calculées
+- Blocs ```` ```tasks ```` du plugin [Tasks](https://publish.obsidian.md/tasks/) : filtres par état, échéance, chemin, tag, priorité, tris et groupes ; les signes 📅 ⏳ 🛫 ✅ 🔁 ⏫ sont lus
+- Cocher une tâche dans les résultats la coche dans sa note (seule sa ligne change)
+
+**Canevas**
+- Les canevas d'Obsidian (`Nom.canvas`) : cartes de note, de texte, d'image et de lien (titre et image d'aperçu, miniature des vidéos YouTube), groupes, flèches avec libellés, couleurs
+- Écrits exactement comme Obsidian les écrit, pour des diffs Git propres
 
 **Dessins**
 - Une page peut être une note ou un **dessin** à main levée, avec [Excalidraw](https://excalidraw.com) intégré : formes, flèches, crayon, texte, images
@@ -75,7 +87,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 
 **Présentations**
 - Une note avec `marp: true` devient une présentation [Marp](https://marp.app) : diapos séparées par `---`, notes de l'orateur en commentaires
-- Miniatures à jour pendant l'écriture, mode Présenter (`⌘⇧P`) avec vue présentateur, export en HTML autonome
+- Miniatures à jour pendant l'écriture, mode Présenter (`⌘⌥P`) avec vue présentateur, export en HTML autonome
 
 **Bases**
 - Des bases de données comme dans Notion, au format des Bases d'Obsidian (`Nom.base`) : chaque ligne est une note d'un dossier, chaque colonne une propriété YAML
@@ -96,7 +108,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Un bouton de la barre de page coupe ou réactive la correction sans changer le correcteur choisi
 
 **Navigation**
-- Recherche de page (`⌘P`), recherche et remplacement dans la note (`⌘F` / `⌘⌥F`), recherche dans tout le vault (`⌘⇧F`)
+- Recherche de page (`⌘P`), recherche et remplacement dans la note (`⌘F` / `⌘⌥F`), recherche dans tout le vault (`⌘⇧F`) avec des filtres par tag, dossier, propriété ou date de modification (aussi en syntaxe Obsidian : `tag:#projet`, `path:Dossier`, `[statut:fait]`)
 - Fil d'Ariane cliquable, plan de la note, historique précédent/suivant
 - **Notes liées** sous chaque note (les pages qui pointent vers elle) et mentions non liées, avec un bouton pour en faire un lien
 - Mots et caractères de la sélection dans la pastille d'état
@@ -107,6 +119,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Pull (par fusion) et push
 - Historique d'une note et restauration d'une version
 - Résolution simple des conflits de fusion
+- En option, les modifications depuis le dernier commit dans la marge de l'éditeur, avec le diff mot à mot et le retour à la version du commit
 
 ## Compatibilité avec Obsidian
 
@@ -114,6 +127,7 @@ C'est le cœur du projet : **une note que FlowNote n'a pas modifiée est réécr
 
 - Frontmatter YAML, `[[wikilinks]]`, `![[embeds]]`, `#tags`, pièces jointes : tout reste lisible et éditable dans Obsidian.
 - Les blocs sans équivalent Markdown standard utilisent une syntaxe qu'Obsidian affiche nativement (callouts pour les toggles, blocs ```` ```mermaid ````…).
+- Les requêtes Dataview et Tasks, les notes intégrées et les notes de bas de page gardent leur syntaxe : Obsidian (avec ses plugins pour Dataview et Tasks) les affiche de la même façon.
 - Tickets, lectures et présentations sont des notes ordinaires : propriétés YAML (`type: ticket`, `status`, `marp: true`…), cases à cocher et callouts, que les plugins Tasks et Marp Slides savent aussi lire.
 - Exceptions assumées : les codes emoji (`:warning:`) et les dessins (`.excalidraw.md`) demandent un plugin Obsidian pour être rendus ; sans lui, on voit leur texte.
 - Les bases utilisent le format des Bases d'Obsidian : tableau, galerie et kanban s'y ouvrent tels quels. Le calendrier, qu'Obsidian n'a pas, y apparaît en galerie ; les couleurs et types des colonnes sont rangés sous une clé `flownote:` qu'Obsidian conserve.
@@ -164,7 +178,7 @@ CI=true npm run tauri build -- --bundles dmg   # src-tauri/target/release/bundle
 
 `CI=true` saute la mise en page de la fenêtre du `.dmg` par le Finder (comme dans la CI). Sans lui, la construction échoue sur `bundle_dmg.sh` si le Terminal n'a pas le droit de piloter le Finder (*Réglages Système → Confidentialité et sécurité → Automatisation*). Après un échec, supprimer l'image temporaire `rw.*.dmg` laissée dans `src-tauri/target/release/bundle/macos/`.
 
-La première construction prend plusieurs minutes (compilation Rust et de Grammalecte). Pour ajouter un `.dmg` à une release existante : `gh release upload vx.y.z <fichier>.dmg`.
+La première construction prend plusieurs minutes (compilation Rust et de Grammalecte). Pour ajouter un `.dmg` à une release existante : `gh release upload x.y.z <fichier>.dmg`.
 
 ### Architecture
 
@@ -175,7 +189,8 @@ Le fonctionnement interne (bibliothèques, moteur de fidélité Markdown, format
 - **`src/markdown/`** : moteur de fidélité Markdown. Il parse avec remark/mdast, conserve la source de chaque bloc et ne re-sérialise que les blocs modifiés, en vérifiant l'équivalence.
 - **`src/editor/`** : éditeur basé sur Tiptap/ProseMirror. Il contient le schéma, les vues de blocs, le menu `/`, le glisser-déposer, les poignées de tableau et la recherche.
 - **`src/vault/`** : accès au vault, résolution des liens façon Obsidian, opérations sur les pages et client Git. `src/platform.ts` est le point d'appel au backend.
-- **`src/base/`**, **`src/ticket/`**, **`src/reading/`**, **`src/presentation/`**, **`src/mindmap/`**, **`src/graph/`**, **`src/drawing/`** : bases, tickets et kanban, liste de lectures, présentations Marp, mind maps, graphe des liens, dessins Excalidraw.
+- **`src/base/`**, **`src/ticket/`**, **`src/reading/`**, **`src/presentation/`**, **`src/mindmap/`**, **`src/canvas/`**, **`src/graph/`**, **`src/drawing/`** : bases, tickets et kanban, liste de lectures, présentations Marp, mind maps, canevas, graphe des liens, dessins Excalidraw.
+- **`src/query/`** : requêtes Dataview et Tasks (index du vault, langages, rendu des résultats).
 - **`grammar/`** : petit programme compagnon qui fait tourner Grammalecte. Le backend lui envoie les paragraphes par l'entrée standard.
 
 ### Publier une version

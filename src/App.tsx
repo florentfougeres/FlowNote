@@ -25,7 +25,9 @@ import { ShortcutsHelp } from "./ShortcutsHelp";
 import { Titlebar } from "./Titlebar";
 import { usePageOps } from "./hooks/usePageOps";
 import { useGitBase } from "./hooks/useGitBase";
-import { globalAction, type GlobalAction } from "./shortcuts";
+import { globalAction, shortcutOf, type GlobalAction } from "./shortcuts";
+import { CommandPalette, type Command } from "./CommandPalette";
+import { PAGE_KINDS } from "./pageKinds";
 import { applyTheme, applyScale, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
 import { PageIcon, PopoverMenu, Sidebar, type MenuItem } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
@@ -49,7 +51,8 @@ import { VaultSearch } from "./VaultSearch";
 import { useSpellChecking } from "./editor/useSpellChecking";
 import type { Editor } from "@tiptap/core";
 import { HistoryPanel } from "./HistoryPanel";
-import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, type Vault, type VaultEntry } from "./vault/vault";
+import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, readAllNotes, type Vault, type VaultEntry } from "./vault/vault";
+import { isoDay, setTaskDone } from "./query/pages";
 import { DEFAULT_CONFIG, dirname, noteTitle, parseObsidianConfig, type ObsidianConfig } from "./vault/links";
 import { DEMO_FILES, DEMO_REMOTE } from "./demo";
 import { GitDrawer, useGitDrawer } from "./GitDrawer";
@@ -166,7 +169,7 @@ export function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [gitChanges, setGitChanges] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
-  const [modal, setModal] = useState<"switcher" | "help" | "search" | "addLink" | null>(null);
+  const [modal, setModal] = useState<"switcher" | "palette" | "help" | "search" | "addLink" | null>(null);
   /** Bumped when a link is added, so the reading list views read it again. */
   const [readingVersion, setReadingVersion] = useState(0);
   const [readingThemes, setReadingThemes] = useState<string[]>([]);
@@ -561,6 +564,7 @@ export function App() {
     /** What each shortcut runs (shortcuts.ts); false: nothing to do here, the key goes on. */
     const actions: Record<GlobalAction, () => boolean | void> = {
       switcher: () => setModal("switcher"),
+      palette: () => setModal("palette"),
       present: () => (presentationPageRef.current ? present() : setModal("switcher")),
       newPage: () => void newPage(null),
       back: goBack,
@@ -757,6 +761,24 @@ export function App() {
         mounted.unmount();
       };
     },
+    readNote: (path) => (vault ? vault.read(path) : Promise.reject(new Error("Aucun vault ouvert."))),
+    queryVault: async () => {
+      if (!vault) return { notes: [], stats: [] };
+      const [notes, stats] = await Promise.all([readAllNotes(vault, filesRef.current), vault.stats?.().catch(() => []) ?? Promise.resolve([])]);
+      return { notes, stats };
+    },
+    toggleTask: async (path, line, done) => {
+      if (!vault) return;
+      // Only the task's line changes; the write is refused if the note changed meanwhile.
+      const text = await vault.read(path);
+      const lines = text.split("\n");
+      const eol = lines[line]?.endsWith("\r") ? "\r" : "";
+      const changed = lines[line] === undefined ? null : setTaskDone(lines[line].replace(/\r$/, ""), done, isoDay(new Date()));
+      if (changed === null) throw new Error(`${noteTitle(path)} a changé : la tâche n'est plus à cette ligne.`);
+      lines[line] = changed + eol;
+      await vault.write(path, lines.join("\n"), text);
+      void refreshGit();
+    },
   };
 
   /** The page on the right of the split view (only pages are shown there). */
@@ -788,6 +810,9 @@ export function App() {
       askName: (title, initial) => splitBridgeLatest.current.askName(title, initial),
       createFile: (path, content) => splitBridgeLatest.current.createFile(path, content),
       mountBase: (dom, path) => splitBridgeLatest.current.mountBase?.(dom, path) ?? (() => {}),
+      readNote: (path) => splitBridgeLatest.current.readNote!(path),
+      queryVault: () => splitBridgeLatest.current.queryVault!(),
+      toggleTask: (path, line, done) => splitBridgeLatest.current.toggleTask!(path, line, done),
     }),
     [],
   );
@@ -1099,6 +1124,60 @@ export function App() {
     if (control) control.set(setProperty(control.get(), "icon", icon ?? undefined));
   };
 
+  /** The command palette's commands (⌘⇧P): what the app can do from where it is. */
+  const paletteCommands = (): Command[] => {
+    const page = noteRef.current;
+    const command = (id: string, label: string, section: string, run: () => unknown, icon?: IconName, action?: GlobalAction): Command => ({ id, label, section, icon, keys: action && shortcutOf(action), run: () => void run() });
+    const list: Command[] = [
+      command("switcher", "Rechercher une page", "Navigation", () => setModal("switcher"), "search", "switcher"),
+      command("vaultSearch", "Rechercher dans les notes", "Navigation", () => setModal("search"), "searchText", "vaultSearch"),
+      command("back", "Page précédente", "Navigation", goBack, "chevronLeft", "back"),
+      command("forward", "Page suivante", "Navigation", goForward, "chevronRight", "forward"),
+      command("home", "Ouvrir l'accueil", "Vues", () => openView(null, false), "home"),
+      command("tickets", "Ouvrir les tickets", "Vues", () => openView(TICKETS_VIEW, false), "ticket"),
+      command("readingList", "Ouvrir les lectures", "Vues", () => openView(READING_VIEW, false), "bookmark"),
+      command("graph", "Ouvrir le graphe", "Vues", () => openView(GRAPH_VIEW, false), "graph"),
+      command("docs", "Ouvrir la documentation", "Vues", () => openView(DOCS_VIEW, false), "book"),
+      command("settings", "Ouvrir les réglages", "Vues", () => select(SETTINGS_VIEW, "push"), "sliders", "settings"),
+      command("help", "Aide et raccourcis", "Vues", () => setModal("help"), "question", "help"),
+      ...PAGE_KINDS.map(({ kind, create, icon }) => command(`new-${kind}`, create, "Créer", () => newPage(null, undefined, undefined, kind), icon, kind === "note" ? "newPage" : undefined)),
+      command("newTab", "Nouvel onglet", "Onglets", () => newTab(null), "plus", "newTab"),
+      command("closeTab", "Fermer l'onglet", "Onglets", () => closeTab(activeRef.current), "close", "closeTab"),
+      command("previousTab", "Onglet précédent", "Onglets", () => cycleTab(-1), "chevronLeft", "previousTab"),
+      command("nextTab", "Onglet suivant", "Onglets", () => cycleTab(1), "chevronRight", "nextTab"),
+      command("split", "Ouvrir ou fermer le panneau de droite", "Onglets", toggleSplit, "split", "split"),
+      command("sidebar", "Afficher ou masquer la barre latérale", "Fenêtre", toggleSidebar, "sidebar", "sidebar"),
+      command("focus", "Mode focus", "Fenêtre", toggleFocus, "focus", "focus"),
+      command("theme-light", "Thème clair", "Apparence", () => changeSettings({ ...settings, theme: "light" })),
+      command("theme-dark", "Thème sombre", "Apparence", () => changeSettings({ ...settings, theme: "dark" })),
+      command("theme-system", "Thème du système", "Apparence", () => changeSettings({ ...settings, theme: "system" })),
+      command("gitGutter", settings.gitGutter ? "Masquer les modifications dans la marge" : "Afficher les modifications dans la marge", "Apparence", () => changeSettings({ ...settings, gitGutter: !settings.gitGutter }), "branch"),
+      command("addLink", "Ajouter un lien à lire", "Lectures", openAddLink, "bookmark", "addLink"),
+    ];
+    if (vault?.git) list.push(command("git", "Panneau Git", "Git", () => toggleGit(), "branch", "git"));
+    if (page) {
+      list.push(
+        command("newSubpage", "Nouvelle sous-page", "Créer", () => newPage(page.path), "doc"),
+        command("raw", "Mode Markdown brut", "Page", toggleRaw, "raw", "raw"),
+        command("save", "Enregistrer maintenant", "Page", () => saveNow().catch(() => {}), undefined, "save"),
+      );
+      if (vault?.git && gitChanges !== null) list.push(command("history", "Historique de la note", "Git", () => setShowHistory(true), "clock"));
+    }
+    if (page && readable) {
+      list.push(
+        command("find", "Rechercher dans la note", "Page", () => openFind(false), "search", "find"),
+        command("replace", "Rechercher et remplacer", "Page", () => openFind(true), "replace", "replace"),
+        command("reading", "Mode lecture", "Page", toggleReading, "eye", "reading"),
+        command("outline", "Plan de la note", "Page", toggleOutline, "outline"),
+        command("wide", "Pleine largeur / largeur normale", "Page", () => toggleWide(page.path), "width"),
+      );
+      if (!presentationPage) list.push(command("copyHtml", "Copier en HTML", "Page", copyAsHtml, "copy"), command("toPresentation", "Transformer en présentation", "Page", convertToPresentation, "slides"));
+    }
+    if (page && !canvasPage && !basePage) list.push(command("exportPdf", "Exporter en PDF", "Page", exportCurrentPdf, "export"));
+    if (presentationPage) list.push(command("present", "Présenter", "Page", present, "play", "present"));
+    return list;
+  };
+
   // Words and reading time of a plain note (not a drawing, mind map nor base).
   const words = note && !drawing && !mindmap && !canvasPage && !basePage ? countWords(note.markdown) : null;
   /**
@@ -1338,7 +1417,7 @@ export function App() {
                   {presentationPage && (
                   <>
                     <ToolButton icon="slides" label="Miniatures des diapos" onClick={() => setShowSlides(!showSlides)} active={showSlides} />
-                    <ToolButton icon="play" label="Présenter (⌘⇧P)" onClick={() => present()} disabled={!slides} />
+                    <ToolButton icon="play" label="Présenter (⌘⌥P)" onClick={() => present()} disabled={!slides} />
                     <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportCurrent()} />
                   </>
                 )}
@@ -1645,8 +1724,9 @@ export function App() {
         />
       )}
       {modal === "switcher" && (
-        <QuickSwitcher files={files} iconOf={pageIconFor} onOpen={(path) => void select(path)} onCreate={(name) => void newPage(null, name)} onClose={() => setModal(null)} />
+        <QuickSwitcher files={files} iconOf={pageIconFor} onOpen={(path) => void select(path)} onCreate={(name) => void newPage(null, name)} onCommands={() => setModal("palette")} onClose={() => setModal(null)} />
       )}
+      {modal === "palette" && <CommandPalette commands={paletteCommands()} onClose={() => setModal(null)} />}
       {modal === "search" && (
         <VaultSearch
           vault={vault}

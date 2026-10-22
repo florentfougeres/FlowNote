@@ -1,5 +1,6 @@
 import type { Editor } from "@tiptap/core";
 import { attachmentFolder, DEFAULT_CONFIG, IMAGE_EXTENSIONS, extension, linkTextFor, relativePath, uniquePath, type ObsidianConfig } from "../vault/links";
+import type { VaultSnapshot } from "../query/pages";
 
 /**
  * What the editor needs from the vault. The app keeps one mutable bridge per
@@ -19,6 +20,14 @@ export interface VaultBridge {
   createFile(path: string, content: string | Uint8Array): Promise<void>;
   /** Shows a base (`![[X.base]]`) in `dom`; returns how to remove it. */
   mountBase?(dom: HTMLElement, path: string): () => void;
+  /** Text of a note, for the notes embedded with `![[Note]]`. */
+  readNote?(path: string): Promise<string>;
+  /** Every note with its dates, for the Dataview and Tasks blocks. */
+  queryVault?(): Promise<VaultSnapshot>;
+  /** Checks or unchecks a task (0-based line) in its note, from a query's results. */
+  toggleTask?(path: string, line: number, done: boolean): Promise<void>;
+  /** How many notes embed this one (`![[…]]` inside `![[…]]`), to stop at a depth. */
+  embedDepth?: number;
 }
 
 export interface BridgeRef {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { globalAction, SHORTCUTS } from "./shortcuts";
+import { globalAction, shortcutOf, SHORTCUTS } from "./shortcuts";
 
 const press = (key: string, mods: { shift?: boolean; alt?: boolean; code?: string; ctrl?: boolean; handled?: boolean } = {}) =>
   globalAction({
@@ -25,7 +25,8 @@ describe("global shortcuts", () => {
 
   it("tells the variants apart by Shift and Option", () => {
     expect(press("p")).toBe("switcher");
-    expect(press("P", { shift: true })).toBe("present");
+    expect(press("P", { shift: true })).toBe("palette");
+    expect(press("π", { code: "KeyP", alt: true })).toBe("present");
     expect(press("f", { code: "KeyF" })).toBe("find");
     expect(press("ƒ", { code: "KeyF", alt: true })).toBe("replace");
     expect(press("F", { code: "KeyF", shift: true })).toBe("vaultSearch");
@@ -44,5 +45,15 @@ describe("global shortcuts", () => {
   it("lists each row once in the help", () => {
     const shown = SHORTCUTS.map((s) => s.keys);
     expect(new Set(shown).size).toBe(shown.length);
+  });
+});
+
+describe("keys shown in the command palette", () => {
+  it("gives each action its own side of a shared row", () => {
+    expect(shortcutOf("back")).toBe("⌘[");
+    expect(shortcutOf("forward")).toBe("⌘]");
+    expect(shortcutOf("switcher")).toBe("⌘P");
+    expect(shortcutOf("palette")).toBe("⌘⇧P");
+    expect(shortcutOf("goToTab")).toBe("⌘1 … ⌘9");
   });
 });

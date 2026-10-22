@@ -5,6 +5,7 @@ import { codeBlockView } from "./codeBlock";
 import { imageView } from "./image";
 import { listItemView } from "./listItem";
 import { rawBlockView } from "./rawBlock";
+import { inlineRawView } from "./inlineRaw";
 import { wikilinkView } from "./wikilink";
 
 /**
@@ -17,8 +18,9 @@ export function createNodeViews(bridge: BridgeRef): Record<string, NodeViewRende
   return {
     listItem: listItemView,
     callout: calloutView,
-    codeBlock: codeBlockView,
+    codeBlock: codeBlockView(bridge),
     rawBlock: rawBlockView,
+    inlineRaw: inlineRawView,
     wikilink: wikilinkView(bridge),
     image: imageView(bridge),
   };

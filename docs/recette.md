@@ -116,6 +116,8 @@ Toutes les fonctionnalités de FlowNote, à vérifier **dans l'app de bureau** a
 | Dessin Excalidraw : outils dans la barre de page, menu au clic droit, enregistrement | ☐ |
 | Mind map : `Tab`, `↵`, double-clic, glisser, disposition, zoom, recentrer, export PNG | ☐ |
 | Canevas : cartes de texte, de note, d'image et de lien, groupe qui emporte ses cartes, flèches et libellés, couleurs, redimensionner, `⌘Z` ; le fichier ouvert dans Obsidian | ☐ |
+| Note « Fonctionnalités Obsidian » de la démo : `![[Note#Titre]]` et `![[Note#^id]]` affichés, notes de bas de page (survol, clic, `/note de bas de page`), tableau et liste Dataview, requête Tasks ; cocher une tâche d'une autre note l'écrit dans cette note (`✅ date`) | ☐ |
+| Palette de commandes : `⌘⇧P`, `>` dans `⌘P`, recherche sans accents, commande exécutée, récentes en tête ; `⌘⌥P` présente | ☐ |
 | Présentation : miniatures, Présenter `⌘⇧P` (plein écran), export HTML et PDF | ☐ |
 
 ## Vues et outils
