@@ -224,6 +224,9 @@ export function createMemoryVault(name: string, files: Record<string, string | U
     const value = contents.get(path) ?? "";
     return typeof value === "string" ? value : new TextDecoder().decode(value);
   };
+  /** Modification times: the opening of the vault until a file is written. */
+  const opened = Date.now();
+  const times = new Map<string, number>();
   return {
     name,
     git: memoryGit(contents, remote),
@@ -237,7 +240,9 @@ export function createMemoryVault(name: string, files: Record<string, string | U
     write: async (path, content, expected) => {
       if (text(path) !== expected) throw new ConflictError(`${path} a été modifié en dehors de l'application.`);
       contents.set(path, content);
+      times.set(path, Date.now());
     },
+    stats: async () => [...contents.keys()].filter((p) => !hidden(p) && p.endsWith(".md")).map((path) => ({ path, ctime: opened, mtime: times.get(path) ?? opened })),
     files: async () => [...contents.keys()].filter((p) => !hidden(p)).sort(),
     readBinary: async (path) => {
       const value = contents.get(path);
@@ -246,6 +251,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
     create: async (path, content) => {
       if (contents.has(path)) throw new Error(`${path} existe déjà.`);
       contents.set(path, content);
+      times.set(path, Date.now());
     },
     createFolder: async (path) => {
       if ([...contents.keys(), ...folders].some((k) => inside(k, path))) throw new Error(`${path} existe déjà.`);
@@ -263,6 +269,9 @@ export function createMemoryVault(name: string, files: Record<string, string | U
       for (const key of moved) {
         contents.set(to + key.slice(from.length), contents.get(key)!);
         contents.delete(key);
+        const time = times.get(key);
+        if (time !== undefined) times.set(to + key.slice(from.length), time);
+        times.delete(key);
       }
       for (const folder of movedFolders) {
         folders.delete(folder);

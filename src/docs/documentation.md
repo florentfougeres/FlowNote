@@ -188,6 +188,7 @@ statut: en cours
 
 - **Copier** : le texte copié depuis une note se colle en Markdown dans un éditeur de texte, et mis en forme dans un traitement de texte.
 - **Rechercher** : `⌘F` dans la note, `⌘⌥F` pour remplacer, `⌘⇧F` dans tout le vault.
+- **Filtres de la recherche** (`⌘⇧F`) : « + Filtre » restreint la recherche par tag (les tags imbriqués compris), dossier, propriété (une valeur, ou « est renseignée ») ou date de modification (aujourd'hui, 7 ou 30 derniers jours, cette année, ou une période). La syntaxe d'Obsidian marche aussi : `tag:#projet`, `path:Projets`, `[statut:fait]`, `[statut]` deviennent des pastilles à l'espace ou à `↵`. Sans texte, la recherche liste les notes filtrées, les plus récemment modifiées d'abord. `⌫` dans le champ vide retire la dernière pastille.
 - **Notes liées** : sous chaque note, les pages qui pointent vers elle (avec la ligne du lien) et les **mentions non liées** (son titre cité sans lien), avec un bouton « Lier ».
 
 ## Les types de page

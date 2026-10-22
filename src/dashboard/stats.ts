@@ -43,6 +43,12 @@ const TAG = /(?:^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
 const WIKILINK = /(!?)\[\[([^\]|#^\n]+)(?:[#^][^\]|\n]*)?(?:\|[^\]\n]*)?\]\]/g;
 const MDLINK = /\[[^\]\n]*\]\(([^)\s]+\.md)(?:#[^)]*)?\)/g;
 
+/** Tags of a note, from its `tags` property and its prose outside code, without `#`, in their written case. */
+export function noteTags(text: string): string[] {
+  const { body, tags } = frontmatter(text);
+  return [...tags, ...[...withoutCode(body).matchAll(TAG)].map((m) => m[1])];
+}
+
 /** Link targets written in a note's prose (wikilinks and Markdown links to notes), outside code. */
 export function noteLinkTargets(text: string): string[] {
   const prose = withoutCode(frontmatter(text).body);
@@ -65,10 +71,7 @@ export function computeStats(notes: [string, string][], files: string[]): VaultS
       drawings++;
       continue; // drawing data is JSON, not prose
     }
-    const { body, tags } = frontmatter(text);
-    const prose = withoutCode(body);
-    for (const tag of tags) count(tag, path);
-    for (const match of prose.matchAll(TAG)) count(match[1], path);
+    for (const tag of noteTags(text)) count(tag, path);
     for (const target of noteLinkTargets(text)) {
       const resolved = resolveLink(target, files, path);
       if (resolved) {

@@ -1635,6 +1635,7 @@ export function App() {
             setRawMode(false);
             void select(hit.path).then(() => setFindRequest({ query, occurrence, nonce: Date.now() }));
           }}
+          onOpenPage={(path) => void select(path)}
           onClose={() => setModal(null)}
         />
       )}

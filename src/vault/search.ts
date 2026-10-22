@@ -41,6 +41,17 @@ function hitsOf(path: string, lines: [number, string][], query: string, caseSens
   return lines.filter(([, text]) => !isDataLine(path, text)).flatMap(([line, text]) => matchesIn(text, query, caseSensitive).map(([from, to]) => ({ path, line, text, from, to })));
 }
 
+/** Searches notes already read (the ones left by the search filters), in their order. */
+export function searchNotes(notes: [string, string][], query: string, caseSensitive = false, limit = SEARCH_LIMIT): SearchHit[] {
+  if (!query.trim()) return [];
+  const hits: SearchHit[] = [];
+  for (const [path, text] of notes) {
+    hits.push(...hitsOf(path, text.split(/\r?\n/).map((line, n) => [n, line] as [number, string]), query, caseSensitive));
+    if (hits.length >= limit) break;
+  }
+  return hits.slice(0, limit);
+}
+
 /** Searches every note of the vault; results grouped by file, in path order. */
 export async function searchVault(vault: Vault, query: string, caseSensitive = false, limit = SEARCH_LIMIT): Promise<SearchHit[]> {
   if (!query.trim()) return [];
