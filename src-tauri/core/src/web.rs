@@ -48,10 +48,10 @@ pub fn fetch_page_title(url: String) -> Option<String> {
     if !is_web_url(&url) {
         return None;
     }
-    let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(6)).redirects(5).build();
-    let response = agent.get(url.trim()).set("User-Agent", "Mozilla/5.0 (Macintosh) FlowNote").call().ok()?;
+    let agent: ureq::Agent = ureq::Agent::config_builder().timeout_global(Some(Duration::from_secs(6))).max_redirects(5).build().into();
+    let mut response = agent.get(url.trim()).header("User-Agent", "Mozilla/5.0 (Macintosh) FlowNote").call().ok()?;
     let mut bytes = Vec::new();
-    response.into_reader().take(512 * 1024).read_to_end(&mut bytes).ok()?;
+    response.body_mut().as_reader().take(512 * 1024).read_to_end(&mut bytes).ok()?;
     title_of(&String::from_utf8_lossy(&bytes))
 }
 
