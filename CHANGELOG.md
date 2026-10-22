@@ -2,6 +2,11 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.16.1] - 2026-10-22
+
+### Modifié
+- Dépendances mises à jour : React 19, Vite 8 (avec @vitejs/plugin-react 6), vite-node 6, motion 14, Tauri et ses dépendances Rust, ureq 3 (titre des pages web ajoutées aux lectures).
+
 ## [0.16.0] - 2026-10-19
 
 ### Ajouté
