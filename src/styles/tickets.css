@@ -632,7 +632,7 @@ button.ticket-tag.selected {
   text-align: center;
   color: var(--muted);
 }
-.dash-create-icon.ticket {
+.dash-create-icon.ticket-kind {
   color: #1a7f37;
   background: color-mix(in srgb, #1a7f37 13%, transparent);
 }

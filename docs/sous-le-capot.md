@@ -148,6 +148,7 @@ Chaque type a son dossier et un format de fichier compatible avec Obsidian ou se
 | Dessin | `*.excalidraw.md` | Excalidraw | Format du plugin Obsidian Excalidraw |
 | Mind map | `*.mindmap.md` | Mind Elixir | Plan lisible et JSON de la carte |
 | Canevas | `*.canvas` | React Flow | JSON Canvas, écrit comme Obsidian |
+| Dashboard | `*.dashboard.md` | grille CSS, pointer events | Sections `## Titre` = widgets, positions dans `flownote-dashboard` (front matter) |
 | Ticket | note avec `type: ticket` | Tiptap | Note et commentaires en callouts |
 | Présentation | note avec `marp: true` | Marp | Diapos séparées par `---` |
 | Lectures | une note | | Titres = thèmes, tâches = liens |

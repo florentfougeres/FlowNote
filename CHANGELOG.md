@@ -2,6 +2,13 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.18.0] - 2026-10-22
+
+### Ajouté
+- Dashboards (`Nom.dashboard.md`) : des widgets à déplacer et redimensionner sur une grille de 12 colonnes (texte, graphique Plotly, tâches à faire, notes récentes), modifiés sur place. Chaque widget est une section `## Titre` de la note, les positions sont dans ses propriétés.
+- Liste de tâches (« Tâches » dans la barre latérale, « Nouvelle tâche » sur l'accueil) : titre, échéance, catégorie et tags, écrite dans `Todo.md` au format du plugin Tasks et cachée de l'explorateur.
+- L'accueil propose 9 types en grille de 3×3.
+
 ## [0.17.0] - 2026-10-22
 
 ### Ajouté

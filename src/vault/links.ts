@@ -56,7 +56,7 @@ const fileStem = (path: string) => basename(path).replace(/\.md$/i, "");
 
 /** Title shown for a page: file name without ".md" (drawings and mind maps: without ".excalidraw.md", ".mindmap.md"). */
 export function noteTitle(path: string): string {
-  return basename(path).replace(/\.(?:excalidraw|mindmap)\.md$/i, "").replace(/\.(?:md|base|canvas)$/i, "");
+  return basename(path).replace(/\.(?:excalidraw|mindmap|dashboard)\.md$/i, "").replace(/\.(?:md|base|canvas)$/i, "");
 }
 
 function join(folder: string, name: string): string {
@@ -128,7 +128,7 @@ export function sanitizeName(name: string): string {
 
 /** `folder/name.ext`, suffixed with " 1", " 2"... when the path is taken (before `.excalidraw.md` or `.mindmap.md` as a whole). */
 export function uniquePath(folder: string, name: string, files: string[]): string {
-  const compound = /\.(excalidraw|mindmap)\.md$/i.exec(name);
+  const compound = /\.(excalidraw|mindmap|dashboard)\.md$/i.exec(name);
   const dot = compound ? compound.index : name.lastIndexOf(".");
   const stem = dot > 0 ? name.slice(0, dot) : name;
   const ext = dot > 0 ? name.slice(dot) : "";

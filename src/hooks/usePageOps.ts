@@ -5,6 +5,7 @@ import type { NameResult, PageKind } from "../Dialogs";
 import { DRAWING_SUFFIX, newDrawingFile } from "../drawing/format";
 import { MINDMAP_SUFFIX, newMindmapFile } from "../mindmap/format";
 import { CANVAS_SUFFIX, newCanvasFile } from "../canvas/format";
+import { DASHBOARD_SUFFIX, newDashboardFile } from "../dashboardPage/format";
 import { newPresentationFile } from "../presentation/format";
 import type { Settings } from "../SettingsPage";
 import { ticketInfo } from "../ticket/agenda";
@@ -164,7 +165,7 @@ export function usePageOps(ctx: PageOpsContext) {
     if (!vault) return;
     try {
       await ctx.saveNow();
-      const extension = /\.(?:excalidraw|mindmap)\.md$|\.base$|\.canvas$|\.md$/i.exec(path)?.[0] ?? "";
+      const extension = /\.(?:excalidraw|mindmap|dashboard)\.md$|\.base$|\.canvas$|\.md$/i.exec(path)?.[0] ?? "";
       const stem = path.slice(0, path.length - extension.length);
       let copy = "";
       for (let i = 1; !copy || filesRef.current.some((f) => f.toLowerCase() === copy.toLowerCase()); i++) copy = `${stem} ${i}${extension}`;
@@ -273,11 +274,11 @@ export function usePageOps(ctx: PageOpsContext) {
     const path =
       kind === "ticket"
         ? uniquePath(settings.ticketsFolder, `${ticketId} - ${title}.md`, filesRef.current)
-        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : kind === "canvas" ? CANVAS_SUFFIX : kind === "base" ? BASE_SUFFIX : ".md"}`, filesRef.current);
+        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : kind === "canvas" ? CANVAS_SUFFIX : kind === "dashboard" ? DASHBOARD_SUFFIX : kind === "base" ? BASE_SUFFIX : ".md"}`, filesRef.current);
     try {
       await ctx.saveNow();
       // A base's rows are the notes of the folder named after it, next to it (like sub-pages).
-      await createFile(path, kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "canvas" ? newCanvasFile() : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : `# ${title}\n`);
+      await createFile(path, kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "canvas" ? newCanvasFile() : kind === "dashboard" ? newDashboardFile() : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : `# ${title}\n`);
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";

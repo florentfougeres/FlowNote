@@ -94,7 +94,7 @@
   background: var(--accent-soft);
 }
 
-.dash-create-icon.drawing {
+.dash-create-icon.drawing-kind {
   color: #8e44ad;
   background: color-mix(in srgb, #8e44ad 13%, transparent);
 }

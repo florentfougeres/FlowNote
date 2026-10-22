@@ -477,6 +477,34 @@ title: Bilan du trimestre
 
 ---
 
+### Dashboard
+
+« Nouveau dashboard » crée `Nom.dashboard.md` : une grille de widgets. Chaque widget est une section `## Titre` de la note, écrite en Markdown normal (requête Dataview ou Tasks, graphique Plotly, note intégrée `![[Note]]`, texte).
+
+- **Déplacer** : glisser le widget par sa barre de titre ; il s'aligne sur une grille de 12 colonnes et pousse les autres vers le bas.
+- **Redimensionner** : tirer le coin en bas à droite.
+- **Modifier** : écrire directement dans le widget ; cliquer le titre pour le renommer ; la croix le supprime. « + Widget » propose un texte, un graphique Plotly (à modifier avec son éditeur visuel), les tâches à faire ou les notes récentes. Un nouveau dashboard est vide.
+
+Les positions sont rangées dans les propriétés (`flownote-dashboard: { Titre: [x, y, largeur, hauteur] }`). Dans Obsidian, le fichier reste une note lisible, une section par widget. Exemple :
+
+~~~~
+---
+flownote-dashboard:
+  Tâches à faire: [0, 0, 6, 7]
+---
+## Tâches à faire
+
+```tasks
+not done
+```
+~~~~
+
+### Tâches
+
+« Tâches » dans la barre latérale, la tuile « Nouvelle tâche » de l’accueil ou « Ouvrir les tâches » dans la palette (⌘⇧P) ouvre la liste de tâches : un titre, une catégorie, une échéance et des tags, puis « Ajouter ». Les tâches sont rangées par catégorie ; une échéance passée s'affiche en rouge, celle du jour en jaune. Cocher une tâche la marque faite ; « Afficher les tâches faites » les montre.
+
+Tout est écrit dans `Todo.md`, à la racine du vault, caché de la barre latérale comme la liste de lecture. Une section par catégorie, une tâche par ligne au format du plugin Tasks : `- [ ] Appeler Paul 📅 2026-10-25 #perso`.
+
 ## Chiffres clés
 
 - Ventes : +12 %

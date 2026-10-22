@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Icon } from "./Icon";
-import { PAGE_KINDS, kindIconClass, type PageKind } from "./pageKinds";
+import { NEW_PAGE_KINDS as PAGE_KINDS, kindIconClass, type PageKind } from "./pageKinds";
 
 export type { PageKind };
 

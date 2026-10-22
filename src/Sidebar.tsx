@@ -6,6 +6,7 @@ import { isDrawingPath } from "./drawing/format";
 import { isMindmapPath } from "./mindmap/format";
 import { isBasePath } from "./base/baseFile";
 import { isCanvasPath } from "./canvas/format";
+import { isDashboardPath } from "./dashboardPage/format";
 import { dirname, noteTitle } from "./vault/links";
 import { keys } from "./keys";
 
@@ -69,7 +70,7 @@ export function PageIcon({ path, icon, ticket, presentation, row, size = 14 }: {
       </span>
     );
   }
-  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isCanvasPath(path) ? "canvas" : isBasePath(path) ? "database" : ticket ? "ticket" : presentation ? "slides" : row ? "baseRow" : "doc";
+  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isCanvasPath(path) ? "canvas" : isDashboardPath(path) ? "blocks" : isBasePath(path) ? "database" : ticket ? "ticket" : presentation ? "slides" : row ? "baseRow" : "doc";
   return <Icon name={name} size={size} />;
 }
 
@@ -166,7 +167,7 @@ interface Props {
   tree: VaultEntry[];
   selected?: string;
   /** What the active tab shows when it is not a page. */
-  view: "home" | "tickets" | "graph" | "reading" | "settings" | "docs" | null;
+  view: "home" | "tickets" | "todo" | "graph" | "reading" | "settings" | "docs" | null;
   /** Folder of the tickets (a setting): numbered by the app, so it never moves nor receives drops. */
   ticketsFolder: string;
   /** Paths left out of the tree: the tickets folder and the reading list have their own views. */
@@ -206,6 +207,7 @@ interface Props {
   onHome: (newTab: boolean) => void;
   onTickets: (newTab: boolean) => void;
   onGraph: (newTab: boolean) => void;
+  onTodo: (newTab: boolean) => void;
   onReading: (newTab: boolean) => void;
   onDocs: (newTab: boolean) => void;
   onGit: () => void;
@@ -463,6 +465,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
         <NavRow icon="search" label="Rechercher" shortcut="⌘P" onClick={props.onSearch} />
         <NavRow icon="searchText" label="Rechercher dans les notes" shortcut="⌘⇧F" onClick={props.onVaultSearch} />
         <NavRow icon="ticket" label="Tickets" active={view === "tickets"} onClick={(event) => props.onTickets(event.metaKey || event.ctrlKey)} />
+        <NavRow icon="checkbox" label="Tâches" active={view === "todo"} onClick={(event) => props.onTodo(event.metaKey || event.ctrlKey)} />
         <NavRow icon="bookmark" label="Lectures" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
         <NavRow icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />
         <NavRow icon="book" label="Documentation" active={view === "docs"} onClick={(event) => props.onDocs(event.metaKey || event.ctrlKey)} />

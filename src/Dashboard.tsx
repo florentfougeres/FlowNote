@@ -92,6 +92,7 @@ export function Dashboard({
   onOpenTickets,
   onOpenGraph,
   readingList,
+  onOpenTodo,
   readingVersion,
   onOpenReading,
   onAddLink,
@@ -106,6 +107,8 @@ export function Dashboard({
   onSearch: () => void;
   onOpenTickets: (newTab: boolean) => void;
   onOpenGraph: (newTab: boolean) => void;
+  /** Opens the to-do list. */
+  onOpenTodo: () => void;
   /** Path of the reading list note. */
   readingList: string;
   /** Bumped when a link was added. */
@@ -182,7 +185,7 @@ export function Dashboard({
 
       <section className="dash-create" aria-label="Créer">
         {PAGE_KINDS.map((k) => (
-          <button key={k.kind} onClick={() => onCreate(k.kind)}>
+          <button key={k.kind} onClick={() => (k.kind === "todo" ? onOpenTodo() : onCreate(k.kind))}>
             <span className={kindIconClass(k.kind)}>
               <Icon name={k.icon} size={20} />
             </span>

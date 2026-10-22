@@ -35,7 +35,7 @@
   box-shadow: var(--shadow-menu);
 }
 
-.dash-create-icon.canvas {
+.dash-create-icon.canvas-kind {
   color: #d35400;
   background: color-mix(in srgb, #d35400 13%, transparent);
 }

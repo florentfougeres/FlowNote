@@ -19,7 +19,7 @@ export async function renamePage(vault: Vault, oldPath: string, title: string): 
   if (!name) throw new Error("Le titre ne peut pas être vide.");
   const folder = dirname(oldPath);
   // Drawings, mind maps, bases and canvases keep their extension (".excalidraw.md", ".mindmap.md", ".base", ".canvas").
-  const extension = /\.(?:excalidraw|mindmap)\.md$|\.base$|\.canvas$/i.exec(oldPath)?.[0] ?? ".md";
+  const extension = /\.(?:excalidraw|mindmap|dashboard)\.md$|\.base$|\.canvas$/i.exec(oldPath)?.[0] ?? ".md";
   const newPath = folder ? `${folder}/${name}${extension}` : `${name}${extension}`;
   if (newPath === oldPath) return { path: oldPath, updatedNotes: [] };
 

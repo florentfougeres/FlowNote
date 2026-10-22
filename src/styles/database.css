@@ -813,7 +813,7 @@ body:has(.db-board.dragging) {
   gap: 8px;
 }
 
-.dash-create-icon.base {
+.dash-create-icon.base-kind {
   color: #2f6fdf;
   background: color-mix(in srgb, #2f6fdf 13%, transparent);
 }

@@ -232,7 +232,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.dash-create-icon.presentation {
+.dash-create-icon.presentation-kind {
   color: #d35400;
   background: color-mix(in srgb, #e67e22 14%, transparent);
 }

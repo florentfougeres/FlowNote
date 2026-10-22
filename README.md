@@ -13,7 +13,7 @@
 
 FlowNote est une application de bureau macOS qui ouvre un dossier de notes Obsidian et permet de les éditer comme dans Notion : blocs, menu `/`, glisser-déposer, tableaux, callouts… Il n'y a ni base de données ni format caché : chaque note reste un fichier `.md` que vous pouvez continuer à ouvrir dans Obsidian, sans plugin.
 
-Autour de l'éditeur : des bases façon Notion (tableau, kanban, galerie, calendrier), des canevas Obsidian, des dessins Excalidraw, des mind maps, des tickets façon GitHub avec un tableau kanban, une liste de lectures, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. FlowNote lit aussi les requêtes des plugins **Dataview** et **Tasks**, les notes intégrées (`![[Note#Section]]`) et les notes de bas de page. Tout reste du texte, lisible dans Obsidian et propre dans Git.
+Autour de l'éditeur : des bases façon Notion (tableau, kanban, galerie, calendrier), des canevas Obsidian, des dessins Excalidraw, des mind maps, des tickets façon GitHub avec un tableau kanban, une liste de lectures, une liste de tâches, des dashboards de widgets, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. FlowNote lit aussi les requêtes des plugins **Dataview** et **Tasks**, les notes intégrées (`![[Note#Section]]`) et les notes de bas de page. Tout reste du texte, lisible dans Obsidian et propre dans Git.
 
 Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 
@@ -84,6 +84,12 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Une note `Lectures.md` : une section par thème, une case à cocher par lien, cochée une fois lu
 - Tags Obsidian (`#tag`) sur chaque lien, et filtre par tags dans la vue Lectures
 - Ajout rapide (`⌘⇧L`) avec le titre de la page lu automatiquement, vue dédiée et carte « À lire » sur l'accueil
+
+**Dashboards**
+- `Nom.dashboard.md` : des widgets (texte, graphique Plotly, tâches à faire, notes récentes) à déplacer et redimensionner sur une grille ; chaque widget est une section `## Titre` de la note
+
+**Tâches**
+- Une liste de tâches (`Todo.md`, cachée de l'explorateur) : échéance, catégorie et tags, au format du plugin Tasks
 
 **Présentations**
 - Une note avec `marp: true` devient une présentation [Marp](https://marp.app) : diapos séparées par `---`, notes de l'orateur en commentaires
