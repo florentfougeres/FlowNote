@@ -2,6 +2,25 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.17.0] - 2026-10-22
+
+### Ajouté
+- Canevas Obsidian (`.canvas`) : cartes de note, de texte, d'image et de lien (titre et image d'aperçu de la page, miniature et lecteur des vidéos YouTube), groupes, flèches avec libellés, couleurs, annuler et rétablir. Le fichier est écrit exactement comme Obsidian l'écrit.
+- Notes intégrées : `![[Note]]`, `![[Note#Section]]` et `![[Note#^bloc]]` affichent le contenu de l'autre note, toujours à jour.
+- Notes de bas de page : appel `[^1]` en exposant (son texte au survol, un clic y mène), note numérotée en bas ; `/note de bas de page` en ajoute une.
+- Requêtes Dataview (blocs ```` ```dataview ````) : `LIST`, `TABLE` et `TASK`, avec `FROM`, `WHERE`, `SORT`, `GROUP BY`, `LIMIT`, les propriétés, les champs `clé:: valeur` et les dates calculées.
+- Requêtes Tasks (blocs ```` ```tasks ````) : filtres par état, échéance, chemin, tag, priorité, tris et groupes ; cocher une tâche dans les résultats la coche dans sa note.
+- Palette de commandes (`⌘⇧P`, ou `>` dans `⌘P`) : toutes les actions de l'app par leur nom.
+- Recherche dans les notes (`⌘⇧F`) : filtres par tag, dossier, propriété et date de modification, aussi en syntaxe Obsidian (`tag:#projet`, `path:Dossier`, `[statut:fait]`).
+- Option « Modifications dans la marge » (Réglages → Éditeur) : les blocs changés depuis le dernier commit, avec le diff mot à mot et le retour à la version du commit.
+- Vault de démo : une note « Fonctionnalités Obsidian » qui montre ces nouveautés, et un canevas.
+- Documentation : des exemples pour chaque fonctionnalité.
+
+### Modifié
+- « Présenter » passe à `⌘⌥P` (`⌘⇧P` ouvre la palette de commandes).
+- Une note ouverte depuis un canevas s'ouvre dans un nouvel onglet.
+- Dépendance ajoutée : React Flow (`@xyflow/react`) pour les canevas, chargée à l'ouverture du premier canevas.
+
 ## [0.16.1] - 2026-10-22
 
 ### Modifié
