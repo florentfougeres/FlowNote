@@ -314,6 +314,7 @@ Si le vault est un dépôt Git, le panneau Git (`⌘⇧G`) montre les fichiers m
 
 - L'**historique** d'une note (barre de page) permet de comparer une version à la note actuelle et de la restaurer.
 - Les **conflits de fusion** se résolvent dans l'app ; une note en conflit reste en lecture seule jusqu'à sa résolution.
+- **Modifications dans la marge** (Réglages → Éditeur, désactivé par défaut) : une barre verte à gauche des blocs ajoutés depuis le dernier commit, bleue pour les blocs modifiés, un petit triangle rouge là où des blocs ont été supprimés. Un clic sur une marque montre la version du dernier commit, différences surlignées mot à mot, avec **Rétablir** (le bloc reprend exactement son texte d'avant, `⌘Z` pour annuler), **Retirer** un bloc ajouté ou **Restaurer** un bloc supprimé. Les marques disparaissent au commit.
 
 ## Exporter
 

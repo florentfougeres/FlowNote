@@ -13,11 +13,13 @@ import { applyLink, LinkHover, LinkPrompt, linkTarget, type LinkRequest } from "
 import { GrammarPopover } from "./GrammarPopover";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { insertAttachments, type VaultBridge } from "./bridge";
-import { loadMarkdown, NoteSession } from "../markdown/note";
+import { loadMarkdown, NoteSession, serializeTopLevelBlock } from "../markdown/note";
 import { pastedImageName, resolveLink } from "../vault/links";
 import { openUrl } from "../reading/web";
 import { markdownForClipboard } from "./clipboard";
 import { afterTitleHeading } from "./titleHeading";
+import { gitChange, setGitBase, undoGitChange, type GitBase, type GitChange } from "./gitGutter";
+import { GitChangePopover } from "./GitChangePopover";
 
 interface Props {
   /** File content as loaded from disk; a new value reloads the editor. */
@@ -39,6 +41,8 @@ interface Props {
   properties?: boolean;
   /** The page shows the note's first `# heading` as its title: the editor hides it. */
   titleHeading?: boolean;
+  /** The note as in the last commit: blocks changed since are marked in the margin (null: no marks). */
+  gitBase?: GitBase | null;
 }
 
 export interface FrontmatterControl {
@@ -57,7 +61,7 @@ async function readFiles(list: FileList | null | undefined): Promise<{ name: str
   );
 }
 
-export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEditor, hiddenProperties, header, frontmatterControl, properties = true, titleHeading = false }: Props) {
+export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEditor, hiddenProperties, header, frontmatterControl, properties = true, titleHeading = false, gitBase = null }: Props) {
   const session = useRef<NoteSession | null>(null);
   const shell = useRef<HTMLDivElement>(null);
   const [wiring] = useState(defaultWiring);
@@ -67,6 +71,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
   markdownCallback.current = onMarkdown;
   const [frontmatter, setFrontmatter] = useState<string | null>(null);
   const [linkRequest, setLinkRequest] = useState<LinkRequest | null>(null);
+  const [gitPopover, setGitPopover] = useState<{ change: GitChange; x: number; y: number } | null>(null);
 
   const editor = useEditor({
     extensions: editorExtensions(wiring),
@@ -148,6 +153,17 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         // A click in the empty space under the last block: the cursor goes to an
         // empty line at the end (added when needed), like in Notion.
         mousedown: (view, event) => {
+          // A click on a mark of the changes since the last commit (the bar left of a block, or a removal mark).
+          const mark = event.button === 0 ? (event.target as Element).closest?.("[data-git-group]") : null;
+          if (mark && mark.parentElement === view.dom && (mark.classList.contains("git-removed") || event.clientX < mark.getBoundingClientRect().left)) {
+            const change = gitChange(view.state, Number((mark as HTMLElement).dataset.gitGroup));
+            if (change) {
+              event.preventDefault();
+              const rect = mark.getBoundingClientRect();
+              setGitPopover({ change, x: rect.left - 14, y: rect.bottom + 6 });
+              return true;
+            }
+          }
           // A middle click on a link opens it (auxclick), without moving the cursor or scrolling.
           if (event.button === 1 && (event.target as Element).closest?.("a[href], .wikilink")) {
             event.preventDefault();
@@ -213,6 +229,12 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
     setFrontmatter(layout.frontmatter);
   }, [editor, source, wiring.titleHeading]);
 
+  // After a load (a fresh state forgets it), and whenever the committed version changes.
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    editor.view.dispatch(setGitBase(editor.state, gitBase));
+  }, [editor, source, gitBase]);
+
   const changeFrontmatter = (raw: string | null) => {
     if (!session.current || !editor) return;
     session.current.setFrontmatter(raw);
@@ -255,6 +277,20 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         />
       )}
       <GrammarPopover />
+      {gitPopover && editor && (
+        <GitChangePopover
+          {...gitPopover}
+          dom={editor.view.dom}
+          markdownOf={(node) => serializeTopLevelBlock(node.toJSON(), session.current?.layout.context)}
+          onRestore={() => {
+            // The committed blocks are written back with their exact text.
+            for (const { node, source } of gitPopover.change.before) if (source !== null) session.current?.restore(node, source);
+            editor.view.dispatch(undoGitChange(editor.state, gitPopover.change));
+            editor.commands.focus();
+          }}
+          onClose={() => setGitPopover(null)}
+        />
+      )}
       <SuggestionMenu store={wiring.slashStore} />
       <SuggestionMenu store={wiring.linkStore} />
       <SuggestionMenu store={wiring.emojiStore} />

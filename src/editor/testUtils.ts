@@ -22,7 +22,7 @@ export function openEditor(markdown = "", bridge: Partial<VaultBridge> = {}, opt
   open_.push(editor);
   const session = new NoteSession(layout, editor.state.doc);
   editor.commands.focus("end");
-  return { editor, slash: wiring.slashStore, links: wiring.linkStore, emojis: wiring.emojiStore, bridge: wiring.bridge, save: () => session.serialize(editor.state.doc) };
+  return { editor, slash: wiring.slashStore, links: wiring.linkStore, emojis: wiring.emojiStore, bridge: wiring.bridge, session, save: () => session.serialize(editor.state.doc) };
 }
 
 /** Types text character by character, going through input rules like a keyboard would. */

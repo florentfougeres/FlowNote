@@ -72,6 +72,8 @@ export function loadMarkdown(raw: string): LoadedNote {
 
 export class NoteSession {
   private readonly origins = new WeakMap<PMNode, BlockOrigin>();
+  /** Blocks put back as they were in another version (the last commit): written with that text. */
+  private readonly restored = new WeakMap<PMNode, string>();
 
   /** `doc` must be the document built from `loadMarkdown(...).doc`, before any edit. */
   constructor(
@@ -89,6 +91,11 @@ export class NoteSession {
     if (raw !== null && !had) leading = `\n${leading}`;
     if (raw === null && had) leading = leading.replace(/^\n/, "");
     this.layout = { ...this.layout, frontmatter: raw, leading };
+  }
+
+  /** `node` was parsed from `source` (a block of the committed note): it is written back as that exact text. */
+  restore(node: PMNode, source: string) {
+    this.restored.set(node, source);
   }
 
   isOriginal(node: PMNode): boolean {
@@ -111,7 +118,7 @@ export class NoteSession {
     let previous: { text: string; slot: BlockOrigin | null; edited: boolean } | null = null;
     children.forEach((child, i) => {
       const origin = exact[i];
-      const text = origin ? origin.source : serializeTopLevelBlock(child.toJSON() as PMJSON, this.layout.context);
+      const text = origin ? origin.source : (this.restored.get(child) ?? serializeTopLevelBlock(child.toJSON() as PMJSON, this.layout.context));
       if (text === "") return;
       const current = { text, slot: slots[i], edited: origin === null };
       if (previous) body += this.gapBetween(previous, current);

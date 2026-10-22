@@ -32,6 +32,7 @@ import { Presenter } from "./presentation/Presenter";
 import { setProperty } from "./markdown/frontmatter";
 import { exportMindmapPng, exportPdf, exportSlidesHtml, type ExportedPage } from "./pageExport";
 import type { GitApi } from "./vault/git";
+import { useGitBase } from "./hooks/useGitBase";
 
 
 const AUTOSAVE_DELAY_MS = 700;
@@ -79,6 +80,8 @@ export const SplitPane = memo(function SplitPane({
   reading: readingOn,
   onToggleReading,
   git,
+  gitGutter,
+  gitVersion,
   notify,
 }: {
   vault: Vault;
@@ -116,11 +119,15 @@ export const SplitPane = memo(function SplitPane({
   reading: boolean;
   onToggleReading: () => void;
   git: GitApi | null;
+  /** Marks of the changes since the last commit (option), read again when `gitVersion` changes. */
+  gitGutter: boolean;
+  gitVersion: number | null;
   notify: (message: string) => void;
 }) {
   const [page, setPage] = useState<Loaded | null>(null);
   const [status, setStatus] = useState("");
   const [raw, setRaw] = useState(false);
+  const gitBase = useGitBase(git, path, gitGutter && !raw, gitVersion);
   const [outline, setOutline] = useState(false);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [history, setHistory] = useState(false);
@@ -317,7 +324,7 @@ export const SplitPane = memo(function SplitPane({
         {ticket ? (
           <TicketView key={key} path={path} source={page.loaded} markdown={page.markdown} onMarkdown={onMarkdown} bridge={bridge} editable={editable} onEditor={setEditor} columns={ticketColumns} />
         ) : (
-          <NoteEditor key={key} source={page.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={editable} hiddenProperties={["icon"]} onEditor={setEditor} frontmatterControl={frontmatter} titleHeading={!presentation} />
+          <NoteEditor key={key} source={page.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={editable} hiddenProperties={["icon"]} onEditor={setEditor} frontmatterControl={frontmatter} titleHeading={!presentation} gitBase={gitBase} />
         )}
       </div>
     );

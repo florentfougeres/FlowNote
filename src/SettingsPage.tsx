@@ -23,6 +23,8 @@ export interface Settings {
   uiScale: number;
   /** The sidebar and the tabs name pages by their title (else by their file name). */
   showTitles: boolean;
+  /** Bars in the margin beside the blocks changed since the last commit. */
+  gitGutter: boolean;
 }
 
 const AUTOSAVE_KEY = "flownote:autosave";
@@ -34,6 +36,7 @@ const READING_KEY = "flownote:reading-list";
 const TITLES_KEY = "flownote:fetch-titles";
 const SCALE_KEY = "flownote:ui-scale";
 const SHOW_TITLES_KEY = "flownote:show-titles";
+const GIT_GUTTER_KEY = "flownote:git-gutter";
 
 /** Sizes offered for the interface: text, buttons and spacing grow together. */
 const UI_SCALES: [number, string][] = [
@@ -79,9 +82,10 @@ export function loadSettings(): Settings {
       fetchTitles: localStorage.getItem(TITLES_KEY) !== "false",
       uiScale: readScale(),
       showTitles: localStorage.getItem(SHOW_TITLES_KEY) !== "false",
+      gitGutter: localStorage.getItem(GIT_GUTTER_KEY) === "true",
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true, gitGutter: false };
   }
 }
 
@@ -96,6 +100,7 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(TITLES_KEY, String(settings.fetchTitles));
     localStorage.setItem(SCALE_KEY, String(settings.uiScale));
     localStorage.setItem(SHOW_TITLES_KEY, String(settings.showTitles));
+    localStorage.setItem(GIT_GUTTER_KEY, String(settings.gitGutter));
   } catch {
     // Settings simply won't persist.
   }
@@ -270,6 +275,9 @@ export function SettingsPage({
                   </button>
                 ))}
               </div>
+            </Row>
+            <Row label="Modifications dans la marge" help="Une barre à gauche des blocs ajoutés (verte) ou modifiés (bleue) depuis le dernier commit, un trait rouge là où des blocs ont été supprimés. Vault Git seulement.">
+              <Switch checked={settings.gitGutter} label="Modifications dans la marge" onChange={(gitGutter) => onChange({ ...settings, gitGutter })} />
             </Row>
           </section>
         )}

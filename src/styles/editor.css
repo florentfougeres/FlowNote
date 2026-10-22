@@ -611,3 +611,109 @@ li.drag-ghost {
 .note img {
   max-width: 100%;
 }
+
+/* Changes since the last commit (option): a bar in the margin beside the block. */
+.note > .git-added,
+.note > .git-modified {
+  position: relative;
+}
+
+.note > .git-added::after,
+.note > .git-modified::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  /* 3px bar, clickable a little around it. */
+  left: -19px;
+  width: 3px;
+  padding: 0 5px;
+  border-radius: 2px;
+  background: var(--git-added);
+  background-clip: content-box;
+  cursor: pointer;
+}
+
+.note > .git-modified::after {
+  background: var(--accent);
+}
+
+/* Where committed blocks were removed: a small red wedge between the blocks. */
+.note > .git-removed {
+  display: block;
+  position: relative;
+  height: 0;
+  margin: 0;
+}
+
+.note > .git-removed::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: -16px;
+  border: 5px solid transparent;
+  border-left: 7px solid var(--danger);
+  cursor: pointer;
+}
+
+/* A click on a mark: the committed version, word by word, and a way back to it. */
+.git-change-popover {
+  width: 420px;
+  min-width: 0;
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+.git-change-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px 6px;
+  font-weight: 600;
+}
+
+.git-change-date {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.git-change-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.git-change-dot.added {
+  background: var(--git-added);
+}
+
+.git-change-dot.removed {
+  background: var(--danger);
+}
+
+.git-change-diff {
+  overflow: auto;
+  margin: 0 4px 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--hover);
+  font: 12.5px/1.5 var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.git-change-diff del {
+  border-radius: 3px;
+  background: var(--danger-mark);
+  color: var(--text);
+  text-decoration: line-through;
+}
+
+.git-change-diff ins {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--git-added) 24%, transparent);
+  color: var(--text);
+  text-decoration: none;
+}

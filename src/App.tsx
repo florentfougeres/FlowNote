@@ -22,6 +22,7 @@ import { QuickSwitcher } from "./QuickSwitcher";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { Titlebar } from "./Titlebar";
 import { usePageOps } from "./hooks/usePageOps";
+import { useGitBase } from "./hooks/useGitBase";
 import { globalAction, type GlobalAction } from "./shortcuts";
 import { applyTheme, applyScale, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
 import { PageIcon, PopoverMenu, Sidebar, type MenuItem } from "./Sidebar";
@@ -180,6 +181,7 @@ export function App() {
   const openFind = (replace = false) =>
     setFindRequest((previous) => ({ query: selectedText() || previous?.query || "", replace, nonce: Date.now() }));
   const [settings, setSettings] = useState<Settings>(loadSettings);
+  const gitBase = useGitBase(vault?.git, note?.path, settings.gitGutter && !rawMode, gitChanges);
   /** Toolbar switch: pauses the checker chosen in the settings without changing it. */
   const [spellingOn, toggleSpelling] = useSpellChecking(settings.spellChecker);
   const [pendingOpen, setPendingOpen] = useState<string | null>(null);
@@ -1449,6 +1451,7 @@ export function App() {
                       onEditor={setEditor}
                       frontmatterControl={frontmatter}
                       titleHeading={!presentationPage}
+                      gitBase={gitBase}
                       hiddenProperties={rowBase ? ["icon", ...baseProperties(rowBase.model)] : ["icon"]}
                       header={
                         rowBase
@@ -1579,6 +1582,8 @@ export function App() {
                 wide={widePages.has(splitPath)}
                 reading={Boolean(tabs.find((t) => t.id === activeTab)?.splitReading)}
                 git={vault.git ?? null}
+                gitGutter={settings.gitGutter}
+                gitVersion={gitChanges}
                 {...splitHandlers}
               />
             </div>
