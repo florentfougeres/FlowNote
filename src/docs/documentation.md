@@ -479,24 +479,33 @@ title: Bilan du trimestre
 
 ### Dashboard
 
-« Nouveau dashboard » crée `Nom.dashboard.md` : une grille de widgets. Chaque widget est une section `## Titre` de la note, écrite en Markdown normal (requête Dataview ou Tasks, graphique Plotly, note intégrée `![[Note]]`, texte).
+« Nouveau dashboard » crée `Nom.dashboard.md` : une grille de widgets sur 12 colonnes. Chaque widget est une section `## Titre` de la note, écrite en Markdown normal.
 
-- **Déplacer** : glisser le widget par sa barre de titre ; il s'aligne sur une grille de 12 colonnes et pousse les autres vers le bas.
-- **Redimensionner** : tirer le coin en bas à droite.
-- **Modifier** : écrire directement dans le widget ; cliquer le titre pour le renommer ; la croix le supprime. « + Widget » propose un texte, un graphique Plotly (à modifier avec son éditeur visuel), les tâches à faire ou les notes récentes. Un nouveau dashboard est vide.
+- **Ajouter** : « Ajouter un widget », fixé en haut à droite, propose un texte, un tableau, un graphique Plotly (à modifier avec son éditeur visuel), un diagramme Mermaid, ou une mind map, un croquis Excalidraw ou une base du vault (existants ou nouveaux). Ces trois derniers s'intègrent par `![[…]]`, le titre au-dessus les ouvre.
+- **Déplacer** : glisser le widget par sa barre de titre, n'importe où sur toute la largeur de la page ; les widgets sur son chemin descendent.
+- **Redimensionner** : tirer le bord droit (largeur), le bord bas (hauteur) ou le coin, case par case.
+- **Modifier** : écrire directement dans le widget ; cliquer le titre pour le renommer ; la croix le supprime.
 
-Les positions sont rangées dans les propriétés (`flownote-dashboard: { Titre: [x, y, largeur, hauteur] }`). Dans Obsidian, le fichier reste une note lisible, une section par widget. Exemple :
+Les positions sont rangées dans les propriétés (`flownote-dashboard: { Titre: [x, y, largeur, hauteur] }`). Dans Obsidian, le fichier reste une note lisible, une section par widget. Une mind map ou un croquis intégré dans une note normale (`![[Idées.mindmap.md]]`) s'affiche aussi, en lecture. Exemple :
 
 ~~~~
 ---
 flownote-dashboard:
-  Tâches à faire: [0, 0, 6, 7]
+  Budget: [0, 0, 8, 9]
+  Idées: [8, 0, 4, 9]
 ---
-## Tâches à faire
+## Budget
 
-```tasks
-not done
+```plotly
+data:
+  - type: bar
+    x: [A, B]
+    y: [3, 5]
 ```
+
+## Idées
+
+![[Idées.mindmap.md]]
 ~~~~
 
 ### Tâches

@@ -1,13 +1,22 @@
+/* The whole width of the pane; the toolbar stays put, the grid scrolls under it. */
 .dashboard-page {
-  height: 100%;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--titlebar-height) - var(--pagebar-height));
+}
+.dashboard-scroll {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  padding: 16px 24px 48px;
-  box-sizing: border-box;
+  padding: 4px 24px 48px;
 }
 .dashboard-toolbar {
+  flex: none;
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 12px;
+  padding: 10px 24px 8px;
 }
 .dashboard-toolbar button {
   display: inline-flex;
@@ -15,6 +24,7 @@
   gap: 6px;
   border: 1px solid var(--border);
   background: var(--bg);
+  box-shadow: none;
   color: var(--text);
   border-radius: 6px;
   padding: 4px 10px;
@@ -42,8 +52,8 @@
 }
 .dashboard-widget.moving {
   z-index: 2;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
-  opacity: 0.92;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 8px 24px rgb(0 0 0 / 14%);
 }
 .dashboard-widget header {
   display: flex;
@@ -82,23 +92,30 @@
 .dashboard-body {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: auto;
   padding: 0 12px 8px;
   user-select: text;
   -webkit-user-select: text;
 }
 .dashboard-body .ProseMirror { padding: 0; margin: 0; max-width: none; min-height: 0; }
+/* The corner sets the size, in grid cells. */
 .dashboard-resize {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   cursor: nwse-resize;
   background: linear-gradient(135deg, transparent 50%, var(--faint) 50%, var(--faint) 58%, transparent 58%, transparent 70%, var(--faint) 70%, var(--faint) 78%, transparent 78%);
   opacity: 0;
 }
-.dashboard-widget:hover .dashboard-resize { opacity: 0.8; }
+.dashboard-widget:hover .dashboard-resize, .dashboard-widget.moving .dashboard-resize { opacity: 0.8; }
+.dashboard-edge-x, .dashboard-edge-y { position: absolute; }
+.dashboard-edge-x { top: 0; right: 0; bottom: 16px; width: 8px; cursor: ew-resize; }
+.dashboard-edge-y { left: 0; right: 16px; bottom: 0; height: 8px; cursor: ns-resize; }
+.dashboard-edge-x:hover { box-shadow: inset -2px 0 0 var(--accent); }
+.dashboard-edge-y:hover { box-shadow: inset 0 -2px 0 var(--accent); }
 .dash-create-icon.dashboard-kind {
   color: #16a085;
   background: color-mix(in srgb, #16a085 13%, transparent);
@@ -111,24 +128,7 @@
   .dashboard-widget { grid-column: 1 / -1 !important; }
 }
 .dashboard-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 80px 0;
+  padding: 60px 0;
+  text-align: center;
   color: var(--faint);
 }
-.dashboard-empty button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  border-radius: 6px;
-  padding: 6px 12px;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-.dashboard-empty button:hover { background: var(--hover); }

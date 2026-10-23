@@ -224,6 +224,8 @@ export const DEMO_FILES = {
   "Bilan du trimestre.md": PRESENTATION,
   "Lectures.md": READING,
   "Croquis.excalidraw.md": demoDrawing(),
+  "Suivi.dashboard.md":
+    "---\nflownote-dashboard:\n  Objectifs: [0, 0, 4, 9]\n  Budget: [4, 0, 8, 9]\n  Voyages: [0, 9, 12, 10]\n  Idées: [0, 19, 6, 10]\n  Croquis: [6, 19, 6, 10]\n---\n## Objectifs\n\n- Site en ligne avant décembre\n- Deux voyages par an\n\n## Budget\n\n```plotly\ndata:\n  - type: bar\n    x: [Lisbonne, Kyoto, Montréal, Islande]\n    y: [650, 2400, 1300, 1800]\n```\n\n## Voyages\n\n![[Voyages.base]]\n\n## Idées\n\n![[Idées.mindmap.md]]\n\n## Croquis\n\n![[Croquis.excalidraw.md]]\n",
   "Tickets/2 - Mode sombre des graphiques.md": ticket(2, "in-progress", "bug", "Les graphiques Plotly restent clairs en mode sombre.", day(1)),
   "Tickets/3 - Import CSV.md": ticket(3, "closed", "idée", "Importer un fichier CSV dans un graphique."),
   "Tickets/4 - Raccourci de recherche.md": ticket(4, "open", "ux", "⌘P pour chercher une page, comme dans VS Code.", day(6)),

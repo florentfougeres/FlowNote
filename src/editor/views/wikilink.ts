@@ -31,6 +31,25 @@ export function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
         const box = element("div");
         dom.append(box);
         unmount = bridge.current.mountBase(box, resolved);
+      } else if (embed && resolved && /\.(excalidraw|mindmap)\.md$/i.test(resolved) && bridge.current.readNote) {
+        // A drawing or a mind map in the note: drawn read only; the title opens it.
+        dom.className = "embed-note embed-page";
+        const title = element("button", "embed-note-title");
+        title.type = "button";
+        title.textContent = alias ?? noteTitle(resolved);
+        title.title = "Ouvrir (⌘-clic : dans un nouvel onglet)";
+        title.addEventListener("click", (event) => bridge.current.openPath(resolved, event.metaKey || event.ctrlKey));
+        const body = element("div", "embed-note-body");
+        dom.append(title, body);
+        let gone = false;
+        const current = bridge.current;
+        unmount = () => {
+          gone = true;
+        };
+        void import("./noteEmbed").then(({ mountPageEmbed }) => {
+          if (gone) return;
+          unmount = mountPageEmbed(body, resolved, current);
+        });
       } else if (embed && resolved && /\.md$/i.test(resolved) && !/\.(excalidraw|mindmap)\.md$/i.test(resolved) && bridge.current.readNote && (bridge.current.embedDepth ?? 0) < EMBED_DEPTH) {
         // A note in the note: its text (or one section or block), read only; the title opens it.
         dom.className = "embed-note";

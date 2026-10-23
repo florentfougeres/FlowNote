@@ -668,6 +668,14 @@
   padding: 0;
 }
 
+/* An embedded drawing or mind map: read only, at a fixed height. */
+.embed-page-canvas.drawing-pane {
+  height: 320px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
 .embed-note-message {
   margin: 4px 0;
   color: var(--muted);

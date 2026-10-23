@@ -86,7 +86,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Ajout rapide (`⌘⇧L`) avec le titre de la page lu automatiquement, vue dédiée et carte « À lire » sur l'accueil
 
 **Dashboards**
-- `Nom.dashboard.md` : des widgets (texte, graphique Plotly, tâches à faire, notes récentes) à déplacer et redimensionner sur une grille ; chaque widget est une section `## Titre` de la note
+- `Nom.dashboard.md` : des widgets (texte, tableau, graphique Plotly, diagramme Mermaid, mind map, croquis, base) à placer librement et redimensionner sur une grille pleine largeur ; chaque widget est une section `## Titre` de la note
 
 **Tâches**
 - Une liste de tâches (`Todo.md`, cachée de l'explorateur) : échéance, catégorie et tags, au format du plugin Tasks

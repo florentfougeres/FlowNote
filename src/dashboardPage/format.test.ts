@@ -13,8 +13,11 @@ describe("dashboard format", () => {
     expect(board.widgets[0]).toMatchObject({ x: 0, y: 0, w: 4, h: 3 });
     expect(serializeDashboard(board)).toContain("tags: [a]");
   });
-  it("settles overlapping widgets", () => {
-    const w = (y: number) => ({ title: "", body: "", x: 0, y, w: 6, h: 2 });
-    expect(settle([w(0), w(1)], 1).map((x) => x.y)).toEqual([3, 1]);
+  it("pushes down only the widgets in the way", () => {
+    const w = (x: number, y: number) => ({ title: "", body: "", x, y, w: 6, h: 2 });
+    // The second widget is dropped on the first: the first goes below it.
+    expect(settle([w(0, 0), w(0, 1)], 1).map((x) => x.y)).toEqual([3, 1]);
+    // A widget out of the way keeps its place, holes included.
+    expect(settle([w(0, 5), w(6, 9)]).map((x) => x.y)).toEqual([5, 9]);
   });
 });

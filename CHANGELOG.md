@@ -2,6 +2,22 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.19.0] - 2026-10-23
+
+### Ajouté
+- Dashboards : nouveaux widgets tableau, diagramme Mermaid, mind map, croquis Excalidraw et base (existants ou nouveaux).
+- Une mind map ou un croquis intégré dans une note (`![[Idées.mindmap.md]]`) s'affiche, en lecture.
+- Vault de démo : un dashboard « Suivi ».
+
+### Modifié
+- Dashboards : un seul bouton « Ajouter un widget », fixé en haut à droite ; placement libre sur toute la largeur de la page, redimensionnement par le bord droit, le bord bas ou le coin ; seuls les widgets sur le chemin descendent.
+
+### Corrigé
+- Dashboards : la grille rétrécissait à la largeur de son contenu ; les déplacements et redimensionnements ne cumulent plus d'écarts.
+
+### Supprimé
+- Widgets « Tâches à faire » et « Notes récentes ».
+
 ## [0.18.0] - 2026-10-22
 
 ### Ajouté

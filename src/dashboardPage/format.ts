@@ -71,15 +71,21 @@ export function serializeDashboard(board: Dashboard): string {
   return `---\n${doc.toString({ flowCollectionPadding: false }).trimEnd()}\n---\n${[board.preamble, ...sections].join("\n")}`;
 }
 
-/** Pushes widgets down until none overlap; `first` keeps its place. */
-export function settle(widgets: Widget[], first: number): Widget[] {
-  const order = widgets.map((_, i) => i).sort((a, b) => (a === first ? -1 : b === first ? 1 : widgets[a].y - widgets[b].y || widgets[a].x - widgets[b].x));
-  const placed: Widget[] = [];
+const overlaps = (a: Widget, b: Widget) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/**
+ * Pushes widgets down until none overlap, leaving every other one where it is
+ * (holes stay: the page is laid out freely). `fixed` keeps its place (the one
+ * being moved or resized); the others go below what they would cover.
+ */
+export function settle(widgets: Widget[], fixed = -1): Widget[] {
+  const order = widgets.map((_, i) => i).filter((i) => i !== fixed);
+  order.sort((a, b) => widgets[a].y - widgets[b].y || widgets[a].x - widgets[b].x);
+  const placed: Widget[] = fixed >= 0 ? [widgets[fixed]] : [];
   const result = [...widgets];
   for (const i of order) {
     const w = { ...widgets[i] };
-    const hit = () => placed.find((p) => w.x < p.x + p.w && p.x < w.x + w.w && w.y < p.y + p.h && p.y < w.y + w.h);
-    for (let p = hit(); p; p = hit()) w.y = p.y + p.h;
+    for (let hit = placed.find((p) => overlaps(w, p)); hit; hit = placed.find((p) => overlaps(w, p))) w.y = hit.y + hit.h;
     placed.push(w);
     result[i] = w;
   }
