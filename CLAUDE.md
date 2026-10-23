@@ -1,6 +1,6 @@
 # FlowNote
 
-Éditeur façon Notion pour un vault Obsidian. Tauri 2 (Rust) + React + Tiptap 3, TypeScript 7. Livré pour **macOS Apple Silicon uniquement** (le build Linux a été retiré).
+Éditeur façon Notion pour un vault Obsidian. Tauri 2 (Rust) + React + Tiptap 3, TypeScript 7. Livré pour **macOS Apple Silicon** (`.dmg`) et **Ubuntu 26.04** (`.deb`, sans bibliothèques embarquées ; réglages Linux dans `src-tauri/tauri.linux.conf.json`). L'AppImage a été abandonnée : 100 Mo.
 
 ## Règles
 

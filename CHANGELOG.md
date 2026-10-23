@@ -2,6 +2,11 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.19.1] - 2026-10-23
+
+### Ajouté
+- Paquet Linux `.deb` pour Ubuntu 26.04 (x86_64), environ 30 Mo : `sudo apt install ./FlowNote_*_amd64.deb` installe aussi WebKitGTK s'il manque.
+
 ## [0.19.0] - 2026-10-23
 
 ### Ajouté

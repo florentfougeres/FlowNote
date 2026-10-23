@@ -811,7 +811,7 @@ dependencies = [
 
 [[package]]
 name = "flownote"
-version = "0.19.0"
+version = "0.19.1"
 dependencies = [
  "flownote-core",
  "log",

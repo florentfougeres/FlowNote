@@ -1,6 +1,6 @@
 # Publier une version
 
-Pousser un tag `X.Y.Z` (sans `v`) déclenche `.github/workflows/release.yml`. Le workflow lance les tests (`ci.yml`), construit le `.dmg` pour Apple Silicon, puis crée une release GitHub en **brouillon**, dont le texte est la section de la version dans `CHANGELOG.md` (`scripts/release-notes.sh`). Il ne reste plus qu'à la publier.
+Pousser un tag `X.Y.Z` (sans `v`) déclenche `.github/workflows/release.yml`. Le workflow lance les tests (`ci.yml`), construit le `.dmg` pour Apple Silicon, puis le `.deb` pour Ubuntu 26.04 (dans un conteneur `ubuntu:26.04`), et crée une release GitHub en **brouillon**, dont le texte est la section de la version dans `CHANGELOG.md` (`scripts/release-notes.sh`). Il ne reste plus qu'à la publier.
 
 Toutes les commandes se lancent depuis la racine du dépôt.
 

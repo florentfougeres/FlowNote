@@ -1,5 +1,5 @@
-# Builds the macOS .dmg (Apple Silicon) and prepares a draft GitHub release
-# when a version tag is pushed (git tag 0.1.0 && git push origin 0.1.0). The
+# Builds the macOS .dmg (Apple Silicon) and the Linux .deb (Ubuntu 26.04) and
+# prepares a draft GitHub release when a version tag is pushed (git tag 0.1.0 && git push origin 0.1.0). The
 # release's body is the version's section of CHANGELOG.md.
 name: Release
 
@@ -18,6 +18,8 @@ jobs:
   build:
     needs: test
     runs-on: macos-latest # Apple Silicon runner: builds the arm64 app
+    outputs:
+      releaseId: ${{ steps.tauri.outputs.releaseId }}
     env:
       # Bundling Plotly (a 4.8 MB CommonJS file) needs more than Node's default heap.
       NODE_OPTIONS: --max-old-space-size=6144
@@ -44,6 +46,7 @@ jobs:
             echo "EOF_NOTES"
           } >> "$GITHUB_OUTPUT"
       - uses: tauri-apps/tauri-action@v1
+        id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -53,3 +56,41 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: --bundles dmg
+
+  # Linux .deb for Ubuntu 26.04, added to the release created by the macOS job.
+  # Built in an Ubuntu 26.04 container so it links against that release's
+  # WebKitGTK; the package depends on the system's (no bundled libraries).
+  # Window settings and bundle target come from src-tauri/tauri.linux.conf.json.
+  build-linux:
+    needs: build
+    runs-on: ubuntu-latest
+    container: ubuntu:26.04
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - name: Install system libraries
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential ca-certificates curl file git perl unzip pkg-config \
+            libwebkit2gtk-4.1-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev
+      - uses: actions/checkout@v7
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - uses: astral-sh/setup-uv@v7 # builds the Grammalecte companion (scripts/build-grammar.sh)
+        with:
+          version: "0.13.0"
+      - run: npm ci
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ needs.build.outputs.releaseId }}
+          args: --bundles deb

@@ -11,7 +11,7 @@
 
 ---
 
-FlowNote est une application de bureau macOS qui ouvre un dossier de notes Obsidian et permet de les éditer comme dans Notion : blocs, menu `/`, glisser-déposer, tableaux, callouts… Il n'y a ni base de données ni format caché : chaque note reste un fichier `.md` que vous pouvez continuer à ouvrir dans Obsidian, sans plugin.
+FlowNote est une application de bureau pour macOS (et Ubuntu) qui ouvre un dossier de notes Obsidian et permet de les éditer comme dans Notion : blocs, menu `/`, glisser-déposer, tableaux, callouts… Il n'y a ni base de données ni format caché : chaque note reste un fichier `.md` que vous pouvez continuer à ouvrir dans Obsidian, sans plugin.
 
 Autour de l'éditeur : des bases façon Notion (tableau, kanban, galerie, calendrier), des canevas Obsidian, des dessins Excalidraw, des mind maps, des tickets façon GitHub avec un tableau kanban, une liste de lectures, une liste de tâches, des dashboards de widgets, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. FlowNote lit aussi les requêtes des plugins **Dataview** et **Tasks**, les notes intégrées (`![[Note#Section]]`) et les notes de bas de page. Tout reste du texte, lisible dans Obsidian et propre dans Git.
 
@@ -153,6 +153,16 @@ C'est le cœur du projet : **une note que FlowNote n'a pas modifiée est réécr
 
 Configuration requise : Mac Apple Silicon (M1 et suivants), macOS 11 (Big Sur) ou plus récent. Git doit être installé pour utiliser les fonctions Git (`xcode-select --install` ou Homebrew).
 
+### Ubuntu 26.04
+
+Téléchargez `FlowNote_x.y.z_amd64.deb` depuis la page [Releases](https://github.com/florentfougeres/FlowNote/releases), puis :
+
+```sh
+sudo apt install ./FlowNote_*_amd64.deb
+```
+
+apt installe aussi WebKitGTK s'il manque : le paquet n'embarque pas de bibliothèques, d'où sa petite taille. Le `.deb` est construit pour Ubuntu 26.04 (x86_64) ; sur une autre version, il peut demander des bibliothèques absentes.
+
 ## Développement
 
 Prérequis : [Node.js](https://nodejs.org) 20+, [Rust](https://rustup.rs), [uv](https://docs.astral.sh/uv/) et les outils en ligne de commande Xcode.
@@ -206,7 +216,7 @@ Le guide complet est dans [docs/publier-une-version.md](docs/publier-une-version
 1. Ajoutez la version et ses changements en tête de `CHANGELOG.md`.
 2. Mettez à jour la version dans `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `src-tauri/Cargo.lock`.
 3. Commitez, puis poussez un tag : `git tag X.Y.Z && git push origin X.Y.Z` (sans `v`).
-4. Le workflow GitHub Actions lance les tests, construit le `.dmg` et prépare une release en brouillon. Relisez-la, puis publiez-la sur GitHub.
+4. Le workflow GitHub Actions lance les tests, construit le `.dmg` et le `.deb` et prépare une release en brouillon. Relisez-la, puis publiez-la sur GitHub.
 
 ## Licence
 
