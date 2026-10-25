@@ -1,0 +1,93 @@
+/*
+ * Fonts offered in the settings (`data-font` on the root): the system font by
+ * default, Bear Sans UI (copied from Bear.app, offered as "Clarika", the font
+ * it is drawn from), Open Sans or Inter.
+ * The faces load only when a font is chosen.
+ */
+@import "@fontsource/open-sans/400.css";
+@import "@fontsource/open-sans/400-italic.css";
+@import "@fontsource/open-sans/600.css";
+@import "@fontsource/open-sans/600-italic.css";
+@import "@fontsource/open-sans/700.css";
+@import "@fontsource/open-sans/700-italic.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/400-italic.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/600-italic.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/700-italic.css";
+
+@font-face {
+  font-family: "Bear Sans UI";
+  src: url("./fonts/bear/BearSansUI-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Bear Sans UI";
+  src: url("./fonts/bear/BearSansUI-Italic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Bear Sans UI";
+  src: url("./fonts/bear/BearSansUI-Medium.otf") format("opentype");
+  font-weight: 500 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Bear Sans UI";
+  src: url("./fonts/bear/BearSansUI-MediumItalic.otf") format("opentype");
+  font-weight: 500 600;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Bear Sans UI";
+  src: url("./fonts/bear/BearSansUI-Bold.otf") format("opentype");
+  font-weight: 700 900;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Bear Sans UI";
+  src: url("./fonts/bear/BearSansUI-BoldItalic.otf") format("opentype");
+  font-weight: 700 900;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Bear Sans UI Heading";
+  src: url("./fonts/bear/BearSansUIHeading-Regular.otf") format("opentype");
+  font-weight: 400 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Bear Sans UI Heading";
+  src: url("./fonts/bear/BearSansUIHeading-RegularItalic.otf") format("opentype");
+  font-weight: 400 500;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Bear Sans UI Heading";
+  src: url("./fonts/bear/BearSansUIHeading-Bold.otf") format("opentype");
+  font-weight: 600 900;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Bear Sans UI Heading";
+  src: url("./fonts/bear/BearSansUIHeading-BoldItalic.otf") format("opentype");
+  font-weight: 600 900;
+  font-style: italic;
+}
+
+:root[data-font="bear"] {
+  --font-ui: "Bear Sans UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-heading: "Bear Sans UI Heading", "Bear Sans UI", -apple-system, system-ui, sans-serif;
+}
+
+:root[data-font="open-sans"] {
+  --font-ui: "Open Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+:root[data-font="inter"] {
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}

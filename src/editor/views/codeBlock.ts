@@ -2,6 +2,7 @@ import type { NodeViewRenderer } from "@tiptap/core";
 import { element, onThemeChange, updateAttrs } from "./dom";
 import type { BridgeRef } from "../bridge";
 import type { QueryLanguage } from "../../query/render";
+import { filterLanguages, type LanguageItem } from "../codeLanguages";
 
 /**
  * Code blocks with an editable language label. Mermaid blocks also show their
@@ -20,20 +21,72 @@ export const codeBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, e
   language.spellcheck = false;
   language.value = node.attrs.language;
   language.addEventListener("change", () => updateAttrs(editor, getPos, { language: language.value.trim() }));
+  // The matching languages under the field, picked with the arrows and Enter or with a click.
+  const choices = element("div", "code-language-menu");
+  let matches: LanguageItem[] = [];
+  let active = -1;
+  const paintChoices = () => {
+    choices.replaceChildren(
+      ...matches.map((item, i) => {
+        const choice = element("button", i === active ? "active" : undefined);
+        choice.type = "button";
+        choice.textContent = item.language;
+        choice.title = item.description;
+        choice.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          pick(item.language);
+        });
+        return choice;
+      }),
+    );
+    choices.hidden = matches.length === 0;
+  };
+  const closeChoices = () => {
+    matches = [];
+    active = -1;
+    paintChoices();
+  };
+  const pick = (value: string) => {
+    language.value = value;
+    closeChoices();
+    updateAttrs(editor, getPos, { language: value });
+    language.blur();
+    editor.commands.focus();
+  };
+  language.addEventListener("input", () => {
+    const query = language.value.trim();
+    matches = query ? filterLanguages(query) : [];
+    active = matches.length > 0 ? 0 : -1;
+    paintChoices();
+  });
+  language.addEventListener("blur", closeChoices);
   language.addEventListener("keydown", (event) => {
+    if ((event.key === "ArrowDown" || event.key === "ArrowUp") && matches.length > 0) {
+      event.preventDefault();
+      active = (active + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length;
+      paintChoices();
+      return;
+    }
+    if (event.key === "Enter" && active >= 0 && matches[active]) {
+      event.preventDefault();
+      pick(matches[active].language);
+      return;
+    }
     if (event.key === "Enter" || event.key === "Escape") {
       event.preventDefault();
+      closeChoices();
       language.blur();
       editor.commands.focus();
     }
   });
+  closeChoices();
   const visualButton = element("button", "code-action");
   visualButton.type = "button";
   visualButton.textContent = "Éditeur visuel";
   const textButton = element("button", "code-action");
   textButton.type = "button";
   textButton.textContent = "Texte";
-  header.append(language, visualButton, textButton);
+  header.append(language, choices, visualButton, textButton);
   const pre = element("pre");
   const code = element("code");
   pre.append(code);

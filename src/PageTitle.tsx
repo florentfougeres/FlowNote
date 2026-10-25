@@ -29,7 +29,6 @@ export function PageTitle({
   onIcon?: (icon: string | null) => void;
 }) {
   const [value, setValue] = useState(title);
-  const [picker, setPicker] = useState<DOMRect | null>(null);
   useEffect(() => setValue(title), [title]);
 
   const commit = async () => {
@@ -37,24 +36,10 @@ export function PageTitle({
     if (!next || next === title) return setValue(title);
     if (!(await onRename(next))) setValue(title);
   };
-  const canEditIcon = onIcon !== undefined && !readOnly;
-  const openPicker = (event: React.MouseEvent) => setPicker((event.currentTarget as HTMLElement).getBoundingClientRect());
 
   return (
     <div className={icon ? "page-heading has-icon" : "page-heading"}>
-      {icon ? (
-        <button className="page-heading-icon" onClick={canEditIcon ? openPicker : undefined} disabled={!canEditIcon} aria-label="Changer l'icône" title="Changer l'icône">
-          {icon}
-        </button>
-      ) : (
-        canEditIcon && (
-          <div className="page-heading-actions">
-            <button onClick={openPicker}>
-              <Icon name="smile" size={14} /> Ajouter une icône
-            </button>
-          </div>
-        )
-      )}
+      <PageHeadingIcon icon={icon} onIcon={readOnly ? undefined : onIcon} />
       <input
         className="page-title"
         value={value}
@@ -72,8 +57,35 @@ export function PageTitle({
         }}
       />
       {fileName !== undefined && onRenameFile && <FileName name={fileName} onRename={onRenameFile} readOnly={readOnly} />}
-      {picker && onIcon && <IconPicker anchor={picker} current={icon ?? null} onPick={onIcon} onClose={() => setPicker(null)} />}
     </div>
+  );
+}
+
+/**
+ * The page icon above the title (an emoji in the `icon` property) or, on
+ * hover, a button to add one. Without `onIcon` the icon only shows. Shared by
+ * the page and the right side of the split view.
+ */
+export function PageHeadingIcon({ icon, onIcon }: { icon?: string | null; onIcon?: (icon: string | null) => void }) {
+  const [picker, setPicker] = useState<DOMRect | null>(null);
+  const openPicker = (event: React.MouseEvent) => setPicker((event.currentTarget as HTMLElement).getBoundingClientRect());
+  return (
+    <>
+      {icon ? (
+        <button className="page-heading-icon" onClick={onIcon ? openPicker : undefined} disabled={!onIcon} aria-label="Changer l'icône" title="Changer l'icône">
+          {icon}
+        </button>
+      ) : (
+        onIcon && (
+          <div className="page-heading-actions">
+            <button onClick={openPicker}>
+              <Icon name="smile" size={14} /> Ajouter une icône
+            </button>
+          </div>
+        )
+      )}
+      {picker && onIcon && <IconPicker anchor={picker} current={icon ?? null} onPick={onIcon} onClose={() => setPicker(null)} />}
+    </>
   );
 }
 

@@ -1,3 +1,5 @@
+import { highlightColorAt } from "./highlightColors";
+import { isClosingTag, openingTag } from "./inlineHtml";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
@@ -414,9 +416,32 @@ function addMark(marks: PMMark[], mark: PMMark): PMMark[] {
   return marks.some((m) => m.type === mark.type) ? marks : [...marks, mark];
 }
 
+/** Index of the `</tag>` closing the opening tag at `start` among siblings, or -1. */
+function closingIndex(nodes: PhrasingContent[], start: number, tag: string): number {
+  let depth = 0;
+  for (let i = start + 1; i < nodes.length; i++) {
+    const n = nodes[i];
+    if (n.type !== "html") continue;
+    if (openingTag(n.value) === tag) depth++;
+    else if (isClosingTag(n.value, tag) && depth-- === 0) return i;
+  }
+  return -1;
+}
+
 function collectInline(nodes: PhrasingContent[], src: string, marks: PMMark[]): Segment[] {
   const out: Segment[] = [];
-  for (const n of nodes) {
+  for (let index = 0; index < nodes.length; index++) {
+    const n = nodes[index];
+    // `<u>text</u>`: the text with an inlineHtml mark, when it has something between its tags.
+    const tag = n.type === "html" ? openingTag(n.value) : null;
+    const end = tag ? closingIndex(nodes, index, tag) : -1;
+    if (tag && end > index + 1) {
+      const open = src.slice(...span(n));
+      const sameTag = marks.some((m) => m.type === "inlineHtml" && m.attrs?.tag === tag);
+      out.push(...collectInline(nodes.slice(index + 1, end), src, sameTag ? marks : [...marks, { type: "inlineHtml", attrs: { tag, open } }]));
+      index = end;
+      continue;
+    }
     // GFM finds URLs that its tokenizer missed (`[https://…]`) by splitting text
     // nodes after parsing: those pieces (text and literal links) have no position.
     const positionless = !n.position && (n.type === "text" || n.type === "link");
@@ -506,7 +531,7 @@ function expandObsidianTokens(segment: Segment): Segment[] {
   return out;
 }
 
-const HIGHLIGHT: PMMark = { type: "highlight" };
+const HIGHLIGHT: PMMark = { type: "highlight", attrs: { color: null } };
 
 function edgeChar(segments: Segment[], index: number, direction: -1 | 1): string | undefined {
   const neighbour = segments[index + direction];
@@ -521,14 +546,16 @@ function applyHighlights(segments: Segment[]): Segment[] {
   if (!segments.some((s) => isLiteral(s) && s.text!.includes("=="))) return segments;
   const out: Segment[] = [];
   let open = false;
+  // The mark of the open highlight, with its colour when `==` is followed by a colour emoji.
+  let mark = HIGHLIGHT;
   const emit = (segment: Segment, text: string, highlighted: boolean) => {
     if (!text) return;
     const piece = { ...segment, text };
-    out.push(highlighted ? withMarks(piece, [...(segment.marks ?? []), HIGHLIGHT]) : piece);
+    out.push(highlighted ? withMarks(piece, [...(segment.marks ?? []), mark]) : piece);
   };
   segments.forEach((segment, index) => {
     if (!isLiteral(segment)) {
-      out.push(open && segment.type !== "hardBreak" ? withMarks(segment, [...(segment.marks ?? []), HIGHLIGHT]) : segment);
+      out.push(open && segment.type !== "hardBreak" ? withMarks(segment, [...(segment.marks ?? []), mark]) : segment);
       return;
     }
     const text = segment.text!;
@@ -544,6 +571,9 @@ function applyHighlights(segments: Segment[]): Segment[] {
       emit(segment, text.slice(last, at), open);
       open = !open;
       last = at + 2;
+      const color = open ? highlightColorAt(text.slice(last)) : undefined;
+      mark = color ? { type: "highlight", attrs: { color: color.color } } : HIGHLIGHT;
+      if (color) last += color.emoji.length;
     }
     emit(segment, text.slice(last), open);
   });

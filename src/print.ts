@@ -58,11 +58,25 @@ async function print(title: string) {
   }
 }
 
-/** Prints the open note as shown on screen (the one on the right of the split view with `side`). */
+/**
+ * Prints the open note (the one on the right of the split view with `side`).
+ * A copy of the page goes in the sheet container, alone on paper: printed in
+ * the app's layout, WebKit left a blank space on the first sheet and cut the
+ * end of long notes. The copy has no spelling underlines (the print style
+ * sheet hides Grammalecte's, the system checker is off in it).
+ */
 export async function printNote(title: string, side: "left" | "right" = "left") {
-  sheetRoot().replaceChildren();
-  document.documentElement.dataset.print = side === "right" ? "note-right" : "note";
+  const root = sheetRoot();
+  const page = document.querySelector<HTMLElement>(side === "right" ? ".split-pane .page" : ".content .panes > .page");
+  if (!page) return;
+  const copy = page.cloneNode(true) as HTMLElement;
+  for (const editable of copy.querySelectorAll<HTMLElement>("[contenteditable]")) editable.contentEditable = "false";
+  for (const element of copy.querySelectorAll<HTMLElement>("[spellcheck]")) element.spellcheck = false;
+  root.className = "print-note";
+  root.replaceChildren(copy);
+  document.documentElement.dataset.print = "note";
   setPageRule("@page { size: A4; margin: 16mm 18mm; }");
+  await imagesLoaded(root);
   await print(title);
 }
 

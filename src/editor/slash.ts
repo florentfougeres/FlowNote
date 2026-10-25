@@ -5,6 +5,7 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";
 import { insertRawBlock, turnInto, type BlockKind } from "./blocks";
 import { PLOT_TEMPLATE } from "./plotModel";
+import { tableSizePicker } from "./TableSizePicker";
 import type { BridgeRef, VaultBridge } from "./bridge";
 import { menuRenderer, MenuStore, normalizeText, type MenuItem } from "./menu";
 import { linkTextFor, sanitizeName, subpageFolder, uniquePath } from "../vault/links";
@@ -156,7 +157,17 @@ const SLASH_ITEMS: SlashItem[] = [
     description: "Tableau Markdown",
     icon: "▦",
     keywords: ["tableau", "table"],
-    run: (editor, range) => editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+    // Its size is chosen first, like in MarkText (TableSizePicker.tsx).
+    run: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      const coords = editor.view.coordsAtPos(editor.state.selection.from);
+      tableSizePicker.open({
+        x: coords.left,
+        y: coords.bottom + 6,
+        onPick: (rows, cols) => editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run(),
+        onCancel: () => editor.commands.focus(),
+      });
+    },
   },
   {
     key: "math",
@@ -209,7 +220,7 @@ const SLASH_ITEMS: SlashItem[] = [
 ];
 
 /** Inserts a footnote: its call `[^n]` at the cursor, its text at the end of the note (double-click to write it). */
-function insertFootnote(editor: Editor, range: Range) {
+export function insertFootnote(editor: Editor, range: Range) {
   const used = new Set<string>();
   editor.state.doc.descendants((node) => {
     const label = /^\[\^([^\]]+)\]/.exec(String(node.attrs.source ?? ""))?.[1];
@@ -275,6 +286,9 @@ export function filterSlashItems(query: string, items: SlashItem[] = SLASH_ITEMS
   return scored.sort((a, b) => b.match - a.match || b.recent - a.recent || a.order - b.order).map((s) => s.item);
 }
 
+/** Icons per row of the block menu shown as a grid (setting "Menu des blocs", editor-extras.css). */
+export const BLOCK_GRID_COLUMNS = 6;
+
 /** The slash menu store is a generic menu store holding slash items. */
 export class SlashMenuStore extends MenuStore<SlashItem> {}
 
@@ -308,11 +322,25 @@ function freshSlashPlugin(): Plugin<number | null> {
   });
 }
 
+/**
+ * `/` inserted by the block handle's + button, with the document right after:
+ * closing the menu before anything else changed removes it again.
+ */
+const handleSlashes = new WeakMap<Editor, { pos: number; doc: unknown }>();
+
 /** Inserts `/` at the cursor and opens the menu (used by the block handle's + button). */
 export function openSlashMenu(editor: Editor) {
   const { from, to } = editor.state.selection;
   editor.view.dispatch(editor.state.tr.insertText("/", from, to).setMeta(freshSlashKey, from));
+  handleSlashes.set(editor, { pos: from, doc: editor.state.doc });
   editor.view.focus();
+}
+
+function dropHandleSlash(editor: Editor) {
+  const slash = handleSlashes.get(editor);
+  handleSlashes.delete(editor);
+  // Deferred: the menu closes while the editor view is updating.
+  if (slash) setTimeout(() => !editor.isDestroyed && editor.state.doc === slash.doc && editor.view.dispatch(editor.state.tr.delete(slash.pos, slash.pos + 1)));
 }
 
 export const SlashCommand = Extension.create<{ store: SlashMenuStore; bridge: BridgeRef }>({
@@ -324,10 +352,17 @@ export const SlashCommand = Extension.create<{ store: SlashMenuStore; bridge: Br
     return { store: new SlashMenuStore(), bridge: { current: undefined as unknown as VaultBridge } };
   },
 
+  // Leaving the note closes the menu: the + button's `/` goes away with it.
+  onBlur() {
+    if (freshSlashKey.getState(this.editor.state) !== null) this.editor.view.dispatch(this.editor.state.tr.setMeta(freshSlashKey, null));
+  },
+
   addProseMirrorPlugins() {
     const { editor } = this;
     const { store, bridge } = this.options;
     const close = () => editor.view.dispatch(editor.state.tr.setMeta(freshSlashKey, null));
+    const columns = () => (document.documentElement.dataset.blockMenu === "grid" ? BLOCK_GRID_COLUMNS : 1);
+    const render = menuRenderer<SlashItem>({ store, heading: "Blocs", close, closeAfterMisses: 3, columns });
 
     return [
       freshSlashPlugin(),
@@ -338,10 +373,20 @@ export const SlashCommand = Extension.create<{ store: SlashMenuStore; bridge: Br
         allow: ({ state, range }) => freshSlashKey.getState(state) === range.from,
         items: ({ query }) => filterSlashItems(query, SLASH_ITEMS, loadFrecency()),
         command: ({ editor, range, props }) => {
+          handleSlashes.delete(editor);
           recordUse(props.key);
           props.run(editor, range, bridge.current);
         },
-        render: menuRenderer({ store, heading: "Blocs", close, closeAfterMisses: 3 }),
+        render: () => {
+          const renderer = render!();
+          return {
+            ...renderer,
+            onExit: (props) => {
+              renderer.onExit?.(props);
+              dropHandleSlash(editor);
+            },
+          };
+        },
       }),
     ];
   },

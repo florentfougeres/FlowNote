@@ -3,6 +3,7 @@ import type { Node as PMNode } from "@tiptap/pm/model";
 import { type BridgeRef, isImage } from "../bridge";
 import { basename, noteTitle, resolveLink } from "../../vault/links";
 import { element } from "./dom";
+import { rememberImage } from "../imageCopies";
 
 /** Notes embedded inside embedded notes stop at this depth (a note embedding itself). */
 const EMBED_DEPTH = 3;
@@ -82,6 +83,7 @@ export function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
           if (size[2]) img.height = Number(size[2]);
         }
         void bridge.current.loadImage(resolved).then((url) => (img.src = url));
+        rememberImage(`embed:${target}`, img);
         dom.append(img);
       } else if (embed) {
         dom.className = resolved ? "embed-card" : "embed-card unresolved";

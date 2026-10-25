@@ -6,6 +6,10 @@ import { keys } from "./keys";
 export type Theme = "system" | "light" | "dark";
 /** Grammalecte (desktop app), the system's spell checker, or none. */
 export type SpellChecker = "grammalecte" | "system" | "off";
+/** Font of the whole app: the system's, Bear Sans UI (shown as "Clarika", the font it comes from), Open Sans or Inter. */
+export type AppFont = "system" | "bear" | "open-sans" | "inter";
+/** The menu of the + button and of `/`: a list with descriptions, or a grid of icons (like MarkText). */
+export type BlockMenuStyle = "list" | "grid";
 
 export interface Settings {
   autosave: boolean;
@@ -25,6 +29,8 @@ export interface Settings {
   showTitles: boolean;
   /** Bars in the margin beside the blocks changed since the last commit. */
   gitGutter: boolean;
+  font: AppFont;
+  blockMenu: BlockMenuStyle;
 }
 
 const AUTOSAVE_KEY = "flownote:autosave";
@@ -37,6 +43,20 @@ const TITLES_KEY = "flownote:fetch-titles";
 const SCALE_KEY = "flownote:ui-scale";
 const SHOW_TITLES_KEY = "flownote:show-titles";
 const GIT_GUTTER_KEY = "flownote:git-gutter";
+const FONT_KEY = "flownote:font";
+const BLOCK_MENU_KEY = "flownote:block-menu";
+
+const FONTS: [AppFont, string][] = [
+  ["system", "Système"],
+  ["bear", "Clarika"],
+  ["open-sans", "Open Sans"],
+  ["inter", "Inter"],
+];
+
+const BLOCK_MENUS: [BlockMenuStyle, string][] = [
+  ["list", "Liste"],
+  ["grid", "Grille"],
+];
 
 /** Sizes offered for the interface: text, buttons and spacing grow together. */
 const UI_SCALES: [number, string][] = [
@@ -83,9 +103,11 @@ export function loadSettings(): Settings {
       uiScale: readScale(),
       showTitles: localStorage.getItem(SHOW_TITLES_KEY) !== "false",
       gitGutter: localStorage.getItem(GIT_GUTTER_KEY) === "true",
+      font: FONTS.find(([value]) => value === localStorage.getItem(FONT_KEY))?.[0] ?? "system",
+      blockMenu: localStorage.getItem(BLOCK_MENU_KEY) === "grid" ? "grid" : "list",
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true, gitGutter: false };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true, gitGutter: false, font: "system", blockMenu: "list" };
   }
 }
 
@@ -101,6 +123,8 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(SCALE_KEY, String(settings.uiScale));
     localStorage.setItem(SHOW_TITLES_KEY, String(settings.showTitles));
     localStorage.setItem(GIT_GUTTER_KEY, String(settings.gitGutter));
+    localStorage.setItem(FONT_KEY, settings.font);
+    localStorage.setItem(BLOCK_MENU_KEY, settings.blockMenu);
   } catch {
     // Settings simply won't persist.
   }
@@ -135,6 +159,14 @@ export function applyScale(scale: number, desktop = false) {
     return;
   }
   document.documentElement.style.zoom = scale === 1 ? "" : String(scale);
+}
+
+/** Font and block menu style, as attributes of the root read by the styles (fonts.css, editor-extras.css). */
+export function applyLook(font: AppFont, blockMenu: BlockMenuStyle) {
+  const root = document.documentElement;
+  if (font === "system") delete root.dataset.font;
+  else root.dataset.font = font;
+  root.dataset.blockMenu = blockMenu;
 }
 
 const SPELL_HELP: Record<SpellChecker, string> = {
@@ -260,6 +292,15 @@ export function SettingsPage({
                 ))}
               </div>
             </Row>
+            <Row label="Police" help="La police de toute l'app : celle du système, Clarika (douce et arrondie), Open Sans ou Inter.">
+              <div className="segmented" role="radiogroup" aria-label="Police">
+                {FONTS.map(([value, label]) => (
+                  <button key={value} role="radio" aria-checked={settings.font === value} className={settings.font === value ? "selected" : ""} onClick={() => onChange({ ...settings, font: value })}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </Row>
             <Row label="Enregistrement automatique" help={keys("Sinon, enregistrez avec ⌘S. Les modifications en attente sont enregistrées avant de changer de page.")}>
               <Switch checked={settings.autosave} label="Enregistrement automatique" onChange={(autosave) => onChange({ ...settings, autosave })} />
             </Row>
@@ -271,6 +312,15 @@ export function SettingsPage({
               <div className="segmented" role="radiogroup" aria-label="Correcteur">
                 {spellCheckers.map(([value, label]) => (
                   <button key={value} role="radio" aria-checked={current === value} className={current === value ? "selected" : ""} onClick={() => onChange({ ...settings, spellChecker: value })}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </Row>
+            <Row label="Menu des blocs" help="Le menu du bouton + et de /, en liste avec les descriptions ou en grille d'icônes, plus compacte.">
+              <div className="segmented" role="radiogroup" aria-label="Menu des blocs">
+                {BLOCK_MENUS.map(([value, label]) => (
+                  <button key={value} role="radio" aria-checked={settings.blockMenu === value} className={settings.blockMenu === value ? "selected" : ""} onClick={() => onChange({ ...settings, blockMenu: value })}>
                     {label}
                   </button>
                 ))}

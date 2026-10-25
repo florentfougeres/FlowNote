@@ -56,7 +56,8 @@ describe("link text", () => {
 describe("locations", () => {
   it("attachments follow the Obsidian setting", () => {
     const note = "Projets/Mon Notion.md";
-    expect(attachmentFolder(note, DEFAULT_CONFIG)).toBe("");
+    expect(attachmentFolder(note, DEFAULT_CONFIG)).toBe("Projets/attachments");
+    expect(attachmentFolder("Racine.md", DEFAULT_CONFIG)).toBe("attachments");
     expect(attachmentFolder(note, { ...DEFAULT_CONFIG, attachmentFolderPath: "./" })).toBe("Projets");
     expect(attachmentFolder(note, { ...DEFAULT_CONFIG, attachmentFolderPath: "./assets" })).toBe("Projets/assets");
     expect(attachmentFolder(note, { ...DEFAULT_CONFIG, attachmentFolderPath: "Pièces jointes" })).toBe("Pièces jointes");

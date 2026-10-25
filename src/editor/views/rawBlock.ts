@@ -1,18 +1,37 @@
 import type { NodeViewRenderer } from "@tiptap/core";
+import type { BridgeRef } from "../bridge";
+import { sanitizeHtml } from "../html";
 import { element, updateAttrs } from "./dom";
+import { showImage } from "./image";
+
+/** HTML with something to see once rendered (not a comment, not empty tags). */
+function rendersSomething(fragment: DocumentFragment): boolean {
+  return (fragment.textContent ?? "").trim() !== "" || fragment.querySelector("img, hr, table, svg, video, audio, details") !== null;
+}
 
 /**
  * Markdown kept verbatim (tables, HTML, math...): double-click to edit its
  * source. A footnote's text (`[^1]: text`) shows as a footnote: its number,
- * then its text.
+ * then its text. HTML shows rendered (sanitized, html.ts), its images read
+ * from the vault.
  */
-export const rawBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
+export const rawBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, editor, getPos }) => {
   const dom = element("div", "raw-block");
   dom.dataset.kind = node.attrs.kind;
   const footnote = node.attrs.kind === "footnoteDefinition";
-  const pre = element(footnote ? "div" : "pre", footnote ? "footnote-def" : undefined);
+  const html = node.attrs.kind === "html";
+  const pre = element(footnote || html ? "div" : "pre", footnote ? "footnote-def" : html ? "html-block" : undefined);
   let source = node.attrs.source as string;
   const paint = () => {
+    if (html) {
+      const fragment = sanitizeHtml(source);
+      const shown = rendersSomething(fragment);
+      pre.classList.toggle("source", !shown);
+      if (!shown) return void (pre.textContent = source);
+      for (const img of fragment.querySelectorAll("img")) showImage(img, img.getAttribute("src") ?? "", bridge);
+      pre.replaceChildren(fragment);
+      return;
+    }
     const match = footnote ? /^\[\^([^\]]+)\]:[ \t]*([\s\S]*)$/.exec(source) : null;
     if (!match) {
       pre.textContent = source;
@@ -52,7 +71,7 @@ export const rawBlockView: NodeViewRenderer = ({ node, editor, getPos }) => {
     textarea.focus();
   });
   dom.append(pre);
-  dom.title = "Double-cliquez pour modifier le Markdown";
+  dom.title = html ? "Double-cliquez pour modifier le HTML" : "Double-cliquez pour modifier le Markdown";
   return {
     dom,
     update: (n) => {

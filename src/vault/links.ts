@@ -99,10 +99,14 @@ export function linkTextFor(path: string, files: string[]): string {
   return isNote ? path.replace(/\.md$/i, "") : path;
 }
 
-/** Folder receiving new attachments for the note at `notePath`. */
+/**
+ * Folder receiving new attachments for the note at `notePath`. Obsidian's
+ * default (the vault root) would pile every image there: FlowNote uses an
+ * `attachments` folder next to the note instead.
+ */
 export function attachmentFolder(notePath: string, config: ObsidianConfig): string {
   const setting = config.attachmentFolderPath.trim();
-  if (setting === "" || setting === "/") return "";
+  if (setting === "" || setting === "/") return join(dirname(notePath), "attachments");
   if (setting === "./" || setting === ".") return dirname(notePath);
   if (setting.startsWith("./")) return join(dirname(notePath), setting.slice(2));
   return setting.replace(/^\/+|\/+$/g, "");

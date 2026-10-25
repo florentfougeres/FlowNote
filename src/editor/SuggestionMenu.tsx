@@ -4,8 +4,8 @@ import type { MenuItem, MenuStore } from "./menu";
 
 const MENU_MAX_HEIGHT = 340;
 
-/** Floating menu for a suggestion store (slash commands, links). */
-export function SuggestionMenu<T extends MenuItem>({ store }: { store: MenuStore<T> }) {
+/** Floating menu for a suggestion store (slash commands, links). `blocks`: the block menu, shown as a grid with that setting. */
+export function SuggestionMenu<T extends MenuItem>({ store, blocks = false }: { store: MenuStore<T>; blocks?: boolean }) {
   const state = useSyncExternalStore(
     (listener) => {
       const unsubscribe = store.subscribe(listener);
@@ -25,7 +25,7 @@ export function SuggestionMenu<T extends MenuItem>({ store }: { store: MenuStore
   const style = below ? { left: rect.left, top: rect.bottom + 6 } : { left: rect.left, bottom: window.innerHeight - rect.top + 6 };
 
   return createPortal(
-    <div className="slash-menu" style={{ ...style, maxHeight: MENU_MAX_HEIGHT }} ref={list} role="listbox">
+    <div className={blocks ? "slash-menu blocks" : "slash-menu"} style={{ ...style, maxHeight: MENU_MAX_HEIGHT }} ref={list} role="listbox" onMouseDown={(event) => event.preventDefault()}>
       <div className="slash-menu-title">{state.heading}</div>
       {state.items.map((item, i) => (
         <button
@@ -33,6 +33,7 @@ export function SuggestionMenu<T extends MenuItem>({ store }: { store: MenuStore
           className={i === state.index ? "slash-item active" : "slash-item"}
           role="option"
           aria-selected={i === state.index}
+          title={blocks ? item.title : undefined}
           onMouseEnter={() => store.set({ ...state, index: i })}
           onMouseDown={(event) => {
             event.preventDefault();

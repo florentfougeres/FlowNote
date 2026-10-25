@@ -187,6 +187,15 @@ FROM #projet
 WHERE !completed
 \`\`\`
 
+## Fluo et HTML
+
+Du fluo ==jaune==, ==🟢vert== ou ==🔵bleu== (comme Bear), du texte <u>souligné</u> et du <span style="color: #d9480f">HTML en ligne</span>.
+
+<div style="padding: 12px 16px; border-radius: 10px; background: rgba(0, 122, 255, 0.08)">
+  <strong>Un bloc HTML</strong>, mis en page comme dans MarkText ou HedgeDoc.
+  <details><summary>Cliquez pour déplier</summary>Le HTML est affiché sans ses scripts.</details>
+</div>
+
 [^1]: Écrites \`[^1]\` dans le texte et \`[^1]: …\` en bas de la note.
 [^2]: Le menu \`/\` en ajoute une : « Note de bas de page ».
 `;

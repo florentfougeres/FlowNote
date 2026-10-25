@@ -1,6 +1,12 @@
 import type { NodeViewRenderer } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
+import type { BridgeRef } from "../bridge";
+import { sanitizeHtml } from "../html";
 import { element } from "./dom";
+import { showImage } from "./image";
+
+/** Inline HTML elements shown rendered on their own (`<br>`, `<img src="…">`); other tags stay as written. */
+const VOID_HTML = /^<(br|img|wbr)\b[^<>]*>$/i;
 
 /** The text of the footnote labelled `label` in the note, from its definition `[^label]: text`. */
 export function footnoteText(doc: PMNode, label: string): string | null {
@@ -19,7 +25,14 @@ export function footnoteText(doc: PMNode, label: string): string | null {
  * call `[^1]` shows as a superscript number: its text on hover, a click
  * scrolls to it.
  */
-export const inlineRawView: NodeViewRenderer = ({ node, editor }) => {
+export const inlineRawView = (bridge: BridgeRef): NodeViewRenderer => ({ node, editor }) => {
+  if (node.attrs.kind === "html" && VOID_HTML.test(node.attrs.source)) {
+    const dom = element("span", "inline-html-void");
+    const fragment = sanitizeHtml(node.attrs.source);
+    for (const img of fragment.querySelectorAll("img")) showImage(img, img.getAttribute("src") ?? "", bridge);
+    dom.append(fragment);
+    return { dom, update: (n) => n.type === node.type && n.attrs.source === node.attrs.source };
+  }
   const label = node.attrs.kind === "footnoteReference" ? (/^\[\^([^\]]+)\]$/.exec(node.attrs.source)?.[1] ?? null) : null;
   if (label === null) {
     const dom = element("span", "inline-raw");

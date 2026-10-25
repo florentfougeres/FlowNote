@@ -63,10 +63,12 @@ interface RendererOptions<T extends MenuItem> {
   close: (range: Range) => void;
   /** Closes the menu after this many letters typed without any result. */
   closeAfterMisses?: number;
+  /** Items per row when the menu is a grid (arrows then move in two directions). */
+  columns?: () => number;
 }
 
 /** Suggestion renderer feeding a MenuStore, with keyboard navigation. */
-export function menuRenderer<T extends MenuItem>({ store, heading, close, closeAfterMisses }: RendererOptions<T>): SuggestionOptions<T, T>["render"] {
+export function menuRenderer<T extends MenuItem>({ store, heading, close, closeAfterMisses, columns = () => 1 }: RendererOptions<T>): SuggestionOptions<T, T>["render"] {
   return () => {
     let command: ((item: T) => void) | null = null;
     let lengthAtLastResult = 0;
@@ -91,9 +93,12 @@ export function menuRenderer<T extends MenuItem>({ store, heading, close, closeA
           return true;
         }
         if (!state || state.items.length === 0) return false;
-        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-          const delta = event.key === "ArrowDown" ? 1 : -1;
-          store.set({ ...state, index: (state.index + delta + state.items.length) % state.items.length });
+        const perRow = columns();
+        const steps: Record<string, number> = perRow > 1 ? { ArrowDown: perRow, ArrowUp: -perRow, ArrowRight: 1, ArrowLeft: -1 } : { ArrowDown: 1, ArrowUp: -1 };
+        const delta = steps[event.key];
+        if (delta !== undefined) {
+          const count = state.items.length;
+          store.set({ ...state, index: Math.abs(delta) > 1 ? Math.min(Math.max(state.index + delta, 0), count - 1) : (state.index + delta + count) % count });
           return true;
         }
         if (event.key === "Enter" || event.key === "Tab") {

@@ -19,8 +19,8 @@ export function createNodeViews(bridge: BridgeRef): Record<string, NodeViewRende
     listItem: listItemView,
     callout: calloutView,
     codeBlock: codeBlockView(bridge),
-    rawBlock: rawBlockView,
-    inlineRaw: inlineRawView,
+    rawBlock: rawBlockView(bridge),
+    inlineRaw: inlineRawView(bridge),
     wikilink: wikilinkView(bridge),
     image: imageView(bridge),
   };

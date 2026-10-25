@@ -1,3 +1,4 @@
+import { highlightEmoji } from "./highlightColors";
 import type { PMJSON, PMMark } from "./types";
 
 /**
@@ -233,7 +234,7 @@ function serializeTable(n: PMJSON, v: Variant): string {
 // ---------------------------------------------------------------------------
 // Inline
 
-const MARK_ORDER: Record<string, number> = { link: 0, bold: 1, italic: 2, strike: 3, highlight: 4 };
+const MARK_ORDER: Record<string, number> = { link: 0, bold: 1, italic: 2, strike: 3, highlight: 4, inlineHtml: 5 };
 const DELIMITED = new Set(["bold", "italic", "strike", "highlight"]);
 
 function sortedMarks(n: PMJSON): PMMark[] {
@@ -345,7 +346,9 @@ function opening(mark: PMMark, form: LinkForm, v: Variant): string {
     case "strike":
       return "~~";
     case "highlight":
-      return "==";
+      return `==${highlightEmoji(attr(mark, "color", null))}`;
+    case "inlineHtml":
+      return attr(mark, "open", "");
     case "link":
       return form === "inline" ? "[" : form === "autolink" ? "<" : "";
     default:
@@ -362,6 +365,10 @@ function closing({ mark, form, delimiter }: OpenMark): string {
       const titlePart = title === null ? "" : ` "${title.replace(/"/g, '\\"')}"`;
       return `](${destination(attr(mark, "href", ""))}${titlePart})`;
     }
+    case "highlight":
+      return "==";
+    case "inlineHtml":
+      return `</${attr(mark, "tag", "span")}>`;
     default:
       // Emphasis-like delimiters close with exactly what opened them.
       return delimiter;

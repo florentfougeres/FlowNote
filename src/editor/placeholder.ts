@@ -13,7 +13,7 @@ export function placeholderPlugin(): Plugin {
         const inCell = $from.depth > 0 && ["cell", "header_cell"].includes($from.node(-1).type.spec.tableRole);
         if (empty && parent.isTextblock && parent.content.size === 0 && !inCell) {
           let text: string | null = null;
-          if (parent.type.name === "paragraph") text = "Écrivez, ou tapez # - [] > ``` pour formater…";
+          if (parent.type.name === "paragraph") text = "Tapez / pour insérer…";
           else if (parent.type.name === "heading") text = HEADING_PLACEHOLDERS[parent.attrs.level - 1];
           if (text) decorations.push(Decoration.node($from.before(), $from.after(), { class: "is-empty", "data-placeholder": text }));
         }

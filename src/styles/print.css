@@ -33,18 +33,17 @@
     print-color-adjust: exact;
   }
 
-  /* A note: the page alone, running over as many sheets as needed. */
-  html[data-print^="note"] .titlebar,
-  html[data-print^="note"] .sidebar-dock,
-  html[data-print^="note"] .sidebar-hotzone,
-  html[data-print^="note"] .toolbar,
-  html[data-print^="note"] .status-pill-anchor,
-  html[data-print^="note"] .find-bar-anchor,
-  html[data-print^="note"] .outline-panel,
-  html[data-print^="note"] .history-panel,
-  html[data-print^="note"] .side-column,
-  html[data-print^="note"] .git-drawer,
-  html[data-print^="note"] .conflict-note-banner,
+  /* A note: a copy of its page in the sheet container (print.ts), alone, over as many sheets as needed. */
+  html[data-print="note"] body > *:not(#print-root) {
+    display: none !important;
+  }
+
+  html[data-print="note"] #print-root {
+    position: static;
+    left: auto;
+    width: auto;
+  }
+
   html[data-print^="note"] .backlinks,
   html[data-print^="note"] .block-handle,
   html[data-print^="note"] .table-handles,
@@ -56,22 +55,14 @@
   html[data-print^="note"] .code-header,
   html[data-print^="note"] .plot-editor-host,
   html[data-print^="note"] .ProseMirror-gapcursor,
-  html[data-print^="note"] #print-root {
+  html[data-print^="note"] .heading-level,
+  html[data-print^="note"] .highlight-pencil {
     display: none !important;
   }
 
-  html[data-print^="note"] body,
-  html[data-print^="note"] #root,
-  html[data-print^="note"] .layout,
-  html[data-print^="note"] .workspace,
-  html[data-print^="note"] .content,
-  html[data-print^="note"] .panes,
   html[data-print^="note"] .page {
     display: block !important;
-    position: static !important;
-    width: auto !important;
     height: auto !important;
-    min-height: 0 !important;
     overflow: visible !important;
     background: #ffffff !important;
   }
@@ -94,6 +85,25 @@
 
   html[data-print^="note"] .note {
     padding-bottom: 0 !important;
+  }
+
+  /* Grammalecte's underlines stay on screen. */
+  html[data-print^="note"] .note .gc-error {
+    background: none !important;
+    text-decoration: none !important;
+    border-bottom: none !important;
+  }
+
+  html[data-print^="note"] .note-editor,
+  html[data-print^="note"] .note-editor > div {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* The room kept above the title for an icon is not printed. */
+  html[data-print^="note"] .page-heading {
+    margin-top: 0 !important;
   }
 
   html[data-print^="note"] .property-value::-webkit-calendar-picker-indicator {
@@ -150,28 +160,5 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
-  }
-}
-
-/* The page on the right of the split view, printed alone. */
-@media print {
-  html[data-print="note-right"] .main-area > .content,
-  html[data-print="note-right"] .split-resizer,
-  html[data-print="note-right"] .split-pane-bar,
-  html[data-print="note-right"] .split-outline,
-  html[data-print="note-right"] .slides-panel {
-    display: none !important;
-  }
-
-  html[data-print="note-right"] .split-host {
-    display: flex !important;
-    flex-basis: 100% !important;
-  }
-
-  html[data-print="note-right"] .split-pane-main,
-  html[data-print="note-right"] .split-pane-body {
-    display: block;
-    overflow: visible !important;
-    height: auto !important;
   }
 }

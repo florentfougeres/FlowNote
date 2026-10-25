@@ -1,23 +1,38 @@
 /* ---- Tables ---- */
 
+/* Like Bear's: rounded, light lines, a pale grey header row. */
 .note table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin: 8px 0;
   min-width: 50%;
   font-size: 0.95em;
+  border: 1px solid var(--table-line);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .note th,
 .note td {
-  border: 0.5px solid color-mix(in srgb, var(--text) 18%, transparent);
-  padding: 6px 10px;
+  border: none;
+  border-right: 1px solid var(--table-line);
+  border-bottom: 1px solid var(--table-line);
+  padding: 7px 14px;
   vertical-align: top;
   min-width: 60px;
   position: relative;
 }
 
+.note tr > :last-child {
+  border-right: none;
+}
+
+.note tr:last-child > * {
+  border-bottom: none;
+}
+
 .note th {
-  background: var(--sidebar);
+  background: var(--table-header);
   font-weight: 600;
   text-align: left;
 }

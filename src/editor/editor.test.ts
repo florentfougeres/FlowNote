@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { tableSizePicker } from "./TableSizePicker";
 import { afterEach, describe, expect, it } from "vitest";
 import { cursorAtStartOf, destroyEditors, openEditor as open, press, type } from "./testUtils";
 
@@ -163,6 +164,8 @@ describe("tables", () => {
     type(editor, "/tableau");
     await tick();
     press(editor, "Enter");
+    // Its size is chosen in the picker (TableSizePicker.tsx): 3 rows, 3 columns.
+    tableSizePicker.state!.onPick(3, 3);
     type(editor, "Nom");
     press(editor, "Tab");
     type(editor, "Rôle");

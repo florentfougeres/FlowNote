@@ -23,7 +23,7 @@ import { HistoryPanel } from "./HistoryPanel";
 import { PageIcon, PopoverMenu, type MenuItem } from "./Sidebar";
 import { ToolButton, ToolGroup } from "./Toolbar";
 import type { FrontmatterControl } from "./editor/NoteEditor";
-import { copyNoteAsHtml } from "./editor/copyHtml";
+import { exportNoteHtml } from "./editor/copyHtml";
 import { DRAWING_TOOLS } from "./drawing/tools";
 import type { DrawingControls } from "./drawing/DrawingEditor";
 import type { MindmapControls } from "./mindmap/MindmapCanvas";
@@ -32,6 +32,8 @@ import { slideAt, useSlides } from "./presentation/useSlides";
 import { SlidesPanel } from "./presentation/SlidesPanel";
 import { Presenter } from "./presentation/Presenter";
 import { setProperty } from "./markdown/frontmatter";
+import { noteIcon } from "./vault/icon";
+import { PageHeadingIcon } from "./PageTitle";
 import { exportMindmapPng, exportPdf, exportSlidesHtml, type ExportedPage } from "./pageExport";
 import type { GitApi } from "./vault/git";
 import { useGitBase } from "./hooks/useGitBase";
@@ -230,6 +232,12 @@ export const SplitPane = memo(function SplitPane({
   /** The note's first `# heading`, shown as its title (titleHeading.ts). */
   const headingTitle = note && !ticket && !presentation && !raw && editor && !editor.isDestroyed ? titleHeadingOf(editor.state.doc) : null;
   const editable = page !== null && !hasConflictMarkers(page.disk) && !openOnLeft && !reading;
+  // The icon as now in the text (set here, or by the left side): the tree's one comes after saving.
+  const pageIcon = page ? noteIcon(page.markdown) : icon;
+  const setPageIcon = (next: string | null) => {
+    const control = frontmatter.current;
+    if (control) control.set(setProperty(control.get(), "icon", next ?? undefined));
+  };
   const slides = useSlides(presentation ? page.markdown : "", path, files, bridge.loadImage, presentation);
   const title = noteTitle(path);
 
@@ -252,10 +260,10 @@ export const SplitPane = memo(function SplitPane({
     const current = exported();
     if (current) await exportPdf(vault, current, files, "right");
   };
-  const copyHtml = async () => {
+  const exportHtml = async () => {
     if (!editor || !page) return;
-    await copyNoteAsHtml(editor.state.doc, title, page.markdown);
-    notify("Note copiée en HTML");
+    const where = await exportNoteHtml(editor.state.doc, title);
+    if (where) notify(`Note exportée : ${where}`);
   };
   /** A version from the history replaces the page (as a change to commit). */
   const restore = async (content: string) => {
@@ -325,7 +333,8 @@ export const SplitPane = memo(function SplitPane({
     body = (
       <div className={`${presentation ? "page presentation-page" : wide ? "page wide" : "page"}${reading ? " reading" : ""}`}>
         {!ticket && (
-          <div className="page-heading split-heading">
+          <div className={pageIcon ? "page-heading split-heading has-icon" : "page-heading split-heading"}>
+            <PageHeadingIcon icon={pageIcon} onIcon={editable && !raw ? setPageIcon : undefined} />
             <h1 className="page-title" title={headingTitle !== null ? `Fichier : ${noteTitle(path)}` : undefined}>
               {headingTitle ?? noteTitle(path)}
             </h1>
@@ -409,7 +418,7 @@ export const SplitPane = memo(function SplitPane({
           onClose={() => setMenu(null)}
           items={[
             { label: "Exporter en PDF…", icon: "export", run: () => void exportPagePdf().catch(report("Export PDF")) },
-            ...(note && !presentation ? [{ label: "Copier en HTML", icon: "copy", run: () => void copyHtml().catch(report("Copie")) } satisfies MenuItem] : []),
+            ...(note && !presentation ? [{ label: "Exporter en HTML…", icon: "export", run: () => void exportHtml().catch(report("Export")) } satisfies MenuItem] : []),
           ]}
         />
       )}

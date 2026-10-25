@@ -3,6 +3,8 @@ import { Table as TiptapTable } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell as TiptapTableCell } from "@tiptap/extension-table-cell";
 import { TableHeader as TiptapTableHeader } from "@tiptap/extension-table-header";
+import { INLINE_HTML_TAGS } from "../markdown/inlineHtml";
+import { openingAttributes } from "./html";
 
 /**
  * Document schema. It mirrors the Markdown subset handled by `src/markdown`:
@@ -234,10 +236,30 @@ const Strike = Mark.create({
   renderHTML: () => ["s", 0],
 });
 
+/** `color`: a Bear colour (`==🟡text==`, see markdown/highlightColors.ts), null for the default one. */
 const Highlight = Mark.create({
   name: "highlight",
+  addAttributes: () => ({
+    color: { default: null, parseHTML: (el) => el.getAttribute("data-color"), renderHTML: (a) => (a.color ? { "data-color": a.color } : {}) },
+  }),
   parseHTML: () => [{ tag: "mark" }],
-  renderHTML: () => ["mark", 0],
+  renderHTML: ({ HTMLAttributes }) => ["mark", HTMLAttributes, 0],
+});
+
+/**
+ * HTML around text (`<u>…</u>`, `<span style="…">…</span>`, markdown/inlineHtml.ts),
+ * shown as that element. Several can nest, so the mark does not exclude itself.
+ */
+const InlineHtml = Mark.create({
+  name: "inlineHtml",
+  excludes: "",
+  addAttributes: attrs({ tag: "span", open: "<span>" }),
+  parseHTML: () => [{ tag: "u", attrs: { tag: "u", open: "<u>" } }],
+  renderHTML: ({ mark }) => {
+    const tag = INLINE_HTML_TAGS.has(mark.attrs.tag) ? mark.attrs.tag : "span";
+    const attributes = openingAttributes(mark.attrs.open, tag);
+    return [tag, { ...attributes, class: attributes.class ? `${attributes.class} inline-html` : "inline-html" }, 0];
+  },
 });
 
 const Code = Mark.create({
@@ -282,6 +304,7 @@ export const documentExtensions: AnyExtension[] = [
   Italic,
   Strike,
   Highlight,
+  InlineHtml,
   Code,
 ];
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import { noteToHtml } from "./copyHtml";
+import { noteHtmlDocument, noteToHtml } from "./copyHtml";
 import { destroyEditors, openEditor as open } from "./testUtils";
 
 afterEach(destroyEditors);
@@ -23,5 +23,17 @@ describe("noteToHtml", () => {
     expect(page.querySelector("blockquote")?.textContent).toContain("Corps");
     expect(page.querySelector("img")).toBeNull();
     expect(page.querySelector("td")?.getAttribute("style")).toContain("border");
+  });
+});
+
+describe("noteHtmlDocument", () => {
+  it("is a standalone page, one block per line, with the note's HTML rendered", () => {
+    const { editor } = open("## Partie\n\n- un\n- deux\n\n<div><b>bloc</b></div>\n");
+    const html = noteHtmlDocument(editor.state.doc, "Ma note");
+    expect(html.startsWith("<!doctype html>")).toBe(true);
+    expect(html).toContain("<title>Ma note</title>");
+    expect(html).toMatch(/\n {4}<h2>Partie<\/h2>\n/);
+    expect(html).toMatch(/<ul>\n {6}<li>/);
+    expect(html).toContain("<div><b>bloc</b></div>");
   });
 });

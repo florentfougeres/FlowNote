@@ -44,7 +44,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Réglages dans un onglet (`⌘,`), rangés par catégorie, dont la taille de l'interface
 - Barre latérale masquable (`⌘\`), qui réapparaît au survol du bord gauche
 - Pleine largeur par page et mode focus (`⌘⇧M`, Échap pour en sortir)
-- Menu « … » de la page : export en **PDF** (note, présentation, dessin, mind map) et copie de la note en HTML pour un mail ou un document
+- Menu « … » de la page : export en **PDF** (note, présentation, dessin, mind map) et export de la note en page **HTML** autonome, images comprises
 - Icône de page : un emoji choisi au-dessus du titre (propriété `icon`)
 - Accueil : créer, récents, à faire, tickets, à lire, graphe, Git, activité et statistiques du vault
 

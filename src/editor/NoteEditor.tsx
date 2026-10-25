@@ -7,16 +7,22 @@ import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { defaultWiring, editorExtensions } from "./extensions";
 import { SuggestionMenu } from "./SuggestionMenu";
 import { BlockHandle } from "./BlockHandle";
+import { HeadingLevel } from "./HeadingLevel";
 import { TableHandles } from "./TableHandles";
 import { CalloutPicker } from "./CalloutPicker";
+import { TableSizePicker } from "./TableSizePicker";
 import { applyLink, LinkHover, LinkPrompt, linkTarget, type LinkRequest } from "./LinkPrompt";
 import { GrammarPopover } from "./GrammarPopover";
+import { FormatBar } from "./FormatBar";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { insertAttachments, type VaultBridge } from "./bridge";
 import { loadMarkdown, NoteSession, serializeTopLevelBlock } from "../markdown/note";
 import { pastedImageName, resolveLink } from "../vault/links";
 import { openUrl } from "../reading/web";
 import { markdownForClipboard } from "./clipboard";
+import { inlineVaultImages } from "./imageCopies";
+import { schema } from "./schema";
+import { DOMSerializer } from "@tiptap/pm/model";
 import { afterTitleHeading } from "./titleHeading";
 import { gitChange, setGitBase, undoGitChange, type GitBase, type GitChange } from "./gitGutter";
 import { GitChangePopover } from "./GitChangePopover";
@@ -49,6 +55,19 @@ export interface FrontmatterControl {
   get(): string | null;
   set(raw: string | null): void;
 }
+
+/** Copied HTML: what the editor shows, with the vault's images themselves rather than their names. */
+const CLIPBOARD_SERIALIZER = (() => {
+  const base = DOMSerializer.fromSchema(schema);
+  const serializer = new DOMSerializer(base.nodes, base.marks);
+  const serializeFragment = serializer.serializeFragment.bind(serializer);
+  serializer.serializeFragment = (fragment, options, target) => {
+    const dom = serializeFragment(fragment, options, target);
+    inlineVaultImages(dom);
+    return dom;
+  };
+  return serializer;
+})();
 
 async function readFiles(list: FileList | null | undefined): Promise<{ name: string; bytes: Uint8Array }[]> {
   const files = [...(list ?? [])];
@@ -107,6 +126,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         return true;
       },
       clipboardTextSerializer: (slice) => markdownForClipboard(slice),
+      clipboardSerializer: CLIPBOARD_SERIALIZER,
       handleKeyDown: (view, event) => {
         // ⌘K on selected text (or in a link): its address, like in Notion.
         if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "k" || !view.editable) return false;
@@ -263,9 +283,19 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
       {properties && <PropertiesPanel raw={frontmatter} readOnly={!editable} onChange={changeFrontmatter} hidden={hiddenProperties} />}
       <EditorContent editor={editor} />
       <BlockHandle editor={editor} shell={shell} />
+      <HeadingLevel editor={editor} shell={shell} />
       <TableHandles editor={editor} />
       <CalloutPicker />
+      <TableSizePicker />
       <LinkHover editor={editor} onEdit={setLinkRequest} />
+      <FormatBar
+        editor={editor}
+        onLink={(target) => {
+          if (!editor) return;
+          const start = editor.view.coordsAtPos(target.from);
+          setLinkRequest({ ...target, x: start.left, y: editor.view.coordsAtPos(target.to).bottom });
+        }}
+      />
       {linkRequest && editor && (
         <LinkPrompt
           request={linkRequest}
@@ -291,9 +321,10 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
           onClose={() => setGitPopover(null)}
         />
       )}
-      <SuggestionMenu store={wiring.slashStore} />
+      <SuggestionMenu store={wiring.slashStore} blocks />
       <SuggestionMenu store={wiring.linkStore} />
       <SuggestionMenu store={wiring.emojiStore} />
+      <SuggestionMenu store={wiring.languageStore} />
     </div>
   );
 }

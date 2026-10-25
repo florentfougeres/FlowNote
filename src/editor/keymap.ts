@@ -318,6 +318,9 @@ export const BlockKeymap = Extension.create({
       "Mod-Alt-1": setHeading(1),
       "Mod-Alt-2": setHeading(2),
       "Mod-Alt-3": setHeading(3),
+      "Mod-Alt-4": setHeading(4),
+      "Mod-Alt-5": setHeading(5),
+      "Mod-Alt-6": setHeading(6),
     };
   },
 });

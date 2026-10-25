@@ -59,7 +59,7 @@ Au-dessus de chaque page : le fil d'Ariane (cliquable, avec le menu des dossiers
 | Historique | les versions Git de la note, à comparer ou restaurer |
 | Pleine largeur | la page occupe toute la fenêtre (retenu pour chaque page) |
 | Mode focus `⌘⇧M` | masque tout sauf la page |
-| « … » | export PDF, copie en HTML |
+| « … » | export PDF, export HTML |
 | Markdown brut `⌘⇧E` | le fichier tel quel, avec ses numéros de ligne |
 
 - **Plan** et **Historique** s'affichent dans une même colonne à droite, le plan au-dessus.
@@ -78,6 +78,7 @@ Chaque page s'ouvre dans un onglet : `⌘T` nouvel onglet, `⌘W` fermer, `⌘1`
 - Clic droit sur un autre onglet : « Afficher à droite de… » ; sur l'onglet actif : « Diviser avec l'onglet suivant ».
 - Clic droit sur l'onglet double : échanger les côtés, séparer en deux onglets, fermer la page de droite. Fermer l'onglet ferme les deux.
 - La page de droite a la même barre d'outils que celle de gauche, plus trois boutons : ouvrir dans son propre onglet, échanger les côtés, fermer.
+- Comme à gauche, « Ajouter une icône » s'affiche au survol au-dessus de son titre.
 - Le séparateur se déplace à la souris (la largeur est retenue). `⌘⌥\` ouvre ou ferme le panneau de droite.
 - Les deux côtés s'enregistrent chacun de leur côté. Une page ouverte des deux côtés ne se modifie qu'à gauche.
 
@@ -85,8 +86,8 @@ Chaque page s'ouvre dans un onglet : `⌘T` nouvel onglet, `⌘W` fermer, `⌘1`
 
 Ouverts dans un onglet (`⌘,`) et rangés par catégorie :
 
-- **Général** : apparence (système, clair, sombre), taille de l'interface (petite, normale, grande, très grande), enregistrement automatique.
-- **Éditeur** : correcteur (Grammalecte, celui de macOS, ou aucun) ; modifications depuis le dernier commit dans la marge (désactivé par défaut, voir Git).
+- **Général** : apparence (système, clair, sombre), taille de l'interface (petite, normale, grande, très grande), police (celle du système, **Clarika**, douce et arrondie, **Open Sans** ou **Inter**), enregistrement automatique.
+- **Éditeur** : correcteur (Grammalecte, celui de macOS, ou aucun) ; menu des blocs en **liste** (avec les descriptions) ou en **grille** d'icônes, plus compacte, comme MarkText (le nom de chaque bloc au survol, les flèches dans les deux sens) ; modifications depuis le dernier commit dans la marge (désactivé par défaut, voir Git).
 - **Tickets** : dossier des tickets et colonnes du tableau.
 - **Lectures** : note des lectures et lecture automatique du titre des liens.
 - **Vault** : changer de vault.
@@ -121,22 +122,24 @@ Les raccourcis Markdown marchent aussi à la frappe :
 | `>` puis espace | une citation |
 | `> [!note]` puis espace | un callout Obsidian |
 | `:::info` puis espace | une admonition HedgeDoc |
-| ```` ``` ```` puis espace | un bloc de code |
+| ```` ``` ```` puis espace | un bloc de code (```` ```py ```` propose les langages : `↵` en choisit un) |
 | `---` | un séparateur |
 
-**La poignée** apparaît à gauche du bloc survolé : `+` ajoute un bloc dessous, `⋮⋮` le déplace par glisser-déposer (aussi pour l'imbriquer dans une liste) et ouvre son menu (supprimer, dupliquer, monter, descendre, transformer).
+**La poignée** apparaît à gauche du bloc survolé : `+` ajoute un bloc dessous (le menu se referme sans rien laisser si on ne choisit rien), `⋮⋮` le déplace par glisser-déposer (aussi pour l'imbriquer dans une liste) et ouvre son menu (supprimer, dupliquer, monter, descendre, transformer).
 
 ![[poignee.webp]]
 
 - `⌥↑` / `⌥↓` déplacent le bloc, `⌘D` le duplique.
 - `↵` en fin de liste vide en sort ; `⇧↵` passe à la ligne dans le même bloc.
 - `⇥` indente : dans une liste, l'élément passe sous celui du dessus ; dans un paragraphe, la ligne devient un élément de liste, rangé sous la liste du dessus s'il y en a une (Markdown n'a pas de texte indenté : quatre espaces en feraient du code). `⇧⇥` désindente.
-- **Niveau d'un titre** : curseur dans un titre, ses `#` s'affichent en gris au début de la ligne. Au début du titre, `⌫` en retire un (un titre 1 redevient du texte) et `#` en ajoute un.
+- **Niveau d'un titre** : curseur dans un titre, ses `#` s'affichent en gris au début de la ligne. Au début du titre, `⌫` en retire un (un titre 1 redevient du texte) et `#` en ajoute un. Comme dans Bear, son niveau s'affiche aussi dans la marge à gauche : un clic ouvre la liste des niveaux (titre 1 à 6, ou texte), aussi `⌘⌥1` … `⌘⌥6` et `⌘⌥0`.
 - `⌫` au début d'une ligne la remonte au bout de la ligne du dessus, même sous une liste, une citation ou un callout. Sous un tableau, le curseur va dans la dernière cellule ; sous un séparateur, celui-ci est sélectionné (un second `⌫` le supprime).
 
 ### La mise en forme
 
-- `⌘B` gras, `⌘I` italique, `⌘E` code, `⌘⇧S` barré, `⌘⇧H` surligné. Les délimiteurs Markdown (`**gras**`, `*italique*`, `~~barré~~`, `==surligné==`) marchent aussi à la frappe.
+- **Barre de mise en forme** : sélectionnez du texte, une barre apparaît au-dessus, alignée sur le début de la sélection (elle ne bouge pas pendant qu'on s'en sert) : gras, italique, souligné, barré, fluo (et sa couleur, flèche à droite), code, lien, note de bas de page (ajoutée après la sélection) et gomme, qui retire la mise en forme (les liens restent).
+- `⌘B` gras, `⌘I` italique, `⌘U` souligné, `⌘E` code, `⌘⇧S` barré, `⌘⇧H` fluo. Les délimiteurs Markdown (`**gras**`, `*italique*`, `~~barré~~`, `==fluo==`) marchent aussi à la frappe. Markdown n'a pas de souligné : il s'écrit `<u>souligné</u>`, comme dans Obsidian.
+- **Fluo en couleur**, comme Bear : un emoji de couleur juste après `==` (`==🟢vert==`, `==🔴rouge==`, `==🔵bleu==`, `==🟡jaune==`, `==🟣violet==`). Le curseur dans un fluo, un petit crayon apparaît à son début : un clic choisit une autre couleur (ou « Défaut », le jaune sans emoji). Obsidian affiche l'emoji dans un fluo jaune.
 - **Code en ligne** : `` ` `` tapé sur une sélection la met entre accents graves ; posé devant puis derrière un mot (ou l'inverse), le mot devient du code. Curseur dans le code, ses `` ` `` s'affichent en gris : `→` à la fin passe le `` ` `` fermant, puis `⌫` retire le code (le texte reste) ; `⌦` avant le `` ` `` ouvrant, ou `⌘E` dans le code, le retire aussi.
 - **Emoji** : `:` suivi d'un mot propose un emoji, écrit `:shortcode:` dans le fichier.
 
@@ -145,7 +148,7 @@ Les raccourcis Markdown marchent aussi à la frappe :
 - `[[` insère un lien vers une note, avec autocomplétion ; `![[` intègre une note, une image ou une base. Les liens suivent les réglages d'Obsidian.
 - `⌘K` sur un texte sélectionné demande l'adresse d'un lien web ; sur un lien existant, il le modifie ou le retire. Coller une URL sur un texte sélectionné en fait aussi un lien. Une adresse tapée (`https://…`, `www.…`) devient un lien dès qu'on la quitte ; le fichier garde l'adresse telle quelle.
 - Un **clic** sur un lien l'ouvre : dans le navigateur pour une adresse web, dans l'app pour une note. Un **clic molette** l'ouvre dans un nouvel onglet. Au **survol**, une barre affiche l'adresse avec Modifier, Copier et Retirer.
-- Coller ou déposer une image l'enregistre dans le dossier des pièces jointes d'Obsidian et l'intègre à la note.
+- Coller ou déposer une image l'enregistre dans le dossier des pièces jointes réglé dans Obsidian et l'intègre à la note. Sans réglage (ou réglé sur la racine du vault), l'image va dans un dossier `attachments` à côté de la note.
 - La syntaxe Markdown tapée à la main devient un lien ou une image dès la parenthèse fermante : `[texte](https://…)` pour un lien, `![texte](https://…/image.png)` pour une image (du web ou du vault). Du texte simple collé (depuis un fichier texte, un terminal ou le mode source d'Obsidian) est lu comme du Markdown ; ce qui est copié d'une page web garde sa mise en forme.
 
 ### Intégrer une note
@@ -215,8 +218,9 @@ statut: en cours
 
 ### Les blocs spéciaux
 
-- **Tableaux** : poignées de lignes et de colonnes pour insérer, déplacer, aligner ou supprimer. `Tab` passe à la cellule suivante, `↵` à celle du dessous.
-- **Code** : coloration syntaxique, langage choisi en haut du bloc ; `⌘↵` ou trois `↵` en sortent.
+- **Tableaux** : `/tableau` demande d'abord sa taille, comme MarkText : survolez la grille et cliquez, ou tapez le nombre de lignes (en-tête comprise) et de colonnes, puis **OK**. Poignées de lignes et de colonnes pour insérer, déplacer, aligner ou supprimer. `Tab` passe à la cellule suivante, `↵` à celle du dessous.
+- **Code** : coloration syntaxique, langage choisi en haut du bloc (la liste des langages s'affiche dès la première lettre) ; `⌘↵` ou trois `↵` en sortent.
+- **HTML** : le HTML écrit dans une note s'affiche mis en page, comme dans MarkText ou HedgeDoc : un bloc (`<div>`, `<details>`, `<table>`…), du texte entouré (`<span style="…">`, `<sup>`, `<kbd>`…) ou une image (`<img src="…">`, même du vault). Tapé dans la note, le HTML s'affiche dès que le curseur quitte la ligne (`<h3>Thaïlande</h3>` puis `↵`). Les scripts, cadres et formulaires sont retirés à l'affichage, jamais du fichier. Double-cliquez sur un bloc HTML pour modifier sa source.
 - **Mermaid** : un bloc ```` ```mermaid ```` devient un diagramme (`/mermaid`) ; sa source s'affiche quand le curseur entre dans le bloc.
 - **Graphiques Plotly** (`/graphique`) : au format du plugin obsidian-plotly, avec un éditeur visuel (type, titres, valeurs, import d'un CSV). L'éditeur visuel propose lignes, barres (verticales, horizontales, empilées), aire, points, camembert, anneau et radar ; tous les autres types de Plotly (heatmap, 3D, sankey…) s'affichent aussi et s'écrivent en texte.
 - **Maths** : `$…$` en ligne, `$$…$$` en bloc.
@@ -250,7 +254,7 @@ layout:
 
 ### Copier, rechercher, notes liées
 
-- **Copier** : le texte copié depuis une note se colle en Markdown dans un éditeur de texte, et mis en forme dans un traitement de texte.
+- **Copier** : le texte copié depuis une note se colle en Markdown dans un éditeur de texte, et mis en forme dans un traitement de texte, avec ses images (pas seulement leur nom).
 - **Rechercher** : `⌘F` dans la note, `⌘⌥F` pour remplacer, `⌘⇧F` dans tout le vault.
 - **Filtres de la recherche** (`⌘⇧F`) : « + Filtre » restreint la recherche par tag (les tags imbriqués compris), dossier, propriété (une valeur, ou « est renseignée ») ou date de modification (aujourd'hui, 7 ou 30 derniers jours, cette année, ou une période). La syntaxe d'Obsidian marche aussi et devient des pastilles à l'espace ou à `↵`. Sans texte, la recherche liste les notes filtrées, les plus récemment modifiées d'abord. `⌫` dans le champ vide retire la dernière pastille. Par exemple :
   - `réunion tag:#projet` : « réunion » dans les notes qui portent le tag `#projet` (ou `#projet/site`) ;
@@ -560,8 +564,8 @@ Si le vault est un dépôt Git, le panneau Git (`⌘⇧G`) montre les fichiers m
 
 Menu « … » de la page :
 
-- **Exporter en PDF** par le panneau d'impression : une note telle qu'affichée, une présentation (une diapo par page), un dessin ou une mind map ajustés à la page.
-- **Copier en HTML** : la note mise en forme, pour un mail ou un document (son Markdown est copié en même temps, pour un éditeur de texte).
+- **Exporter en PDF** par le panneau d'impression : une note telle qu'affichée (sans les soulignements du correcteur), une présentation (une diapo par page), un dessin ou une mind map ajustés à la page.
+- **Exporter en HTML** : la note en page web autonome (un fichier `.html`, indenté, avec ses images), pour la publier ou l'envoyer.
 
 ## Raccourcis clavier
 
@@ -577,8 +581,9 @@ Menu « … » de la page :
 | `⌥-clic` | Ouvrir à droite (split view) |
 | `⌘⌥\` | Ouvrir ou fermer le panneau de droite |
 | `⌘K` | Lien sur la sélection (sinon : rechercher une page) |
-| `⌘B` / `⌘I` / `⌘E` | Gras / italique / code |
-| `⌘⇧S` / `⌘⇧H` | Barré / surligné |
+| `⌘B` / `⌘I` / `⌘U` / `⌘E` | Gras / italique / souligné / code |
+| `⌘⇧S` / `⌘⇧H` | Barré / fluo |
+| `⌘⌥1` … `⌘⌥6` / `⌘⌥0` | Titre 1 à 6 / texte |
 | `⌥↑` / `⌥↓` | Déplacer le bloc |
 | `⌘D` | Dupliquer le bloc |
 | `⌘⇧E` | Markdown brut |

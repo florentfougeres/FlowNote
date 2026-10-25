@@ -30,7 +30,7 @@ import { useGitBase } from "./hooks/useGitBase";
 import { globalAction, shortcutOf, type GlobalAction } from "./shortcuts";
 import { CommandPalette, type Command } from "./CommandPalette";
 import { NEW_PAGE_KINDS } from "./pageKinds";
-import { applyTheme, applyScale, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
+import { applyLook, applyTheme, applyScale, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
 import { PageIcon, PopoverMenu, Sidebar, type MenuItem } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
 import { GraphPage } from "./graph/GraphPage";
@@ -45,7 +45,7 @@ import { GitPanel } from "./GitPanel";
 import { ToolButton, ToolGroup, Toolbar } from "./Toolbar";
 import { Backlinks } from "./Backlinks";
 import { withNoteCache, type CachedVault } from "./vault/noteCache";
-import { copyNoteAsHtml } from "./editor/copyHtml";
+import { exportNoteHtml } from "./editor/copyHtml";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { OutlinePanel } from "./OutlinePanel";
 import { RawEditor } from "./RawEditor";
@@ -266,6 +266,7 @@ export function App() {
   const frontmatter = useRef<FrontmatterControl | null>(null);
   useEffect(() => applyTheme(settings.theme, isTauri()), [settings.theme]);
   useEffect(() => applyScale(settings.uiScale, isTauri()), [settings.uiScale]);
+  useEffect(() => applyLook(settings.font, settings.blockMenu), [settings.font, settings.blockMenu]);
   // The macOS window is transparent so the sidebar can show the native material
   // (on Linux the window is opaque, with the system title bar).
   useEffect(() => {
@@ -1111,19 +1112,15 @@ export function App() {
       setStatus(`Export PDF impossible : ${String(error)}`);
     }
   };
-  /**
-   * Copies the open note as HTML (for a mail or a document), its Markdown as
-   * plain text. The clipboard is written right in the click: WebKit refuses a
-   * write that comes after an await.
-   */
-  const copyAsHtml = async () => {
+  /** Exports the open note as an HTML file, images included. */
+  const exportAsHtml = async () => {
     const current = noteRef.current;
     if (!editor || !current) return;
     try {
-      await copyNoteAsHtml(editor.state.doc, noteTitle(current.path), current.markdown);
-      notify("Note copiée en HTML");
+      const where = await exportNoteHtml(editor.state.doc, noteTitle(current.path));
+      if (where) notify(`Note exportée : ${where}`);
     } catch (error) {
-      setStatus(`Copie impossible : ${String(error)}`);
+      setStatus(`Export HTML impossible : ${String(error)}`);
     }
   };
   const [pageMenu, setPageMenu] = useState<DOMRect | null>(null);
@@ -1182,7 +1179,7 @@ export function App() {
         command("outline", "Plan de la note", "Page", toggleOutline, "outline"),
         command("wide", "Pleine largeur / largeur normale", "Page", () => toggleWide(page.path), "width"),
       );
-      if (!presentationPage) list.push(command("copyHtml", "Copier en HTML", "Page", copyAsHtml, "copy"), command("toPresentation", "Transformer en présentation", "Page", convertToPresentation, "slides"));
+      if (!presentationPage) list.push(command("exportHtml", "Exporter en HTML", "Page", exportAsHtml, "export"), command("toPresentation", "Transformer en présentation", "Page", convertToPresentation, "slides"));
     }
     if (page && !canvasPage && !dashboardPage && !basePage) list.push(command("exportPdf", "Exporter en PDF", "Page", exportCurrentPdf, "export"));
     if (presentationPage) list.push(command("present", "Présenter", "Page", present, "play", "present"));
@@ -1453,7 +1450,7 @@ export function App() {
               onClose={() => setPageMenu(null)}
               items={[
                 { label: "Exporter en PDF…", icon: "export", run: () => void exportCurrentPdf() },
-                ...(!drawing && !mindmap && !canvasPage && !dashboardPage && !presentationPage ? [{ label: "Copier en HTML", icon: "copy", run: () => void copyAsHtml() } satisfies MenuItem] : []),
+                ...(!drawing && !mindmap && !canvasPage && !dashboardPage && !presentationPage ? [{ label: "Exporter en HTML…", icon: "export", run: () => void exportAsHtml() } satisfies MenuItem] : []),
               ]}
             />
           )}

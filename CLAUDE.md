@@ -69,8 +69,9 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 **L'utilisateur publie lui-même** (version, CHANGELOG, tag) en suivant `docs/publier-une-version.md`. Ne pas le faire à sa place ; tenir ce document à jour si le processus change.
 
-## État actuel (19 octobre 2026)
+## État actuel (25 octobre 2026)
 
+- 0.20.0 : barre de mise en forme (`FormatBar.tsx`, `format.ts`), fluo en couleur façon Bear (`markdown/highlightColors.ts`), souligné et HTML en ligne en marque `inlineHtml` (`markdown/inlineHtml.ts`), HTML rendu par DOMPurify (`editor/html.ts`, `typedHtml.ts`), niveau des titres dans la marge (`HeadingLevel.tsx`), langages du code (`codeLanguages.ts`), taille des tableaux (`TableSizePicker.tsx`), polices et menu des blocs en grille dans les réglages, export HTML d'une note, PDF imprimé depuis une copie de la page (`print.ts`). Testé dans Chrome seulement : PDF, export HTML et `/` du bouton + à vérifier dans l'app de bureau.
 - 0.15.3 : backend Rust sorti en bibliothèque `flownote-core` avec un aiguillage unique, menus partagés (`menus.ts`), API vault/Git construites une fois, recette avant release (`docs/recette.md`) ; filigrane des titres vides après les `#`, emoji d'une lettre (`:x:`). FlowNote Swift essayé puis retiré.
 - 0.15.2 : liens tapés cliquables, Tab dans un paragraphe, `#` des titres en ligne, guide de release (`docs/publier-une-version.md`). 0.15.1 : favoris, réglages de la barre latérale.
 - 0.15.0 : titre et nom de fichier indépendants (`titleHeading.ts`, `title` dans l'arbre, réglage `showTitles`), mode lecture par onglet, panneau Git compact, puces dessinées en CSS (marqueurs WebKit). 0.14.1 (CSP activée, barre latérale et panneau de droite mémoïsés, `tabs.ts` et `pageExport.ts` sortis d'`App.tsx`). La 0.14.0 a apporté le split view en un onglet, les marques # et `, les liens cliquables, la copie en Markdown et la documentation illustrée. Le workflow de release crée un brouillon à publier.

@@ -3,6 +3,7 @@
  * equal specificity): Vite inlines these imports in this order.
  */
 @import "./styles/base.css";
+@import "./styles/fonts.css";
 @import "./styles/editor.css";
 @import "./styles/git.css";
 @import "./styles/typography.css";

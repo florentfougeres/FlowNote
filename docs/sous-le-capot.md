@@ -49,6 +49,8 @@ Le principe qui guide tout le reste : **le vault Obsidian reste la seule source 
 | Diagrammes | [Mermaid](https://mermaid.js.org) | `src/editor/mermaid.ts` | Blocs ```` ```mermaid ```` |
 | Graphiques | [Plotly](https://plotly.com/javascript/) (`plotly.js-dist-min`) | `src/editor/plotly.ts` | Blocs ```` ```plotly ```` (format d'obsidian-plotly) |
 | Emoji | [emojibase-data](https://emojibase.dev) | `src/editor/emoji.ts` | Recherche `:nom` (en français) et `:shortcode:` |
+| HTML des notes | [DOMPurify](https://github.com/cure53/DOMPurify) | `src/editor/html.ts` | Nettoie le HTML écrit dans les notes avant de l'afficher (pas de scripts, cadres ni formulaires) |
+| Polices | [Open Sans](https://fontsource.org/fonts/open-sans) et [Inter](https://fontsource.org/fonts/inter) (`@fontsource/*`), Bear Sans UI (copiée de Bear.app, proposée sous le nom « Clarika ») | `src/styles/fonts.css`, `src/styles/fonts/bear/` | Polices proposées dans les réglages (`data-font` sur la racine) |
 | Croquis | [Excalidraw](https://excalidraw.com), [lz-string](https://github.com/pieroxy/lz-string) | `src/drawing/` | Dessins `.excalidraw.md` |
 | Mind maps | [Mind Elixir](https://mind-elixir.com) 5.15.x | `src/mindmap/` | Cartes `.mindmap.md` |
 | Canevas | [React Flow](https://reactflow.dev) (`@xyflow/react`) 12.11.x | `src/canvas/` | Tableau blanc `.canvas` (cartes, flèches, zoom) |
@@ -74,7 +76,8 @@ C'est la pièce centrale. Un éditeur WYSIWYG classique lit le Markdown, le tran
 
 - les détails de style (marqueur `*` ou `_`, puce `-` ou `*`, clôture ```` ``` ```` ou `~~~`) sont gardés en attributs ;
 - le contenu des conteneurs (citations, callouts, éléments de liste) est extrait, débarrassé de ses préfixes (`> `, indentation) et reparsé ;
-- la syntaxe propre à Obsidian, que CommonMark ignore (`[[wikilinks]]`, `![[embeds]]`, `==surlignage==`, `%%commentaires%%`, callouts `> [!note]`), est reconnue dans le texte après coup ;
+- la syntaxe propre à Obsidian, que CommonMark ignore (`[[wikilinks]]`, `![[embeds]]`, `==surlignage==`, `%%commentaires%%`, callouts `> [!note]`), est reconnue dans le texte après coup ; un emoji de couleur juste après `==` (`==🟢texte==`, comme Bear) devient l'attribut `color` du surlignage (`highlightColors.ts`) et est réécrit au même endroit ;
+- le HTML qui entoure du texte (`<u>…</u>`, `<span style="…">…</span>`, liste dans `inlineHtml.ts`) devient une marque `inlineHtml` qui garde la balise ouvrante telle quelle ; une balise seule reste du texte brut. C'est ainsi que s'écrit le souligné, que Markdown n'a pas ;
 - les admonitions HedgeDoc (`:::info` … `:::`) sont masquées pour remark derrière un commentaire HTML de même longueur (`maskContainers`), pour que les positions restent justes, puis lues comme des callouts ;
 - ce que FlowNote ne sait pas éditer reste un bloc brut (`rawBlock`, `inlineRaw`), affiché et réécrit tel quel.
 
@@ -132,6 +135,9 @@ Tout ce qui relève de l'affichage passe par des **décorations** ProseMirror, j
 - **Mermaid** : rendu au thème de l'app, avec `securityLevel: "strict"`. Le fichier garde un simple bloc de code.
 - **Plotly** : blocs ```` ```plotly ```` en YAML ou JSON, au format du plugin [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly). Seules des données statiques sont dessinées, aucun JavaScript n'est exécuté. Plotly 3+ n'affichant plus les titres en texte simple, `plotly.ts` les convertit en `{ text }` au dessin. `PlotEditor.tsx` et `plotModel.ts` forment l'éditeur visuel : un modèle « étiquettes + séries » pour les types qui y tiennent (`keysOf` dit où chacun range étiquettes et valeurs : `x`/`y`, `labels`/`values`, `theta`/`r`) ; les autres s'éditent en texte.
 - **Maths** : reconnues par `remark-math`.
+- **HTML** : un bloc HTML (`rawBlock` de type `html`) s'affiche rendu après passage par DOMPurify (`html.ts`), ses images lues dans le vault ; une balise seule en ligne (`<br>`, `<img>`) aussi. Le fichier garde la source telle quelle ; double-clic pour la modifier.
+- **HTML tapé** (`typedHtml.ts`) : un paragraphe de texte simple contenant une balise est relu par le parseur quand le curseur le quitte ; s'il en sort du HTML, il est remplacé par ce que donnerait l'ouverture du fichier.
+- **Copie et export** : `clipboardSerializer` (`NoteEditor.tsx`) et « Exporter en HTML » (`copyHtml.ts`) remplacent les images du vault par l'image elle-même (adresse `data:` dessinée depuis l'image affichée, `imageCopies.ts`).
 - **Notes intégrées** (`views/noteEmbed.tsx`) : `![[Note]]` monte un `NoteEditor` en lecture seule avec le texte de la note, ou la section ou le bloc choisi (`src/markdown/sections.ts` : `#Titre` jusqu'au titre suivant de même niveau, `#^id` le paragraphe ou l'élément de liste marqué). La profondeur est limitée (une note qui s'intègre elle-même s'arrête là).
 - **Notes de bas de page** : le parseur garde appels et définitions tels quels (`inlineRaw` et `rawBlock` de type `footnoteReference` et `footnoteDefinition`) ; leurs vues (`views/inlineRaw.ts`, `views/rawBlock.ts`) les affichent en exposant et en note numérotée. Le fichier ne change que si l'utilisateur modifie la note.
 - **Dataview et Tasks** (`src/query/`) : `pages.ts` indexe le vault (propriétés, champs `clé:: valeur`, tags, liens, dates, tâches avec les signes du plugin Tasks), `dataview.ts` lit et exécute le langage de requête de Dataview (sans `FLATTEN` ni JavaScript), `tasks.ts` celui de Tasks, `render.ts` dessine les résultats sous le bloc de code. Les notes viennent de la copie en mémoire du vault (`noteCache.ts`), par `queryVault` du pont. Cocher une tâche passe par `toggleTask` : seule sa ligne est réécrite (`[x]` et `✅ date`), avec le contrôle de conflit habituel.

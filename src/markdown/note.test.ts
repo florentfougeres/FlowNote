@@ -109,6 +109,27 @@ describe("Obsidian syntax is recognised", () => {
     expect(embed?.attrs?.target).toBe("img.png");
   });
 
+  it("coloured highlights (Bear): the emoji becomes the colour, and is written back", () => {
+    const [paragraph] = parseFragment("je ==🟡test== et ==🔵bleu== du fluo");
+    const colors = paragraph.content!.flatMap((n) => n.marks?.filter((m) => m.type === "highlight").map((m) => m.attrs?.color) ?? []);
+    expect(colors).toEqual(["yellow", "blue"]);
+    expect(paragraph.content!.some((n) => n.text?.includes("🟡"))).toBe(false);
+    const { doc, layout } = loadMarkdown("je ==🟡test== et ==🔵bleu== du fluo\n");
+    expect(serializeTopLevelBlockWithReport(doc.content![0], layout.context).markdown).toBe("je ==🟡test== et ==🔵bleu== du fluo");
+  });
+
+  it("HTML around text (underline, span) is a mark, written back as is", () => {
+    for (const line of ['un <u>souligné</u> ici', 'du <span style="color: red">rouge</span> et <sup>2</sup>']) {
+      const [paragraph] = parseFragment(line);
+      expect(paragraph.content!.some((n) => n.marks?.some((m) => m.type === "inlineHtml"))).toBe(true);
+      const { doc, layout } = loadMarkdown(`${line}\n`);
+      expect(serializeTopLevelBlockWithReport(doc.content![0], layout.context)).toEqual({ markdown: line, exact: true });
+    }
+    // A lone tag stays verbatim.
+    const [lone] = parseFragment("a <span> b");
+    expect(lone.content!.some((n) => n.type === "inlineRaw")).toBe(true);
+  });
+
   it("escaped wikilinks stay literal", () => {
     const [paragraph] = parseFragment("\\[\\[pas un lien]]");
     expect(paragraph.content!.every((n) => n.type === "text")).toBe(true);

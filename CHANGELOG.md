@@ -2,6 +2,34 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.20.0] - 2026-10-25
+
+### Ajouté
+- Barre de mise en forme sur le texte sélectionné : gras, italique, souligné, barré, fluo et sa couleur, code, lien, note de bas de page, gomme.
+- Fluo en couleur, comme Bear (`==🟢texte==` : vert, rouge, bleu, jaune, violet) ; curseur dans un fluo, un crayon change sa couleur en un clic.
+- Souligné (`⌘U`), écrit `<u>…</u>` comme dans Obsidian.
+- HTML dans les notes affiché mis en page (blocs, texte entouré de balises, images), nettoyé de ses scripts ; le HTML tapé s'affiche dès qu'on quitte la ligne.
+- Niveau du titre dans la marge, comme Bear : un clic choisit un autre niveau ; raccourcis `⌘⌥4` à `⌘⌥6`.
+- Autocomplétion des langages après ```` ``` ```` et dans le champ langage des blocs de code.
+- Taille d'un nouveau tableau choisie dans une grille (lignes × colonnes), comme MarkText.
+- Réglages : police de l'app (Système, Clarika, Open Sans, Inter) ; menu des blocs en liste ou en grille d'icônes.
+- Icône de page dans la page de droite du split view.
+- Exporter une note en HTML : une page web autonome, indentée, images comprises.
+
+### Modifié
+- Tableaux au rendu plus doux (angles arrondis, traits légers, en-tête gris clair).
+- Citations au texte légèrement éclairci.
+- Filigrane d'une ligne vide : « Tapez / pour insérer… ».
+- Images collées ou déposées : dans le dossier de pièces jointes d'Obsidian, sinon dans `attachments/` à côté de la note (plus à la racine du vault).
+- Copier une note copie ses images, plus seulement leur nom.
+
+### Corrigé
+- Le `/` du bouton + restait dans la note quand on fermait le menu sans choisir (ou en quittant la note).
+- Export PDF : plus de vide en tête de la première page ni de fin de note coupée ; plus de soulignements du correcteur.
+
+### Supprimé
+- « Copier en HTML », remplacé par « Exporter en HTML ».
+
 ## [0.19.1] - 2026-10-23
 
 ### Ajouté

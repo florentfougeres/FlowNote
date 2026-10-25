@@ -5,6 +5,7 @@ import type { Editor } from "@tiptap/core";
 import { Selection, TextSelection } from "@tiptap/pm/state";
 import { blockAt, deleteBlock, duplicateBlock, moveBlock, moveBlockByOne, movableBlocks, turnInto, type BlockKind, type BlockRef, type DropSide } from "./blocks";
 import { openSlashMenu } from "./slash";
+import { HEADING_LEVEL_WIDTH, headingAtCursor } from "./HeadingLevel";
 import { DragVisual } from "./dragMotion";
 
 /**
@@ -113,7 +114,9 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
       const shellRect = el.getBoundingClientRect();
       const line = lineRect(dom);
       // List markers are drawn outside the item box: keep the handle clear of them.
-      const left = (block.node.type.name === "listItem" ? line.left - 26 : dom.getBoundingClientRect().left) - shellRect.left;
+      // The heading holding the cursor has its level icon there (HeadingLevel.tsx): the handle goes further left.
+      const besideLevel = block.pos === headingAtCursor(editor)?.pos && editor.view.hasFocus() ? HEADING_LEVEL_WIDTH : 0;
+      const left = (block.node.type.name === "listItem" ? line.left - 26 : dom.getBoundingClientRect().left) - shellRect.left - besideLevel;
       setHover({ block, top: line.top - shellRect.top + Math.min(line.height, 28) / 2 - 12, left });
     };
     const onLeave = () => !drag.current && setHover(null);
