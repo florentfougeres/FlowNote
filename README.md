@@ -211,7 +211,7 @@ Le fonctionnement interne (bibliothèques, moteur de fidélité Markdown, format
 
 ### Publier une version
 
-Le guide complet est dans [docs/publier-une-version.md](docs/publier-une-version.md), et la liste des fonctionnalités à vérifier avant chaque release dans [docs/recette.md](docs/recette.md). En bref :
+Le guide complet est dans [docs/publier-une-version.md](docs/publier-une-version.md). En bref :
 
 1. Ajoutez la version et ses changements en tête de `CHANGELOG.md`.
 2. Mettez à jour la version dans `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `src-tauri/Cargo.lock`.

@@ -7,7 +7,7 @@
 - **Répondre en français.**
 - **Fidélité des fichiers avant tout** : tout reste du texte lisible dans Obsidian et propre dans Git. Une note non modifiée est réécrite à l'octet près ; une note modifiée ne change que dans les blocs touchés. Seule exception : les emoji restent en `:shortcode:`.
 - **Ne jamais modifier `.obsidian`** : il est en lecture seule.
-- **Commit, push ou merge seulement sur demande** (« commit et push », « merge »). Les releases, c'est l'utilisateur qui les fait. Fin des messages de commit : `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- **Commit, push ou merge seulement sur demande** (« commit et push », « merge »). Les releases demandées, Claude les fait de bout en bout (version, CHANGELOG, commit, tag, push). Fin des messages de commit : `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Grosse fonctionnalité** : poser des questions avant de coder.
 - **Style Notion partout** : pas de `<select>` bruts, des menus cohérents avec l'app, des fenêtres qui ne débordent pas, des alignements soignés.
 - **Bugs propres à WebKit** : les vérifier dans l'app de bureau, pas seulement dans Chrome.
@@ -67,12 +67,12 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 
 ## Publier une version
 
-**L'utilisateur publie lui-même** (version, CHANGELOG, tag) en suivant `docs/publier-une-version.md`. Ne pas le faire à sa place ; tenir ce document à jour si le processus change.
+Sur demande, **Claude fait la release** (version, CHANGELOG, commit, tag, push) en suivant `docs/publier-une-version.md`, puis suit le build ; tenir ce document à jour si le processus change.
 
 ## État actuel (25 octobre 2026)
 
 - 0.20.0 : barre de mise en forme (`FormatBar.tsx`, `format.ts`), fluo en couleur façon Bear (`markdown/highlightColors.ts`), souligné et HTML en ligne en marque `inlineHtml` (`markdown/inlineHtml.ts`), HTML rendu par DOMPurify (`editor/html.ts`, `typedHtml.ts`), niveau des titres dans la marge (`HeadingLevel.tsx`), langages du code (`codeLanguages.ts`), taille des tableaux (`TableSizePicker.tsx`), polices et menu des blocs en grille dans les réglages, export HTML d'une note, PDF imprimé depuis une copie de la page (`print.ts`). Testé dans Chrome seulement : PDF, export HTML et `/` du bouton + à vérifier dans l'app de bureau.
-- 0.15.3 : backend Rust sorti en bibliothèque `flownote-core` avec un aiguillage unique, menus partagés (`menus.ts`), API vault/Git construites une fois, recette avant release (`docs/recette.md`) ; filigrane des titres vides après les `#`, emoji d'une lettre (`:x:`). FlowNote Swift essayé puis retiré.
+- 0.15.3 : backend Rust sorti en bibliothèque `flownote-core` avec un aiguillage unique, menus partagés (`menus.ts`), API vault/Git construites une fois ; filigrane des titres vides après les `#`, emoji d'une lettre (`:x:`). FlowNote Swift essayé puis retiré.
 - 0.15.2 : liens tapés cliquables, Tab dans un paragraphe, `#` des titres en ligne, guide de release (`docs/publier-une-version.md`). 0.15.1 : favoris, réglages de la barre latérale.
 - 0.15.0 : titre et nom de fichier indépendants (`titleHeading.ts`, `title` dans l'arbre, réglage `showTitles`), mode lecture par onglet, panneau Git compact, puces dessinées en CSS (marqueurs WebKit). 0.14.1 (CSP activée, barre latérale et panneau de droite mémoïsés, `tabs.ts` et `pageExport.ts` sortis d'`App.tsx`). La 0.14.0 a apporté le split view en un onglet, les marques # et `, les liens cliquables, la copie en Markdown et la documentation illustrée. Le workflow de release crée un brouillon à publier.
 - Sécurité côté Rust : `check_root` limite toutes les commandes (vault et git) à un dossier avec `.obsidian` ou choisi par `vault_pick` (sélecteur natif, liste dans `trusted-vaults.json` des données de l'app). git tourne avec `core.fsmonitor=false`.
