@@ -26,7 +26,7 @@ export function baseOfNote(notePath: string, bases: RowBase[]): RowBase | null {
 }
 
 /**
- * The properties of a note that is a row of a base, as in a Notion database
+ * The properties of a note that is a row of a base
  * page: the base's typed editors (selects with their colors, dates…), then
  * its formulas, read only. Other properties stay in the regular panel.
  */

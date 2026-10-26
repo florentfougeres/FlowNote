@@ -756,7 +756,7 @@ body:has(.board.dragging) {
   -webkit-user-select: none;
 }
 
-/* The card under the pointer while it is dragged, tilted like in Notion. */
+/* The card under the pointer while it is dragged, tilted. */
 .board-ghost {
   position: fixed;
   z-index: 400;

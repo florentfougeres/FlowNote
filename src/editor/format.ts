@@ -79,7 +79,7 @@ export function removeHighlight(editor: Editor) {
 export const HIGHLIGHT_PENCIL_EVENT = "flownote:highlight-colors";
 
 /**
- * Like Bear: with the cursor in a highlight (nothing selected), a pencil at
+ * With the cursor in a highlight (nothing selected), a pencil at
  * its start, in the text, opens its colours (FormatBar.tsx).
  */
 export function highlightPencilPlugin(): Plugin {

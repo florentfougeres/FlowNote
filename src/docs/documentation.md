@@ -1,6 +1,6 @@
 # Documentation de FlowNote
 
-FlowNote édite votre vault Obsidian comme Notion : par blocs, avec un menu `/`, des bases, des dessins, des tickets, des présentations… Chaque page reste un fichier texte que vous pouvez continuer à ouvrir dans Obsidian et à versionner avec Git.
+FlowNote édite votre vault Obsidian par blocs, avec un menu `/`, des bases, des dessins, des tickets, des présentations… Chaque page reste un fichier texte que vous pouvez continuer à ouvrir dans Obsidian et à versionner avec Git.
 
 ![[editeur.webp]]
 
@@ -87,7 +87,7 @@ Chaque page s'ouvre dans un onglet : `⌘T` nouvel onglet, `⌘W` fermer, `⌘1`
 Ouverts dans un onglet (`⌘,`) et rangés par catégorie :
 
 - **Général** : apparence (système, clair, sombre), taille de l'interface (petite, normale, grande, très grande), police (celle du système, **Clarika**, douce et arrondie, **Open Sans** ou **Inter**), enregistrement automatique.
-- **Éditeur** : correcteur (Grammalecte, celui de macOS, ou aucun) ; menu des blocs en **liste** (avec les descriptions) ou en **grille** d'icônes, plus compacte, comme MarkText (le nom de chaque bloc au survol, les flèches dans les deux sens) ; modifications depuis le dernier commit dans la marge (désactivé par défaut, voir Git).
+- **Éditeur** : correcteur (Grammalecte, celui de macOS, ou aucun) ; menu des blocs en **liste** (avec les descriptions) ou en **grille** d'icônes, plus compacte (le nom de chaque bloc au survol, les flèches dans les deux sens) ; modifications depuis le dernier commit dans la marge (désactivé par défaut, voir Git).
 - **Tickets** : dossier des tickets et colonnes du tableau.
 - **Lectures** : note des lectures et lecture automatique du titre des liens.
 - **Vault** : changer de vault.
@@ -134,14 +134,14 @@ Les raccourcis Markdown marchent aussi à la frappe :
 - `⌥↑` / `⌥↓` déplacent le bloc, `⌘D` le duplique.
 - `↵` en fin de liste vide en sort ; `⇧↵` passe à la ligne dans le même bloc.
 - `⇥` indente : dans une liste, l'élément passe sous celui du dessus ; dans un paragraphe, la ligne devient un élément de liste, rangé sous la liste du dessus s'il y en a une (Markdown n'a pas de texte indenté : quatre espaces en feraient du code). `⇧⇥` désindente.
-- **Niveau d'un titre** : curseur dans un titre, ses `#` s'affichent en gris au début de la ligne. Au début du titre, `⌫` en retire un (un titre 1 redevient du texte) et `#` en ajoute un. Comme dans Bear, son niveau s'affiche aussi dans la marge à gauche : un clic ouvre la liste des niveaux (titre 1 à 6, ou texte), aussi `⌘⌥1` … `⌘⌥6` et `⌘⌥0`.
+- **Niveau d'un titre** : curseur dans un titre, ses `#` s'affichent en gris au début de la ligne. Au début du titre, `⌫` en retire un (un titre 1 redevient du texte) et `#` en ajoute un. Son niveau s'affiche aussi dans la marge à gauche : un clic ouvre la liste des niveaux (titre 1 à 6, ou texte), aussi `⌘⌥1` … `⌘⌥6` et `⌘⌥0`.
 - `⌫` au début d'une ligne la remonte au bout de la ligne du dessus, même sous une liste, une citation ou un callout. Sous un tableau, le curseur va dans la dernière cellule ; sous un séparateur, celui-ci est sélectionné (un second `⌫` le supprime).
 
 ### La mise en forme
 
 - **Barre de mise en forme** : sélectionnez du texte, une barre apparaît au-dessus, alignée sur le début de la sélection (elle ne bouge pas pendant qu'on s'en sert) : gras, italique, souligné, barré, fluo (et sa couleur, flèche à droite), code, lien, note de bas de page (une petite fenêtre demande son texte ; l'appel se place après la sélection, qui reste intacte) et gomme, qui retire la mise en forme (les liens restent).
 - `⌘B` gras, `⌘I` italique, `⌘U` souligné, `⌘E` code, `⌘⇧S` barré, `⌘⇧H` fluo. Les délimiteurs Markdown (`**gras**`, `*italique*`, `~~barré~~`, `==fluo==`) marchent aussi à la frappe. Markdown n'a pas de souligné : il s'écrit `<u>souligné</u>`, comme dans Obsidian.
-- **Fluo en couleur**, comme Bear : un emoji de couleur juste après `==` (`==🟢vert==`, `==🔴rouge==`, `==🔵bleu==`, `==🟡jaune==`, `==🟣violet==`). Le curseur dans un fluo, un petit crayon apparaît à son début : un clic choisit une autre couleur (ou « Défaut », le jaune sans emoji). Obsidian affiche l'emoji dans un fluo jaune.
+- **Fluo en couleur** : un emoji de couleur juste après `==` (`==🟢vert==`, `==🔴rouge==`, `==🔵bleu==`, `==🟡jaune==`, `==🟣violet==`). Le curseur dans un fluo, un petit crayon apparaît à son début : un clic choisit une autre couleur (ou « Défaut », le jaune sans emoji). Obsidian affiche l'emoji dans un fluo jaune.
 - **Code en ligne** : `` ` `` tapé sur une sélection la met entre accents graves ; posé devant puis derrière un mot (ou l'inverse), le mot devient du code. Curseur dans le code, ses `` ` `` s'affichent en gris : `→` à la fin passe le `` ` `` fermant, puis `⌫` retire le code (le texte reste) ; `⌦` avant le `` ` `` ouvrant, ou `⌘E` dans le code, le retire aussi.
 - **Emoji** : `:` suivi d'un mot propose un emoji, écrit `:shortcode:` dans le fichier.
 
@@ -155,7 +155,7 @@ Les raccourcis Markdown marchent aussi à la frappe :
 
 ### Intégrer une note
 
-Comme dans Obsidian, `![[…]]` affiche le contenu d'une autre note dans la page, en lecture, toujours à jour : modifiez la note d'origine, l'intégration suit. Un clic sur le titre de l'intégration ouvre la note. `/intégrer` insère `![[` et propose les notes.
+Avec la syntaxe d'Obsidian, `![[…]]` affiche le contenu d'une autre note dans la page, en lecture, toujours à jour : modifiez la note d'origine, l'intégration suit. Un clic sur le titre de l'intégration ouvre la note. `/intégrer` insère `![[` et propose les notes.
 
 ```markdown
 ![[Réunion]]                 la note entière (sans ses propriétés)
@@ -206,7 +206,7 @@ Une admonition `success`, écrite `:::success` dans le fichier.
 
 ### Les propriétés
 
-Les propriétés YAML (le frontmatter) s'affichent sous le titre, comme dans Obsidian : texte, liste, nombre, case à cocher, date, date et heure. Les tags s'affichent en pastilles, même écrits sur une ligne (`tags: projet, site`) ; les modifier les réécrit en liste YAML. Sur une note sans propriétés, « Ajouter des propriétés » en crée une. Les dates se choisissent dans le calendrier de l'app (tapez aussi `jj/mm/aaaa`).
+Les propriétés YAML (le frontmatter) s'affichent sous le titre : texte, liste, nombre, case à cocher, date, date et heure. Les tags s'affichent en pastilles, même écrits sur une ligne (`tags: projet, site`) ; les modifier les réécrit en liste YAML. Sur une note sans propriétés, « Ajouter des propriétés » en crée une. Les dates se choisissent dans le calendrier de l'app (tapez aussi `jj/mm/aaaa`).
 
 L'icône de la page est un emoji choisi au-dessus du titre. Dans le fichier :
 
@@ -220,13 +220,13 @@ statut: en cours
 
 ### Les blocs spéciaux
 
-- **Tableaux** : `/tableau` demande d'abord sa taille, comme MarkText : survolez la grille et cliquez, ou tapez le nombre de lignes (en-tête comprise) et de colonnes, puis **OK**. Poignées de lignes et de colonnes pour insérer, déplacer, aligner ou supprimer. `Tab` passe à la cellule suivante, `↵` à celle du dessous.
+- **Tableaux** : `/tableau` demande d'abord sa taille : survolez la grille et cliquez, ou tapez le nombre de lignes (en-tête comprise) et de colonnes, puis **OK**. Poignées de lignes et de colonnes pour insérer, déplacer, aligner ou supprimer. `Tab` passe à la cellule suivante, `↵` à celle du dessous.
 - **Code** : coloration syntaxique, langage choisi en haut du bloc (la liste des langages s'affiche dès la première lettre) ; `⌘↵` ou trois `↵` en sortent.
-- **HTML** : le HTML écrit dans une note s'affiche mis en page, comme dans MarkText ou HedgeDoc : un bloc (`<div>`, `<details>`, `<table>`…), du texte entouré (`<span style="…">`, `<sup>`, `<kbd>`…) ou une image (`<img src="…">`, même du vault). Tapé dans la note, le HTML s'affiche dès que le curseur quitte la ligne (`<h3>Thaïlande</h3>` puis `↵`). Les scripts, cadres et formulaires sont retirés à l'affichage, jamais du fichier. Double-cliquez sur un bloc HTML pour modifier sa source.
+- **HTML** : le HTML écrit dans une note s'affiche mis en page : un bloc (`<div>`, `<details>`, `<table>`…), du texte entouré (`<span style="…">`, `<sup>`, `<kbd>`…) ou une image (`<img src="…">`, même du vault). Tapé dans la note, le HTML s'affiche dès que le curseur quitte la ligne (`<h3>Thaïlande</h3>` puis `↵`). Les scripts, cadres et formulaires sont retirés à l'affichage, jamais du fichier. Double-cliquez sur un bloc HTML pour modifier sa source.
 - **Mermaid** : un bloc ```` ```mermaid ```` devient un diagramme (`/mermaid`) ; sa source s'affiche quand le curseur entre dans le bloc.
 - **Organigrammes flowchart.js** : un bloc ```` ```flow ```` (comme HedgeDoc, ```` ```flowchart ```` aussi) est dessiné par [flowchart.js](https://flowchart.js.org) (`/organigramme`). On déclare les éléments (`st=>start: Début`, `op=>operation: …`, `cond=>condition: …`, `e=>end: Fin`), puis on les relie (`st->op->cond`, `cond(yes)->e`, `cond(no)->op`). Sans écrire de texte : **Éditeur visuel**, en haut du bloc, liste les étapes (forme et texte) et les flèches (départ, sortie oui/non d'une condition, arrivée, côté de départ). `↵` dans le texte d'une étape en ajoute une à la suite, insérée dans sa flèche. flowchart.js place les formes lui-même.
 - **Graphiques Plotly** (`/graphique`) : au format du plugin obsidian-plotly, avec un éditeur visuel (type, titres, valeurs, import d'un CSV). L'éditeur visuel propose lignes, barres (verticales, horizontales, empilées), aire, points, camembert, anneau et radar ; tous les autres types de Plotly (heatmap, 3D, sankey…) s'affichent aussi et s'écrivent en texte.
-- **Maths** : des formules LaTeX dessinées par [KaTeX](https://katex.org), comme dans Obsidian. En ligne, `$x^2$` tapé devient une formule au `$` fermant (pas d'espace juste à l'intérieur des `$`, ni de chiffre ou de lettre juste avant le premier : « 5$ et 10$ » reste du texte) ; un clic dessus ouvre une petite fenêtre avec sa source et l'aperçu en direct (`↵` valide, `esc` annule, vide la retire). En bloc, `$$` puis espace (ou `/maths`) ; un double-clic ouvre sa source, l'aperçu suit la frappe sous le champ, `⌘↵` ou un clic à côté valide. Une formule fautive s'affiche en rouge avec l'erreur. Le fichier garde `$…$` et `$$…$$` tels quels ; l'export HTML les écrit en MathML.
+- **Maths** : des formules LaTeX dessinées par [KaTeX](https://katex.org). En ligne, `$x^2$` tapé devient une formule au `$` fermant (pas d'espace juste à l'intérieur des `$`, ni de chiffre ou de lettre juste avant le premier : « 5$ et 10$ » reste du texte) ; un clic dessus ouvre une petite fenêtre avec sa source et l'aperçu en direct (`↵` valide, `esc` annule, vide la retire). En bloc, `$$` puis espace (ou `/maths`) ; un double-clic ouvre sa source, l'aperçu suit la frappe sous le champ, `⌘↵` ou un clic à côté valide. Une formule fautive s'affiche en rouge avec l'erreur. Le fichier garde `$…$` et `$$…$$` tels quels ; l'export HTML les écrit en MathML.
 - **Sommaire** : un paragraphe `[TOC]` affiche les titres de la note, cliquables (comme en haut de cette page).
 - **Date** : `/date` insère la date du jour (`/date et heure` avec l'heure).
 - **Requêtes Dataview et Tasks** : voir le chapitre « Requêtes » plus bas.
@@ -267,7 +267,7 @@ layout:
 
 ## Requêtes : Dataview et Tasks
 
-FlowNote lit les blocs des deux plugins les plus utilisés d'Obsidian, **Dataview** et **Tasks**, et affiche leurs résultats sous le bloc, comme Obsidian. Les résultats viennent de tout le vault et se mettent à jour quand vous revenez sur la fenêtre. Cliquez dans le bloc pour voir et modifier sa requête ; `/dataview` et `/tasks` en insèrent un. Le fichier garde le bloc tel quel : Obsidian, avec le plugin, l'affiche de la même façon.
+FlowNote lit les blocs des deux plugins les plus utilisés d'Obsidian, **Dataview** et **Tasks**, et affiche leurs résultats sous le bloc. Les résultats viennent de tout le vault et se mettent à jour quand vous revenez sur la fenêtre. Cliquez dans le bloc pour voir et modifier sa requête ; `/dataview` et `/tasks` en insèrent un. Le fichier garde le bloc tel quel : Obsidian, avec le plugin, l'affiche de la même façon.
 
 ### Dataview
 
@@ -354,7 +354,7 @@ Les résultats montrent chaque tâche avec ses dates (l'échéance en rouge si e
 
 ### Bases
 
-Des bases de données comme dans Notion, au format des Bases d'Obsidian (`Voyages.base`). Chaque ligne est une note du dossier du même nom (`Voyages/`), chaque colonne une propriété YAML de ces notes.
+Des bases de données au format des Bases d'Obsidian (`Voyages.base`). Chaque ligne est une note du dossier du même nom (`Voyages/`), chaque colonne une propriété YAML de ces notes.
 
 ![[base-tableau.webp]]
 
@@ -390,7 +390,7 @@ views:
 
 ### Tickets
 
-Comme les issues GitHub : un ticket est une note du dossier des tickets (`Tickets/1 - Exporter en PDF.md`), avec un état, des tags, une échéance, des tâches et un fil de commentaires.
+Un ticket est une note du dossier des tickets (`Tickets/1 - Exporter en PDF.md`), avec un état, des tags, une échéance, des tâches et un fil de commentaires.
 
 ![[ticket.webp]]
 

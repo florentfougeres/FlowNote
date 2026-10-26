@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 
 /**
  * The hidden sidebar shown over the page while the pointer is near the left
- * edge, like Notion: it opens at once and closes a moment after the pointer left.
+ * edge: it opens at once and closes a moment after the pointer left.
  */
 export function useSidebarPeek() {
   const [peek, setPeek] = useState(false);

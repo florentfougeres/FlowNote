@@ -182,7 +182,7 @@ export interface BaseViewProps {
 }
 
 /**
- * A base, like a Notion database: views in tabs (table, kanban, gallery,
+ * A base, a database: views in tabs (table, kanban, gallery,
  * calendar) over the notes of a folder. The base file (`.base`) is the page's
  * text: its edits go through `onSource` like a note's. Cells are written to the
  * rows' notes.

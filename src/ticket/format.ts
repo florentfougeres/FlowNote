@@ -1,5 +1,5 @@
 /**
- * Tickets: Markdown notes shown like GitHub / GitLab issues, readable as is
+ * Tickets: Markdown notes shown as issues, readable as is
  * in Obsidian (front matter, Markdown, callouts):
  *
  *   ---

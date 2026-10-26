@@ -4,9 +4,9 @@
  */
 
 export const FULL_NOTE = `---
-tags: [projet, notion]
+tags: [projet, carnet]
 aliases:
-  - Mon Notion
+  - Mon Carnet
 created: 2026-10-13
 ---
 

@@ -21,7 +21,7 @@ pub struct VaultEntry {
     /// The note is a presentation (front matter with `marp: true`).
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     presentation: bool,
-    /// Emoji of the `icon` front matter property, shown like a Notion page icon.
+    /// Emoji of the `icon` front matter property, shown as the page icon.
     #[serde(skip_serializing_if = "Option::is_none")]
     icon: Option<String>,
     /// The page's own title: a note's first `# heading`, the `title` property otherwise.

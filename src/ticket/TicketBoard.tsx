@@ -17,7 +17,7 @@ interface Drag {
  * Kanban board of the tickets: a column per status, cards dragged between
  * columns and within one (the order is kept in the tickets). The drag follows
  * the pointer itself (no HTML drag and drop, which WebKit refuses on some
- * elements), with the card under the pointer like in Notion.
+ * elements), with the card under the pointer.
  */
 export function TicketBoard({
   tickets,

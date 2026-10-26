@@ -1,7 +1,7 @@
 import { isMap, isScalar, isSeq, parseDocument, type Document, type Pair, type Scalar } from "yaml";
 
 /**
- * Note properties (YAML frontmatter), like Obsidian's Properties view. Edits go
+ * Note properties (YAML frontmatter). Edits go
  * through the YAML document model, which keeps comments, key order and the
  * style of untouched values; a frontmatter that is never edited is not
  * rewritten at all.

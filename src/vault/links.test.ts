@@ -17,8 +17,8 @@ import {
 
 const FILES = [
   "Accueil.md",
-  "Projets/Mon Notion.md",
-  "Projets/Mon Notion/Stack.md",
+  "Projets/Mon Carnet.md",
+  "Projets/Mon Carnet/Stack.md",
   "Archive/Stack.md",
   "Perso/Idées.md",
   "Écrits/Cours DuckDB/img/cli.png",
@@ -33,8 +33,8 @@ describe("resolveLink", () => {
   });
 
   it("prefers an exact path, then the linking note's folder, then the shortest path", () => {
-    expect(resolveLink("Projets/Mon Notion/Stack", FILES)).toBe("Projets/Mon Notion/Stack.md");
-    expect(resolveLink("Stack", FILES, "Projets/Mon Notion/Autre.md")).toBe("Projets/Mon Notion/Stack.md");
+    expect(resolveLink("Projets/Mon Carnet/Stack", FILES)).toBe("Projets/Mon Carnet/Stack.md");
+    expect(resolveLink("Stack", FILES, "Projets/Mon Carnet/Autre.md")).toBe("Projets/Mon Carnet/Stack.md");
     expect(resolveLink("Stack", FILES, "Accueil.md")).toBe("Archive/Stack.md");
   });
 
@@ -55,7 +55,7 @@ describe("link text", () => {
 
 describe("locations", () => {
   it("attachments follow the Obsidian setting", () => {
-    const note = "Projets/Mon Notion.md";
+    const note = "Projets/Mon Carnet.md";
     expect(attachmentFolder(note, DEFAULT_CONFIG)).toBe("Projets/attachments");
     expect(attachmentFolder("Racine.md", DEFAULT_CONFIG)).toBe("attachments");
     expect(attachmentFolder(note, { ...DEFAULT_CONFIG, attachmentFolderPath: "./" })).toBe("Projets");
@@ -64,9 +64,9 @@ describe("locations", () => {
   });
 
   it("new notes follow the Obsidian setting; sub-pages go in a folder named after their parent", () => {
-    expect(newNoteFolder("Projets/Mon Notion.md", DEFAULT_CONFIG)).toBe("");
-    expect(newNoteFolder("Projets/Mon Notion.md", { ...DEFAULT_CONFIG, newFileLocation: "current" })).toBe("Projets");
-    expect(subpageFolder("Projets/Mon Notion.md")).toBe("Projets/Mon Notion");
+    expect(newNoteFolder("Projets/Mon Carnet.md", DEFAULT_CONFIG)).toBe("");
+    expect(newNoteFolder("Projets/Mon Carnet.md", { ...DEFAULT_CONFIG, newFileLocation: "current" })).toBe("Projets");
+    expect(subpageFolder("Projets/Mon Carnet.md")).toBe("Projets/Mon Carnet");
     expect(subpageFolder("Accueil.md")).toBe("Accueil");
   });
 
@@ -78,8 +78,8 @@ describe("locations", () => {
     expect(uniquePath("", "Idées.mindmap.md", ["Idées.mindmap.md", "Idées 1.mindmap.md"])).toBe("Idées 2.mindmap.md");
     expect(pastedImageName(new Date(2026, 9, 13, 19, 5, 3), "png")).toBe("Pasted image 20261013190503.png");
     expect(sanitizeName("a/b: c?")).toBe("a b c");
-    expect(relativePath("Projets/Mon Notion.md", "Projets/img/a.png")).toBe("img/a.png");
-    expect(relativePath("Projets/Mon Notion.md", "image.png")).toBe("../image.png");
+    expect(relativePath("Projets/Mon Carnet.md", "Projets/img/a.png")).toBe("img/a.png");
+    expect(relativePath("Projets/Mon Carnet.md", "image.png")).toBe("../image.png");
   });
 
   it("reads Obsidian settings with defaults", () => {
@@ -90,38 +90,38 @@ describe("locations", () => {
 });
 
 describe("updating links after a rename", () => {
-  const before = ["Index.md", "Projets/Mon Notion.md", "Projets/Mon Notion/Stack.md", "Archive/Stack.md", "img/a.png"];
-  const renames = renamePlan("Projets/Mon Notion.md", "Projets/FlowNote.md", before);
+  const before = ["Index.md", "Projets/Mon Carnet.md", "Projets/Mon Carnet/Stack.md", "Archive/Stack.md", "img/a.png"];
+  const renames = renamePlan("Projets/Mon Carnet.md", "Projets/FlowNote.md", before);
   const after = before.map((f) => renames.get(f) ?? f);
   const change = (oldNotePath: string, newNotePath = oldNotePath) => ({ oldNotePath, newNotePath, filesBefore: before, filesAfter: after, renames });
 
   it("plans the note and its sub-pages folder", () => {
     expect([...renames]).toEqual([
-      ["Projets/Mon Notion.md", "Projets/FlowNote.md"],
-      ["Projets/Mon Notion/Stack.md", "Projets/FlowNote/Stack.md"],
+      ["Projets/Mon Carnet.md", "Projets/FlowNote.md"],
+      ["Projets/Mon Carnet/Stack.md", "Projets/FlowNote/Stack.md"],
     ]);
   });
 
   it("rewrites wikilinks, keeping sections and aliases, and nothing else", () => {
-    const src = "Voir [[Mon Notion]], [[Mon Notion#Plan|le plan]] et ![[Mon Notion]].\nAutre : [[Index]] et [[Archive/Stack]].\n";
+    const src = "Voir [[Mon Carnet]], [[Mon Carnet#Plan|le plan]] et ![[Mon Carnet]].\nAutre : [[Index]] et [[Archive/Stack]].\n";
     expect(rewriteLinks(src, change("Index.md"))).toBe("Voir [[FlowNote]], [[FlowNote#Plan|le plan]] et ![[FlowNote]].\nAutre : [[Index]] et [[Archive/Stack]].\n");
     expect(rewriteLinks("[[Index]] seulement\n", change("Index.md"))).toBeNull();
   });
 
   it("path links to moved sub-pages are updated", () => {
-    expect(rewriteLinks("[[Projets/Mon Notion/Stack]]\n", change("Index.md"))).toBe("[[Projets/FlowNote/Stack]]\n");
+    expect(rewriteLinks("[[Projets/Mon Carnet/Stack]]\n", change("Index.md"))).toBe("[[Projets/FlowNote/Stack]]\n");
   });
 
   it("relative Markdown links, including those of notes that moved", () => {
-    expect(rewriteLinks("[Projet](Projets/Mon%20Notion.md#plan)\n", change("Index.md"))).toBe("[Projet](Projets/FlowNote.md#plan)\n");
+    expect(rewriteLinks("[Projet](Projets/Mon%20Carnet.md#plan)\n", change("Index.md"))).toBe("[Projet](Projets/FlowNote.md#plan)\n");
     // The sub-page moved: its link to an unchanged file is recomputed.
-    expect(rewriteLinks("![](../../img/a.png) et [web](https://x.y)\n", change("Projets/Mon Notion/Stack.md", "Projets/FlowNote/Stack.md"))).toBeNull();
-    expect(rewriteLinks("[parent](../Mon%20Notion.md)\n", change("Projets/Mon Notion/Stack.md", "Projets/FlowNote/Stack.md"))).toBe("[parent](../FlowNote.md)\n");
+    expect(rewriteLinks("![](../../img/a.png) et [web](https://x.y)\n", change("Projets/Mon Carnet/Stack.md", "Projets/FlowNote/Stack.md"))).toBeNull();
+    expect(rewriteLinks("[parent](../Mon%20Carnet.md)\n", change("Projets/Mon Carnet/Stack.md", "Projets/FlowNote/Stack.md"))).toBe("[parent](../FlowNote.md)\n");
   });
 
   it("leaves code alone", () => {
-    const src = "```\n[[Mon Notion]]\n```\n`[[Mon Notion]]` mais [[Mon Notion]]\n";
-    expect(rewriteLinks(src, change("Index.md"))).toBe("```\n[[Mon Notion]]\n```\n`[[Mon Notion]]` mais [[FlowNote]]\n");
+    const src = "```\n[[Mon Carnet]]\n```\n`[[Mon Carnet]]` mais [[Mon Carnet]]\n";
+    expect(rewriteLinks(src, change("Index.md"))).toBe("```\n[[Mon Carnet]]\n```\n`[[Mon Carnet]]` mais [[FlowNote]]\n");
   });
 });
 

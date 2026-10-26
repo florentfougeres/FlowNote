@@ -496,7 +496,7 @@ li.drag-ghost {
   background: var(--highlight);
 }
 
-/* Bear's colours (`==🟢text==`), light enough for text in both themes. */
+/* Highlight colours (`==🟢text==`), light enough for text in both themes. */
 .note mark[data-color="green"] {
   background: rgba(52, 199, 89, 0.28);
 }

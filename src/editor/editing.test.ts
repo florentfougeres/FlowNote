@@ -303,7 +303,7 @@ describe("Copy", () => {
   });
 });
 
-describe("Tab in a paragraph indents it, like Notion", () => {
+describe("Tab in a paragraph indents it", () => {
   it("under a list: nested in its last item", () => {
     const { editor, save } = open("- un\n- deux\n\ntrois\n");
     press(editor, "Tab");

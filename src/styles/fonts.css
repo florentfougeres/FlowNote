@@ -1,7 +1,6 @@
 /*
  * Fonts offered in the settings (`data-font` on the root): the system font by
- * default, Bear Sans UI (copied from Bear.app, offered as "Clarika", the font
- * it is drawn from), Open Sans or Inter.
+ * default, Clarika, Open Sans or Inter.
  * The faces load only when a font is chosen.
  */
 @import "@fontsource/open-sans/400.css";
@@ -19,69 +18,69 @@
 @import "@fontsource/inter/700-italic.css";
 
 @font-face {
-  font-family: "Bear Sans UI";
-  src: url("./fonts/bear/BearSansUI-Regular.otf") format("opentype");
+  font-family: "Clarika";
+  src: url("./fonts/clarika/Clarika-Regular.otf") format("opentype");
   font-weight: 400;
   font-style: normal;
 }
 @font-face {
-  font-family: "Bear Sans UI";
-  src: url("./fonts/bear/BearSansUI-Italic.otf") format("opentype");
+  font-family: "Clarika";
+  src: url("./fonts/clarika/Clarika-Italic.otf") format("opentype");
   font-weight: 400;
   font-style: italic;
 }
 @font-face {
-  font-family: "Bear Sans UI";
-  src: url("./fonts/bear/BearSansUI-Medium.otf") format("opentype");
+  font-family: "Clarika";
+  src: url("./fonts/clarika/Clarika-Medium.otf") format("opentype");
   font-weight: 500 600;
   font-style: normal;
 }
 @font-face {
-  font-family: "Bear Sans UI";
-  src: url("./fonts/bear/BearSansUI-MediumItalic.otf") format("opentype");
+  font-family: "Clarika";
+  src: url("./fonts/clarika/Clarika-MediumItalic.otf") format("opentype");
   font-weight: 500 600;
   font-style: italic;
 }
 @font-face {
-  font-family: "Bear Sans UI";
-  src: url("./fonts/bear/BearSansUI-Bold.otf") format("opentype");
+  font-family: "Clarika";
+  src: url("./fonts/clarika/Clarika-Bold.otf") format("opentype");
   font-weight: 700 900;
   font-style: normal;
 }
 @font-face {
-  font-family: "Bear Sans UI";
-  src: url("./fonts/bear/BearSansUI-BoldItalic.otf") format("opentype");
+  font-family: "Clarika";
+  src: url("./fonts/clarika/Clarika-BoldItalic.otf") format("opentype");
   font-weight: 700 900;
   font-style: italic;
 }
 @font-face {
-  font-family: "Bear Sans UI Heading";
-  src: url("./fonts/bear/BearSansUIHeading-Regular.otf") format("opentype");
+  font-family: "Clarika Heading";
+  src: url("./fonts/clarika/ClarikaHeading-Regular.otf") format("opentype");
   font-weight: 400 500;
   font-style: normal;
 }
 @font-face {
-  font-family: "Bear Sans UI Heading";
-  src: url("./fonts/bear/BearSansUIHeading-RegularItalic.otf") format("opentype");
+  font-family: "Clarika Heading";
+  src: url("./fonts/clarika/ClarikaHeading-RegularItalic.otf") format("opentype");
   font-weight: 400 500;
   font-style: italic;
 }
 @font-face {
-  font-family: "Bear Sans UI Heading";
-  src: url("./fonts/bear/BearSansUIHeading-Bold.otf") format("opentype");
+  font-family: "Clarika Heading";
+  src: url("./fonts/clarika/ClarikaHeading-Bold.otf") format("opentype");
   font-weight: 600 900;
   font-style: normal;
 }
 @font-face {
-  font-family: "Bear Sans UI Heading";
-  src: url("./fonts/bear/BearSansUIHeading-BoldItalic.otf") format("opentype");
+  font-family: "Clarika Heading";
+  src: url("./fonts/clarika/ClarikaHeading-BoldItalic.otf") format("opentype");
   font-weight: 600 900;
   font-style: italic;
 }
 
-:root[data-font="bear"] {
-  --font-ui: "Bear Sans UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-heading: "Bear Sans UI Heading", "Bear Sans UI", -apple-system, system-ui, sans-serif;
+:root[data-font="clarika"] {
+  --font-ui: "Clarika", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-heading: "Clarika Heading", "Clarika", -apple-system, system-ui, sans-serif;
 }
 
 :root[data-font="open-sans"] {

@@ -6,7 +6,7 @@ import { canJoin } from "@tiptap/pm/transform";
 /**
  * Block operations shared by the block handle, the block menu, the slash menu
  * and keyboard shortcuts. A "block" is a list item (at any depth) or a block at
- * the top level of the document: those are the units Notion lets you move.
+ * the top level of the document: those are the units that move.
  *
  * Moves are a single transaction (one undo step). A moved top-level block is
  * re-inserted as the very same node object, so it is written back verbatim.

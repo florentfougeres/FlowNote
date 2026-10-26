@@ -4,17 +4,17 @@ import { deletePage, followFolder, moveFolder, movePage, renameFolder, renamePag
 
 function vault() {
   return createMemoryVault("Test", {
-    "Index.md": "Voir [[Mon Notion]] et [[Mon Notion/Stack|la stack]].\n",
-    "Projets/Mon Notion.md": "Sous-page : [[Stack]]\n",
-    "Projets/Mon Notion/Stack.md": "Retour : [parent](../Mon%20Notion.md)\n",
-    "Projets/Mon Notion/schema.png": new Uint8Array([1]),
+    "Index.md": "Voir [[Mon Carnet]] et [[Mon Carnet/Stack|la stack]].\n",
+    "Projets/Mon Carnet.md": "Sous-page : [[Stack]]\n",
+    "Projets/Mon Carnet/Stack.md": "Retour : [parent](../Mon%20Carnet.md)\n",
+    "Projets/Mon Carnet/schema.png": new Uint8Array([1]),
   });
 }
 
 describe("renamePage", () => {
   it("moves the note and its sub-pages and updates links everywhere", async () => {
     const v = vault();
-    const result = await renamePage(v, "Projets/Mon Notion.md", "FlowNote");
+    const result = await renamePage(v, "Projets/Mon Carnet.md", "FlowNote");
     expect(result.path).toBe("Projets/FlowNote.md");
     expect((await v.files()).sort()).toEqual(["Index.md", "Projets/FlowNote.md", "Projets/FlowNote/Stack.md", "Projets/FlowNote/schema.png"]);
     // "Stack" is unique: Obsidian's shortest form drops the folders.
@@ -27,8 +27,8 @@ describe("renamePage", () => {
   it("refuses an existing name and keeps everything as it was", async () => {
     const w = vault();
     await w.create("Projets/Pris.md", "");
-    await expect(renamePage(w, "Projets/Mon Notion.md", "Pris")).rejects.toThrow();
-    expect(await w.read("Index.md")).toContain("[[Mon Notion]]");
+    await expect(renamePage(w, "Projets/Mon Carnet.md", "Pris")).rejects.toThrow();
+    expect(await w.read("Index.md")).toContain("[[Mon Carnet]]");
   });
 
   it("an unchanged title does nothing", async () => {
@@ -41,8 +41,8 @@ describe("deletePage", () => {
   it("removes the page with its sub-pages", async () => {
     const v = vault();
     const files = await v.files();
-    expect(subpagesOf("Projets/Mon Notion.md", files)).toEqual(["Projets/Mon Notion/Stack.md"]);
-    await deletePage(v, "Projets/Mon Notion.md", files);
+    expect(subpagesOf("Projets/Mon Carnet.md", files)).toEqual(["Projets/Mon Carnet/Stack.md"]);
+    await deletePage(v, "Projets/Mon Carnet.md", files);
     expect(await v.files()).toEqual(["Index.md"]);
   });
 
@@ -87,7 +87,7 @@ describe("folders", () => {
 
   it("refuses a taken name and creates empty folders shown in the tree", async () => {
     const v = vault();
-    await expect(renameFolder(v, "Projets/Mon Notion", "mon notion")).resolves.toMatchObject({ path: "Projets/mon notion" });
+    await expect(renameFolder(v, "Projets/Mon Carnet", "mon carnet")).resolves.toMatchObject({ path: "Projets/mon carnet" });
     await v.createFolder("Vide/Sous");
     await expect(v.createFolder("Vide")).rejects.toThrow();
     await expect(v.createFolder("Projets")).rejects.toThrow();
@@ -109,12 +109,12 @@ describe("moving", () => {
   it("moves a page with its sub-pages into a folder; links follow", async () => {
     const v = vault();
     await v.createFolder("Archives");
-    const result = await movePage(v, "Projets/Mon Notion.md", "Archives");
-    expect(result.path).toBe("Archives/Mon Notion.md");
-    expect((await v.files()).sort()).toEqual(["Archives/Mon Notion.md", "Archives/Mon Notion/Stack.md", "Archives/Mon Notion/schema.png", "Index.md"]);
-    expect(await v.read("Archives/Mon Notion/Stack.md")).toBe("Retour : [parent](../Mon%20Notion.md)\n");
-    expect(await v.read("Index.md")).toBe("Voir [[Mon Notion]] et [[Stack|la stack]].\n");
-    await expect(movePage(v, "Archives/Mon Notion.md", "Archives")).resolves.toEqual({ path: "Archives/Mon Notion.md", updatedNotes: [] });
+    const result = await movePage(v, "Projets/Mon Carnet.md", "Archives");
+    expect(result.path).toBe("Archives/Mon Carnet.md");
+    expect((await v.files()).sort()).toEqual(["Archives/Mon Carnet.md", "Archives/Mon Carnet/Stack.md", "Archives/Mon Carnet/schema.png", "Index.md"]);
+    expect(await v.read("Archives/Mon Carnet/Stack.md")).toBe("Retour : [parent](../Mon%20Carnet.md)\n");
+    expect(await v.read("Index.md")).toBe("Voir [[Mon Carnet]] et [[Stack|la stack]].\n");
+    await expect(movePage(v, "Archives/Mon Carnet.md", "Archives")).resolves.toEqual({ path: "Archives/Mon Carnet.md", updatedNotes: [] });
     await v.create("Index/x.md", "");
     await v.create("Archives/Index.md", "");
     await expect(movePage(v, "Index.md", "Archives")).rejects.toThrow("existe déjà");
@@ -134,13 +134,13 @@ describe("moving", () => {
   it("moves a folder, never into itself", async () => {
     const v = vault();
     await v.createFolder("Archives");
-    await expect(moveFolder(v, "Projets", "Projets/Mon Notion")).rejects.toThrow("lui-même");
+    await expect(moveFolder(v, "Projets", "Projets/Mon Carnet")).rejects.toThrow("lui-même");
     const result = await moveFolder(v, "Projets", "Archives");
     expect(result.path).toBe("Archives/Projets");
-    expect(await v.read("Index.md")).toBe("Voir [[Mon Notion]] et [[Stack|la stack]].\n");
-    expect((await v.files()).sort()).toContain("Archives/Projets/Mon Notion/Stack.md");
+    expect(await v.read("Index.md")).toBe("Voir [[Mon Carnet]] et [[Stack|la stack]].\n");
+    expect((await v.files()).sort()).toContain("Archives/Projets/Mon Carnet/Stack.md");
     await moveFolder(v, "Archives/Projets", "");
-    expect((await v.files()).sort()).toContain("Projets/Mon Notion.md");
+    expect((await v.files()).sort()).toContain("Projets/Mon Carnet.md");
   });
 });
 

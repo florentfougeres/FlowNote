@@ -4,7 +4,7 @@ import type { Editor } from "@tiptap/core";
 import * as ops from "./tableOps";
 
 /**
- * Notion-style table handles: a grip above the hovered column and left of the
+ * Table handles: a grip above the hovered column and left of the
  * hovered row (each opening a menu), plus "+" bars to add a row at the bottom
  * and a column at the right.
  */

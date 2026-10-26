@@ -1,5 +1,5 @@
 /**
- * Coloured highlights, written like Bear: a colour emoji right after the
+ * Coloured highlights: a colour emoji right after the
  * opening `==` (`==🟡text==`). Obsidian shows the emoji inside a plain highlight.
  */
 export const HIGHLIGHT_COLORS = [

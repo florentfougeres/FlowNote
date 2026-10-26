@@ -6,7 +6,7 @@ import { IconPicker } from "./IconPicker";
  * The page title is the file name: editing it renames the page (Enter or
  * leaving the field). Pages with a title of their own (a note's first
  * `# heading`, a presentation's `title`) show it instead, with the file name
- * under it: editing one never changes the other. Above it, like in Notion, the page icon (an emoji in the
+ * under it: editing one never changes the other. Above it, the page icon (an emoji in the
  * `icon` property) or, on hover, a button to add one.
  */
 export function PageTitle({

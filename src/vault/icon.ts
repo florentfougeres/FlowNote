@@ -1,5 +1,5 @@
 /**
- * Page icons, like Notion's: an emoji in the `icon` front matter property
+ * Page icons: an emoji in the `icon` front matter property
  * (the property read by the common Obsidian icon plugins). Plugin icon names
  * such as "LiHome" are not emoji and are ignored.
  */

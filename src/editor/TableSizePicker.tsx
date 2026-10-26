@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 /**
- * Size of a new table, like MarkText: a grid to hover and click, or the
+ * Size of a new table: a grid to hover and click, or the
  * numbers of rows (header included) and columns to type. Opened from the
  * slash menu's "Tableau".
  */

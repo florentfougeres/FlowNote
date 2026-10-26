@@ -6,7 +6,7 @@ import { Icon } from "../Icon";
 import { keys } from "../keys";
 
 /**
- * Like Bear: with the cursor in a heading, its level shows in the left
+ * With the cursor in a heading, its level shows in the left
  * margin; a click opens a menu to choose another level (or plain text).
  * The `#` around the cursor (syntaxMarks.ts) stay: this is a second way.
  */

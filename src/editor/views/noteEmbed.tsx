@@ -22,7 +22,7 @@ function NoteEmbed({ path, subpath, bridge }: { path: string; subpath: string; b
         if (!live) return;
         const part = embedSection(markdown, subpath);
         if (part === null) setError(`« ${subpath} » introuvable dans la note.`);
-        // Block ids (` ^id`) are markers, not text: hidden like in Obsidian's reading view.
+        // Block ids (` ^id`) are markers, not text: hidden.
         else setText(part.replace(/[ \t]\^[\w-]+[ \t]*$/gm, ""));
       },
       (e: unknown) => live && setError(String(e)),

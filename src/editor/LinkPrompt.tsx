@@ -95,7 +95,7 @@ interface Hovered {
 }
 
 /**
- * The link under the mouse, like in Notion: its address with Modify, Copy and
+ * The link under the mouse: its address with Modify, Copy and
  * Remove, under the link. A click on the link opens it (see NoteEditor).
  */
 export function LinkHover({ editor, onEdit }: { editor: Editor | null; onEdit: (request: LinkRequest) => void }) {

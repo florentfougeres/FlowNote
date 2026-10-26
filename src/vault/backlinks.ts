@@ -4,7 +4,7 @@ import { isMindmapPath } from "../mindmap/format";
 import { resolveLink } from "./links";
 
 /**
- * Backlinks, like Obsidian's "Linked mentions": the notes whose text links to
+ * Backlinks: the notes whose text links to
  * a page, each with the line of the first link as an excerpt. Nothing is
  * stored: they are computed from the notes' text.
  */

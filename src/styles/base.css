@@ -44,7 +44,7 @@
 
   /* Materials: translucent layers over content (backdrop-filter). */
   --sidebar-material: rgba(244, 244, 246, 0.82);
-  /* Window chrome around the page (tab strip and sidebar), flat like Notion's. */
+  /* Window chrome around the page (tab strip and sidebar), flat. */
   --chrome: #f8f8f7;
   --chrome-edge: rgba(0, 0, 0, 0.06);
   /* Liquid Glass: light catching the edges, soft depth. */
@@ -228,7 +228,7 @@ button:disabled {
 }
 
 /*
- * Window layout, like Notion's desktop app: the tab strip across the top (the
+ * Window layout: the tab strip across the top (the
  * window buttons sit at its left), then the sidebar, the page and the Git
  * drawer side by side.
  */
@@ -253,7 +253,7 @@ button:disabled {
 }
 
 /* Under the tab strip, flush with the window's left edge: a flat panel in the
-   chrome color, like Notion's. */
+   chrome color. */
 .sidebar-dock {
   display: flex;
   min-height: 0;
@@ -270,7 +270,7 @@ button:disabled {
   z-index: 19;
 }
 
-/* Like Notion's: a card under the tab strip, rounded on its right side. */
+/* A card under the tab strip, rounded on its right side. */
 .sidebar-dock.floating {
   position: absolute;
   top: 6px;

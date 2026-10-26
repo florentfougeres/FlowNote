@@ -132,7 +132,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
       clipboardTextSerializer: (slice) => markdownForClipboard(slice),
       clipboardSerializer: CLIPBOARD_SERIALIZER,
       handleKeyDown: (view, event) => {
-        // ⌘K on selected text (or in a link): its address, like in Notion.
+        // ⌘K on selected text (or in a link): its address.
         if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "k" || !view.editable) return false;
         const target = linkTarget(view.state);
         if (!target) return false;
@@ -175,7 +175,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
           return true;
         },
         // A click in the empty space under the last block: the cursor goes to an
-        // empty line at the end (added when needed), like in Notion.
+        // empty line at the end (added when needed).
         mousedown: (view, event) => {
           // A click on a mark of the changes since the last commit (the bar left of a block, or a removal mark).
           const mark = event.button === 0 ? (event.target as Element).closest?.("[data-git-group]") : null;
@@ -220,7 +220,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
           void readFiles(event.clipboardData.files).then((files) => editorRef.current && insertAttachments(editorRef.current, wiring.bridge.current, files, pos));
           return true;
         }
-        // A web address pasted over selected text links that text, like in Notion.
+        // A web address pasted over selected text links that text.
         const url = event.clipboardData?.getData("text/plain").trim() ?? "";
         const { selection, schema, doc } = view.state;
         const linkable = !selection.empty && selection.$from.sameParent(selection.$to) && selection.$from.parent.isTextblock && !selection.$from.parent.type.spec.code;

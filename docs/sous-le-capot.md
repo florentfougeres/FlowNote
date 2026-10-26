@@ -42,7 +42,7 @@ Le principe qui guide tout le reste : **le vault Obsidian reste la seule source 
 | --- | --- | --- | --- |
 | Application | [Tauri 2](https://tauri.app) | `src-tauri/` | Fenêtre native, WebView, commandes Rust appelées par `invoke()` |
 | Interface | [React 18](https://react.dev) | `src/*.tsx` | Toute l'interface |
-| Éditeur | [Tiptap 3](https://tiptap.dev) sur [ProseMirror](https://prosemirror.net) | `src/editor/` | Édition par blocs façon Notion |
+| Éditeur | [Tiptap 3](https://tiptap.dev) sur [ProseMirror](https://prosemirror.net) | `src/editor/` | Édition par blocs |
 | Markdown | [unified](https://unifiedjs.com) / [remark-parse](https://github.com/remarkjs/remark) (mdast), avec `remark-gfm`, `remark-math`, `remark-frontmatter` | `src/markdown/` | Lecture du Markdown, avec les positions dans la source |
 | Propriétés YAML | [yaml](https://eemeli.org/yaml/) | `src/markdown/frontmatter.ts`, `src/base/baseFile.ts` | Modifier le YAML sans perdre commentaires, ordre des clés ni clés inconnues |
 | Coloration du code | [lowlight](https://github.com/wooorm/lowlight) (highlight.js) | `src/editor/codeHighlight.ts` | Coloration des blocs de code, en décorations |
@@ -52,7 +52,7 @@ Le principe qui guide tout le reste : **le vault Obsidian reste la seule source 
 | Graphiques | [Plotly](https://plotly.com/javascript/) (`plotly.js-dist-min`) | `src/editor/plotly.ts` | Blocs ```` ```plotly ```` (format d'obsidian-plotly) |
 | Emoji | [emojibase-data](https://emojibase.dev) | `src/editor/emoji.ts` | Recherche `:nom` (en français) et `:shortcode:` |
 | HTML des notes | [DOMPurify](https://github.com/cure53/DOMPurify) | `src/editor/html.ts` | Nettoie le HTML écrit dans les notes avant de l'afficher (pas de scripts, cadres ni formulaires) |
-| Polices | [Open Sans](https://fontsource.org/fonts/open-sans) et [Inter](https://fontsource.org/fonts/inter) (`@fontsource/*`), Bear Sans UI (copiée de Bear.app, proposée sous le nom « Clarika ») | `src/styles/fonts.css`, `src/styles/fonts/bear/` | Polices proposées dans les réglages (`data-font` sur la racine) |
+| Polices | [Open Sans](https://fontsource.org/fonts/open-sans) et [Inter](https://fontsource.org/fonts/inter) (`@fontsource/*`), Clarika | `src/styles/fonts.css`, `src/styles/fonts/clarika/` | Polices proposées dans les réglages (`data-font` sur la racine) |
 | Croquis | [Excalidraw](https://excalidraw.com), [lz-string](https://github.com/pieroxy/lz-string) | `src/drawing/` | Dessins `.excalidraw.md` |
 | Mind maps | [Mind Elixir](https://mind-elixir.com) 5.15.x | `src/mindmap/` | Cartes `.mindmap.md` |
 | Canevas | [React Flow](https://reactflow.dev) (`@xyflow/react`) 12.11.x | `src/canvas/` | Tableau blanc `.canvas` (cartes, flèches, zoom) |
@@ -78,7 +78,7 @@ C'est la pièce centrale. Un éditeur WYSIWYG classique lit le Markdown, le tran
 
 - les détails de style (marqueur `*` ou `_`, puce `-` ou `*`, clôture ```` ``` ```` ou `~~~`) sont gardés en attributs ;
 - le contenu des conteneurs (citations, callouts, éléments de liste) est extrait, débarrassé de ses préfixes (`> `, indentation) et reparsé ;
-- la syntaxe propre à Obsidian, que CommonMark ignore (`[[wikilinks]]`, `![[embeds]]`, `==surlignage==`, `%%commentaires%%`, callouts `> [!note]`), est reconnue dans le texte après coup ; un emoji de couleur juste après `==` (`==🟢texte==`, comme Bear) devient l'attribut `color` du surlignage (`highlightColors.ts`) et est réécrit au même endroit ;
+- la syntaxe propre à Obsidian, que CommonMark ignore (`[[wikilinks]]`, `![[embeds]]`, `==surlignage==`, `%%commentaires%%`, callouts `> [!note]`), est reconnue dans le texte après coup ; un emoji de couleur juste après `==` (`==🟢texte==`) devient l'attribut `color` du surlignage (`highlightColors.ts`) et est réécrit au même endroit ;
 - le HTML qui entoure du texte (`<u>…</u>`, `<span style="…">…</span>`, liste dans `inlineHtml.ts`) devient une marque `inlineHtml` qui garde la balise ouvrante telle quelle ; une balise seule reste du texte brut. C'est ainsi que s'écrit le souligné, que Markdown n'a pas ;
 - les admonitions HedgeDoc (`:::info` … `:::`) sont masquées pour remark derrière un commentaire HTML de même longueur (`maskContainers`), pour que les positions restent justes, puis lues comme des callouts ;
 - ce que FlowNote ne sait pas éditer reste un bloc brut (`rawBlock`, `inlineRaw`), affiché et réécrit tel quel.

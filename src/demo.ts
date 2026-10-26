@@ -13,10 +13,11 @@ function tripsBase(): string {
   writeColumn(file, "pays", { type: "text", options: [] });
   writeColumn(file, "budget", { type: "number", options: [] });
   writeColumn(file, "depart", { type: "date", options: [] });
-  writeFormula(file, "par_jour", "budget / 7");
+  writeFormula(file, "par_jour", "round(budget / 7)");
   file = reparse(file);
-  const order = ["file.name", "statut", "pays", "depart", "budget", "formula.par_jour"];
-  writeView(file, 0, { ...defaultView("table", "Tableau", order), summaries: { budget: "Sum", "formula.par_jour": "Average" } });
+  const order = ["file.name", "statut", "pays", "depart", "budget"];
+  // The table shows the formula (a week's budget per day) instead of the country.
+  writeView(file, 0, { ...defaultView("table", "Tableau", ["file.name", "statut", "depart", "budget", "formula.par_jour"]), summaries: { budget: "Sum", "formula.par_jour": "Average" } });
   writeView(file, 1, { ...defaultView("board", "Kanban", order), groupBy: "statut" });
   writeView(file, 2, { ...defaultView("cards", "Galerie", order) });
   writeView(file, 3, { ...defaultView("calendar", "Calendrier", order), dateProperty: "depart" });
@@ -119,7 +120,7 @@ budget: 1200
 ---
 # Lancement
 
-Responsable:: [[Mon Notion]]
+Responsable:: [[Mon Carnet]]
 
 ## À faire
 
@@ -134,10 +135,10 @@ Responsable:: [[Mon Notion]]
 Le site sera publié en français d'abord, l'anglais viendra ensuite. ^decision
 `;
 
-/** What FlowNote reads like Obsidian and its plugins: embeds, footnotes, Dataview and Tasks. */
+/** Syntaxes of an Obsidian vault and its plugins that FlowNote shows: embeds, footnotes, Dataview and Tasks. */
 const OBSIDIAN_NOTE = `# Fonctionnalités Obsidian
 
-Cette note montre ce que FlowNote lit et affiche comme Obsidian et ses plugins. Cliquez dans un bloc de requête pour voir sa source.
+Cette note montre des syntaxes d'un vault Obsidian et de ses plugins, que FlowNote lit et affiche. Cliquez dans un bloc de requête pour voir sa source.
 
 ## Intégrer une note
 
@@ -206,10 +207,10 @@ cond(no)->op
 
 ## Fluo et HTML
 
-Du fluo ==jaune==, ==🟢vert== ou ==🔵bleu== (comme Bear), du texte <u>souligné</u> et du <span style="color: #d9480f">HTML en ligne</span>.
+Du fluo ==jaune==, ==🟢vert== ou ==🔵bleu==, du texte <u>souligné</u> et du <span style="color: #d9480f">HTML en ligne</span>.
 
 <div style="padding: 12px 16px; border-radius: 10px; background: rgba(0, 122, 255, 0.08)">
-  <strong>Un bloc HTML</strong>, mis en page comme dans MarkText ou HedgeDoc.
+  <strong>Un bloc HTML</strong>, mis en page.
   <details><summary>Cliquez pour déplier</summary>Le HTML est affiché sans ses scripts.</details>
 </div>
 
@@ -236,7 +237,7 @@ Tout ce que l'éditeur sait afficher, dans une seule note. Ouvrez-la aussi en Ma
 
 ## Mise en forme
 
-Du **gras**, de l'*italique*, du <u>souligné</u>, du ~~barré~~, du \`code\` et du ==fluo==. Le fluo prend aussi une couleur, comme dans Bear : ==🟢vert==, ==🔴rouge==, ==🔵bleu==, ==🟣violet==. Sélectionnez du texte : la barre de mise en forme apparaît au-dessus.
+Du **gras**, de l'*italique*, du <u>souligné</u>, du ~~barré~~, du \`code\` et du ==fluo==. Le fluo prend aussi une couleur : ==🟢vert==, ==🔴rouge==, ==🔵bleu==, ==🟣violet==. Sélectionnez du texte : la barre de mise en forme apparaît au-dessus.
 
 Des liens : vers une note, [[Site web]] ou [[Lancement|avec un autre texte]] ; vers le web, [Obsidian](https://obsidian.md) ou une adresse tapée, https://flowchart.js.org. Des emoji en code court :rocket: :sparkles: et un tag #démo.
 
@@ -398,13 +399,13 @@ const TODO = `## Perso
 `;
 
 /** The simulated remote changed the same line of "Projets.md": edit it locally, commit, then pull to see a conflict. */
-export const DEMO_REMOTE = { "Projets.md": "# Projets\n\n[[Mon Notion]] — modifié sur un autre ordinateur\n" };
+export const DEMO_REMOTE = { "Projets.md": "# Projets\n\n[[Mon Carnet]] — modifié sur un autre ordinateur\n" };
 
 export const DEMO_FILES = {
   ".obsidian/bookmarks.json": JSON.stringify({ items: [{ type: "file", path: "Exemple.md" }, { type: "file", path: "Projets/Site web.md" }, { type: "file", path: "Fonctionnalités Obsidian.md" }, { type: "file", path: "Tour de l'éditeur.md" }] }),
   "Exemple.md": FULL_NOTE,
-  "Projets.md": "# Projets\n\n[[Mon Notion]]\n",
-  "Projets/Mon Notion.md": "Une sous-page de [[Projets]].\n",
+  "Projets.md": "# Projets\n\n[[Mon Carnet]]\n",
+  "Projets/Mon Carnet.md": "Une sous-page de [[Projets]].\n",
   "Projets/Site web.md": PROJECT_NOTE,
   "Projets/Lancement.md": LAUNCH_NOTE,
   "Fonctionnalités Obsidian.md": OBSIDIAN_NOTE,

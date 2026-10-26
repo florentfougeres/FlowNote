@@ -5,15 +5,15 @@
 <h1 align="center">FlowNote</h1>
 
 <p align="center">
-  L'édition par blocs de Notion, directement sur votre vault Obsidian.<br>
+  L'édition par blocs, directement sur votre vault Obsidian.<br>
   Vos fichiers Markdown restent la seule source de vérité.
 </p>
 
 ---
 
-FlowNote est une application de bureau pour macOS (et Ubuntu) qui ouvre un dossier de notes Obsidian et permet de les éditer comme dans Notion : blocs, menu `/`, glisser-déposer, tableaux, callouts… Il n'y a ni base de données ni format caché : chaque note reste un fichier `.md` que vous pouvez continuer à ouvrir dans Obsidian, sans plugin.
+FlowNote est une application de bureau pour macOS (et Ubuntu) qui ouvre un dossier de notes Obsidian et permet de les éditer par blocs : menu `/`, glisser-déposer, tableaux, callouts… Il n'y a ni base de données ni format caché : chaque note reste un fichier `.md` que vous pouvez continuer à ouvrir dans Obsidian, sans plugin.
 
-Autour de l'éditeur : des bases façon Notion (tableau, kanban, galerie, calendrier), des canevas Obsidian, des dessins Excalidraw, des mind maps, des tickets façon GitHub avec un tableau kanban, une liste de lectures, une liste de tâches, des dashboards de widgets, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. FlowNote lit aussi les requêtes des plugins **Dataview** et **Tasks**, les notes intégrées (`![[Note#Section]]`) et les notes de bas de page. Tout reste du texte, lisible dans Obsidian et propre dans Git.
+Autour de l'éditeur : des bases (tableau, kanban, galerie, calendrier), des canevas, des dessins Excalidraw, des mind maps, des tickets avec un tableau kanban, une liste de lectures, une liste de tâches, des dashboards de widgets, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. FlowNote lit aussi les requêtes des plugins **Dataview** et **Tasks**, les notes intégrées (`![[Note#Section]]`) et les notes de bas de page. Tout reste du texte, lisible dans Obsidian et propre dans Git.
 
 Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 
@@ -27,13 +27,13 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/split-view.dark.webp">  <img src="src/docs/images/split-view.light.webp" alt="Deux pages côte à côte"></picture> | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/base-kanban.dark.webp">  <img src="src/docs/images/base-kanban.light.webp" alt="Une base en kanban"></picture> |
 | **Split view** : deux pages dans un onglet | **Bases** : tableau, kanban, galerie, calendrier |
 | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/croquis.dark.webp">  <img src="src/docs/images/croquis.light.webp" alt="Un dessin Excalidraw"></picture> | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/tickets-tableau.dark.webp">  <img src="src/docs/images/tickets-tableau.light.webp" alt="Les tickets en tableau kanban"></picture> |
-| **Dessins** Excalidraw | **Tickets** façon GitHub |
+| **Dessins** Excalidraw | **Tickets** |
 
 La documentation complète, illustrée, est dans l'app (« Documentation » dans la barre latérale) et dans [`src/docs/documentation.md`](src/docs/documentation.md).
 
 ## Fonctionnalités
 
-**Interface façon Notion**
+**Interface**
 - Onglets en haut de la fenêtre, barre latérale avec le vault (et ses vaults récents), Accueil, Rechercher, Tickets, Tâches, Lectures, Graphe, Documentation et l'arbre des pages
 - **Split view** : deux pages côte à côte (`⌥-clic` sur une page, `⌘⌥\` pour fermer le panneau)
 - Documentation intégrée de toutes les fonctionnalités
@@ -53,10 +53,10 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Menu `/` pour insérer ou transformer un bloc, raccourcis Markdown à la frappe (`#`, `-`, `[]`, `>`, ```` ``` ````)
 - Poignée de bloc : glisser-déposer avec imbrication, dupliquer, transformer, supprimer ; `⌥↑` / `⌥↓` déplacent le bloc
 - Sommaire : `[TOC]` (comme HedgeDoc) affiche les titres de la note, `/sommaire` l'insère
-- **Barre de mise en forme** sur le texte sélectionné : gras, italique, souligné (`<u>`, comme Obsidian), barré, fluo, code, lien (`⌘K`), note de bas de page, gomme
-- **Fluo en couleur** comme Bear (`==🟢vert==`, rouge, bleu, jaune, violet), modifiable d'un clic sur le crayon
+- **Barre de mise en forme** sur le texte sélectionné : gras, italique, souligné (`<u>`, lisible dans Obsidian), barré, fluo, code, lien (`⌘K`), note de bas de page, gomme
+- **Fluo en couleur** (`==🟢vert==`, rouge, bleu, jaune, violet), modifiable d'un clic sur le crayon
 - Liens : `⌘K` sur une sélection, une URL collée sur du texte sélectionné, une adresse tapée devient cliquable
-- **Niveau des titres** dans la marge, comme Bear (un clic en choisit un autre, `⌘⌥1` … `⌘⌥6`)
+- **Niveau des titres** dans la marge (un clic en choisit un autre, `⌘⌥1` … `⌘⌥6`)
 - **HTML** dans les notes affiché mis en page (blocs, texte entouré de balises, images), sans ses scripts
 - Collage : le texte simple est lu comme du Markdown ; un seul bloc collé (une ligne d'une page web) garde le type de la ligne où il arrive
 - Tableaux éditables avec poignées de lignes et de colonnes (insérer, déplacer, aligner, supprimer) ; taille choisie dans une grille à la création
@@ -83,7 +83,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Format du plugin Obsidian « Excalidraw » (`Nom.excalidraw.md`) : avec ce plugin, les dessins s'ouvrent aussi dans Obsidian ; sans lui, on voit le JSON du dessin
 
 **Tickets**
-- Comme les issues GitHub : un ticket est une note de `Tickets/` (« 12 - Titre.md ») avec état, tags, échéance (`📅` du plugin Tasks) et fil de commentaires en callouts `[!comment]`
+- Un ticket est une note de `Tickets/` (« 12 - Titre.md ») avec état, tags, échéance (`📅` du plugin Tasks) et fil de commentaires en callouts `[!comment]`
 - Vue liste (ouverts / fermés, tri, recherche, tags) ou **tableau kanban** avec glisser-déposer ; colonnes personnalisables depuis le tableau ou les réglages
 
 **Lectures**
@@ -102,8 +102,8 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Miniatures à jour pendant l'écriture, mode Présenter (`⌘⌥P`) avec vue présentateur, export en HTML autonome
 
 **Bases**
-- Des bases de données comme dans Notion, au format des Bases d'Obsidian (`Nom.base`) : chaque ligne est une note d'un dossier, chaque colonne une propriété YAML
-- Vues Tableau, Kanban, Galerie et Calendrier ; filtres, tris, groupes, calculs en bas de colonne, formules (`budget / 7`)
+- Des bases de données au format des Bases d'Obsidian (`Nom.base`) : chaque ligne est une note d'un dossier, chaque colonne une propriété YAML
+- Vues Tableau, Kanban, Galerie et Calendrier ; filtres, tris, groupes, calculs en bas de colonne, formules (`round(budget / 7)`)
 - Sélections colorées, saisie au clavier, glisser-déposer des colonnes, lignes et cartes
 - Une base s'intègre dans une note avec `![[Nom.base]]`, et la page d'une ligne affiche les propriétés de sa base
 
@@ -112,7 +112,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Stockées dans une note `Nom.mindmap.md`, avec un plan lisible pour Obsidian
 
 **Graphe**
-- Le graphe des liens entre les notes, comme dans Obsidian : aperçu sur l'accueil et vue complète (zoom, survol, filtres)
+- Le graphe des liens entre les notes : aperçu sur l'accueil et vue complète (zoom, survol, filtres)
 
 **Correction**
 - Grammaire et orthographe en français avec [Grammalecte](https://grammalecte.net), entièrement sur votre Mac, sans service en ligne

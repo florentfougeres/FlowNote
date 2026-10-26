@@ -1,7 +1,7 @@
 import { isMap, isSeq, parseDocument, type Document } from "yaml";
 
 /**
- * Bases (Notion-like databases) in Obsidian's own format: a `Name.base` YAML
+ * Bases (databases) in Obsidian's own format: a `Name.base` YAML
  * file describes the views; the rows are the notes of a folder, their
  * properties are the columns.
  *
@@ -48,7 +48,7 @@ export const COLUMN_TYPES: [ColumnType, string][] = [
   ["url", "URL"],
 ];
 
-/** Notion's option colors. */
+/** The option colors. */
 export const OPTION_COLORS = ["default", "gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"] as const;
 export type OptionColor = (typeof OPTION_COLORS)[number];
 

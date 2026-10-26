@@ -29,7 +29,7 @@ const COLOR_LABELS: Record<OptionColor, string> = {
   red: "Rouge",
 };
 
-/** A colored pill, like Notion's select options. */
+/** A colored pill: an option of a select. */
 export function OptionPill({ option, onRemove }: { option: SelectOption; onRemove?: () => void }) {
   return (
     <span className={`db-pill color-${option.color}`}>
@@ -181,7 +181,7 @@ function SelectEditor({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && q) {
-              // Like Notion: the exact option, else the first one matching, else a new option.
+              // The exact option, else the first one matching, else a new option.
               const exact = options.find((o) => o.value === q);
               if (exact) toggle(exact.value);
               else if (shown.length > 0) toggle(shown[0].value);

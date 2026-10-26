@@ -29,7 +29,7 @@ describe("selection toolbar commands", () => {
     expect(save()).toBe("un mot ici\n");
   });
 
-  it("a highlight changes colour from the cursor, like in Bear", () => {
+  it("a highlight changes colour from the cursor", () => {
     const { editor, save } = open("je ==test== du fluo\n");
     select(editor, "es");
     editor.view.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, editor.state.selection.from)));

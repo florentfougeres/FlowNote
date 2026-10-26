@@ -15,7 +15,7 @@ const GROUPS: [number, string][] = [
 ];
 
 /**
- * Emoji picker for the page icon, like Notion's: a search field (French names
+ * Emoji picker for the page icon: a search field (French names
  * and :shortcodes:), every emoji by category, a random pick and "Retirer".
  */
 export function IconPicker({ anchor, current, onPick, onClose }: { anchor: DOMRect; current: string | null; onPick: (emoji: string | null) => void; onClose: () => void }) {

@@ -9,7 +9,7 @@ import { TicketBoard } from "./TicketBoard";
 import { ColumnsSetting } from "../SettingsPage";
 
 /**
- * Every ticket of the vault, as a list like GitHub's issues (open / closed,
+ * Every ticket of the vault, as a list (open / closed,
  * sort) or as a kanban board; tags and search filter both.
  */
 export function TicketsView({

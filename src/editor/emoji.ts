@@ -6,7 +6,7 @@ import Suggestion from "@tiptap/suggestion";
 import { dismissPlugin, isDismissed, menuRenderer, MenuStore, normalizeText, type MenuItem } from "./menu";
 
 /**
- * Emoji, as in Notion: typing `:cal` suggests 📆. The note keeps the
+ * Emoji: typing `:cal` suggests 📆. The note keeps the
  * shortcode (`:calendar:`), and the editor displays every known shortcode as
  * its emoji, revealing the code while the cursor is on it. Names are searched
  * in English (shortcodes) and French.

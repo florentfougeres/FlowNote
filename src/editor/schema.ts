@@ -236,7 +236,7 @@ const Strike = Mark.create({
   renderHTML: () => ["s", 0],
 });
 
-/** `color`: a Bear colour (`==🟡text==`, see markdown/highlightColors.ts), null for the default one. */
+/** `color`: a highlight colour (`==🟡text==`, see markdown/highlightColors.ts), null for the default one. */
 const Highlight = Mark.create({
   name: "highlight",
   addAttributes: () => ({

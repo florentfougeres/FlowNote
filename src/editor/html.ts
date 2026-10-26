@@ -2,7 +2,7 @@ import DOMPurify from "dompurify";
 import { INLINE_HTML_TAGS } from "../markdown/inlineHtml";
 
 /**
- * HTML written in notes, shown rendered like MarkText and HedgeDoc do. It may
+ * HTML written in notes, shown rendered. It may
  * come from anywhere (a cloned vault): scripts, frames, forms and event
  * handlers are removed, only layout and formatting are kept.
  */

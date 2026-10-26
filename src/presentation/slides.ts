@@ -34,7 +34,7 @@ export interface RenderedSlides {
   notes: string[];
 }
 
-/** Obsidian callout types, grouped by color like in Obsidian. */
+/** Obsidian callout types, grouped by color. */
 const CALLOUT_FAMILIES: Record<string, string> = {
   abstract: "abstract", summary: "abstract", tldr: "abstract",
   info: "info", todo: "info",

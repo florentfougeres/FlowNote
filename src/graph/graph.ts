@@ -7,7 +7,7 @@ import { noteIcon } from "../vault/icon";
 import { extension, linkPath, noteTitle, resolveLink } from "../vault/links";
 
 /**
- * Graph of the vault, like Obsidian's: a node per note, an edge per link
+ * Graph of the vault: a node per note, an edge per link
  * between two notes (in either direction, counted once). Links to notes that
  * do not exist yet give "missing" nodes. Nothing is stored: the graph is
  * computed from the notes' text.

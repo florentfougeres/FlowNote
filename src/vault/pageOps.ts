@@ -12,7 +12,7 @@ export interface RenameResult {
 
 /**
  * Renames a note and its sub-pages folder, then updates every link to the moved
- * files across the vault (like Obsidian's "Automatically update internal links").
+ * files across the vault, so that they keep working in Obsidian.
  */
 export async function renamePage(vault: Vault, oldPath: string, title: string): Promise<RenameResult> {
   const name = sanitizeName(title);

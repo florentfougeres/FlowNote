@@ -14,7 +14,7 @@ interface Props {
 
 const FEATURES: [IconName, string, string][] = [
   ["doc", "Vos fichiers restent les vôtres", "Chaque note reste un fichier Markdown, lisible et modifiable dans Obsidian."],
-  ["blocks", "L'édition par blocs", "Menu /, glisser-déposer, tableaux, callouts : comme dans Notion."],
+  ["blocks", "L'édition par blocs", "Menu /, glisser-déposer, tableaux, callouts."],
   ["branch", "Versionné avec Git", "Historique, commit, pull et push sans quitter vos notes."],
 ];
 
@@ -30,7 +30,7 @@ export function Welcome({ recent, onOpenVault, onOpenRecent, onForgetRecent, onT
       <main className="welcome-card">
         <img className="welcome-icon" src="/icon.png" alt="" width={112} height={112} />
         <h1>Bienvenue dans FlowNote</h1>
-        <p className="welcome-lead">L'édition par blocs de Notion, directement sur votre vault Obsidian.</p>
+        <p className="welcome-lead">L'édition par blocs, directement sur votre vault Obsidian.</p>
 
         <ul className="welcome-features">
           {FEATURES.map(([icon, title, text]) => (

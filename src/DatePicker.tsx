@@ -4,7 +4,7 @@ import { Icon } from "./Icon";
 
 /**
  * The app's date picker, in place of the system's: a month calendar in a
- * menu, like Notion's. Values stay as written in the files: "YYYY-MM-DD", or
+ * menu. Values stay as written in the files: "YYYY-MM-DD", or
  * "YYYY-MM-DDTHH:mm" with the time.
  */
 

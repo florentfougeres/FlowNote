@@ -448,7 +448,7 @@ function BoardView({ initial, onChange, editable, theme, ...live }: Omit<CanvasB
         ref={wrapper}
         className="canvas-board"
         onDoubleClick={(event) => {
-          // A double click on the empty board adds a text card there, ready to type, like in Obsidian.
+          // A double click on the empty board adds a text card there, ready to type.
           if (!editable || !(event.target as Element).classList.contains("react-flow__pane")) return;
           const at = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
           setEditing(add({ type: "text", width: 250, height: 60, text: "" }, at).id);

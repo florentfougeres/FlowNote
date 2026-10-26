@@ -131,9 +131,9 @@ describe("tags", () => {
   });
 
   it("highlights #tags but not headings, numbers or code", () => {
-    const { editor } = openEditor("Un #projet/notion et #42 et `#code`\n");
+    const { editor } = openEditor("Un #projet/carnet et #42 et `#code`\n");
     const tags = [...editor.view.dom.querySelectorAll(".tag")].map((el) => el.textContent);
-    expect(tags).toEqual(["#projet/notion"]);
+    expect(tags).toEqual(["#projet/carnet"]);
   });
 });
 

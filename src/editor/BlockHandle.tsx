@@ -9,7 +9,7 @@ import { HEADING_LEVEL_WIDTH, headingAtCursor } from "./HeadingLevel";
 import { DragVisual } from "./dragMotion";
 
 /**
- * Notion-style gutter controls shown next to the hovered block: "+" inserts a
+ * Gutter controls shown next to the hovered block: "+" inserts a
  * block below and opens the slash menu; the grip opens the block menu on click
  * and moves the block on drag.
  *
@@ -127,7 +127,7 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
     const onLeave = () => !drag.current && setHover(null);
     el.addEventListener("mousemove", onMove);
     el.addEventListener("mouseleave", onLeave);
-    // Typing hides the controls, as in Notion.
+    // Typing hides the controls.
     const onTransaction = ({ transaction }: { transaction: { docChanged: boolean } }) => transaction.docChanged && setHover(null);
     editor.on("transaction", onTransaction);
     return () => {

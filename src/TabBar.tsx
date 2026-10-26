@@ -14,7 +14,7 @@ export interface Tab {
 }
 
 /**
- * Open pages, one tab each, in the window's title bar (like Notion). Drag to reorder, middle-click
+ * Open pages, one tab each, in the window's title bar. Drag to reorder, middle-click
  * or × to close; the + opens the dashboard in a new tab. Two pages side by side
  * make one tab, both named in it.
  */

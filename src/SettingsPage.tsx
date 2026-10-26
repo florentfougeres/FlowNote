@@ -6,9 +6,9 @@ import { keys } from "./keys";
 export type Theme = "system" | "light" | "dark";
 /** Grammalecte (desktop app), the system's spell checker, or none. */
 export type SpellChecker = "grammalecte" | "system" | "off";
-/** Font of the whole app: the system's, Bear Sans UI (shown as "Clarika", the font it comes from), Open Sans or Inter. */
-export type AppFont = "system" | "bear" | "open-sans" | "inter";
-/** The menu of the + button and of `/`: a list with descriptions, or a grid of icons (like MarkText). */
+/** Font of the whole app: the system's, Clarika, Open Sans or Inter. */
+export type AppFont = "system" | "clarika" | "open-sans" | "inter";
+/** The menu of the + button and of `/`: a list with descriptions, or a grid of icons. */
 export type BlockMenuStyle = "list" | "grid";
 
 export interface Settings {
@@ -48,7 +48,7 @@ const BLOCK_MENU_KEY = "flownote:block-menu";
 
 const FONTS: [AppFont, string][] = [
   ["system", "Système"],
-  ["bear", "Clarika"],
+  ["clarika", "Clarika"],
   ["open-sans", "Open Sans"],
   ["inter", "Inter"],
 ];
@@ -103,12 +103,18 @@ export function loadSettings(): Settings {
       uiScale: readScale(),
       showTitles: localStorage.getItem(SHOW_TITLES_KEY) !== "false",
       gitGutter: localStorage.getItem(GIT_GUTTER_KEY) === "true",
-      font: FONTS.find(([value]) => value === localStorage.getItem(FONT_KEY))?.[0] ?? "system",
+      font: readFont(),
       blockMenu: localStorage.getItem(BLOCK_MENU_KEY) === "grid" ? "grid" : "list",
     };
   } catch {
     return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true, gitGutter: false, font: "system", blockMenu: "list" };
   }
+}
+
+/** The chosen font; Clarika was saved as "bear" before 0.21. */
+function readFont(): AppFont {
+  const saved = localStorage.getItem(FONT_KEY) === "bear" ? "clarika" : localStorage.getItem(FONT_KEY);
+  return FONTS.find(([value]) => value === saved)?.[0] ?? "system";
 }
 
 export function saveSettings(settings: Settings) {

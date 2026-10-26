@@ -6,12 +6,12 @@ Les changements notables de FlowNote, version par version. Le format suit [Keep 
 
 ### Ajouté
 - Barre de mise en forme sur le texte sélectionné : gras, italique, souligné, barré, fluo et sa couleur, code, lien, note de bas de page, gomme.
-- Fluo en couleur, comme Bear (`==🟢texte==` : vert, rouge, bleu, jaune, violet) ; curseur dans un fluo, un crayon change sa couleur en un clic.
-- Souligné (`⌘U`), écrit `<u>…</u>` comme dans Obsidian.
+- Fluo en couleur (`==🟢texte==` : vert, rouge, bleu, jaune, violet) ; curseur dans un fluo, un crayon change sa couleur en un clic.
+- Souligné (`⌘U`), écrit `<u>…</u>`, lisible dans Obsidian.
 - HTML dans les notes affiché mis en page (blocs, texte entouré de balises, images), nettoyé de ses scripts ; le HTML tapé s'affiche dès qu'on quitte la ligne.
-- Niveau du titre dans la marge, comme Bear : un clic choisit un autre niveau ; raccourcis `⌘⌥4` à `⌘⌥6`.
+- Niveau du titre dans la marge : un clic choisit un autre niveau ; raccourcis `⌘⌥4` à `⌘⌥6`.
 - Autocomplétion des langages après ```` ``` ```` et dans le champ langage des blocs de code.
-- Taille d'un nouveau tableau choisie dans une grille (lignes × colonnes), comme MarkText.
+- Taille d'un nouveau tableau choisie dans une grille (lignes × colonnes).
 - Réglages : police de l'app (Système, Clarika, Open Sans, Inter) ; menu des blocs en liste ou en grille d'icônes.
 - Icône de page dans la page de droite du split view.
 - Exporter une note en HTML : une page web autonome, indentée, images comprises.
@@ -92,7 +92,7 @@ Les changements notables de FlowNote, version par version. Le format suit [Keep 
 
 ### Modifié
 - Propriétés : les valeurs de texte prennent toute la largeur et passent à la ligne au lieu d'être coupées.
-- Propriétés : des tags écrits sur une ligne (`tags: projet, perso`) s'affichent en pastilles, comme dans Obsidian.
+- Propriétés : des tags écrits sur une ligne (`tags: projet, perso`) s'affichent en pastilles.
 - Sous le capot : raccourcis clavier écrits une seule fois (`shortcuts.ts`), opérations sur les pages sorties d'`App.tsx` (`usePageOps`), vues de l'éditeur découpées en un fichier chacune ; restes de FlowNote Swift et code mort retirés.
 
 ### Corrigé
@@ -278,7 +278,7 @@ Les changements notables de FlowNote, version par version. Le format suit [Keep 
 ## [0.9.0] - 2026-10-15
 
 ### Ajouté
-- **Bases**, comme les bases de données de Notion : un nouveau type de page (`Nom.base`, au format des Bases d'Obsidian), dont les lignes sont les notes d'un dossier.
+- **Bases**, des bases de données : un nouveau type de page (`Nom.base`, au format des Bases d'Obsidian), dont les lignes sont les notes d'un dossier.
   - Vues Tableau, Kanban, Galerie et Calendrier, en onglets ; recherche, filtres et tris par vue.
   - Propriétés typées : texte, nombre, sélection et multi-sélection colorées, date, case à cocher, lien. Les valeurs sont écrites dans les propriétés YAML des notes.
   - Tableau : saisie au clavier (flèches, Tab, Entrée), colonnes redimensionnables et déplaçables, ordre manuel des lignes, groupes repliables, ligne de calcul (somme, moyenne, min, max, cochées…).
@@ -333,12 +333,12 @@ Note : le fichier de cette release s'appelle `FlowNote_0.7.0_aarch64.dmg` (numé
   - Vue « Lectures » : thèmes repliables avec avancement, recherche, « Masquer les lus », « Au hasard ».
   - Carte « À lire » sur l'accueil ; les liens s'ouvrent dans le navigateur.
 - **Kanban des tickets** : bascule Liste / Tableau, glisser-déposer entre colonnes et dans une colonne. Les colonnes sont personnalisables dans les réglages (la dernière ferme le ticket) et l'ordre manuel est gardé dans la propriété `order`. Le badge d'état d'un ticket permet aussi de changer de colonne.
-- **Graphe des notes**, comme celui d'Obsidian : aperçu sur l'accueil et vue en plein onglet, avec zoom, déplacement, survol des voisines et filtres (notes sans lien, notes inexistantes).
+- **Graphe des notes** : aperçu sur l'accueil et vue en plein onglet, avec zoom, déplacement, survol des voisines et filtres (notes sans lien, notes inexistantes).
 
 ## [0.6.0] - 2026-10-14
 
 ### Ajouté
-- **Ergonomie inspirée de Notion** :
+- **Ergonomie** :
   - onglets en haut de la fenêtre, alignés sur les boutons de fenêtre macOS ;
   - barre latérale plate avec vault, nouvelle page, Rechercher / Accueil / Tickets, menu « … » des pages, Git / Réglages / Aide en bas ;
   - aperçu de la barre latérale au survol quand elle est masquée.
@@ -371,7 +371,7 @@ Note : le fichier de cette release s'appelle `FlowNote_0.7.0_aarch64.dmg` (numé
 ## [0.5.0] - 2026-10-14
 
 ### Ajouté
-- **Tickets**, comme les issues GitHub :
+- **Tickets** :
   - fichiers Markdown dans `Tickets/`, avec état, tags et échéance (format `📅` du plugin Tasks) ;
   - fils de commentaires en callouts `[!comment]` ;
   - vue de tous les tickets, et tickets sur l'accueil.
@@ -415,7 +415,7 @@ Note : le fichier de cette release s'appelle `FlowNote_0.7.0_aarch64.dmg` (numé
 ## [0.1.0] - 2026-10-13
 
 ### Ajouté
-- Première version : éditeur de blocs façon Notion sur un vault Obsidian, avec un moteur de fidélité Markdown qui réécrit à l'identique ce qui n'a pas été modifié.
+- Première version : éditeur de blocs sur un vault Obsidian, avec un moteur de fidélité Markdown qui réécrit à l'identique ce qui n'a pas été modifié.
 - Menu `/`, raccourcis Markdown, poignée de bloc et glisser-déposer.
 - Liens `[[wikilinks]]`, sous-pages, pièces jointes, tags.
 - Tableaux éditables, propriétés YAML, blocs de code colorés, Mermaid.

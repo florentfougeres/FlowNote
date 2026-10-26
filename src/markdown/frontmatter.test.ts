@@ -4,10 +4,10 @@ import { addProperty, readProperties, renameProperty, setProperty } from "./fron
 const FM = `---
 # Métadonnées de la note
 title: Mon projet
-tags: [projet, notion]
+tags: [projet, carnet]
 aliases:
   - FlowNote
-  - Mon Notion
+  - Mon Carnet
 published: false
 priority: 2
 created: 2026-10-13
@@ -18,8 +18,8 @@ describe("reading properties", () => {
   it("types values like Obsidian", () => {
     expect(readProperties(FM).properties).toEqual([
       { key: "title", type: "text", value: "Mon projet" },
-      { key: "tags", type: "list", value: ["projet", "notion"] },
-      { key: "aliases", type: "list", value: ["FlowNote", "Mon Notion"] },
+      { key: "tags", type: "list", value: ["projet", "carnet"] },
+      { key: "aliases", type: "list", value: ["FlowNote", "Mon Carnet"] },
       { key: "published", type: "checkbox", value: false },
       { key: "priority", type: "number", value: 2 },
       { key: "created", type: "date", value: "2026-10-13" },
@@ -42,8 +42,8 @@ describe("reading properties", () => {
 
 describe("editing properties", () => {
   it("adding a tag keeps the flow style, comments and the other keys", () => {
-    const next = setProperty(FM, "tags", ["projet", "notion", "obsidian"])!;
-    expect(next).toBe(FM.replace("tags: [projet, notion]", "tags: [projet, notion, obsidian]"));
+    const next = setProperty(FM, "tags", ["projet", "carnet", "obsidian"])!;
+    expect(next).toBe(FM.replace("tags: [projet, carnet]", "tags: [projet, carnet, obsidian]"));
   });
 
   it("block lists stay block lists", () => {

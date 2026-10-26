@@ -9,7 +9,7 @@ import { clearFormatting, HIGHLIGHT_PENCIL_EVENT, highlightAt, isUnderlined, rem
 import { linkTarget } from "./LinkPrompt";
 
 /**
- * Formatting of the selected text, like Bear and MarkText: a bar above the
+ * Formatting of the selected text: a bar above the
  * selection (bold, italic, underline, strike, highlight and its colour, code,
  * link, footnote, eraser). With the cursor in a highlight, its pencil
  * (format.ts) opens its colours.
@@ -100,7 +100,7 @@ export function FormatBar({ editor, onLink, onFootnote }: Props) {
       const start = view.coordsAtPos(state.selection.from);
       const end = view.coordsAtPos(state.selection.to);
       const top = Math.min(start.top, end.top);
-      // Aligned on the start of the selection, like Bear: its width never shifts it.
+      // Aligned on the start of the selection: its width never shifts it.
       const left = Math.max(8, Math.min(start.left - 6, window.innerWidth - 340));
       placed.current = { key, style: top > 54 ? { left, top: top - 44 } : { left, top: Math.max(start.bottom, end.bottom) + 8 } };
     }
@@ -156,7 +156,7 @@ export function FormatBar({ editor, onLink, onFootnote }: Props) {
   );
 }
 
-/** Bear's colour menu: the default yellow, then the five colours. `current` undefined: no highlight yet. */
+/** The highlight colour menu: the default yellow, then the five colours. `current` undefined: no highlight yet. */
 function HighlightColors({ x, y, current, onPick, onClose }: { x: number; y: number; current: string | null | undefined; onPick: (color: string | null) => void; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {

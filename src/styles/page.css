@@ -1,6 +1,6 @@
 /* ---- Full width, focus mode, backlinks ---- */
 
-/* Full width (per page): the note column spans the page, like Notion's. */
+/* Full width (per page): the note column spans the page. */
 .page.wide .page-heading,
 .page.wide .page-title,
 .page.wide .properties,

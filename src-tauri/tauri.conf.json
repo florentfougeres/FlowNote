@@ -85,7 +85,7 @@
     },
     "category": "Productivity",
     "shortDescription": "Éditeur de blocs pour vault Obsidian",
-    "longDescription": "Éditeur de notes façon Notion qui travaille directement sur les fichiers Markdown d'un vault Obsidian, avec gestionnaire Git intégré.",
+    "longDescription": "Éditeur de notes par blocs qui travaille directement sur les fichiers Markdown d'un vault Obsidian, avec gestionnaire Git intégré.",
     "copyright": "© 2026 Florent Fougères",
     "macOS": {
       "signingIdentity": "-",

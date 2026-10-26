@@ -15,7 +15,7 @@ function lastTextblock(node: PMNode, pos: number): { node: PMNode; pos: number }
 }
 
 /**
- * Tab in a top-level paragraph, like Notion: under a list it becomes an item
+ * Tab in a top-level paragraph: under a list it becomes an item
  * nested in the last one, otherwise a bullet item (Markdown has no indented
  * text: 4 spaces before a paragraph make it code).
  */
@@ -79,7 +79,7 @@ function backspaceIntoAbove(state: EditorState): Transaction | null {
 }
 
 /**
- * Block-level keyboard behaviour modelled on Notion: Enter and Backspace
+ * Block-level keyboard behaviour: Enter and Backspace
  * convert or leave blocks instead of only splitting and joining text.
  */
 export const BlockKeymap = Extension.create({
@@ -243,7 +243,7 @@ export const BlockKeymap = Extension.create({
         }
 
         // Start of a line under a list, quote, callout, table or atom block:
-        // go up to the end of the line above, like Notion (see `backspaceIntoAbove`).
+        // go up to the end of the line above (see `backspaceIntoAbove`).
         if ($from.depth === 1 && $from.index(0) > 0 && parent.isTextblock && parent.type !== types().codeBlock) {
           const tr = backspaceIntoAbove(state);
           if (tr) {

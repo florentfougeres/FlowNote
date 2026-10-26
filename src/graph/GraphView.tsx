@@ -14,7 +14,7 @@ const MINDMAP_COLOR = "#16a085";
 
 /**
  * The vault graph drawn on a canvas, laid out by a force simulation (linked
- * notes attract, all notes repel), like Obsidian's graph view. Hover lights a
+ * notes attract, all notes repel). Hover lights a
  * note and its neighbours; click opens it (⌘-click: new tab). In `compact`
  * mode (dashboard preview) the view does not zoom or pan.
  */

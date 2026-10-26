@@ -11,13 +11,13 @@ import { dirname, noteTitle } from "./vault/links";
 import { keys } from "./keys";
 
 /**
- * Sidebar, laid out like Notion's: the vault (with its menu) and a "new page"
+ * Sidebar: the vault (with its menu) and a "new page"
  * button at the top, navigation rows, the page tree, then Git, settings and
  * help at the bottom.
  *
  * Page tree: a note and the folder of the same name next to it ("Projet.md" +
  * "Projet/") are shown as one page whose children are the folder's content,
- * like nested pages in Notion.
+ * as nested pages.
  */
 
 interface Page {

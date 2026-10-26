@@ -109,7 +109,7 @@ describe("Obsidian syntax is recognised", () => {
     expect(embed?.attrs?.target).toBe("img.png");
   });
 
-  it("coloured highlights (Bear): the emoji becomes the colour, and is written back", () => {
+  it("coloured highlights: the emoji becomes the colour, and is written back", () => {
     const [paragraph] = parseFragment("je ==🟡test== et ==🔵bleu== du fluo");
     const colors = paragraph.content!.flatMap((n) => n.marks?.filter((m) => m.type === "highlight").map((m) => m.attrs?.color) ?? []);
     expect(colors).toEqual(["yellow", "blue"]);

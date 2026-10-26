@@ -14,7 +14,7 @@ import { linkTextFor, sanitizeName, subpageFolder, uniquePath } from "../vault/l
 
 /**
  * Slash menu. The query stays in the document text (`/tit` filters on "tit")
- * like in Notion. The menu only opens when `/` is typed (not when the cursor
+ * The menu only opens when `/` is typed (not when the cursor
  * lands after an existing slash), at the start of a block or after a space —
  * so `1/2` and URLs do not open it — and never in code or callout titles.
  */
@@ -24,7 +24,7 @@ export interface SlashItem extends MenuItem {
   run: (editor: Editor, range: Range, bridge: VaultBridge) => void;
 }
 
-/** Notion-style sub-page: a new note in a folder named after this one, linked from here. */
+/** Sub-page: a new note in a folder named after this one, linked from here. */
 async function createSubpage(editor: Editor, range: Range, bridge: VaultBridge) {
   editor.chain().focus().deleteRange(range).run();
   const name = await bridge.askName("Nom de la sous-page", "Sans titre");
@@ -171,7 +171,7 @@ const SLASH_ITEMS: SlashItem[] = [
     description: "Tableau Markdown",
     icon: "▦",
     keywords: ["tableau", "table"],
-    // Its size is chosen first, like in MarkText (TableSizePicker.tsx).
+    // Its size is chosen first (TableSizePicker.tsx).
     run: (editor, range) => {
       editor.chain().focus().deleteRange(range).run();
       const coords = editor.view.coordsAtPos(editor.state.selection.from);

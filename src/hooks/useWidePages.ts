@@ -20,7 +20,7 @@ function save(paths: Set<string>) {
 }
 
 /**
- * Pages shown at full width, like Notion's "Full width": remembered by FlowNote
+ * Pages shown at full width: remembered by FlowNote
  * (by path), the notes themselves are not changed.
  */
 export function useWidePages() {

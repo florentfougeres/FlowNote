@@ -261,7 +261,7 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [focusMode]);
   const [widePages, toggleWide, followWide] = useWidePages();
-  /** Hidden sidebar shown over the page while the pointer is near the left edge, like Notion. */
+  /** Hidden sidebar shown over the page while the pointer is near the left edge. */
   const { peek, setPeek, openPeek, closePeekSoon } = useSidebarPeek();
   const frontmatter = useRef<FrontmatterControl | null>(null);
   useEffect(() => applyTheme(settings.theme, isTauri()), [settings.theme]);
@@ -395,7 +395,7 @@ export function App() {
     return saving.current;
   }, [vault, refreshGit, refresh]);
 
-  // Autosave, like Notion and Obsidian (can be turned off in the settings).
+  // Autosave (can be turned off in the settings).
   useEffect(() => {
     if (!dirty || !settings.autosave) return;
     const timer = window.setTimeout(() => void saveNow().catch(() => {}), AUTOSAVE_DELAY_MS);
@@ -1189,7 +1189,7 @@ export function App() {
   // Words and reading time of a plain note (not a drawing, mind map nor base).
   const words = note && !drawing && !mindmap && !canvasPage && !dashboardPage && !basePage ? countWords(note.markdown) : null;
   /**
-   * Status pill, at the bottom right of the page like Obsidian's status bar:
+   * Status pill, at the bottom right of the page:
    * the save state and the words, or a passing message. It takes no room and
    * fades while typing.
    */
