@@ -2,6 +2,12 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.21.1] - 2026-10-26
+
+### Modifié
+- Vault de démo refait : le carnet de Camille, designer freelance (clients, projets, réunions, journal, voyages), ordonné et réaliste, qui montre chaque fonctionnalité en situation. Sa note « Bienvenue » dit où voir chacune. Les dates restent d'actualité (échéances, calendrier, journal).
+- Captures de la documentation refaites sur ce vault.
+
 ## [0.21.0] - 2026-10-26
 
 ### Ajouté
