@@ -1,5 +1,5 @@
 import { Extension } from "@tiptap/core";
-import { Plugin, PluginKey, type EditorState } from "@tiptap/pm/state";
+import { Plugin, PluginKey, TextSelection, type EditorState } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import Suggestion from "@tiptap/suggestion";
@@ -8,7 +8,9 @@ import { dismissPlugin, isDismissed, menuRenderer, MenuStore, normalizeText, typ
 /**
  * Emoji: typing `:cal` suggests 📆. The note keeps the
  * shortcode (`:calendar:`), and the editor displays every known shortcode as
- * its emoji, revealing the code while the cursor is on it. Names are searched
+ * its emoji as soon as its closing `:` is typed, like a highlight or inline
+ * code: the code shows only while the cursor is inside it (← from the emoji,
+ * or a click on it), to change its text. Names are searched
  * in English (shortcodes) and French.
  */
 
@@ -180,6 +182,12 @@ function emojiWidget(emoji: string) {
   };
 }
 
+/** The cursor inside the code (not just before or after it), or a selection over it: its text shows. */
+function editingShortcode(state: EditorState, code: Shortcode): boolean {
+  const { from, to, empty } = state.selection;
+  return empty ? from > code.from && from < code.to : from < code.to && to > code.from;
+}
+
 function shortcodePlugin(): Plugin {
   return new Plugin<Shortcode[]>({
     key: shortcodeKey,
@@ -193,14 +201,45 @@ function shortcodePlugin(): Plugin {
       return {};
     },
     props: {
+      // Around an emoji, the keys see one character: the arrows go into its code
+      // (the browser would skip the hidden text), ⌫ and ⌦ remove it whole.
+      handleKeyDown(view, event) {
+        if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return false;
+        const { selection } = view.state;
+        if (!selection.empty) return false;
+        const at = selection.from;
+        const codes = shortcodeKey.getState(view.state) ?? [];
+        const before = codes.find((c) => c.to === at);
+        const after = codes.find((c) => c.from === at);
+        const go = (pos: number) => view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos)));
+        if (event.key === "ArrowLeft" && before) go(before.to - 1);
+        else if (event.key === "ArrowRight" && after) go(after.from + 1);
+        else if (event.key === "Backspace" && before) view.dispatch(view.state.tr.delete(before.from, before.to));
+        else if (event.key === "Delete" && after) view.dispatch(view.state.tr.delete(after.from, after.to));
+        else return false;
+        return true;
+      },
+      // A click on an emoji opens its code, the cursor before the closing `:`.
+      handleDOMEvents: {
+        mousedown(view, event) {
+          const target = event.target as HTMLElement;
+          if (!target.classList?.contains("emoji-shortcode") || !view.editable) return false;
+          const pos = view.posAtDOM(target, 0);
+          const code = (shortcodeKey.getState(view.state) ?? []).find((c) => c.from === pos);
+          if (!code) return false;
+          event.preventDefault();
+          view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, code.to - 1)));
+          view.focus();
+          return true;
+        },
+      },
       decorations(state: EditorState) {
         const codes = shortcodeKey.getState(state) ?? [];
         if (codes.length === 0) return null;
-        const { from, to } = state.selection;
         const decorations: Decoration[] = [];
         for (const code of codes) {
           // The code being edited stays visible as text.
-          if (from <= code.to && to >= code.from) continue;
+          if (editingShortcode(state, code)) continue;
           decorations.push(Decoration.widget(code.from, emojiWidget(code.emoji), { side: -1, key: `emoji-${code.emoji}`, ignoreSelection: true }));
           decorations.push(Decoration.inline(code.from, code.to, { class: "emoji-shortcode-source" }));
         }

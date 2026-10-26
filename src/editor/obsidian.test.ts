@@ -186,4 +186,26 @@ describe("emoji", () => {
     expect(shown()).toEqual(["⚠️"]);
     expect(save()).toBe("Danger :warning: ici\n\nAutre ligne\n");
   });
+
+  it("a shortcode typed shows as its emoji at its closing colon, like a highlight", async () => {
+    const { loadEmojis } = await import("./emoji");
+    await loadEmojis();
+    const { editor, save } = openEditor("");
+    type(editor, "## Fait :white_check_mark:");
+    const shown = () => [...editor.view.dom.querySelectorAll(".emoji-shortcode")].map((e) => e.textContent);
+    // The cursor right after the code: the emoji, at once.
+    expect(shown()).toEqual(["✅\u{FE0F}"]);
+    // ← goes inside the code: its text shows, to be changed.
+    editor.commands.setTextSelection(editor.state.selection.from - 1);
+    expect(shown()).toEqual([]);
+    editor.commands.setTextSelection(editor.state.doc.firstChild!.nodeSize - 1);
+    expect(shown()).toEqual(["✅\u{FE0F}"]);
+    expect(save()).toBe("## Fait :white_check_mark:\n");
+    // ← right after the emoji goes into its code; ⌫ right after it removes it whole.
+    press(editor, "ArrowLeft");
+    expect(shown()).toEqual([]);
+    editor.commands.setTextSelection(editor.state.doc.firstChild!.nodeSize - 1);
+    press(editor, "Backspace");
+    expect(save()).toBe("## Fait \n");
+  });
 });

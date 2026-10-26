@@ -143,7 +143,7 @@ Les raccourcis Markdown marchent aussi à la frappe :
 - `⌘B` gras, `⌘I` italique, `⌘U` souligné, `⌘E` code, `⌘⇧S` barré, `⌘⇧H` fluo. Les délimiteurs Markdown (`**gras**`, `*italique*`, `~~barré~~`, `==fluo==`) marchent aussi à la frappe. Markdown n'a pas de souligné : il s'écrit `<u>souligné</u>`, comme dans Obsidian.
 - **Fluo en couleur** : un emoji de couleur juste après `==` (`==🟢vert==`, `==🔴rouge==`, `==🔵bleu==`, `==🟡jaune==`, `==🟣violet==`). Le curseur dans un fluo, un petit crayon apparaît à son début : un clic choisit une autre couleur (ou « Défaut », le jaune sans emoji). Obsidian affiche l'emoji dans un fluo jaune.
 - **Code en ligne** : `` ` `` tapé sur une sélection la met entre accents graves ; posé devant puis derrière un mot (ou l'inverse), le mot devient du code. Curseur dans le code, ses `` ` `` s'affichent en gris : `→` à la fin passe le `` ` `` fermant, puis `⌫` retire le code (le texte reste) ; `⌦` avant le `` ` `` ouvrant, ou `⌘E` dans le code, le retire aussi.
-- **Emoji** : `:` suivi d'un mot propose un emoji, écrit `:shortcode:` dans le fichier.
+- **Emoji** : `:` suivi d'un mot propose un emoji, écrit `:shortcode:` dans le fichier. Un code tapé à la main (`:white_check_mark:`) s'affiche en emoji dès son `:` fermant. Comme pour le fluo et le code, `←` juste après l'emoji (ou un clic dessus) montre son code pour le modifier ; il redevient un emoji quand le curseur en sort. `⌫` juste après l'efface en entier.
 
 ### Les liens
 
