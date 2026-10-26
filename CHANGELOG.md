@@ -2,6 +2,33 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.21.0] - 2026-10-26
+
+### Ajouté
+- Organigrammes flowchart.js : un bloc ```` ```flow ```` (ou ```` ```flowchart ````) est dessiné aux couleurs de l'app ; `/organigramme` en insère un. Un éditeur visuel en formulaire liste les étapes (forme, texte) et les flèches (départ, sortie oui/non, arrivée, côté), sans écrire la syntaxe.
+- Maths dans les notes, dessinées par KaTeX : `$…$` en ligne (un clic ouvre la source avec l'aperçu en direct), `$$…$$` en bloc (double-clic, aperçu sous le champ). `$x^2$` tapé devient une formule, `$$` puis espace crée un bloc, « Formule en ligne » dans le menu `/`. L'export HTML écrit les formules en MathML.
+- Modèles : si un dossier de modèles est réglé dans Obsidian, « Nouvelle page » (type Note) propose un modèle et `/modèle` en insère un dans la note ; `{{title}}`, `{{date}}`, `{{time}}` et `{{date:format}}` sont remplis aux formats d'Obsidian.
+- Note de bas de page depuis la barre de mise en forme : une petite fenêtre demande son texte.
+- Vault de démo : une note « Tour de l'éditeur » qui montre chaque bloc et chaque mise en forme, une liste de tâches, une galerie et une formule dans la base, deux modèles.
+
+### Modifié
+- Emoji : un `:code:` s'affiche en emoji dès son `:` fermant ; `←`, `→` ou un clic dans le code le montrent pour le modifier, `⌫` efface l'emoji en entier.
+- Coller un seul bloc (une ligne d'une page web, un titre, un élément de liste) n'apporte que son texte : la ligne garde son type.
+- Une sous-page créée par `/sous-page` commence par son titre `# Nom`, comme une nouvelle page.
+- Pleine largeur : le `+` s'affiche au-dessus de `⋮⋮`, et sous l'icône du niveau ou la flèche d'un toggle, pour tenir dans la marge.
+- Plus rien ne s'affiche par-dessus un diagramme Mermaid ou des résultats de requête au survol ; un organigramme ne montre que ses boutons.
+- Documentation et README repris de bout en bout, captures refaites (`npm run captures`).
+
+### Corrigé
+- Le `/` du bouton + ne reste plus quand on referme le menu d'un clic ailleurs dans la note ; la ligne créée par le + part aussi.
+- La note de bas de page de la barre de mise en forme n'efface plus le texte sélectionné.
+- La flèche d'un toggle n'est plus recouverte par la poignée du bloc.
+- Valider un bloc brut (formule, HTML) par `⌘↵` ne provoque plus d'erreur.
+- Documentation : les sections Dashboard et Tâches étaient prises dans le bloc de code d'exemple des présentations.
+
+### Supprimé
+- Les « mentions non liées » sous les notes.
+
 ## [0.20.0] - 2026-10-25
 
 ### Ajouté

@@ -18,7 +18,7 @@ git status            # rien en attente
 npm run lint
 npm run typecheck
 npm test
-~/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml
+~/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml --workspace   # sans --workspace, les tests du backend ne tournent pas
 ```
 
 ## 3. Changer la version
