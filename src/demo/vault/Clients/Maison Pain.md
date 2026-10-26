@@ -4,7 +4,7 @@ ville: Lyon
 contact: Hélène Garnier
 montant: 6800
 rdv: {{J+2}}
-site: https://maison-pain.example
+site: https://maison-pain.example/boutique/commande-en-ligne
 fidele: true
 tags: [client, maison-pain]
 ---

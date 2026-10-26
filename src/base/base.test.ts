@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { defaultView, filterExpression, newBaseFile, writeFormula, parseBase, parseFilter, renameInBase, reparse, serializeBase, writeColumn, writeView } from "./baseFile";
+import { defaultView, filterExpression, NAME, newBaseFile, writeFormula, parseBase, parseFilter, renameInBase, reparse, serializeBase, writeColumn, writeDisplayName, writeView } from "./baseFile";
+import { columnInfo, usedValues } from "./columns";
 import { cellValue, columnMeta, optionsOf, rowsOf, setNoteProperty, summarize, viewRows } from "./rows";
 
 const BASE = `# Mes projets
@@ -115,6 +116,17 @@ describe("base file", () => {
     expect(model.displayNames).toEqual({ état: "Statut" });
   });
 
+  it("names the note column through Obsidian's displayName, and forgets it", () => {
+    const file = parseBase(BASE);
+    writeDisplayName(file, NAME, "Projet");
+    const named = reparse(file);
+    expect(columnInfo(named.model, NAME, []).label).toBe("Projet");
+    expect(serializeBase(named)).toContain("  file.name:\n    displayName: Projet");
+    writeDisplayName(named, NAME, null);
+    expect(serializeBase(named)).not.toContain("file.name:\n    displayName");
+    expect(columnInfo(reparse(named).model, NAME, []).label).toBe("Nom");
+  });
+
   it("reads and writes formulas", () => {
     const file = parseBase(BASE);
     expect(file.model.formulas).toEqual({ restant: "(date(echeance) - today()).days" });
@@ -155,6 +167,16 @@ describe("base rows", () => {
     expect(viewRows(rows, model.views[0].filters, [{ property: "statut", direction: "ASC" }]).map((r) => r.name)).toEqual(["Site web", "Appli"]);
     expect(viewRows(rows, [], [], "terminé").map((r) => r.name)).toEqual(["Appli"]);
     expect(viewRows(rows, [{ property: "tags", op: "contains", value: "A" }], []).map((r) => r.name)).toEqual(["Plan"]);
+  });
+
+  it("let every row through a filter whose value is not typed yet", () => {
+    expect(viewRows(rows, [{ property: "statut", op: "is", value: " " }], []).length).toBe(3);
+  });
+
+  it("offer the values used in a column, most used first", () => {
+    expect(usedValues("statut", [...rows, ...rowsOf([["Projets/Autre.md", "---\nstatut: Terminé\n---\n"]], model)])).toEqual(["Terminé", "Abandonné", "En cours"]);
+    expect(usedValues("tags", rows)).toEqual(["a", "b"]);
+    expect(usedValues("prioritaire", rows)).toEqual([]);
   });
 
   it("set one property of a note, keeping the rest", () => {

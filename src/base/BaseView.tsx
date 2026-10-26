@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PropertyValue } from "../markdown/frontmatter";
 import { Icon, type IconName } from "../Icon";
 import { readAllNotes, type Vault } from "../vault/vault";
-import { noteTitle, uniquePath } from "../vault/links";
-import { defaultView, NAME, parseBase, renameInBase, removeView, serializeBase, writeColumn, writeFormula, writeView, type BaseFile, type BaseView as View, type SimpleFilter } from "./baseFile";
+import { noteTitle, resolveLink, uniquePath } from "../vault/links";
+import { defaultView, NAME, parseBase, renameInBase, removeView, serializeBase, writeColumn, writeDisplayName, writeFormula, writeView, type BaseFile, type BaseView as View, type SimpleFilter } from "./baseFile";
 import { FILE_PROPERTIES, propertiesOf, renameNoteProperty, rowsOf, setNoteProperty, viewRows, type BaseRow } from "./rows";
 import { TableView, type TableActions } from "./TableView";
 import { BoardView } from "./BoardView";
 import { GalleryView } from "./GalleryView";
 import { CalendarView } from "./CalendarView";
 import { columnInfo, type ColumnInfo } from "./columns";
-import { TYPE_ICONS } from "./cells";
+import { BaseLinks, TYPE_ICONS } from "./cells";
 
 const OPS: [SimpleFilter["op"], string][] = [
   ["is", "est"],
@@ -33,29 +33,93 @@ function usePopover(onClose: () => void) {
   return box;
 }
 
-function FilterMenu({ view, properties, label, onChange, onClose }: { view: View; properties: string[]; label: (p: string) => string; onChange: (filters: SimpleFilter[]) => void; onClose: () => void }) {
+/** A choice of a filter or sort rule, as the app's menus (no raw `<select>`). */
+function RuleChoice<T extends string>({ value, choices, onChange }: { value: T; choices: readonly (readonly [T, string])[]; onChange: (value: T) => void }) {
+  const [open, setOpen] = useState(false);
+  const box = usePopover(() => setOpen(false));
+  return (
+    <div ref={box} className="db-choice">
+      <button type="button" className="db-choice-button" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span>{choices.find(([v]) => v === value)?.[1] ?? value}</span>
+        <Icon name="chevronDown" size={12} />
+      </button>
+      {open && (
+        <div className="db-popover db-menu db-choice-list">
+          {choices.map(([v, text]) => (
+            <button
+              key={v}
+              type="button"
+              className={v === value ? "selected" : undefined}
+              onClick={() => {
+                onChange(v);
+                setOpen(false);
+              }}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The value of a filter, with the values of its column offered under it while it has the focus. */
+function FilterValue({ value, values, onChange }: { value: string; values: string[]; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const typed = value.trim().toLowerCase();
+  const offered = values.filter((v) => v.toLowerCase() !== typed && v.toLowerCase().includes(typed)).slice(0, 10);
+  return (
+    <div className="db-choice">
+      <input value={value} placeholder="Valeur" onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setOpen(false)} />
+      {open && offered.length > 0 && (
+        <div className="db-popover db-menu db-choice-list" onMouseDown={(e) => e.preventDefault()}>
+          <small>Valeurs de la colonne</small>
+          {offered.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => {
+                onChange(v);
+                setOpen(false);
+              }}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FilterMenu({
+  view,
+  properties,
+  label,
+  valuesOf,
+  onChange,
+  onClose,
+}: {
+  view: View;
+  properties: string[];
+  label: (p: string) => string;
+  /** The values used in a column, offered for a filter's value. */
+  valuesOf: (p: string) => string[];
+  onChange: (filters: SimpleFilter[]) => void;
+  onClose: () => void;
+}) {
   const box = usePopover(onClose);
   const set = (i: number, patch: Partial<SimpleFilter>) => onChange(view.filters.map((f, j) => (j === i ? { ...f, ...patch } : f)));
+  const columns = properties.map((p) => [p, label(p)] as const);
   return (
-    <div ref={box} className="db-popover db-menu db-menu-right db-rules">
+    <div ref={box} className="db-popover db-menu db-rules">
       {view.filters.length === 0 && <p className="dash-muted">Aucun filtre dans cette vue.</p>}
       {view.filters.map((f, i) => (
         <div key={i} className="db-rule">
-          <select value={f.property} onChange={(e) => set(i, { property: e.target.value })}>
-            {properties.map((p) => (
-              <option key={p} value={p}>
-                {label(p)}
-              </option>
-            ))}
-          </select>
-          <select value={f.op} onChange={(e) => set(i, { op: e.target.value as SimpleFilter["op"] })}>
-            {OPS.map(([op, text]) => (
-              <option key={op} value={op}>
-                {text}
-              </option>
-            ))}
-          </select>
-          {["is", "isNot", "contains"].includes(f.op) && <input value={f.value} placeholder="Valeur" onChange={(e) => set(i, { value: e.target.value })} />}
+          <RuleChoice value={f.property} choices={columns} onChange={(property) => set(i, { property })} />
+          <RuleChoice value={f.op} choices={OPS} onChange={(op) => set(i, { op })} />
+          {["is", "isNot", "contains"].includes(f.op) && <FilterValue value={f.value} values={valuesOf(f.property)} onChange={(value) => set(i, { value })} />}
           <button className="db-icon-button" aria-label="Retirer le filtre" onClick={() => onChange(view.filters.filter((_, j) => j !== i))}>
             <Icon name="close" size={12} />
           </button>
@@ -69,24 +133,21 @@ function FilterMenu({ view, properties, label, onChange, onClose }: { view: View
   );
 }
 
+const DIRECTIONS = [
+  ["ASC", "Croissant"],
+  ["DESC", "Décroissant"],
+] as const;
+
 function SortMenu({ view, properties, label, onChange, onClose }: { view: View; properties: string[]; label: (p: string) => string; onChange: (sort: View["sort"]) => void; onClose: () => void }) {
   const box = usePopover(onClose);
+  const columns = properties.map((p) => [p, label(p)] as const);
   return (
-    <div ref={box} className="db-popover db-menu db-menu-right db-rules">
+    <div ref={box} className="db-popover db-menu db-rules">
       {view.sort.length === 0 && <p className="dash-muted">Lignes triées par nom.</p>}
       {view.sort.map((s, i) => (
         <div key={i} className="db-rule">
-          <select value={s.property} onChange={(e) => onChange(view.sort.map((x, j) => (j === i ? { ...x, property: e.target.value } : x)))}>
-            {properties.map((p) => (
-              <option key={p} value={p}>
-                {label(p)}
-              </option>
-            ))}
-          </select>
-          <select value={s.direction} onChange={(e) => onChange(view.sort.map((x, j) => (j === i ? { ...x, direction: e.target.value as "ASC" | "DESC" } : x)))}>
-            <option value="ASC">Croissant</option>
-            <option value="DESC">Décroissant</option>
-          </select>
+          <RuleChoice value={s.property} choices={columns} onChange={(property) => onChange(view.sort.map((x, j) => (j === i ? { ...x, property } : x)))} />
+          <RuleChoice value={s.direction} choices={DIRECTIONS} onChange={(direction) => onChange(view.sort.map((x, j) => (j === i ? { ...x, direction } : x)))} />
           <button className="db-icon-button" aria-label="Retirer le tri" onClick={() => onChange(view.sort.filter((_, j) => j !== i))}>
             <Icon name="close" size={12} />
           </button>
@@ -232,6 +293,8 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
   const formulaIds = Object.keys(model.formulas).map((f) => `formula.${f}`);
   const label = (p: string) => columnInfo(model, p, all).label;
   const info = (p: string): ColumnInfo => columnInfo(model, p, all);
+  /** The values a filter on `p` can take: the rows' names, a select's options, the values used. */
+  const valuesOf = (p: string) => (p === NAME ? all.map((r) => r.name) : [...new Set([...info(p).options.map((o) => o.value), ...(info(p).values ?? [])])]);
   const known = (p: string) => p === NAME || properties.includes(p) || p.startsWith("file.") || formulaIds.includes(p);
   const order = view.order.length ? (view.order.includes(NAME) ? view.order : [NAME, ...view.order]) : [NAME, ...properties, ...formulaIds];
   const columns = order.filter(known).map(info);
@@ -341,6 +404,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
         );
       }
     },
+    onDisplayName: (property, name) => edit((file) => writeDisplayName(file, property, name)),
     onDeleteColumn: (property) => {
       edit((file) => {
         writeColumn(file, property, null);
@@ -380,147 +444,155 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
           : null;
   const cardColumns = columns.filter((c) => c.property !== NAME && c.property !== view.groupBy && c.property !== view.image);
 
+  // `[[liens]]` written in cells open their note, resolved from the base's folder.
+  const openLink = (target: string, newTab: boolean) => {
+    const found = resolveLink(target, files, path);
+    if (found) onOpen(found, newTab);
+  };
+
   return (
-    <div className={embedded ? "db-page embedded" : "db-page"}>
-      {!embedded && (
-        <header className="db-header">
-          <h1>
-            <Icon name="database" size={26} /> {noteTitle(path)}
-          </h1>
-          <p className="dash-muted">{model.folder !== null ? `Les pages du dossier « ${model.folder || "racine"} »` : "Toutes les pages du vault"}</p>
-        </header>
-      )}
-      <div className="db-toolbar">
-        <div className="db-tabs" role="tablist">
-          {embedded && (
-            <button className="db-embed-title" onClick={(e) => onOpen(path, e.metaKey || e.ctrlKey)} title="Ouvrir la base">
-              <Icon name="database" size={15} /> {noteTitle(path)}
-            </button>
-          )}
-          {model.views.map((v, i) => (
-            <button key={i} role="tab" aria-selected={i === index} className={i === index ? "db-tab active" : "db-tab"} onClick={() => setViewIndex(i)} onDoubleClick={() => editable && setRenaming(i)}>
-              <Icon name={viewIcon(v.type)} size={14} /> {v.name}
-              {i === index && model.views.length > 1 && editable && (
-                <span
-                  className="db-tab-remove"
-                  role="button"
-                  aria-label={`Supprimer la vue ${v.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    edit((file) => removeView(file, i));
-                    setViewIndex(0);
-                  }}
-                >
-                  ×
-                </span>
-              )}
-            </button>
-          ))}
-          {editable && (
-            <span className="db-popover-anchor">
-              <button className="db-icon-button" aria-label="Ajouter une vue" title="Ajouter une vue" onClick={() => setPopover(popover === "views" ? null : "views")}>
-                <Icon name="plus" size={14} />
+    <BaseLinks.Provider value={openLink}>
+      <div className={embedded ? "db-page embedded" : "db-page"}>
+        {!embedded && (
+          <header className="db-header">
+            <h1>
+              <Icon name="database" size={26} /> {noteTitle(path)}
+            </h1>
+            <p className="dash-muted">{model.folder !== null ? `Les pages du dossier « ${model.folder || "racine"} »` : "Toutes les pages du vault"}</p>
+          </header>
+        )}
+        <div className="db-toolbar">
+          <div className="db-tabs" role="tablist">
+            {embedded && (
+              <button className="db-embed-title" onClick={(e) => onOpen(path, e.metaKey || e.ctrlKey)} title="Ouvrir la base">
+                <Icon name="database" size={15} /> {noteTitle(path)}
               </button>
-              {popover === "views" && <ViewsMenu onAdd={addView} onClose={() => setPopover(null)} />}
-            </span>
-          )}
-        </div>
-        <div className="db-tools">
-          <label className="tickets-search db-search">
-            <Icon name="search" size={14} />
-            <input placeholder="Rechercher" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setSearch("")} />
-          </label>
-          <span className="db-popover-anchor">
-            <button className={view.filters.length ? "db-tool active" : "db-tool"} onClick={() => setPopover(popover === "filter" ? null : "filter")}>
-              <Icon name="filter" size={14} /> Filtrer{view.filters.length ? ` · ${view.filters.length}` : ""}
-            </button>
-            {popover === "filter" && <FilterMenu view={view} properties={[NAME, ...properties]} label={label} onChange={(filters) => editView({ filters })} onClose={() => setPopover(null)} />}
-          </span>
-          <span className="db-popover-anchor">
-            <button className={view.sort.length ? "db-tool active" : "db-tool"} onClick={() => setPopover(popover === "sort" ? null : "sort")}>
-              <Icon name="sort" size={14} /> Trier{view.sort.length ? ` · ${view.sort.length}` : ""}
-            </button>
-            {popover === "sort" && <SortMenu view={view} properties={[NAME, ...properties, ...formulaIds, ...FILE_IDS]} label={label} onChange={(sort) => editView({ sort })} onClose={() => setPopover(null)} />}
-          </span>
-          {options && editable && (
-            <span className="db-popover-anchor">
-              <button className={options.value ? "db-tool active" : "db-tool"} onClick={() => setPopover(popover === "options" ? null : "options")}>
-                <Icon name={options.key === "groupBy" ? "board" : options.key === "dateProperty" ? "calendar" : "image"} size={14} /> {options.button}
+            )}
+            {model.views.map((v, i) => (
+              <button key={i} role="tab" aria-selected={i === index} className={i === index ? "db-tab active" : "db-tab"} onClick={() => setViewIndex(i)} onDoubleClick={() => editable && setRenaming(i)}>
+                <Icon name={viewIcon(v.type)} size={14} /> {v.name}
+                {i === index && model.views.length > 1 && editable && (
+                  <span
+                    className="db-tab-remove"
+                    role="button"
+                    aria-label={`Supprimer la vue ${v.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      edit((file) => removeView(file, i));
+                      setViewIndex(0);
+                    }}
+                  >
+                    ×
+                  </span>
+                )}
               </button>
-              {popover === "options" && <ChoiceMenu title={options.title} choices={options.choices} value={options.value} none={options.none} onChoose={(p) => editView({ [options.key]: p })} onClose={() => setPopover(null)} />}
+            ))}
+            {editable && (
+              <span className="db-popover-anchor">
+                <button className="db-icon-button" aria-label="Ajouter une vue" title="Ajouter une vue" onClick={() => setPopover(popover === "views" ? null : "views")}>
+                  <Icon name="plus" size={14} />
+                </button>
+                {popover === "views" && <ViewsMenu onAdd={addView} onClose={() => setPopover(null)} />}
+              </span>
+            )}
+          </div>
+          <div className="db-tools">
+            <label className="tickets-search db-search">
+              <Icon name="search" size={14} />
+              <input placeholder="Rechercher" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setSearch("")} />
+            </label>
+            <span className="db-popover-anchor">
+              <button className={view.filters.length ? "db-tool active" : "db-tool"} onClick={() => setPopover(popover === "filter" ? null : "filter")}>
+                <Icon name="filter" size={14} /> Filtrer{view.filters.length ? ` · ${view.filters.length}` : ""}
+              </button>
+              {popover === "filter" && <FilterMenu view={view} properties={[NAME, ...properties]} label={label} valuesOf={valuesOf} onChange={(filters) => editView({ filters })} onClose={() => setPopover(null)} />}
             </span>
-          )}
-          {editable && (
-            <button className="primary db-new" onClick={() => void newRow()}>
-              <Icon name="plus" size={13} /> Nouveau
-            </button>
-          )}
+            <span className="db-popover-anchor">
+              <button className={view.sort.length ? "db-tool active" : "db-tool"} onClick={() => setPopover(popover === "sort" ? null : "sort")}>
+                <Icon name="sort" size={14} /> Trier{view.sort.length ? ` · ${view.sort.length}` : ""}
+              </button>
+              {popover === "sort" && <SortMenu view={view} properties={[NAME, ...properties, ...formulaIds, ...FILE_IDS]} label={label} onChange={(sort) => editView({ sort })} onClose={() => setPopover(null)} />}
+            </span>
+            {options && editable && (
+              <span className="db-popover-anchor">
+                <button className={options.value ? "db-tool active" : "db-tool"} onClick={() => setPopover(popover === "options" ? null : "options")}>
+                  <Icon name={options.key === "groupBy" ? "board" : options.key === "dateProperty" ? "calendar" : "image"} size={14} /> {options.button}
+                </button>
+                {popover === "options" && <ChoiceMenu title={options.title} choices={options.choices} value={options.value} none={options.none} onChoose={(p) => editView({ [options.key]: p })} onClose={() => setPopover(null)} />}
+              </span>
+            )}
+            {editable && (
+              <button className="primary db-new" onClick={() => void newRow()}>
+                <Icon name="plus" size={13} /> Nouveau
+              </button>
+            )}
+          </div>
         </div>
+        {renaming !== null && (
+          <RenameView
+            name={model.views[renaming]?.name ?? ""}
+            onDone={(name) => {
+              if (name) edit((file) => writeView(file, renaming, { ...file.model.views[renaming], name }));
+              setRenaming(null);
+            }}
+          />
+        )}
+        {error && (
+          <p className="status warning" onClick={() => setError("")}>
+            {error}
+          </p>
+        )}
+        {rows === null ? (
+          <p className="dash-muted">Lecture des pages…</p>
+        ) : view.type === "board" ? (
+          <BoardView
+            rows={shown}
+            group={group}
+            shown={cardColumns}
+            formulas={model.formulas}
+            selectColumns={selectColumns}
+            editable={editable}
+            onGroup={(property) => editView({ groupBy: property })}
+            onMove={(row, value, paths) => {
+              if (view.groupBy && value !== null) void setCell(row, view.groupBy, value);
+              if (paths) setRowOrder(paths);
+            }}
+            onOpen={onOpen}
+            onNewRow={(value) => void newRow(value !== undefined && view.groupBy ? { [view.groupBy]: valueFor(view.groupBy, value) } : {})}
+          />
+        ) : view.type === "table" ? (
+          <TableView
+            rows={shown}
+            columns={columns}
+            hidden={hidden}
+            sizes={view.columnSize}
+            editable={editable}
+            formulas={model.formulas}
+            group={group}
+            summaries={view.summaries}
+            sorted={view.sort.length > 0}
+            editRow={editRow}
+            labels={label}
+            actions={actions}
+          />
+        ) : view.type === "cards" ? (
+          <GalleryView rows={shown} shown={cardColumns} formulas={model.formulas} image={view.image} files={files} editable={editable} loadImage={loadImage} onOpen={onOpen} onNewRow={() => void newRow()} />
+        ) : view.type === "calendar" ? (
+          <CalendarView
+            rows={shown}
+            date={view.dateProperty ? info(view.dateProperty) : null}
+            dateColumns={dateColumns}
+            editable={editable}
+            onDate={(property) => editView({ dateProperty: property })}
+            onMove={(row, value) => view.dateProperty && void setCell(row, view.dateProperty, value)}
+            onOpen={onOpen}
+            onNewRow={(day) => view.dateProperty && void newRow({ [view.dateProperty]: day })}
+          />
+        ) : (
+          <p className="dash-muted">La vue « {view.name} » ({view.type}) est une vue d'Obsidian que FlowNote n'affiche pas encore. Elle est conservée telle quelle.</p>
+        )}
       </div>
-      {renaming !== null && (
-        <RenameView
-          name={model.views[renaming]?.name ?? ""}
-          onDone={(name) => {
-            if (name) edit((file) => writeView(file, renaming, { ...file.model.views[renaming], name }));
-            setRenaming(null);
-          }}
-        />
-      )}
-      {error && (
-        <p className="status warning" onClick={() => setError("")}>
-          {error}
-        </p>
-      )}
-      {rows === null ? (
-        <p className="dash-muted">Lecture des pages…</p>
-      ) : view.type === "board" ? (
-        <BoardView
-          rows={shown}
-          group={group}
-          shown={cardColumns}
-          formulas={model.formulas}
-          selectColumns={selectColumns}
-          editable={editable}
-          onGroup={(property) => editView({ groupBy: property })}
-          onMove={(row, value, paths) => {
-            if (view.groupBy && value !== null) void setCell(row, view.groupBy, value);
-            if (paths) setRowOrder(paths);
-          }}
-          onOpen={onOpen}
-          onNewRow={(value) => void newRow(value !== undefined && view.groupBy ? { [view.groupBy]: valueFor(view.groupBy, value) } : {})}
-        />
-      ) : view.type === "table" ? (
-        <TableView
-          rows={shown}
-          columns={columns}
-          hidden={hidden}
-          sizes={view.columnSize}
-          editable={editable}
-          formulas={model.formulas}
-          group={group}
-          summaries={view.summaries}
-          sorted={view.sort.length > 0}
-          editRow={editRow}
-          labels={label}
-          actions={actions}
-        />
-      ) : view.type === "cards" ? (
-        <GalleryView rows={shown} shown={cardColumns} formulas={model.formulas} image={view.image} files={files} editable={editable} loadImage={loadImage} onOpen={onOpen} onNewRow={() => void newRow()} />
-      ) : view.type === "calendar" ? (
-        <CalendarView
-          rows={shown}
-          date={view.dateProperty ? info(view.dateProperty) : null}
-          dateColumns={dateColumns}
-          editable={editable}
-          onDate={(property) => editView({ dateProperty: property })}
-          onMove={(row, value) => view.dateProperty && void setCell(row, view.dateProperty, value)}
-          onOpen={onOpen}
-          onNewRow={(day) => view.dateProperty && void newRow({ [view.dateProperty]: day })}
-        />
-      ) : (
-        <p className="dash-muted">La vue « {view.name} » ({view.type}) est une vue d'Obsidian que FlowNote n'affiche pas encore. Elle est conservée telle quelle.</p>
-      )}
-    </div>
+    </BaseLinks.Provider>
   );
 }
 

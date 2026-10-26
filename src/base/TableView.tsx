@@ -25,6 +25,8 @@ export interface TableActions {
   onReorderColumns: (order: string[]) => void;
   onRowOrder: (paths: string[]) => void;
   onRenameColumn: (property: string, name: string) => void;
+  /** The name shown for a column that cannot be renamed in the notes (the note's name); null: the default one. */
+  onDisplayName: (property: string, name: string | null) => void;
   onType: (property: string, type: ColumnType) => void;
   onDeleteColumn: (property: string) => void;
   onAddColumn: (name: string, type: ColumnType) => void;
@@ -68,6 +70,7 @@ function defaultWidth(column: ColumnInfo): number {
 function HeaderMenu({ column, actions, onClose }: { column: ColumnInfo; actions: TableActions; onClose: () => void }) {
   const [name, setName] = useState(column.kind === "formula" ? column.property.slice(8) : column.property);
   const [formula, setFormula] = useState(column.formula ?? "");
+  const [label, setLabel] = useState(column.label);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const box = useOutside(onClose);
   const run = (action: () => void) => {
@@ -88,6 +91,23 @@ function HeaderMenu({ column, actions, onClose }: { column: ColumnInfo; actions:
             if (e.key === "Escape") onClose();
           }}
         />
+      )}
+      {column.kind === "name" && (
+        <>
+          <input
+            autoFocus
+            className="db-menu-input"
+            value={label}
+            aria-label="Nom de la colonne"
+            onChange={(e) => setLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") run(() => actions.onDisplayName(NAME, label.trim() && label.trim() !== "Nom" ? label.trim() : null));
+              if (e.key === "Escape") onClose();
+            }}
+          />
+          <p className="db-menu-hint">Chaque ligne est une note : cette colonne est son nom de fichier. Elle se renomme ici, mais ne se supprime pas.</p>
+          <hr />
+        </>
       )}
       {column.kind === "formula" && (
         <>
@@ -165,8 +185,20 @@ function AddColumnMenu({ hidden, labels, actions, onClose }: { hidden: string[];
   };
   const fileProps = FILE_PROPERTIES.filter(([p]) => hidden.includes(p) || !hidden.length);
   return (
-    <div ref={box} className="db-popover db-menu db-menu-right" onMouseDown={(e) => e.stopPropagation()}>
-      <input autoFocus className="db-menu-input" placeholder="Nom de la propriété" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => (e.key === "Enter" ? add() : e.key === "Escape" && onClose())} />
+    <div
+      ref={box}
+      className="db-popover db-menu db-menu-right"
+      onMouseDown={(e) => e.stopPropagation()}
+      // ↵ adds from anywhere in the menu, even after a click on a type (⇧↵ goes to the line in a formula); esc closes.
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+        else if (e.key === "Enter" && !(e.shiftKey && e.target instanceof HTMLTextAreaElement)) {
+          e.preventDefault();
+          add();
+        }
+      }}
+    >
+      <input autoFocus className="db-menu-input" placeholder="Nom de la propriété" value={name} onChange={(e) => setName(e.target.value)} />
       <small>Type</small>
       {COLUMN_TYPES.map(([t, label]) => (
         <button key={t} className={type === t ? "selected" : undefined} onClick={() => setType(t)}>
@@ -563,6 +595,7 @@ export function TableView({
                               options={column.options}
                               value={row.values[column.property]}
                               editable={editable}
+                              suggestions={column.values}
                               onChange={(value) => actions.onCell(row, column.property, value)}
                               onOptions={(options) => actions.onOptions(column.property, options)}
                             />

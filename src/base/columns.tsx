@@ -13,12 +13,27 @@ export interface ColumnInfo {
   options: SelectOption[];
   /** The formula's expression, for formula columns. */
   formula?: string;
+  /** Text values already used in the column, most used first: offered while typing, and by the filters. */
+  values?: string[];
+}
+
+/** The distinct values of a column in the rows, most used first. */
+export function usedValues(property: string, rows: BaseRow[]): string[] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const value = row.values[property];
+    for (const v of Array.isArray(value) ? value : [value]) {
+      if (v === null || v === undefined || v === "" || typeof v === "boolean") continue;
+      counts.set(String(v), (counts.get(String(v)) ?? 0) + 1);
+    }
+  }
+  return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "fr")).map(([v]) => v);
 }
 
 const FILE_TYPES: Record<string, ColumnType> = { "file.ctime": "date", "file.mtime": "date", "file.folder": "text", "file.tags": "multi", "file.links": "number" };
 
 export function columnInfo(model: BaseModel, property: string, rows: BaseRow[]): ColumnInfo {
-  if (property === NAME) return { property, label: "Nom", kind: "name", meta: { type: "text", options: [] }, options: [] };
+  if (property === NAME) return { property, label: model.displayNames[NAME] ?? "Nom", kind: "name", meta: { type: "text", options: [] }, options: [] };
   if (property.startsWith("file.")) {
     const label = FILE_PROPERTIES.find(([p]) => p === property)?.[1] ?? property;
     const type = FILE_TYPES[property] ?? "text";
@@ -29,7 +44,7 @@ export function columnInfo(model: BaseModel, property: string, rows: BaseRow[]):
     return { property, label: model.displayNames[property] ?? name, kind: "formula", meta: { type: "text", options: [] }, options: [], formula: model.formulas[name] ?? "" };
   }
   const meta = columnMeta(model, property, rows);
-  return { property, label: model.displayNames[property] ?? property, kind: "note", meta, options: meta.type === "select" || meta.type === "multi" ? optionsOf(meta, property, rows) : [] };
+  return { property, label: model.displayNames[property] ?? property, kind: "note", meta, options: meta.type === "select" || meta.type === "multi" ? optionsOf(meta, property, rows) : [], values: usedValues(property, rows) };
 }
 
 /** Whether a card shows this column for the row (an unchecked box is a value). */

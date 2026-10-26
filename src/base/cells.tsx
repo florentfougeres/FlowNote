@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { PropertyValue } from "../markdown/frontmatter";
 import { Icon, type IconName } from "../Icon";
 import { openUrl } from "../reading/web";
@@ -51,6 +51,56 @@ export function OptionPill({ option, onRemove }: { option: SelectOption; onRemov
   );
 }
 
+/** Opens a `[[link]]` written in a cell (provided by the base, which resolves it from its folder). */
+export const BaseLinks = createContext<((target: string, newTab: boolean) => void) | null>(null);
+
+/** A web address shown in a cell: on one line, its start only, opened in the browser. */
+function UrlLink({ url }: { url: string }) {
+  return (
+    <a
+      className="db-url"
+      href={url}
+      title={url}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openUrl(url);
+      }}
+    >
+      {url.replace(/^https?:\/\/(www\.)?/, "")}
+    </a>
+  );
+}
+
+/** Text with its `[[liens]]` and web addresses clickable (the rest as written). */
+function LinkedText({ text }: { text: string }) {
+  const open = useContext(BaseLinks);
+  const parts = text.split(/(\[\[[^\]]+\]\]|https?:\/\/[^\s<>"]+)/);
+  if (parts.length === 1) return <span>{text}</span>;
+  return (
+    <span className="db-linked">
+      {parts.map((part, i) => {
+        if (i % 2 === 0) return part;
+        if (part.startsWith("http")) return <UrlLink key={i} url={part} />;
+        const [target, alias] = part.slice(2, -2).split("|");
+        return (
+          <span
+            key={i}
+            className="db-link"
+            role="link"
+            onClick={(e) => {
+              e.stopPropagation();
+              open?.(target.split("#")[0], e.metaKey || e.ctrlKey);
+            }}
+          >
+            {alias ?? target}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 const asList = (value: PropertyValue | undefined): string[] => (Array.isArray(value) ? value.map(String) : value === null || value === undefined || value === "" ? [] : [String(value)]);
 
 function formatDate(value: string): string {
@@ -72,33 +122,20 @@ export function CellDisplay({ type, value, options }: { type: ColumnType; value:
     );
   }
   if (type === "date" && typeof value === "string") return <span>{formatDate(value)}</span>;
-  if (type === "url" && typeof value === "string") {
-    return (
-      <a
-        className="db-url"
-        href={value}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          openUrl(value);
-        }}
-      >
-        {value.replace(/^https?:\/\/(www\.)?/, "")}
-      </a>
-    );
-  }
+  if (type === "url" && typeof value === "string") return <UrlLink url={value} />;
   if (type === "number") return <span className="db-number">{typeof value === "number" ? value.toLocaleString("fr-FR") : String(value)}</span>;
-  return <span>{Array.isArray(value) ? value.join(", ") : String(value)}</span>;
+  return <LinkedText text={Array.isArray(value) ? value.join(", ") : String(value)} />;
 }
 
-/** Text, number, date and URL cells: an input over the cell; Enter or leaving saves, Escape cancels. */
-function InputEditor({ type, value, onDone }: { type: ColumnType; value: PropertyValue | undefined; onDone: (value: PropertyValue | undefined | false) => void }) {
+/** Text, number, date and URL cells: an input over the cell; Enter or leaving saves, Escape cancels. The values already used in the column are offered under it (↑ ↓ to pick). */
+function InputEditor({ type, value, suggestions = [], onDone }: { type: ColumnType; value: PropertyValue | undefined; suggestions?: string[]; onDone: (value: PropertyValue | undefined | false) => void }) {
   const [text, setText] = useState(value === null || value === undefined ? "" : Array.isArray(value) ? value.join(", ") : String(value));
+  const [active, setActive] = useState(-1);
   const done = useRef(false);
-  const commit = () => {
+  const commit = (chosen = text) => {
     if (done.current) return;
     done.current = true;
-    const trimmed = text.trim();
+    const trimmed = chosen.trim();
     if (trimmed === "") return onDone(undefined);
     if (type === "number") {
       const n = Number(trimmed.replace(",", "."));
@@ -106,22 +143,45 @@ function InputEditor({ type, value, onDone }: { type: ColumnType; value: Propert
     }
     onDone(trimmed);
   };
+  const typed = text.trim().toLowerCase();
+  const offered = suggestions.filter((v) => v.toLowerCase() !== typed && v.toLowerCase().includes(typed)).slice(0, 8);
   return (
-    <input
-      autoFocus
-      className="db-input"
-      inputMode={type === "number" ? "decimal" : undefined}
-      value={text}
-      onChange={(e) => setText(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") commit();
-        if (e.key === "Escape") {
-          done.current = true;
-          onDone(false);
-        }
-      }}
-    />
+    <>
+      <input
+        autoFocus
+        className="db-input"
+        inputMode={type === "number" ? "decimal" : undefined}
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          setActive(-1);
+        }}
+        onBlur={() => commit()}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown" && offered.length) {
+            e.preventDefault();
+            setActive((active + 1) % offered.length);
+          } else if (e.key === "ArrowUp" && offered.length) {
+            e.preventDefault();
+            setActive(active <= 0 ? offered.length - 1 : active - 1);
+          } else if (e.key === "Enter") commit(active >= 0 ? offered[active] : text);
+          else if (e.key === "Escape") {
+            done.current = true;
+            onDone(false);
+          }
+        }}
+      />
+      {offered.length > 0 && (
+        <div className="db-popover db-suggest" role="listbox" onMouseDown={(e) => e.preventDefault()}>
+          <small>Déjà utilisé dans la colonne</small>
+          {offered.map((v, i) => (
+            <button key={v} type="button" role="option" aria-selected={i === active} className={i === active ? "active" : undefined} onMouseEnter={() => setActive(i)} onClick={() => commit(v)}>
+              {v}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -237,6 +297,7 @@ export function Cell({
   options,
   value,
   editable,
+  suggestions,
   onChange,
   onOptions,
 }: {
@@ -244,6 +305,8 @@ export function Cell({
   options: SelectOption[];
   value: PropertyValue | undefined;
   editable: boolean;
+  /** Values already used in the column, offered while typing. */
+  suggestions?: string[];
   onChange: (value: PropertyValue | undefined) => void;
   onOptions: (options: SelectOption[]) => void;
 }) {
@@ -281,6 +344,7 @@ export function Cell({
         <InputEditor
           type={type}
           value={value}
+          suggestions={type === "text" ? suggestions : undefined}
           onDone={(next) => {
             done();
             if (next !== false && next !== value) onChange(next);

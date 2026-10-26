@@ -9,6 +9,7 @@ views:
       - note.statut
       - note.ville
       - note.contact
+      - note.site
       - note.rdv
       - note.montant
       - formula.ttc

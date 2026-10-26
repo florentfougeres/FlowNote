@@ -71,6 +71,7 @@ export function RowProperties({
               options={column.options}
               value={values[column.property]}
               editable={editable}
+              suggestions={column.values}
               onChange={(value) => onChange(setProperty(raw, column.property, value))}
               onOptions={(options) => onOptions(column.property, options)}
             />

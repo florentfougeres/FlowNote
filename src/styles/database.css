@@ -373,9 +373,13 @@ button.db-cell-check {
   box-shadow: none;
 }
 
+/* Padding for the caret: without it, WebKit cuts the caret at the start of the text in half. */
 .db-input {
-  width: 100%;
-  padding: 0;
+  box-sizing: content-box;
+  width: calc(100% - 4px);
+  margin: -1px -2px;
+  padding: 1px 2px;
+  caret-color: var(--accent);
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
@@ -437,7 +441,14 @@ button.db-cell-check {
   font-variant-numeric: tabular-nums;
 }
 
+/* A web address in a cell: one line, its start only (the whole address on hover). */
 .db-url {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
   color: var(--text);
   text-decoration: underline;
   text-decoration-color: var(--db-line);
@@ -583,8 +594,16 @@ button.db-cell-check {
   background: var(--hover);
 }
 
+/* The chosen type (or option): tinted, with a check at the end. */
 .db-menu > button.selected {
-  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.db-menu > button.selected::after {
+  content: "✓";
+  margin-left: auto;
 }
 
 .db-menu > button.danger,
@@ -630,11 +649,55 @@ button.db-cell-check {
   padding: 2px 4px;
 }
 
-.db-rule select,
-.db-rule input {
-  min-width: 0;
+/* A rule's choices (column, operator, value): the app's menus, not raw selects. */
+.db-choice {
+  position: relative;
   flex: 1;
+  min-width: 0;
+}
+
+.db-choice-button,
+.db-choice input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--db-line);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
   font-size: 13px;
+  text-align: left;
+}
+
+.db-choice-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.db-choice-button svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.db-choice-button:hover {
+  background: var(--hover);
+}
+
+.db-choice-list {
+  background: var(--bg-elevated);
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: max(100%, 180px);
+  white-space: nowrap;
+  max-height: 260px;
+  overflow-y: auto;
 }
 
 .db-rules p {
@@ -1348,4 +1411,54 @@ body:has(.db-calendar.dragging) {
 
 .db-row-properties .db-number {
   text-align: left;
+}
+
+/* A `[[link]]` written in a cell. */
+.db-link {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.db-link:hover {
+  text-decoration: underline;
+}
+
+/* Values already used in the column, under the cell being typed in. */
+/* Opaque: inside a cell, the menus' blur has nothing behind it to blur. */
+.db-suggest {
+  background: var(--bg-elevated);
+  top: calc(100% + 2px);
+  left: -1px;
+  min-width: calc(100% + 2px);
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.db-suggest small {
+  padding: 4px 8px 2px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.db-suggest button {
+  min-height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-suggest button.active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
 }

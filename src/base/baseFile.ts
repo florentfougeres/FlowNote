@@ -319,6 +319,23 @@ export function writeColumn(file: BaseFile, property: string, meta: ColumnMeta |
   doc.setIn(path, doc.createNode(meta.options.length ? { type: meta.type, options: meta.options.map((o) => ({ value: o.value, color: o.color })) } : { type: meta.type }));
 }
 
+/** The name a column shows (Obsidian's `properties: X: displayName:`); null shows the property's own name. */
+export function writeDisplayName(file: BaseFile, property: string, name: string | null): void {
+  const { doc } = file;
+  const path = ["properties", idOf(property)];
+  if (name === null) {
+    doc.deleteIn([...path, "displayName"]);
+    const left = doc.getIn(path, true);
+    if (isMap(left) && left.items.length === 0) doc.deleteIn(path);
+    const all = doc.get("properties", true);
+    if (isMap(all) && all.items.length === 0) doc.delete("properties");
+    return;
+  }
+  if (!isMap(doc.get("properties", true))) doc.set("properties", doc.createNode({}));
+  if (!isMap(doc.getIn(path, true))) doc.setIn(path, doc.createNode({}));
+  doc.setIn([...path, "displayName"], name);
+}
+
 /** A property renamed everywhere in the base file (columns, sorts, filters, sizes, group, meta). */
 export function renameInBase(file: BaseFile, from: string, to: string): void {
   file.model.views.forEach((view, index) => {

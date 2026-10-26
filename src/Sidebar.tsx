@@ -43,7 +43,9 @@ function toPages(entries: VaultEntry[], rows = false): Page[] {
   const pages: Page[] = [];
   for (const entry of entries) {
     if (entry.kind !== "file") continue;
-    const folder = dirs.get(entry.name);
+    // The folder of the same name holds the page's sub-pages; empty, it stays a folder of its own, or a new one would seem not created.
+    const same = dirs.get(entry.name);
+    const folder = same && ((same.children ?? []).length > 0 || isBasePath(entry.path)) ? same : undefined;
     if (folder) usedDirs.add(folder.name);
     const children = folder ? toPages(folder.children ?? [], isBasePath(entry.path)) : [];
     pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children, ticket: entry.ticket, presentation: entry.presentation, icon: entry.icon, title: entry.title, row: rows && entry.path.endsWith(".md") });

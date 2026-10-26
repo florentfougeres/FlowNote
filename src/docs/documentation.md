@@ -388,6 +388,9 @@ Des bases de données au format des Bases d'Obsidian (`Voyages.base`). Chaque li
 - Vues **Tableau**, **Kanban**, **Galerie** et **Calendrier**, en onglets au-dessus de la base, avec filtres, tris et groupes.
 - **Calculs** en bas des colonnes (somme, moyenne, remplies, vides…) et **formules**.
 - Sélections colorées, cellules date avec le calendrier de l'app, saisie au clavier, glisser-déposer des colonnes, des lignes et des cartes.
+- **Saisie** : dans une cellule de texte, les valeurs déjà utilisées dans la colonne sont proposées sous le champ (`↑` `↓` puis `↵`, ou un clic). Les adresses web et les `[[liens]]` écrits dans une cellule sont cliquables ; une adresse longue s'affiche sur une ligne, tronquée (l'adresse entière au survol).
+- **Filtres** : la colonne, la condition et la valeur se choisissent dans des menus ; la valeur propose celles de la colonne (options d'une sélection, valeurs déjà saisies). Un filtre sans valeur ne masque encore rien.
+- **Colonne Nom** : chaque ligne est une note, cette colonne est son nom de fichier. Elle ne se supprime pas, mais se renomme dans son menu (le nom est gardé dans la base, `displayName`, comme dans Obsidian).
 - « Nouveau » crée une note dans le dossier de la base.
 - Une base s'intègre dans une note avec `![[Voyages.base]]`.
 

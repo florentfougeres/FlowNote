@@ -152,6 +152,8 @@ const valueOf = (row: BaseRow, property: string): PropertyValue | undefined => {
 function matches(row: BaseRow, filter: SimpleFilter): boolean {
   const value = valueOf(row, filter.property);
   const list = Array.isArray(value) ? value.map(String) : value === null || value === undefined || value === "" ? [] : [String(value)];
+  // A filter whose value is not typed yet lets every row through, instead of emptying the view.
+  if ((filter.op === "is" || filter.op === "isNot" || filter.op === "contains") && filter.value.trim() === "") return true;
   switch (filter.op) {
     case "is":
       return list.includes(filter.value);
