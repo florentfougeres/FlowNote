@@ -2,6 +2,32 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.22.0] - 2026-10-26
+
+### Ajouté
+- Liens vers les titres et les blocs : après le nom d'une note, `[[Note#` propose ses titres et `[[Note#^` ses paragraphes et éléments de liste (un bloc choisi reçoit un identifiant ` ^abc123`, comme dans Obsidian) ; `[[#` vise la note elle-même. Ces liens s'affichent « Note › Titre ».
+- Alias : `[[` trouve aussi une note par ses `aliases` et écrit le lien sous ce nom.
+- « Copier le lien vers ce bloc » (ou « vers ce titre ») dans le menu de la poignée `⋮⋮` ; les identifiants de bloc s'affichent en gris.
+- Renommer un titre met à jour les liens `[[Note#Titre]]` des autres notes.
+- Titres repliables : une flèche au survol replie la section jusqu'au titre suivant de même niveau (affichage seulement).
+- Section « Tags » dans la barre latérale : les tags en arbre avec leurs compteurs ; un clic ouvre la recherche filtrée.
+- Les onglets d'un vault sont retrouvés au lancement suivant.
+- Révisions : les cartes de révision du plugin Spaced Repetition (`Q::R`, `Q:::R`, `?` sur plusieurs lignes, notes tagguées `#flashcards`), revues par paquet avec son algorithme ; la prochaine date est écrite dans la note comme le plugin l'écrit, affichée en pastille.
+- Kanban : les tableaux du plugin Kanban d'Obsidian (`kanban-plugin: board`) s'ouvrent en colonnes ; cartes glissées, cochées, modifiées ; « Nouveau kanban ». Un tableau non modifié reste identique à l'octet près.
+- Bases : menu d'une ligne (clic droit ou poignée `⋮⋮`) pour l'ouvrir, la renommer ou la supprimer ; le nom de la base se renomme en place ; la colonne Nom se renomme (`displayName`) ; les valeurs déjà utilisées dans une colonne sont proposées en tapant et dans les filtres ; les liens écrits dans les cellules sont cliquables.
+- Vault de démo : un tableau Kanban (« Production »), deux paquets de cartes (« Mémo typo », « Japonais »), une colonne `site` dans la base Clients.
+
+### Modifié
+- Bases : une ligne, une carte ou une entrée du calendrier s'ouvre dans un nouvel onglet ; le fil d'Ariane d'une ligne ramène à sa base.
+- Bases : les menus des filtres et des tris sont ceux de l'app (plus de listes déroulantes brutes) et s'ouvrent vers la droite ; un filtre sans valeur ne masque plus rien.
+- Bases : les adresses web longues sont tronquées sur une ligne, dans le tableau comme sur les cartes.
+- Les couleurs écrites dans le HTML d'une note (`#3f5e4b`) ne comptent plus comme des tags.
+
+### Corrigé
+- Bases : le type choisi pour une nouvelle propriété est bien visible, et `↵` l'ajoute même après un clic sur un type.
+- Bases : une cellule se clique sur toute la hauteur de sa ligne ; le curseur n'y est plus coupé (WebKit).
+- Un dossier créé au nom d'une note existante n'est plus invisible dans l'arbre.
+
 ## [0.21.1] - 2026-10-26
 
 ### Modifié

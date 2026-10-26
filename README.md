@@ -63,7 +63,9 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Blocs de code avec coloration syntaxique et autocomplétion du langage, diagrammes **Mermaid**, formules mathématiques **KaTeX** (`$x^2$` en ligne, `$$…$$` en bloc, avec aperçu en direct), emoji (`:calendrier`), date du jour (`/date`)
 - **Organigrammes** [flowchart.js](https://flowchart.js.org) (blocs ```` ```flow ````, comme HedgeDoc), avec un éditeur visuel : étapes, formes et flèches sans écrire la syntaxe
 - **Graphiques Plotly** (`/graphique`) au format du plugin Obsidian [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) : blocs ```` ```plotly ```` en YAML ou JSON, graphiques interactifs, éditeur visuel (lignes, barres, aire, points, camembert, anneau, radar ; titres, tableau des valeurs, import d'un CSV), tous les types de Plotly en texte
-- Propriétés YAML (frontmatter) éditables, tags, `[[wikilinks]]` et `![[embeds]]` avec autocomplétion
+- Propriétés YAML (frontmatter) éditables, tags, `[[wikilinks]]` et `![[embeds]]` avec autocomplétion, par alias aussi
+- **Liens vers les titres et les blocs** : `[[Note#` propose les titres, `[[Note#^` les blocs (identifiant ` ^id` ajouté comme Obsidian), « Copier le lien vers ce bloc » dans le menu `⋮⋮` ; renommer un titre met à jour les liens qui le visent
+- **Titres repliables** : une flèche au survol replie la section
 - **Notes intégrées** : `![[Note]]`, `![[Note#Section]]` et `![[Note#^bloc]]` affichent le contenu de l'autre note, toujours à jour
 - **Notes de bas de page** `[^1]` : appel en exposant (texte au survol), note numérotée en bas ; la barre de mise en forme en ajoute une sur la sélection (une fenêtre demande son texte), `/note de bas de page` au curseur
 - Sous-pages et arborescence dans la barre latérale
@@ -107,6 +109,13 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Vues Tableau, Kanban, Galerie et Calendrier ; filtres, tris, groupes, calculs en bas de colonne, formules (`round(budget / 7)`)
 - Sélections colorées, saisie au clavier, glisser-déposer des colonnes, lignes et cartes
 - Une base s'intègre dans une note avec `![[Nom.base]]`, et la page d'une ligne affiche les propriétés de sa base
+- Menu d'une ligne (ouvrir, renommer, supprimer), valeurs déjà utilisées proposées en tapant et dans les filtres, liens cliquables dans les cellules
+
+**Kanban**
+- Les tableaux du plugin Kanban d'Obsidian (`kanban-plugin: board`) : listes et cartes glissées, cochées, modifiées en place, écrits comme le plugin
+
+**Révisions**
+- Les cartes de révision du plugin Spaced Repetition (`Question::Réponse`, `:::` dans les deux sens, `?` sur plusieurs lignes, notes `#flashcards`), revues par paquet avec son algorithme ; la date de la prochaine révision est écrite dans la note
 
 **Mind maps**
 - Des cartes mentales éditées à la souris et au clavier ([Mind Elixir](https://mind-elixir.com)) : Tab pour un enfant, Entrée pour un frère, glisser pour réorganiser, export PNG
@@ -122,7 +131,8 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 
 **Navigation**
 - Recherche de page (`⌘P`), recherche et remplacement dans la note (`⌘F` / `⌘⌥F`), recherche dans tout le vault (`⌘⇧F`) avec des filtres par tag, dossier, propriété ou date de modification (aussi en syntaxe Obsidian : `tag:#projet`, `path:Dossier`, `[statut:fait]`)
-- Fil d'Ariane cliquable, plan de la note, historique précédent/suivant
+- Fil d'Ariane cliquable, plan de la note, historique précédent/suivant, onglets retrouvés au lancement
+- **Tags** en arbre dans la barre latérale, avec leurs compteurs
 - **Notes liées** sous chaque note (les pages qui pointent vers elle)
 - Mots et caractères de la sélection dans la pastille d'état
 - Mode Markdown brut (`⌘⇧E`) avec numéros de ligne
