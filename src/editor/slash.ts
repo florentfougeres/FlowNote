@@ -1,7 +1,7 @@
 import { CALLOUT_TYPES, calloutPicker } from "./callouts";
 import { isoDay } from "../ticket/agenda";
 import { Extension, type Editor, type Range } from "@tiptap/core";
-import { Plugin, PluginKey, type EditorState } from "@tiptap/pm/state";
+import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";
 import { insertRawBlock, turnInto, type BlockKind } from "./blocks";
 import { mathPrompt } from "./MathPrompt";
@@ -376,19 +376,25 @@ function freshSlashPlugin(): Plugin<number | null> {
  * through the changes, while it is still there: closing the menu with
  * nothing typed after it removes it again.
  */
-const handleSlashKey = new PluginKey<number | null>("handleSlash");
+const handleSlashKey = new PluginKey<HandleSlash | null>("handleSlash");
 
-function handleSlashPlugin(): Plugin<number | null> {
-  return new Plugin<number | null>({
+/** The + button's `/`, and whether the button made a new line for it (it goes too when nothing is chosen). */
+interface HandleSlash {
+  pos: number;
+  newLine: boolean;
+}
+
+function handleSlashPlugin(): Plugin<HandleSlash | null> {
+  return new Plugin<HandleSlash | null>({
     key: handleSlashKey,
     state: {
       init: () => null,
       apply(tr, value) {
-        const meta = tr.getMeta(handleSlashKey) as number | null | undefined;
+        const meta = tr.getMeta(handleSlashKey) as HandleSlash | null | undefined;
         if (meta !== undefined) return meta;
         if (value === null) return null;
-        const mapped = tr.mapping.mapResult(value);
-        return mapped.deleted || tr.doc.textBetween(mapped.pos, Math.min(mapped.pos + 1, tr.doc.content.size)) !== "/" ? null : mapped.pos;
+        const mapped = tr.mapping.mapResult(value.pos);
+        return mapped.deleted || tr.doc.textBetween(mapped.pos, Math.min(mapped.pos + 1, tr.doc.content.size)) !== "/" ? null : { ...value, pos: mapped.pos };
       },
     },
   });
@@ -400,16 +406,36 @@ function lonelySlash(state: EditorState, pos: number): boolean {
   return state.doc.textBetween(pos, pos + 1) === "/" && !/\S/.test(state.doc.textBetween(pos + 1, $pos.end()).slice(0, 1));
 }
 
-/** Inserts `/` at the cursor and opens the menu (used by the block handle's + button). */
-export function openSlashMenu(editor: Editor) {
+/** Removes the + button's `/`, with the line the button made for it when that line holds nothing else. */
+function removeHandleSlash(tr: Transaction, slash: HandleSlash) {
+  const $pos = tr.doc.resolve(slash.pos);
+  const line = $pos.parent;
+  if (slash.newLine && line.textContent === "/" && line.childCount === 1 && tr.doc.childCount > 1) {
+    // The line, or the list item holding it.
+    const depth = $pos.depth > 1 && $pos.node(-1).type.name === "listItem" && $pos.node(-1).childCount === 1 ? $pos.depth - 1 : $pos.depth;
+    tr.delete($pos.before(depth), $pos.after(depth));
+  } else {
+    tr.delete(slash.pos, slash.pos + 1);
+  }
+}
+
+/** The slash menu's suggestion plugin: whether its menu is open, and for which `/`. */
+const slashSuggestionKey = new PluginKey<{ active: boolean; range: Range }>("slashSuggestion");
+
+/**
+ * Inserts `/` at the cursor and opens the menu (used by the block handle's +
+ * button). `newLine`: the button has just made the line, which goes with the
+ * `/` when the menu closes unused.
+ */
+export function openSlashMenu(editor: Editor, newLine = false) {
   const { state } = editor;
   const tr = state.tr;
   // A + clicked while the menu of another one was open: the first `/` goes.
   const previous = handleSlashKey.getState(state);
-  if (previous != null && lonelySlash(state, previous)) tr.delete(previous, previous + 1);
+  if (previous && lonelySlash(state, previous.pos)) removeHandleSlash(tr, previous);
   const from = tr.mapping.map(state.selection.from);
   const to = tr.mapping.map(state.selection.to);
-  tr.insertText("/", from, to).setMeta(freshSlashKey, from).setMeta(handleSlashKey, from);
+  tr.insertText("/", from, to).setMeta(freshSlashKey, from).setMeta(handleSlashKey, { pos: from, newLine });
   editor.view.dispatch(tr);
   editor.view.focus();
 }
@@ -419,12 +445,13 @@ function dropHandleSlash(editor: Editor) {
   // Deferred: the menu closes while the editor view is updating.
   setTimeout(() => {
     if (editor.isDestroyed) return;
-    const pos = handleSlashKey.getState(editor.state);
-    if (pos == null) return;
-    // Still open (the menu closed for another `/`): kept.
-    if (freshSlashKey.getState(editor.state) === pos) return;
+    const slash = handleSlashKey.getState(editor.state);
+    if (!slash) return;
+    // Its menu still open (the one that closed was another `/`'s): kept.
+    const menu = slashSuggestionKey.getState(editor.state);
+    if (menu?.active && menu.range.from === slash.pos) return;
     const tr = editor.state.tr.setMeta(handleSlashKey, null);
-    if (lonelySlash(editor.state, pos)) tr.delete(pos, pos + 1);
+    if (lonelySlash(editor.state, slash.pos)) removeHandleSlash(tr, slash);
     editor.view.dispatch(tr);
   });
 }
@@ -454,6 +481,7 @@ export const SlashCommand = Extension.create<{ store: SlashMenuStore; bridge: Br
       freshSlashPlugin(),
       handleSlashPlugin(),
       Suggestion<SlashItem, SlashItem>({
+        pluginKey: slashSuggestionKey,
         editor,
         char: "/",
         allowedPrefixes: [" ", " "],

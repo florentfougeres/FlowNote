@@ -22,6 +22,8 @@ interface Hover {
   block: BlockRef;
   top: number;
   left: number;
+  /** Full-width page: the margin is too narrow for + and ⋮⋮ side by side, they are stacked. */
+  stacked: boolean;
 }
 
 interface DropTarget {
@@ -122,7 +124,7 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
       // A foldable callout (toggle) has its arrow there too: the handle leaves it clickable.
       const besideFold = block.node.type.name === "callout" && block.node.attrs.fold ? CALLOUT_FOLD_WIDTH : 0;
       const left = (block.node.type.name === "listItem" ? line.left - 26 : dom.getBoundingClientRect().left) - shellRect.left - besideLevel - besideFold;
-      setHover({ block, top: line.top - shellRect.top + Math.min(line.height, 28) / 2 - 12, left });
+      setHover({ block, top: line.top - shellRect.top + Math.min(line.height, 28) / 2 - 12, left, stacked: note.closest(".page.wide") !== null });
     };
     const onLeave = () => !drag.current && setHover(null);
     el.addEventListener("mousemove", onMove);
@@ -142,7 +144,8 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
       if (!editor) return;
       const { listItem, paragraph } = editor.schema.nodes;
       const node = block.node;
-      if (node.type === paragraph && node.content.size === 0) {
+      const empty = node.type === paragraph && node.content.size === 0;
+      if (empty) {
         editor.view.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, block.pos + 1)));
       } else {
         const at = block.pos + node.nodeSize;
@@ -154,7 +157,8 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
         tr.setSelection(TextSelection.create(tr.doc, at + (isItem ? 2 : 1)));
         editor.view.dispatch(tr);
       }
-      openSlashMenu(editor);
+      // A line made here goes again if the menu closes unused.
+      openSlashMenu(editor, !empty);
     },
     [editor],
   );
@@ -237,7 +241,11 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
   return (
     <>
       {hover && !menu && (
-        <div className="block-handle" style={{ top: hover.top, left: hover.left - 50 }} contentEditable={false}>
+        <div
+          className={hover.stacked ? "block-handle stacked" : "block-handle"}
+          style={hover.stacked ? { top: hover.top - 12, left: hover.left - 26 } : { top: hover.top, left: hover.left - 50 }}
+          contentEditable={false}
+        >
           <button title="Cliquer pour ajouter un bloc en dessous" onMouseDown={(e) => e.preventDefault()} onClick={() => insertBelow(hover.block)}>
             +
           </button>

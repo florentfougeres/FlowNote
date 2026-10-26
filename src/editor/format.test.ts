@@ -95,6 +95,33 @@ describe("the + button's slash", () => {
     expect(save()).toBe("Un\n\nDeux\n");
   });
 
+  it("takes away the line the + button made, when nothing is chosen", async () => {
+    const { editor, save } = open("Un\n\nDeux\n");
+    // The + of "Un": a new line under it, then the menu.
+    const tr = editor.state.tr.insert(4, editor.schema.nodes.paragraph.create());
+    editor.view.dispatch(tr.setSelection(TextSelection.create(tr.doc, 5)));
+    openSlashMenu(editor, true);
+    await new Promise((resolve) => setTimeout(resolve));
+    editor.commands.setTextSelection(2);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(save()).toBe("Un\n\nDeux\n");
+    expect(editor.state.doc.childCount).toBe(2);
+  });
+
+  it("goes away when the cursor is clicked elsewhere in the note", async () => {
+    const { editor, save } = open("Un\n\nDeux\n");
+    editor.commands.setTextSelection(3);
+    press(editor, "Enter");
+    const before = save();
+    openSlashMenu(editor);
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(document.querySelector(".slash-menu, [role=listbox]") !== null || save() !== before).toBe(true);
+    // A click in "Deux": the menu closes, nothing chosen.
+    editor.commands.setTextSelection(editor.state.doc.content.size - 2);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(save()).toBe(before);
+  });
+
   it("goes away when the note loses the focus (a click outside it)", async () => {
     const { editor, save } = open("Texte\n");
     press(editor, "Enter");

@@ -127,7 +127,7 @@ Les raccourcis Markdown marchent aussi à la frappe :
 | `$x^2$` | une formule en ligne |
 | `---` | un séparateur |
 
-**La poignée** apparaît à gauche du bloc survolé : `+` ajoute un bloc dessous (le menu se referme sans rien laisser si on ne choisit rien), `⋮⋮` le déplace par glisser-déposer (aussi pour l'imbriquer dans une liste) et ouvre son menu (supprimer, dupliquer, monter, descendre, transformer).
+**La poignée** apparaît à gauche du bloc survolé : `+` ajoute un bloc dessous (refermé sans choix, par `esc` ou un clic ailleurs, le menu ne laisse rien : ni `/`, ni ligne vide), `⋮⋮` le déplace par glisser-déposer (aussi pour l'imbriquer dans une liste) et ouvre son menu (supprimer, dupliquer, monter, descendre, transformer). En pleine largeur, la marge étant étroite, `+` s'affiche au-dessus de `⋮⋮`.
 
 ![[poignee.webp]]
 

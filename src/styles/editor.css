@@ -8,6 +8,12 @@
   user-select: none;
 }
 
+/* Full-width page: + above ⋮⋮, to fit the narrow margin (BlockHandle.tsx). */
+.block-handle.stacked {
+  flex-direction: column;
+  gap: 0;
+}
+
 .block-handle button {
   width: 22px;
   height: 24px;
