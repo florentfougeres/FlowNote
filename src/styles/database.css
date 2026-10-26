@@ -110,6 +110,26 @@
   color: var(--muted);
 }
 
+/* The base's name, renamed in place like a page title. */
+.db-title {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 4px;
+  margin-left: -4px;
+  border: none;
+  border-radius: 6px;
+  outline: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.db-title:hover:not(:read-only),
+.db-title:focus {
+  background: var(--hover);
+}
+
 .db-header p {
   margin: 0 0 18px;
   font-size: 13px;
@@ -285,6 +305,15 @@
 .db-table th:last-child,
 .db-table td:last-child {
   border-right: none;
+}
+
+/* A cell fills its row, however tall: the whole of it can be clicked (height: 1px lets the cell's 100% take the row's height). */
+.db-table tbody td {
+  height: 1px;
+}
+
+.db-table tbody td > .db-cell {
+  height: 100%;
 }
 
 .db-table tbody tr:hover {

@@ -93,6 +93,36 @@ function FilterValue({ value, values, onChange }: { value: string; values: strin
   );
 }
 
+/** The base's name, edited in place like a page title: Enter or leaving the field renames the file (its rows' folder follows). */
+function BaseTitle({ name, editable, onRename }: { name: string; editable: boolean; onRename: (name: string) => Promise<boolean> }) {
+  const [value, setValue] = useState(name);
+  useEffect(() => setValue(name), [name]);
+  const commit = async () => {
+    const next = value.trim();
+    if (!next || next === name) return setValue(name);
+    if (!(await onRename(next))) setValue(name);
+  };
+  return (
+    <input
+      className="db-title"
+      value={value}
+      readOnly={!editable}
+      spellCheck={false}
+      aria-label="Nom de la base"
+      size={Math.max(4, value.length)}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => void commit()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          setValue(name);
+          requestAnimationFrame(() => (e.target as HTMLInputElement).blur());
+        }
+      }}
+    />
+  );
+}
+
 function FilterMenu({
   view,
   properties,
@@ -456,7 +486,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
         {!embedded && (
           <header className="db-header">
             <h1>
-              <Icon name="database" size={26} /> {noteTitle(path)}
+              <Icon name="database" size={26} /> <BaseTitle name={noteTitle(path)} editable={editable} onRename={(name) => onRenameRow(path, name)} />
             </h1>
             <p className="dash-muted">{model.folder !== null ? `Les pages du dossier « ${model.folder || "racine"} »` : "Toutes les pages du vault"}</p>
           </header>

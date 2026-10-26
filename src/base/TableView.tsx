@@ -579,7 +579,16 @@ export function TableView({
                   return (
                     <tr key={row.path} data-path={row.path} className={[rowDrag?.path === row.path ? "dragging" : "", dropBefore ? "drop-before" : ""].join(" ").trim() || undefined}>
                       {columns.map((column, c) => (
-                        <td key={column.property} data-r={r} data-c={c} tabIndex={0} style={{ width: width(column.property) }} onKeyDown={onKey}>
+                        <td
+                          key={column.property}
+                          data-r={r}
+                          data-c={c}
+                          tabIndex={0}
+                          style={{ width: width(column.property) }}
+                          onKeyDown={onKey}
+                          // A click in the cell's empty space (below a short value, in a tall row) edits it too.
+                          onClick={(e) => e.target === e.currentTarget && e.currentTarget.querySelector<HTMLElement>(":scope > .db-cell")?.click()}
+                        >
                           {column.kind === "name" ? (
                             <>
                               {editable && !group && (
