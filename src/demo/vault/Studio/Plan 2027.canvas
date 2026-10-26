@@ -1,0 +1,18 @@
+{
+	"nodes":[
+		{"id":"a1c4e7f0b3d6a901","x":-80,"y":-120,"width":900,"height":560,"color":"5","type":"group","label":"Clients 2027"},
+		{"id":"b2d5f8a1c4e7b012","x":-40,"y":-60,"width":300,"height":170,"color":"4","type":"text","text":"## Objectif 2027\n\n**65 000 €** de chiffre d'affaires, avec moins de sites d'une page et plus d'identités."},
+		{"id":"c3e6a9b2d5f8c123","x":380,"y":-60,"width":400,"height":440,"type":"file","file":"Projets/Site Maison Pain.md"},
+		{"id":"d4f7b0c3e6a9d234","x":-40,"y":170,"width":300,"height":210,"type":"file","file":"attachments/velo-rouge.svg"},
+		{"id":"e5a8c1d4f7b0e345","x":900,"y":-120,"width":360,"height":200,"color":"6","type":"text","text":"## À tester\n\n- Des forfaits *maintenance* mensuels\n- Un atelier « site en un jour »\n- Une newsletter tous les deux mois"},
+		{"id":"f6b9d2e5a8c1f456","x":900,"y":140,"width":360,"height":150,"type":"link","url":"https://jsoncanvas.org"},
+		{"id":"a7c0e3f6b9d2a567","x":900,"y":340,"width":360,"height":260,"type":"link","url":"https://www.youtube.com/watch?v=jNQXAC9IVRw"},
+		{"id":"b8d1f4a7c0e3b678","x":-80,"y":500,"width":900,"height":100,"color":"3","type":"text","text":"Idée : une vidéo de présentation du studio, aussi simple que la toute première vidéo de YouTube (à droite)."}
+	],
+	"edges":[
+		{"id":"c9e2a5b8d1f4c789","fromNode":"b2d5f8a1c4e7b012","fromSide":"right","toNode":"c3e6a9b2d5f8c123","toSide":"left","label":"un projet type"},
+		{"id":"d0f3b6c9e2a5d890","fromNode":"b2d5f8a1c4e7b012","fromSide":"bottom","toNode":"d4f7b0c3e6a9d234","toSide":"top","label":"plus d'identités"},
+		{"id":"e1a4c7d0f3b6e901","fromNode":"c3e6a9b2d5f8c123","fromSide":"right","toNode":"e5a8c1d4f7b0e345","toSide":"left","color":"6"},
+		{"id":"f2b5d8e1a4c7f012","fromNode":"b8d1f4a7c0e3b678","fromSide":"right","toNode":"a7c0e3f6b9d2a567","toSide":"left","color":"3"}
+	]
+}

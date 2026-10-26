@@ -1316,7 +1316,7 @@ export function App() {
         onOpenVault={isTauri() ? () => void open(pickTauriVault()) : browserVaultSupported() ? () => void open(openBrowserVault()) : null}
         onOpenRecent={(root) => void open(openTauriVault(root))}
         onForgetRecent={forgetTauriVault}
-        onTryDemo={() => void open(createMemoryVault("Démo", DEMO_FILES, DEMO_REMOTE))}
+        onTryDemo={() => void open(createMemoryVault("Carnet de Camille", DEMO_FILES, DEMO_REMOTE))}
         status={status}
       />
     );

@@ -238,7 +238,7 @@ export function memoryGit(contents: Map<string, string | Uint8Array>, remote: Re
   const conflicts = new Map<string, ConflictVersions>();
   let pending = { ...remote };
   const history: { commit: GitCommit; files: Map<string, string> }[] = [
-    { commit: { hash: "0".repeat(40), short: "0000000", author: "Démo", date: new Date(Date.now() - 86400000).toISOString(), subject: "Version initiale", path: "" }, files: head },
+    { commit: { hash: "0".repeat(40), short: "0000000", author: "Camille Roux", date: new Date(Date.now() - 86400000).toISOString(), subject: "Version initiale", path: "" }, files: head },
   ];
   const letter = (from: Map<string, string>, to: Map<string, string | undefined>, path: string) => {
     const before = from.get(path);

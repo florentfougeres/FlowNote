@@ -1,0 +1,8 @@
+{
+  "items": [
+    { "type": "file", "path": "Bienvenue.md" },
+    { "type": "file", "path": "Tableau de bord.dashboard.md" },
+    { "type": "file", "path": "Studio/Comptabilité 2026.md" },
+    { "type": "file", "path": "Studio/Tarifs.md" }
+  ]
+}

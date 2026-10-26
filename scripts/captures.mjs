@@ -54,27 +54,28 @@ const SHOTS = {
   accueil: async (page) => {
     // A few pages opened first: the "Récents" card lists them.
     await expand(page, "Projets");
-    for (const label of ["Voyages", "Idées", "Bilan du trimestre", "Site web"]) await openPage(page, label, 900);
+    await expand(page, "Site Maison Pain");
+    for (const label of ["Clients", "Présentation de la maquette", "Journal", "Site Maison Pain"]) await openPage(page, label, 900);
     await nav(page, "Accueil");
     await wait(page, 1200);
   },
   editeur: async (page) => {
     await expand(page, "Projets");
-    await openPage(page, "Site web");
+    await openPage(page, "Site Maison Pain");
   },
   "split-view": async (page) => {
     await expand(page, "Projets");
-    await openPage(page, "Site web");
-    await expand(page, "Voyages");
-    await pageRow(page, "Lisbonne").click({ modifiers: ["Alt"] });
+    await openPage(page, "Site Maison Pain");
+    await expand(page, "Clients");
+    await pageRow(page, "Maison Pain").click({ modifiers: ["Alt"] });
     await wait(page, 1500);
   },
   "menu-slash": {
     clip: true,
     run: async (page) => {
       await expand(page, "Projets");
-      await openPage(page, "Site web");
-      const para = page.locator(".ProseMirror p", { hasText: "Refonte du site" });
+      await openPage(page, "Site Maison Pain");
+      const para = page.locator(".ProseMirror p", { hasText: "Site vitrine de la boulangerie" });
       await clickEnd(page, para);
       await page.keyboard.press("Enter");
       await page.keyboard.type("/");
@@ -90,8 +91,8 @@ const SHOTS = {
     clip: true,
     run: async (page) => {
       await expand(page, "Projets");
-      await openPage(page, "Site web");
-      const item = page.locator(".ProseMirror li", { hasText: "Rédiger les trois premiers articles" });
+      await openPage(page, "Site Maison Pain");
+      const item = page.locator(".ProseMirror li", { hasText: "Maquette de la page d'accueil" });
       const heading = page.locator(".ProseMirror h2", { hasText: "Étapes" });
       const box = await item.boundingBox();
       await page.mouse.move(box.x + 200, box.y + 12);
@@ -101,75 +102,74 @@ const SHOTS = {
     },
   },
   reglages: async (page) => {
-    await expand(page, "Voyages");
+    await expand(page, "Projets");
     await nav(page, "Réglages");
     await wait(page, 800);
   },
   "base-tableau": async (page) => {
-    await expand(page, "Voyages");
-    await openPage(page, "Voyages", 2000);
+    await openPage(page, "Clients", 2000);
   },
   "base-kanban": async (page) => {
-    await expand(page, "Voyages");
-    await openPage(page, "Voyages", 2000);
+    await openPage(page, "Clients", 2000);
     await page.getByRole("tab", { name: /Kanban/ }).or(page.locator("button", { hasText: /^Kanban$/ })).first().click();
     await wait(page, 1000);
   },
   "base-calendrier": async (page) => {
-    await expand(page, "Voyages");
-    await openPage(page, "Voyages", 2000);
-    await page.getByRole("tab", { name: /Calendrier/ }).or(page.locator("button", { hasText: /^Calendrier$/ })).first().click();
+    await openPage(page, "Clients", 2000);
+    await page.getByRole("tab", { name: /Rendez-vous/ }).or(page.locator("button", { hasText: /^Rendez-vous$/ })).first().click();
     await wait(page, 1000);
   },
   croquis: async (page) => {
-    await expand(page, "Voyages");
-    await openPage(page, "Croquis", 4000);
+    await expand(page, "Projets");
+    await expand(page, "Site Maison Pain");
+    await openPage(page, "Arborescence", 4000);
   },
   git: async (page) => {
     await expand(page, "Projets");
-    await expand(page, "Voyages");
-    await openPage(page, "Site web");
-    const line = page.locator(".ProseMirror li", { hasText: "Mettre en ligne" }).locator("p");
+    await openPage(page, "Site Maison Pain");
+    const line = page.locator(".ProseMirror p", { hasText: "Site vitrine de la boulangerie" });
     await clickEnd(page, line);
-    await page.keyboard.type(" sur Netlify");
+    await page.keyboard.type(" Mise en ligne prévue en décembre.");
     await wait(page, 2500);
     await page.keyboard.press("Meta+Shift+G");
     await wait(page, 1500);
-    await page.getByText("Site web.md", { exact: false }).last().click();
+    await page.getByText("Site Maison Pain.md", { exact: false }).last().click();
     await wait(page, 1200);
   },
   graphe: async (page) => {
-    await expand(page, "Voyages");
+    await expand(page, "Projets");
     await nav(page, "Graphe");
     await wait(page, 5000);
   },
   lectures: async (page) => {
-    await expand(page, "Voyages");
+    await expand(page, "Projets");
     await nav(page, "Lectures");
     await wait(page, 1200);
   },
   mindmap: async (page) => {
-    await expand(page, "Voyages");
-    await openPage(page, "Idées", 2500);
+    await expand(page, "Projets");
+    await expand(page, "Identité Vélo Rouge");
+    await openPage(page, "Pistes de logo", 2500);
   },
   presentation: async (page) => {
-    await expand(page, "Voyages");
-    await openPage(page, "Bilan du trimestre", 3000);
+    await expand(page, "Projets");
+    await expand(page, "Site Maison Pain");
+    await openPage(page, "Présentation de la maquette", 3000);
   },
   ticket: async (page) => {
-    await expand(page, "Voyages");
+    await expand(page, "Projets");
     await nav(page, "Tickets");
     await wait(page, 1000);
-    await page.getByText("Exporter en PDF").first().click();
+    await page.getByText("Horaires du dimanche faux").first().click();
     await wait(page, 1500);
   },
   "tickets-liste": async (page) => {
-    await expand(page, "Voyages");
+    await expand(page, "Projets");
     await nav(page, "Tickets");
     await wait(page, 1200);
   },
   "tickets-tableau": async (page) => {
-    await expand(page, "Voyages");
+    await expand(page, "Projets");
     await nav(page, "Tickets");
     await wait(page, 800);
     await page.getByRole("radio", { name: "Tableau" }).first().click();

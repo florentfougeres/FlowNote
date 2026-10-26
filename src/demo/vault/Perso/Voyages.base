@@ -1,0 +1,51 @@
+filters:
+  and:
+    - file.inFolder("Perso/Voyages")
+views:
+  - type: table
+    name: Tableau
+    order:
+      - file.name
+      - note.statut
+      - note.pays
+      - note.depart
+      - note.jours
+      - note.budget
+      - formula.par_jour
+    summaries:
+      note.budget: Sum
+      formula.par_jour: Average
+  - type: cards
+    name: Galerie
+    order:
+      - file.name
+      - note.pays
+      - note.depart
+  - type: cards
+    name: Calendrier
+    flownoteView: calendar
+    order:
+      - file.name
+      - note.pays
+    dateProperty: note.depart
+flownote:
+  properties:
+    statut:
+      type: select
+      options:
+        - value: Idée
+          color: gray
+        - value: Réservé
+          color: blue
+        - value: Fait
+          color: green
+    pays:
+      type: text
+    depart:
+      type: date
+    jours:
+      type: number
+    budget:
+      type: number
+formulas:
+  par_jour: round(budget / jours)

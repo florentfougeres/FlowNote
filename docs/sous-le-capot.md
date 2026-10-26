@@ -216,7 +216,7 @@ Une note avec `marp: true`, découpée en diapos par `---` : c'est la syntaxe de
 
 - **`tauriVault.ts`** : l'app de bureau, qui appelle les commandes Rust ;
 - **le navigateur** (File System Access API, Chrome) : pour le développement ;
-- **un vault en mémoire** : le vault de démo (« Essayer avec un exemple », `src/demo.ts`), qui sert aussi aux captures de la documentation.
+- **un vault en mémoire** : le vault de démo (« Essayer avec un exemple »), qui sert aussi aux captures de la documentation. Ses fichiers sont de vrais fichiers dans `src/demo/vault`, chargés par `import.meta.glob` dans `src/demo.ts`. Les dates y sont relatives (`{{J+3}}` : dans trois jours, aussi dans les noms ; `{{D-2}}` : il y a deux jours, en `jj/mm/aaaa`) pour que les échéances et les calendriers restent d'actualité. `src/demo.test.ts` vérifie que chaque note se réécrit à l'octet près et que chaque lien mène à un fichier du vault.
 
 Autour de cette interface :
 

@@ -23,7 +23,7 @@ FlowNote édite votre vault Obsidian par blocs, avec un menu `/`, des bases, des
 5. **Tout s'enregistre seul** : la pastille en bas à droite indique « Enregistré ». Le fichier est lisible tel quel dans Obsidian.
 6. **Une commande dont vous ne connaissez pas le raccourci** : `⌘⇧P` ouvre la palette de commandes.
 
-Le vault de démonstration montre tout ce que FlowNote sait faire. Dans les favoris, **« Tour de l'éditeur »** passe en revue chaque bloc et chaque mise en forme (callouts, admonitions, tableaux, code, maths, diagrammes, graphique, HTML, intégrations), et **« Fonctionnalités Obsidian »** les intégrations de notes, les notes de bas de page, les requêtes Dataview et Tasks. Il contient aussi une base, des tickets, une mind map, un croquis, un canevas, une présentation, un dashboard, une liste de tâches et une liste de lectures.
+Le vault de démonstration est le carnet de Camille, qui crée des sites et des identités visuelles à son compte : des clients, des projets, des réunions, un journal, des voyages. Il montre tout ce que FlowNote sait faire, en situation. Sa note **« Bienvenue »** (dans les favoris) dit où voir chaque fonctionnalité : le projet « Site Maison Pain » et ses sous-pages (cahier des charges, moodboard, croquis, présentation), la base « Clients » et ses quatre vues, le dashboard, le canevas, les tarifs (maths, admonitions), la comptabilité (graphiques, Dataview, Tasks), les tickets, la liste de tâches et les lectures.
 
 L'**Accueil** rassemble les raccourcis de création, les pages récentes, les tâches à faire (échéances des tickets et des notes), les tickets ouverts, les liens à lire et l'état de Git. Un clic sur un tag de la carte Vault liste les pages qui le portent (dans le texte ou dans la propriété `tags`).
 
@@ -172,7 +172,7 @@ Le {{date}} à {{time}}.
 ## Ordre du jour
 ```
 
-Sans dossier de modèles réglé dans Obsidian, ni le menu ni `/modèle` n'apparaissent. Le vault de démo en a un, avec « Réunion » et « Compte rendu ».
+Sans dossier de modèles réglé dans Obsidian, ni le menu ni `/modèle` n'apparaissent. Le vault de démo en a un, avec « Réunion », « Compte rendu » et « Journal ».
 
 ### Intégrer une note
 

@@ -1,0 +1,80 @@
+filters:
+  and:
+    - file.inFolder("Clients")
+views:
+  - type: table
+    name: Tableau
+    order:
+      - file.name
+      - note.statut
+      - note.ville
+      - note.contact
+      - note.rdv
+      - note.montant
+      - formula.ttc
+      - note.fidele
+    summaries:
+      note.montant: Sum
+      formula.ttc: Sum
+      note.fidele: Checked
+  - type: kanban
+    name: Kanban
+    order:
+      - file.name
+      - note.statut
+      - note.ville
+      - note.contact
+      - note.montant
+      - note.rdv
+    groupBy:
+      property: note.statut
+      direction: ASC
+    groupOrder:
+      - Prospect
+      - Devis envoyé
+      - En cours
+      - Terminé
+  - type: cards
+    name: Galerie
+    order:
+      - file.name
+      - note.statut
+      - note.ville
+  - type: cards
+    name: Rendez-vous
+    flownoteView: calendar
+    order:
+      - file.name
+      - note.statut
+      - note.ville
+      - note.contact
+      - note.montant
+      - note.rdv
+    dateProperty: note.rdv
+flownote:
+  properties:
+    statut:
+      type: select
+      options:
+        - value: Prospect
+          color: gray
+        - value: Devis envoyé
+          color: yellow
+        - value: En cours
+          color: blue
+        - value: Terminé
+          color: green
+    ville:
+      type: text
+    contact:
+      type: text
+    montant:
+      type: number
+    rdv:
+      type: date
+    site:
+      type: url
+    fidele:
+      type: checkbox
+formulas:
+  ttc: round(montant * 1.2)
