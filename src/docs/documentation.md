@@ -153,6 +153,27 @@ Les raccourcis Markdown marchent aussi à la frappe :
 - Coller ou déposer une image l'enregistre dans le dossier des pièces jointes réglé dans Obsidian et l'intègre à la note. Sans réglage (ou réglé sur la racine du vault), l'image va dans un dossier `attachments` à côté de la note.
 - La syntaxe Markdown tapée à la main devient un lien ou une image dès la parenthèse fermante : `[texte](https://…)` pour un lien, `![texte](https://…/image.png)` pour une image (du web ou du vault). Du texte simple collé (depuis un fichier texte, un terminal ou le mode source d'Obsidian) est lu comme du Markdown ; ce qui est copié d'une page web garde sa mise en forme. Un **seul bloc** collé (une ligne, un titre ou un élément de liste copié d'une page web) n'apporte que son texte (gras, liens…) : la ligne où il arrive garde son type, un paragraphe ne devient ni un titre ni une puce. Plusieurs blocs gardent les leurs.
 
+### Les modèles
+
+Si un dossier de modèles est réglé dans Obsidian (module « Modèles », `.obsidian/templates.json`), ses notes servent de modèles :
+
+- **Nouvelle page** (`⌘N`), type Note : le menu **Modèle** propose « Aucun » ou un modèle. La page part du modèle, sous son titre `# Nom` (après les propriétés du modèle).
+- **`/modèle`** dans une note : une fenêtre liste les modèles ; celui choisi remplace la ligne vide du curseur (ou s'insère sous la ligne), sans ses propriétés.
+
+Dans le modèle, `{{title}}` devient le titre de la note, `{{date}}` et `{{time}}` la date et l'heure aux formats réglés dans Obsidian. Un format peut s'écrire sur place, avec les codes d'Obsidian : `{{date:dddd D MMMM}}` donne « lundi 26 octobre ».
+
+```markdown
+---
+tags: [réunion]
+---
+
+Le {{date}} à {{time}}.
+
+## Ordre du jour
+```
+
+Sans dossier de modèles réglé dans Obsidian, ni le menu ni `/modèle` n'apparaissent. Le vault de démo en a un, avec « Réunion » et « Compte rendu ».
+
 ### Intégrer une note
 
 Avec la syntaxe d'Obsidian, `![[…]]` affiche le contenu d'une autre note dans la page, en lecture, toujours à jour : modifiez la note d'origine, l'intégration suit. Un clic sur le titre de l'intégration ouvre la note. `/intégrer` insère `![[` et propose les notes.

@@ -24,6 +24,8 @@ interface Hover {
   left: number;
   /** Full-width page: the margin is too narrow for + and ⋮⋮ side by side, they are stacked. */
   stacked: boolean;
+  /** The margin holds the heading's level or the toggle's arrow: the stacked handle goes under it. */
+  belowMarker: boolean;
 }
 
 interface DropTarget {
@@ -123,8 +125,11 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
       const besideLevel = block.pos === headingAtCursor(editor)?.pos && editor.view.hasFocus() ? HEADING_LEVEL_WIDTH : 0;
       // A foldable callout (toggle) has its arrow there too: the handle leaves it clickable.
       const besideFold = block.node.type.name === "callout" && block.node.attrs.fold ? CALLOUT_FOLD_WIDTH : 0;
-      const left = (block.node.type.name === "listItem" ? line.left - 26 : dom.getBoundingClientRect().left) - shellRect.left - besideLevel - besideFold;
-      setHover({ block, top: line.top - shellRect.top + Math.min(line.height, 28) / 2 - 12, left, stacked: note.closest(".page.wide") !== null });
+      const stacked = note.closest(".page.wide") !== null;
+      const marker = besideLevel + besideFold > 0;
+      // Stacked, the handle keeps the margin's one column: under the marker, not left of it (out of the page).
+      const left = (block.node.type.name === "listItem" ? line.left - 26 : dom.getBoundingClientRect().left) - shellRect.left - (stacked ? 0 : besideLevel + besideFold);
+      setHover({ block, top: line.top - shellRect.top + Math.min(line.height, 28) / 2 - 12, left, stacked, belowMarker: stacked && marker });
     };
     const onLeave = () => !drag.current && setHover(null);
     el.addEventListener("mousemove", onMove);
@@ -243,7 +248,7 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
       {hover && !menu && (
         <div
           className={hover.stacked ? "block-handle stacked" : "block-handle"}
-          style={hover.stacked ? { top: hover.top - 12, left: hover.left - 26 } : { top: hover.top, left: hover.left - 50 }}
+          style={hover.stacked ? { top: hover.top + (hover.belowMarker ? 24 : -12), left: hover.left - 26 } : { top: hover.top, left: hover.left - 50 }}
           contentEditable={false}
         >
           <button title="Cliquer pour ajouter un bloc en dessous" onMouseDown={(e) => e.preventDefault()} onClick={() => insertBelow(hover.block)}>

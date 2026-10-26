@@ -51,6 +51,8 @@ export interface Vault {
   stats?(): Promise<{ path: string; ctime: number; mtime: number }[]>;
   /** Obsidian's bookmarks (.obsidian/bookmarks.json, read only), "{}" when absent. */
   bookmarks?(): Promise<string>;
+  /** Obsidian's templates settings (.obsidian/templates.json, read only), "{}" when absent. */
+  templatesConfig?(): Promise<string>;
   /** Shows a note or folder in the Finder (desktop app only). */
   reveal?(path: string): Promise<void>;
   /** Fast full-text search done by the backend; otherwise notes are read one by one. */
@@ -259,6 +261,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
     },
     obsidianConfig: async () => text(".obsidian/app.json") || "{}",
     bookmarks: async () => text(".obsidian/bookmarks.json") || "{}",
+    templatesConfig: async () => text(".obsidian/templates.json") || "{}",
     rename: async (from, to) => {
       const moved = [...contents.keys()].filter((k) => inside(k, from));
       const movedFolders = [...folders].filter((f) => inside(f, from));

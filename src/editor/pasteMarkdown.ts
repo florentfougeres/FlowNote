@@ -41,3 +41,21 @@ export function pasteMarkdown(view: EditorView, text: string): boolean {
   view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView());
   return true;
 }
+
+/**
+ * Markdown inserted as blocks, kept as they are (a template): in place of the
+ * empty line holding the cursor, or under the block holding it.
+ */
+export function insertMarkdownBlocks(view: EditorView, text: string): boolean {
+  const blocks = parseFragment(text.replace(/\r\n?/g, "\n"));
+  if (blocks.length === 0) return false;
+  const content = Fragment.fromJSON(view.state.schema, blocks);
+  const { $from } = view.state.selection;
+  const top = $from.node(1);
+  const start = $from.before(1);
+  const tr = view.state.tr;
+  if (top.type.name === "paragraph" && top.content.size === 0) tr.replaceWith(start, start + top.nodeSize, content);
+  else tr.insert(start + top.nodeSize, content);
+  view.dispatch(tr.scrollIntoView());
+  return true;
+}

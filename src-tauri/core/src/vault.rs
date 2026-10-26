@@ -414,6 +414,12 @@ pub fn vault_bookmarks(root: String) -> String {
     fs::read_to_string(base.join(".obsidian").join("bookmarks.json")).unwrap_or_else(|_| "{}".into())
 }
 
+/// Obsidian's templates settings (.obsidian/templates.json: folder, date and time formats), read only; "{}" when absent.
+pub fn vault_templates_config(root: String) -> String {
+    let Ok(base) = check_root(&root) else { return "{}".into() };
+    fs::read_to_string(base.join(".obsidian").join("templates.json")).unwrap_or_else(|_| "{}".into())
+}
+
 /// Renames a note or a folder; never overwrites an existing path.
 pub fn vault_rename(root: String, from: String, to: String) -> Result<(), String> {
     let source = resolve(&root, &from)?;

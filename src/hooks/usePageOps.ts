@@ -1,7 +1,7 @@
 import { useCallback, type MutableRefObject } from "react";
 import { BASE_SUFFIX, isBasePath, newBaseFile } from "../base/baseFile";
 import { moveRecentPage } from "../dashboard/recents";
-import type { NameResult, PageKind } from "../Dialogs";
+import type { NameResult, PageKind, TemplateChoice } from "../Dialogs";
 import { DRAWING_SUFFIX, newDrawingFile } from "../drawing/format";
 import { MINDMAP_SUFFIX, newMindmapFile } from "../mindmap/format";
 import { CANVAS_SUFFIX, newCanvasFile } from "../canvas/format";
@@ -14,6 +14,7 @@ import { linkTextFor, newNoteFolder, noteTitle, sanitizeName, subpageFolder, uni
 import { deletePage, followFolder, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "../vault/pageOps";
 import { isTauri } from "../vault/tauriVault";
 import type { Vault, VaultEntry } from "../vault/vault";
+import { noteFromTemplate, templateName, type TemplatesConfig } from "../vault/templates";
 
 /** The "new page" dialog's request: its answer is the name, kind and folder chosen. */
 export interface NewPageRequest {
@@ -23,6 +24,7 @@ export interface NewPageRequest {
   folder?: string;
   kinds?: boolean;
   initialKind?: PageKind;
+  templates?: TemplateChoice[];
 }
 
 export interface PageOpsContext {
@@ -31,6 +33,8 @@ export interface PageOpsContext {
   filesRef: MutableRefObject<string[]>;
   noteRef: { readonly current: { path: string } | null };
   config: ObsidianConfig;
+  /** Obsidian's templates folder and its notes, when one is set. */
+  templates: { config: TemplatesConfig; files: string[] } | null;
   ticketPaths: Set<string>;
   settings: Settings;
   /** Applies and saves the settings (the tickets folder follows its folder). */
@@ -250,6 +254,7 @@ export function usePageOps(ctx: PageOpsContext) {
     if (!vault) return;
     let name = presetName ?? null;
     let kind: PageKind = "note";
+    let template: string | undefined;
     let folder = parent ? subpageFolder(parent) : (inFolder ?? newNoteFolder("", ctx.config));
     if (!name) {
       const chooseFolder = !parent && inFolder === undefined;
@@ -260,10 +265,12 @@ export function usePageOps(ctx: PageOpsContext) {
         folder,
         kinds: true,
         initialKind,
+        templates: ctx.templates?.files.map((path) => ({ path, name: templateName(ctx.templates!.config, path) })),
       });
       if (!result) return;
       name = result.name;
       kind = result.kind;
+      template = result.template;
       if (chooseFolder) folder = result.folder;
     }
     const title = sanitizeName(name) || "Sans titre";
@@ -277,8 +284,10 @@ export function usePageOps(ctx: PageOpsContext) {
         : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : kind === "canvas" ? CANVAS_SUFFIX : kind === "dashboard" ? DASHBOARD_SUFFIX : kind === "base" ? BASE_SUFFIX : ".md"}`, filesRef.current);
     try {
       await ctx.saveNow();
+      // A note from a template: the template filled in, under its title.
+      const fromTemplate = template && ctx.templates ? noteFromTemplate(await vault.read(template), title, new Date(), ctx.templates.config) : null;
       // A base's rows are the notes of the folder named after it, next to it (like sub-pages).
-      await createFile(path, kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "canvas" ? newCanvasFile() : kind === "dashboard" ? newDashboardFile() : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : `# ${title}\n`);
+      await createFile(path, fromTemplate ?? (kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "canvas" ? newCanvasFile() : kind === "dashboard" ? newDashboardFile() : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : `# ${title}\n`));
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";

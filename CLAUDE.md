@@ -18,8 +18,9 @@
 npm run lint        # oxlint (--deny-warnings), config .oxlintrc.json
 npm run typecheck   # tsc --noEmit
 npm test            # vitest
-~/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml
+~/.cargo/bin/cargo test --manifest-path src-tauri/Cargo.toml --workspace   # sans --workspace, les tests de flownote-core ne tournent pas
 npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le vault de démo en mémoire
+npm run captures      # refait les captures de la doc (src/docs/images)
 ```
 
 ## Architecture
@@ -40,7 +41,7 @@ npx vite --port 1430   # serveur de dev ; « Essayer avec un exemple » ouvre le
 - `src/query/` : requêtes Dataview et Tasks (index du vault, langages, rendu sous les blocs de code) ; `src/markdown/sections.ts` : la partie d'une note montrée par `![[Note#Titre]]` ou `![[Note#^id]]`.
 - `src/CommandPalette.tsx` : palette de commandes (`⌘⇧P`), commandes construites par `App.tsx`.
 - `src/docs/documentation.md` : documentation affichée dans l'app (`flownote:docs`). **La mettre à jour avec chaque fonctionnalité.**
-- `src/docs/images/` : captures de la doc, `nom.light.webp` et `nom.dark.webp` (1600 px de large, densité 2), intégrées par `![[nom.webp]]` (`docsBridge.ts` sert celle du thème). Refaites dans Chrome sur le vault de démo (`src/demo.ts`), fenêtre 1280×800, puis converties en WebP (`sips` ne sait pas écrire le WebP : passer par un canvas).
+- `src/docs/images/` : captures de la doc, `nom.light.webp` et `nom.dark.webp` (1600 px de large, densité 2), intégrées par `![[nom.webp]]` (`docsBridge.ts` sert celle du thème). Refaites par `npm run captures` (`scripts/captures.mjs`, ou `npm run captures -- graphe` pour certaines) : le Chrome installé, piloté par playwright-core, sur le vault de démo, fenêtre 1280×800, converties en WebP par un canvas.
 - Types de page, un dossier chacun : `base/` (`.base`), `drawing/` (`.excalidraw.md`), `mindmap/` (`.mindmap.md`), `canvas/` (`.canvas`, écrit comme Obsidian), `ticket/` (`type: ticket`), `presentation/` (`marp: true`), `dashboardPage/` (`.dashboard.md`), plus `reading/` et `graph/`.
 - `src/App.tsx` : état global, onglets, choix du type de page. Les vues hors page sont des pseudo-chemins `flownote:tickets`, `flownote:graph`, `flownote:reading`, `flownote:settings`, `flownote:docs`.
 - Styles : `src/styles/*.css`, importés depuis `src/styles.css`.
@@ -83,7 +84,7 @@ Sur demande, **Claude fait la release** (version, CHANGELOG, commit, tag, push) 
     - Déploiement retenu : Docker (`Dockerfile` avec l'app web, le serveur, Grammalecte pour Linux et git ; `docker compose` qui monte le vault, publie un port et lit un mot de passe dans `.env`). L'image pourrait être publiée par la CI sur ghcr.io.
     - Points à régler : un mot de passe au minimum ; les identifiants Git montés en lecture seule et l'utilisateur du conteneur égal au propriétaire du vault ; Grammalecte recompilé pour Linux (ou le correcteur du navigateur) ; les liens et exports qui s'ouvrent côté navigateur. Le contrôle de conflit protège déjà deux navigateurs sur la même note.
   - `App.tsx` (~1 660 lignes) : reste à sortir la navigation des onglets (`useTabs` : `select`, `switchTab`, `newTab`, historique), à vérifier dans l'app de bureau (déjà sortis : `usePageOps`, `shortcuts.ts`, `Titlebar`, `useSplitWidth`, `useSidebarPeek`, `tabs.ts`, `pageExport.ts`) ;
-  - idées rapides : note du jour (`.obsidian/daily-notes.json`), nouvelle page depuis un modèle (`.obsidian/templates.json`), `/page` qui écrit `# Titre` comme « Nouvelle page » ;
+  - idée rapide : note du jour (`.obsidian/daily-notes.json`), écartée pour l'instant ;
   - CSP active depuis octobre 2026, validée dans Chrome : à vérifier dans l'app de bureau (protocoles `ipc:` et `asset:`) ;
   - **iPad / app native (idée pour plus tard)** : piste retenue, l'**hybride**. Une coquille Swift native (barre latérale, onglets, fichiers, iCloud, réglages) qui affiche l'éditeur et les vues lourdes (Excalidraw, Plotly, Mermaid, KaTeX, Marp, mind maps) dans une WKWebView. Ressenti plus natif que Tauri, pour un effort intermédiaire. Chemin prévu : d'abord Tauri 2 sur iPad (cible iOS, vault par le sélecteur de dossiers et signets de sécurité, Git par libgit2, Grammalecte en version JS), puis remplacer les morceaux par du natif un par un. Une réécriture tout en Swift est écartée : pas d'équivalent natif à ProseMirror ni au moteur de fidélité remark. Une coquille SwiftUI pour macOS (« FlowNote Swift », `native/`) a été essayée en octobre 2026 puis retirée : trop lourde à tenir à parité, rendu jugé moins beau. Code récupérable au commit `58f9768` ;
   - branche `feature/notebooks` (notebooks Python marimo) jamais fusionnée, très en retard sur `main` ; `feature/swift-shell-historique` garde l'historique de l'essai Swift ;

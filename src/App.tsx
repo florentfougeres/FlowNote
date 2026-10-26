@@ -5,7 +5,7 @@ import { NoteEditor } from "./editor/NoteEditor";
 import { imageMime, NULL_BRIDGE, type VaultBridge } from "./editor/bridge";
 import DOCUMENTATION from "./docs/documentation.md?raw";
 import { docsBridge } from "./docs/docsBridge";
-import { ConfirmDialog, NameDialog, type NameResult, type PageKind } from "./Dialogs";
+import { ConfirmDialog, NameDialog, TemplateDialog, type NameResult, type PageKind, type TemplateChoice } from "./Dialogs";
 import { isDrawingPath } from "./drawing/format";
 import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
 import { DRAWING_TOOLS } from "./drawing/tools";
@@ -57,6 +57,7 @@ import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, readAllNotes, type Vault, type VaultEntry } from "./vault/vault";
 import { isoDay, setTaskDone } from "./query/pages";
 import { DEFAULT_CONFIG, dirname, noteTitle, parseObsidianConfig, type ObsidianConfig } from "./vault/links";
+import { readTemplatesConfig, templateBody, templateFiles, templateName, type TemplatesConfig } from "./vault/templates";
 import { DEMO_FILES, DEMO_REMOTE } from "./demo";
 import { GitDrawer, useGitDrawer } from "./GitDrawer";
 import { usePersistentFlag } from "./hooks/usePersistentFlag";
@@ -131,6 +132,7 @@ interface Dialog {
   folder?: string;
   kinds?: boolean;
   initialKind?: PageKind;
+  templates?: TemplateChoice[];
   resolve: (result: NameResult | null) => void;
 }
 
@@ -147,6 +149,10 @@ export function App() {
   const [tree, setTree] = useState<VaultEntry[]>([]);
   /** Obsidian's bookmarked files (.obsidian/bookmarks.json), shown as favorites. */
   const [bookmarks, setBookmarks] = useState<string[]>([]);
+  /** Obsidian's templates settings (.obsidian/templates.json), null when no folder is set: templates are then hidden. */
+  const [templatesConfig, setTemplatesConfig] = useState<TemplatesConfig | null>(null);
+  /** `/modèle`: the template list shown, until one is chosen. */
+  const [templatePick, setTemplatePick] = useState<{ resolve: (path: string | null) => void } | null>(null);
   const [files, setFiles] = useState<string[]>([]);
   const [config, setConfig] = useState<ObsidianConfig>(DEFAULT_CONFIG);
   const [note, setNote] = useState<OpenNote | null>(null);
@@ -312,7 +318,13 @@ export function App() {
   const dirty = note !== null && note.markdown !== note.disk;
 
   const refresh = useCallback(async (v: Vault) => {
-    const [newTree, newFiles, bookmarksJson] = await Promise.all([v.tree(), v.files(), v.bookmarks?.().catch(() => "{}") ?? "{}"]);
+    const [newTree, newFiles, bookmarksJson, templatesJson] = await Promise.all([
+      v.tree(),
+      v.files(),
+      v.bookmarks?.().catch(() => "{}") ?? "{}",
+      v.templatesConfig?.().catch(() => "{}") ?? "{}",
+    ]);
+    setTemplatesConfig(readTemplatesConfig(templatesJson));
     setTree(newTree);
     setFiles(newFiles);
     filesRef.current = newFiles;
@@ -716,12 +728,16 @@ export function App() {
     setSettings(next);
     saveSettings(next);
   };
+  const templateList = useMemo(() => templateFiles(templatesConfig, files), [templatesConfig, files]);
+  const templates = useMemo(() => (templatesConfig && templateList.length > 0 ? { config: templatesConfig, files: templateList } : null), [templatesConfig, templateList]);
+
   const { createFile, renamePath, renameCurrent, newFolder, renameFolderPath, moveItem, duplicatePage, copyLink, removeFolder, removePage, newPage } = usePageOps({
     vault,
     tree,
     filesRef,
     noteRef,
     config,
+    templates,
     ticketPaths,
     settings,
     changeSettings,
@@ -771,6 +787,15 @@ export function App() {
       };
     },
     readNote: (path) => (vault ? vault.read(path) : Promise.reject(new Error("Aucun vault ouvert."))),
+    // `/modèle`, offered only when Obsidian has a templates folder with notes in it.
+    ...(templates && vault
+      ? {
+          pickTemplate: async (title: string) => {
+            const path = await new Promise<string | null>((resolve) => setTemplatePick({ resolve }));
+            return path ? templateBody(await vault.read(path), title, new Date(), templates.config) : null;
+          },
+        }
+      : {}),
     queryVault: async () => {
       if (!vault) return { notes: [], stats: [] };
       const [notes, stats] = await Promise.all([readAllNotes(vault, filesRef.current), vault.stats?.().catch(() => []) ?? Promise.resolve([])]);
@@ -822,6 +847,9 @@ export function App() {
       readNote: (path) => splitBridgeLatest.current.readNote!(path),
       queryVault: () => splitBridgeLatest.current.queryVault!(),
       toggleTask: (path, line, done) => splitBridgeLatest.current.toggleTask!(path, line, done),
+      get pickTemplate() {
+        return splitBridgeLatest.current.pickTemplate;
+      },
     }),
     [],
   );
@@ -1757,6 +1785,15 @@ export function App() {
       {presenting !== null && slides && presentationPage && <Presenter rendered={slides} start={presenting} onClose={() => setPresenting(null)} />}
       {modal === "help" && <ShortcutsHelp onClose={() => setModal(null)} />}
       {modal === "addLink" && <AddLinkDialog themes={readingThemes} tags={readingTags} fetchTitles={settings.fetchTitles} onAdd={addReading} onClose={() => setModal(null)} />}
+      {templatePick && templates && (
+        <TemplateDialog
+          templates={templates.files.map((path) => ({ path, name: templateName(templates.config, path) }))}
+          onDone={(path) => {
+            templatePick.resolve(path);
+            setTemplatePick(null);
+          }}
+        />
+      )}
       {dialog && (
         <NameDialog
           title={dialog.title}
@@ -1765,6 +1802,7 @@ export function App() {
           folder={dialog.folder}
           kinds={dialog.kinds}
           initialKind={dialog.initialKind}
+          templates={dialog.templates}
           onDone={(result) => {
             dialog.resolve(result);
             setDialog(null);

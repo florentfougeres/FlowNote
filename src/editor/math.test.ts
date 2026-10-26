@@ -57,3 +57,31 @@ describe("math", () => {
     expect(html).not.toContain("$x^2$");
   });
 });
+
+describe("raw blocks", () => {
+  it("⌘↵ keeps the source once, even when leaving the page fires the field's blur", async () => {
+    const { editor, save } = open("Avant\n\n$$\nx\n$$\n");
+    const block = editor.view.dom.querySelector<HTMLElement>('.raw-block[data-kind="math"]')!;
+    block.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    const field = block.querySelector("textarea")!;
+    // As in browsers: the field leaving the page loses the focus first.
+    const replaceWith = field.replaceWith.bind(field);
+    field.replaceWith = (...nodes) => {
+      field.dispatchEvent(new FocusEvent("blur"));
+      replaceWith(...nodes);
+    };
+    field.value = "$$\ny^2\n$$";
+    // An error in an event handler does not reach dispatchEvent: the window gets it.
+    const errors: unknown[] = [];
+    const onError = (event: ErrorEvent) => {
+      errors.push(event.error);
+      event.preventDefault();
+    };
+    window.addEventListener("error", onError);
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", metaKey: true }));
+    window.removeEventListener("error", onError);
+    expect(errors).toEqual([]);
+    expect(block.querySelector("textarea")).toBeNull();
+    expect(save()).toBe("Avant\n\n$$\ny^2\n$$\n");
+  });
+});

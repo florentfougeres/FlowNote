@@ -67,6 +67,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - **Notes intégrées** : `![[Note]]`, `![[Note#Section]]` et `![[Note#^bloc]]` affichent le contenu de l'autre note, toujours à jour
 - **Notes de bas de page** `[^1]` : appel en exposant (texte au survol), note numérotée en bas ; la barre de mise en forme en ajoute une sur la sélection (une fenêtre demande son texte), `/note de bas de page` au curseur
 - Sous-pages et arborescence dans la barre latérale
+- **Modèles** du dossier réglé dans Obsidian : une nouvelle page en part, `/modèle` en insère un ; `{{title}}`, `{{date}}`, `{{time}}` remplis aux formats d'Obsidian
 
 **Requêtes Dataview et Tasks**
 - Blocs ```` ```dataview ```` du plugin [Dataview](https://blacksmithgu.github.io/obsidian-dataview/) : `LIST`, `TABLE` et `TASK`, avec `FROM`, `WHERE`, `SORT`, `GROUP BY`, `LIMIT`, les propriétés, les champs `clé:: valeur` et les dates calculées

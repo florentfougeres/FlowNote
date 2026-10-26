@@ -10,7 +10,8 @@ import { PLOT_TEMPLATE } from "./plotModel";
 import { tableSizePicker } from "./TableSizePicker";
 import type { BridgeRef, VaultBridge } from "./bridge";
 import { menuRenderer, MenuStore, normalizeText, type MenuItem } from "./menu";
-import { linkTextFor, sanitizeName, subpageFolder, uniquePath } from "../vault/links";
+import { linkTextFor, noteTitle, sanitizeName, subpageFolder, uniquePath } from "../vault/links";
+import { insertMarkdownBlocks } from "./pasteMarkdown";
 
 /**
  * Slash menu. The query stays in the document text (`/tit` filters on "tit")
@@ -22,6 +23,19 @@ import { linkTextFor, sanitizeName, subpageFolder, uniquePath } from "../vault/l
 export interface SlashItem extends MenuItem {
   keywords: string[];
   run: (editor: Editor, range: Range, bridge: VaultBridge) => void;
+}
+
+/** `/modèle`: the chosen template, filled in for this note, inserted as its blocks. */
+async function insertTemplate(editor: Editor, range: Range, bridge: VaultBridge) {
+  editor.chain().focus().deleteRange(range).run();
+  // The cursor's place, kept while the template list has the focus.
+  const bookmark = editor.state.selection.getBookmark();
+  const text = await bridge.pickTemplate?.(noteTitle(bridge.notePath));
+  if (editor.isDestroyed) return;
+  const { tr } = editor.state;
+  editor.view.dispatch(tr.setSelection(bookmark.resolve(tr.doc)));
+  if (text?.trim()) insertMarkdownBlocks(editor.view, text);
+  editor.commands.focus();
 }
 
 /** Sub-page: a new note in a folder named after this one, linked from here; it starts with its title, like a new page. */
@@ -199,6 +213,14 @@ const SLASH_ITEMS: SlashItem[] = [
       });
       if (at >= 0) editMathBlock(editor.view, at);
     },
+  },
+  {
+    key: "template",
+    title: "Modèle",
+    description: "Une note du dossier de modèles, insérée ici",
+    icon: "⎘",
+    keywords: ["modèle", "template", "gabarit"],
+    run: (editor, range, bridge) => void insertTemplate(editor, range, bridge),
   },
   {
     key: "inlineMath",
@@ -487,7 +509,8 @@ export const SlashCommand = Extension.create<{ store: SlashMenuStore; bridge: Br
         char: "/",
         allowedPrefixes: [" ", " "],
         allow: ({ state, range }) => freshSlashKey.getState(state) === range.from,
-        items: ({ query }) => filterSlashItems(query, SLASH_ITEMS, loadFrecency()),
+        // `/modèle` only when the vault has templates (the app gives the bridge a way to pick one).
+        items: ({ query }) => filterSlashItems(query, bridge.current.pickTemplate ? SLASH_ITEMS : SLASH_ITEMS.filter((i) => i.key !== "template"), loadFrecency()),
         command: ({ editor, range, props }) => {
           editor.view.dispatch(editor.state.tr.setMeta(handleSlashKey, null));
           recordUse(props.key);

@@ -26,6 +26,8 @@ export interface VaultBridge {
   queryVault?(): Promise<VaultSnapshot>;
   /** Checks or unchecks a task (0-based line) in its note, from a query's results. */
   toggleTask?(path: string, line: number, done: boolean): Promise<void>;
+  /** `/modèle`: asks for a template and gives its text filled in for the note titled `title` (null: cancelled). Absent without templates. */
+  pickTemplate?(title: string): Promise<string | null>;
   /** How many notes embed this one (`![[…]]` inside `![[…]]`), to stop at a depth. */
   embedDepth?: number;
 }

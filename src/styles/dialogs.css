@@ -122,8 +122,21 @@
   font-size: 13px;
 }
 
+/* One width for "Dans" and "Modèle": their buttons line up. */
 .name-dialog-folder-label {
+  flex: none;
+  width: 52px;
   color: var(--muted);
+}
+
+/* `/modèle`: the template list in its own window. */
+.template-dialog {
+  width: 360px;
+}
+
+.template-dialog .name-dialog-folder-list {
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .name-dialog-folder-button {

@@ -222,6 +222,7 @@ Autour de cette interface :
 
 - **`noteCache.ts`** enveloppe le vault ouvert : les vues qui lisent toutes les notes (accueil, graphe, tickets, bases, notes liées) sont servies depuis une copie en mémoire. Les écritures de l'app la tiennent à jour, et elle est oubliée quand la fenêtre reprend le focus, car les fichiers ont pu changer ailleurs.
 - **`links.ts`** résout les liens comme Obsidian et lit ses réglages (`.obsidian/app.json`, en lecture seule) : dossier des pièces jointes, emplacement des nouvelles notes, wikilinks ou liens Markdown.
+- **`templates.ts`** : les modèles du dossier réglé dans `.obsidian/templates.json` (commande `vault_templates_config`, en lecture seule). Remplit `{{title}}`, `{{date}}`, `{{time}}` et `{{date:format}}` avec un sous-ensemble des codes de Moment (`YYYY`, `MMMM`, `dddd`, `HH`…, texte entre crochets gardé), en français. `noteFromTemplate` fait une nouvelle page (titre `# Nom` après les propriétés du modèle), `templateBody` ce que `/modèle` insère (`insertMarkdownBlocks`, blocs gardés tels quels). Sans dossier réglé, l'interface ne propose rien.
 - **`pageOps.ts`** : renommer, déplacer et dupliquer une page, en mettant à jour les liens qui pointent vers elle.
 - **`backlinks.ts`**, **`search.ts`** : notes liées et recherche dans le vault.
 - **`conflicts.ts`** : lecture des marqueurs de conflit Git (`<<<<<<<`, `=======`, `>>>>>>>`, y compris le style diff3) pour l'outil de résolution.

@@ -107,6 +107,28 @@ describe("sub-pages", () => {
   });
 });
 
+describe("templates", () => {
+  it("/modèle inserts the chosen template's blocks in place of the empty line", async () => {
+    const pickTemplate = vi.fn(async (title: string) => `## Ordre du jour de ${title}\n\n- [ ] Point 1\n`);
+    const { editor, save } = openEditor("# Réunion\n", vault({ notePath: "Réunion.md", pickTemplate }));
+    editor.commands.focus("end");
+    press(editor, "Enter");
+    type(editor, "/modèle");
+    await tick();
+    press(editor, "Enter");
+    await tick();
+    expect(pickTemplate).toHaveBeenCalledWith("Réunion");
+    expect(save()).toBe("# Réunion\n\n## Ordre du jour de Réunion\n\n- [ ] Point 1\n");
+  });
+
+  it("/modèle is not offered without templates", async () => {
+    const { editor, slash } = openEditor("", vault());
+    type(editor, "/modèle");
+    await tick();
+    expect(slash.state?.items.some((i) => i.key === "template") ?? false).toBe(false);
+  });
+});
+
 describe("attachments", () => {
   it("dropped files are saved with the Obsidian settings and embedded", async () => {
     const bridge = vault({ config: { ...DEFAULT_CONFIG, attachmentFolderPath: "./assets" }, notePath: "Perso/Idées.md" });

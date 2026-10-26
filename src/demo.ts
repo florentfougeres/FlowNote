@@ -409,6 +409,10 @@ export const DEMO_FILES = {
   "Projets/Site web.md": PROJECT_NOTE,
   "Projets/Lancement.md": LAUNCH_NOTE,
   "Fonctionnalités Obsidian.md": OBSIDIAN_NOTE,
+  // Templates, set as in Obsidian: « Nouvelle page » (type Note) and `/modèle` offer them.
+  ".obsidian/templates.json": JSON.stringify({ folder: "Modèles", dateFormat: "DD/MM/YYYY", timeFormat: "HH:mm" }),
+  "Modèles/Réunion.md": "---\ntags: [réunion]\n---\n\nLe {{date}} à {{time}}.\n\n## Ordre du jour\n\n- \n\n## Décisions\n\n- [ ] À décider\n",
+  "Modèles/Compte rendu.md": "## Compte rendu du {{date:dddd D MMMM}}\n\n> [!note] Présents\n> \n\n## Points abordés\n\n1. \n",
   "Tour de l'éditeur.md": EDITOR_TOUR,
   "Todo.md": TODO,
   "Voyages.base": tripsBase(),
