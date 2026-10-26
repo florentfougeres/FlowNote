@@ -2,6 +2,8 @@ import type { NodeViewRenderer } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { BridgeRef } from "../bridge";
 import { sanitizeHtml } from "../html";
+import { renderMath, texOf } from "../math";
+import { editInlineMath } from "../MathPrompt";
 import { element } from "./dom";
 import { showImage } from "./image";
 
@@ -21,11 +23,33 @@ export function footnoteText(doc: PMNode, label: string): string | null {
 }
 
 /**
- * Inline Markdown kept verbatim (inline HTML, footnote calls…). A footnote
+ * Inline Markdown kept verbatim (inline HTML, footnote calls, math…). Math
+ * is drawn by KaTeX (math.ts). A footnote
  * call `[^1]` shows as a superscript number: its text on hover, a click
  * scrolls to it.
  */
-export const inlineRawView = (bridge: BridgeRef): NodeViewRenderer => ({ node, editor }) => {
+export const inlineRawView = (bridge: BridgeRef): NodeViewRenderer => ({ node, editor, getPos }) => {
+  if (node.attrs.kind === "inlineMath") {
+    // A formula drawn by KaTeX; a click opens its source with a live preview (MathPrompt.tsx).
+    const dom = element("span", "math-inline");
+    dom.contentEditable = "false";
+    let source = String(node.attrs.source);
+    renderMath(dom, texOf(source), false);
+    dom.addEventListener("mousedown", (event) => {
+      const pos = getPos();
+      if (pos === undefined || !editor.isEditable) return;
+      event.preventDefault();
+      editInlineMath(editor, pos);
+    });
+    return {
+      dom,
+      update: (n) => {
+        if (n.type !== node.type || n.attrs.kind !== "inlineMath") return false;
+        if (n.attrs.source !== source) renderMath(dom, texOf((source = String(n.attrs.source))), false);
+        return true;
+      },
+    };
+  }
   if (node.attrs.kind === "html" && VOID_HTML.test(node.attrs.source)) {
     const dom = element("span", "inline-html-void");
     const fragment = sanitizeHtml(node.attrs.source);

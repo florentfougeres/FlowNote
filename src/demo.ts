@@ -1,23 +1,25 @@
 import { demoDrawing } from "./drawing/demo";
 import { FULL_NOTE } from "./markdown/fixtures";
-import { defaultView, newBaseFile, parseBase, reparse, serializeBase, writeColumn, writeView } from "./base/baseFile";
+import { defaultView, newBaseFile, parseBase, reparse, serializeBase, writeColumn, writeFormula, writeView } from "./base/baseFile";
 import { newMindmapData, serializeMindmap } from "./mindmap/format";
 
 /** A date `days` from today (yyyy-mm-dd), so the demo's calendar and due dates stay current. */
 const day = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
 
-/** The demo's base: trips, as a table, a kanban by status and a calendar. */
+/** The demo's base: trips, as a table (with a formula), a kanban by status, a gallery and a calendar. */
 function tripsBase(): string {
   let file = parseBase(newBaseFile("Voyages"));
   writeColumn(file, "statut", { type: "select", options: [{ value: "Idée", color: "gray" }, { value: "Réservé", color: "blue" }, { value: "Fait", color: "green" }] });
   writeColumn(file, "pays", { type: "text", options: [] });
   writeColumn(file, "budget", { type: "number", options: [] });
   writeColumn(file, "depart", { type: "date", options: [] });
+  writeFormula(file, "par_jour", "budget / 7");
   file = reparse(file);
-  const order = ["file.name", "statut", "pays", "depart", "budget"];
-  writeView(file, 0, { ...defaultView("table", "Tableau", order), summaries: { budget: "Sum" } });
+  const order = ["file.name", "statut", "pays", "depart", "budget", "formula.par_jour"];
+  writeView(file, 0, { ...defaultView("table", "Tableau", order), summaries: { budget: "Sum", "formula.par_jour": "Average" } });
   writeView(file, 1, { ...defaultView("board", "Kanban", order), groupBy: "statut" });
-  writeView(file, 2, { ...defaultView("calendar", "Calendrier", order), dateProperty: "depart" });
+  writeView(file, 2, { ...defaultView("cards", "Galerie", order) });
+  writeView(file, 3, { ...defaultView("calendar", "Calendrier", order), dateProperty: "depart" });
   return serializeBase(file);
 }
 
@@ -215,17 +217,199 @@ Du fluo ==jaune==, ==🟢vert== ou ==🔵bleu== (comme Bear), du texte <u>soulig
 [^2]: Le menu \`/\` en ajoute une : « Note de bas de page ».
 `;
 
+/** Every block and every inline format of the editor, one after the other. */
+const EDITOR_TOUR = `---
+icon: ✍️
+tags: [démo, éditeur]
+auteur: Florent
+pages: 12
+relu: true
+publication: ${day(14)}
+reunion: ${day(2)}T14:30
+lecteurs: [équipe, clients]
+---
+# Tour de l'éditeur
+
+Tout ce que l'éditeur sait afficher, dans une seule note. Ouvrez-la aussi en Markdown brut (\`⌘⇧E\`) : c'est du Markdown ordinaire, lisible dans Obsidian. Le sommaire ci-dessous se construit tout seul :
+
+[TOC]
+
+## Mise en forme
+
+Du **gras**, de l'*italique*, du <u>souligné</u>, du ~~barré~~, du \`code\` et du ==fluo==. Le fluo prend aussi une couleur, comme dans Bear : ==🟢vert==, ==🔴rouge==, ==🔵bleu==, ==🟣violet==. Sélectionnez du texte : la barre de mise en forme apparaît au-dessus.
+
+Des liens : vers une note, [[Site web]] ou [[Lancement|avec un autre texte]] ; vers le web, [Obsidian](https://obsidian.md) ou une adresse tapée, https://flowchart.js.org. Des emoji en code court :rocket: :sparkles: et un tag #démo.
+
+Une note de bas de page[^1], la date du jour (\`/date\`) : ${day(0)}.
+
+## Titres
+
+Cliquez dans un titre : son niveau s'affiche dans la marge, un clic en choisit un autre.
+
+### Titre de niveau 3
+
+#### Titre de niveau 4
+
+## Listes
+
+- Une liste à puces
+  - imbriquée avec \`⇥\`
+- [[Projets|Un lien]] dans une liste
+
+1. Une liste numérotée
+2. Deuxième élément
+
+- [ ] Une tâche à faire 📅 ${day(3)}
+- [x] Une tâche faite
+  - [ ] Une sous-tâche
+
+> Une citation, sur une ligne.
+
+---
+
+## Callouts et toggles
+
+> [!info] Info
+> Cliquez sur l'icône pour changer de type.
+
+> [!tip] Astuce
+> \`> [!tip]\` puis espace en crée un.
+
+> [!warning] Attention
+> Un callout de mise en garde.
+
+> [!success] Réussi
+> Les types d'Obsidian ont chacun leur couleur.
+
+> [!question]- Un toggle (callout repliable)
+> Cliquez sur la flèche à gauche pour le déplier.
+
+:::info
+Une admonition **HedgeDoc** (\`:::info\` … \`:::\`), affichée comme un callout.
+:::
+
+:::spoiler Un spoiler HedgeDoc
+Replié par défaut.
+:::
+
+## Tableau
+
+| Page | État | Visites |
+| :--- | :---: | ---: |
+| Accueil | prête | 1 204 |
+| Blog | en cours | 310 |
+| Contact | à faire | 0 |
+
+## Code
+
+\`\`\`typescript
+export function bonjour(nom: string): string {
+  return \`Bonjour \${nom} !\`;
+}
+\`\`\`
+
+\`\`\`python
+def bonjour(nom):
+    return f"Bonjour {nom} !"
+\`\`\`
+
+## Maths
+
+La formule $E = mc^2$ en ligne (cliquez dessus pour la modifier), et en bloc (double-cliquez) :
+
+$$
+\\sum_{k=1}^{n} k = \\frac{n(n+1)}{2}
+$$
+
+## Diagrammes
+
+Un diagramme Mermaid :
+
+\`\`\`mermaid
+graph LR
+  Idée --> Brouillon --> Relecture --> Publication
+\`\`\`
+
+Un organigramme flowchart.js, modifiable avec son éditeur visuel (survolez le bloc) :
+
+\`\`\`flow
+st=>start: Début
+op=>operation: Écrire
+cond=>condition: Relu ?
+e=>end: Publier
+
+st->op->cond
+cond(yes)->e
+cond(no)->op
+\`\`\`
+
+## Graphique
+
+Un graphique Plotly, avec son éditeur visuel (« Éditeur visuel » en haut du bloc) :
+
+\`\`\`plotly
+data:
+  - type: bar
+    x: [Janv., Févr., Mars, Avr.]
+    y: [12, 19, 7, 15]
+    name: Articles
+  - type: scatter
+    mode: lines
+    x: [Janv., Févr., Mars, Avr.]
+    y: [8, 11, 10, 14]
+    name: Visites (centaines)
+layout:
+  title: Le blog
+\`\`\`
+
+## HTML
+
+Du HTML en ligne : <kbd>⌘</kbd> + <kbd>K</kbd>, <sup>exposant</sup>, <span style="color: #2f9e44">texte coloré</span>.
+
+<details>
+<summary>Un bloc <code>&lt;details&gt;</code></summary>
+Le HTML s'affiche mis en page, sans ses scripts.
+</details>
+
+## Intégrations
+
+Une base, un croquis et une mind map du vault, intégrés par \`![[…]]\` :
+
+![[Voyages.base]]
+
+![[Croquis.excalidraw.md]]
+
+![[Idées.mindmap.md]]
+
+[^1]: Survolez l'appel pour la lire, cliquez pour venir ici. La barre de mise en forme en ajoute une sur le texte sélectionné.
+`;
+
+/** The to-do list (« Tâches » in the sidebar): a section per category, tasks in the Tasks plugin's format. */
+const TODO = `## Perso
+
+- [ ] Prendre rendez-vous chez le dentiste 📅 ${day(4)} #santé
+- [ ] Rappeler Paul 📅 ${day(0)}
+- [x] Payer le loyer 📅 ${day(-2)}
+
+## Travail
+
+- [ ] Préparer la réunion d'équipe 📅 ${day(1)} #réunion
+- [ ] Relire le devis 📅 ${day(-1)} #client
+`;
+
 /** The simulated remote changed the same line of "Projets.md": edit it locally, commit, then pull to see a conflict. */
 export const DEMO_REMOTE = { "Projets.md": "# Projets\n\n[[Mon Notion]] — modifié sur un autre ordinateur\n" };
 
 export const DEMO_FILES = {
-  ".obsidian/bookmarks.json": JSON.stringify({ items: [{ type: "file", path: "Exemple.md" }, { type: "file", path: "Projets/Site web.md" }, { type: "file", path: "Fonctionnalités Obsidian.md" }] }),
+  ".obsidian/bookmarks.json": JSON.stringify({ items: [{ type: "file", path: "Exemple.md" }, { type: "file", path: "Projets/Site web.md" }, { type: "file", path: "Fonctionnalités Obsidian.md" }, { type: "file", path: "Tour de l'éditeur.md" }] }),
   "Exemple.md": FULL_NOTE,
   "Projets.md": "# Projets\n\n[[Mon Notion]]\n",
   "Projets/Mon Notion.md": "Une sous-page de [[Projets]].\n",
   "Projets/Site web.md": PROJECT_NOTE,
   "Projets/Lancement.md": LAUNCH_NOTE,
   "Fonctionnalités Obsidian.md": OBSIDIAN_NOTE,
+  "Tour de l'éditeur.md": EDITOR_TOUR,
+  "Todo.md": TODO,
   "Voyages.base": tripsBase(),
   "Voyages/Lisbonne.md": trip("Réservé", "Portugal", day(9), 650, "Quatre jours en ville, puis la côte."),
   "Voyages/Kyoto.md": trip("Idée", "Japon", day(24), 2400, "Au printemps, pour les cerisiers."),

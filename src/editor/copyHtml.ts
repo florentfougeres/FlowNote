@@ -2,6 +2,7 @@ import { DOMSerializer, type Node as PMNode } from "@tiptap/pm/model";
 import { isTocParagraph } from "./toc";
 import { inlineVaultImages } from "./imageCopies";
 import { sanitizeHtml } from "./html";
+import { mathMarkup, texOf } from "./math";
 import { saveExport } from "../presentation/exportHtml";
 
 /**
@@ -40,6 +41,15 @@ export function noteToHtml(doc: PMNode, title: string): string {
   // HTML written in the note is the page's HTML (cleaned like on screen).
   for (const raw of body.querySelectorAll('pre.raw-block[data-kind="html"]')) raw.replaceWith(sanitizeHtml(raw.textContent ?? ""));
   for (const raw of body.querySelectorAll('.inline-raw[data-kind="html"]')) raw.replaceWith(sanitizeHtml(raw.textContent ?? ""));
+  // Math as MathML, which browsers draw without a style sheet (as code while KaTeX has not loaded).
+  for (const raw of body.querySelectorAll('pre.raw-block[data-kind="math"], .inline-raw[data-kind="inlineMath"]')) {
+    const display = raw.tagName === "PRE";
+    const markup = mathMarkup(texOf(raw.textContent ?? ""), display);
+    if (markup === null) continue;
+    const math = Object.assign(document.createElement(display ? "div" : "span"), { innerHTML: markup });
+    if (display) math.setAttribute("style", "margin: 1em 0; text-align: center;");
+    raw.replaceWith(math);
+  }
   for (const raw of body.querySelectorAll(".inline-raw")) raw.replaceWith(Object.assign(document.createElement("code"), { textContent: raw.textContent }));
   for (const raw of body.querySelectorAll("pre.raw-block")) {
     raw.removeAttribute("class");

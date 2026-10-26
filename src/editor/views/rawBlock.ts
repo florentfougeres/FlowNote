@@ -1,6 +1,8 @@
 import type { NodeViewRenderer } from "@tiptap/core";
+import type { EditorView } from "@tiptap/pm/view";
 import type { BridgeRef } from "../bridge";
 import { sanitizeHtml } from "../html";
+import { renderMath, texOf } from "../math";
 import { element, updateAttrs } from "./dom";
 import { showImage } from "./image";
 
@@ -11,18 +13,30 @@ function rendersSomething(fragment: DocumentFragment): boolean {
 
 /**
  * Markdown kept verbatim (tables, HTML, math...): double-click to edit its
- * source. A footnote's text (`[^1]: text`) shows as a footnote: its number,
+ * source. Math (`$$…$$`) is drawn by KaTeX, with a live preview under its
+ * source while edited. A footnote's text (`[^1]: text`) shows as a footnote: its number,
  * then its text. HTML shows rendered (sanitized, html.ts), its images read
  * from the vault.
  */
+/** Opens the source of the formula block at `pos` (just inserted from the menu or by `$$`), as a double-click would. */
+export function editMathBlock(view: EditorView, pos: number) {
+  window.setTimeout(() => {
+    if (view.isDestroyed) return;
+    const dom = view.nodeDOM(pos);
+    if (dom instanceof HTMLElement && dom.dataset.kind === "math") dom.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+  });
+}
+
 export const rawBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, editor, getPos }) => {
   const dom = element("div", "raw-block");
   dom.dataset.kind = node.attrs.kind;
   const footnote = node.attrs.kind === "footnoteDefinition";
   const html = node.attrs.kind === "html";
-  const pre = element(footnote || html ? "div" : "pre", footnote ? "footnote-def" : html ? "html-block" : undefined);
+  const math = node.attrs.kind === "math";
+  const pre = element(footnote || html || math ? "div" : "pre", footnote ? "footnote-def" : html ? "html-block" : math ? "math-block" : undefined);
   let source = node.attrs.source as string;
   const paint = () => {
+    if (math) return renderMath(pre, texOf(source), true);
     if (html) {
       const fragment = sanitizeHtml(source);
       const shown = rendersSomething(fragment);
@@ -48,11 +62,17 @@ export const rawBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, ed
   paint();
   let textarea: HTMLTextAreaElement | null = null;
 
+  /** A formula's preview under its source while it is edited. */
+  let preview: HTMLElement | null = null;
   const stopEditing = (commit: boolean) => {
     if (!textarea) return;
-    const value = textarea.value;
-    textarea.replaceWith(pre);
+    // Forgotten before it leaves the page: leaving fires its blur, which calls this again.
+    const field = textarea;
     textarea = null;
+    const value = field.value;
+    field.replaceWith(pre);
+    preview?.remove();
+    preview = null;
     if (commit && value !== source) updateAttrs(editor, getPos, { source: value });
     editor.commands.focus();
   };
@@ -68,10 +88,18 @@ export const rawBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, ed
       if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) stopEditing(true);
     });
     pre.replaceWith(textarea);
+    if (math) {
+      const field = textarea;
+      const shown = (preview = element("div", "math-block math-preview"));
+      const draw = () => renderMath(shown, texOf(field.value), true);
+      field.addEventListener("input", draw);
+      draw();
+      field.after(shown);
+    }
     textarea.focus();
   });
   dom.append(pre);
-  dom.title = html ? "Double-cliquez pour modifier le HTML" : "Double-cliquez pour modifier le Markdown";
+  dom.title = html ? "Double-cliquez pour modifier le HTML" : math ? "Double-cliquez pour modifier la formule" : "Double-cliquez pour modifier le Markdown";
   return {
     dom,
     update: (n) => {

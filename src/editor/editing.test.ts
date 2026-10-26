@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TextSelection } from "@tiptap/pm/state";
 import { cursorAtStartOf, destroyEditors, openEditor as open, press, type } from "./testUtils";
 import { linkTarget } from "./LinkPrompt";
-import { pasteMarkdown } from "./pasteMarkdown";
+import { pasteInline, pasteMarkdown } from "./pasteMarkdown";
+import { DOMParser as PMDOMParser } from "@tiptap/pm/model";
 import { codeFromPreceding } from "./backticks";
 import { markdownForClipboard } from "./clipboard";
 
@@ -360,5 +361,27 @@ describe("Plain text pasted is read as Markdown", () => {
   it("stays text in a code block", () => {
     const { editor } = open("```\nx\n```\n");
     expect(pasteMarkdown(editor.view, "**a**")).toBe(false);
+  });
+
+  it("one line keeps the kind of the line it goes in", () => {
+    const { editor, save } = open("Texte\n");
+    select(editor, 6);
+    pasteMarkdown(editor.view, "# Un **titre**");
+    pasteMarkdown(editor.view, "- une puce");
+    expect(save()).toBe("TexteUn **titre**une puce\n");
+    const empty = open("");
+    pasteMarkdown(empty.editor.view, "# Titre copié");
+    expect(empty.save()).toBe("Titre copié\n");
+  });
+
+  it("one block of HTML from elsewhere gives its text", () => {
+    const { editor, save } = open("Avant\n");
+    select(editor, 6);
+    const html = new DOMParser().parseFromString("<h1>Grand <em>titre</em></h1>", "text/html").body;
+    const slice = PMDOMParser.fromSchema(editor.schema).parseSlice(html);
+    expect(pasteInline(editor.view, slice.content)).toBe(true);
+    expect(save()).toBe("AvantGrand *titre*\n");
+    const two = PMDOMParser.fromSchema(editor.schema).parseSlice(new DOMParser().parseFromString("<ul><li>a</li><li>b</li></ul>", "text/html").body);
+    expect(pasteInline(editor.view, two.content)).toBe(false);
   });
 });

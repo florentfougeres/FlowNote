@@ -17,13 +17,13 @@ FlowNote édite votre vault Obsidian comme Notion : par blocs, avec un menu `/`,
 ## Prendre en main
 
 1. **Ouvrez un vault** : au lancement, « Ouvrir un vault Obsidian… » et choisissez son dossier. Un dossier sans `.obsidian` convient aussi : il devient un vault. « Essayer avec un exemple » ouvre un vault de démonstration, en mémoire, sans rien écrire sur le disque.
-2. **Créez une page** avec `⌘N` (ou le bouton en haut de la barre latérale) et choisissez son type : note, base, dessin, mind map, canevas, ticket ou présentation.
+2. **Créez une page** avec `⌘N` (ou le bouton en haut de la barre latérale) et choisissez son type : note, base, dessin, mind map, canevas, ticket, présentation ou dashboard.
 3. **Écrivez** : le texte se tape directement, `/` ouvre le menu des blocs, `[[` insère un lien vers une autre note.
 4. **Retrouvez une page** avec `⌘P`, ou un mot dans tout le vault avec `⌘⇧F`.
 5. **Tout s'enregistre seul** : la pastille en bas à droite indique « Enregistré ». Le fichier est lisible tel quel dans Obsidian.
 6. **Une commande dont vous ne connaissez pas le raccourci** : `⌘⇧P` ouvre la palette de commandes.
 
-Le vault de démonstration contient une note **« Fonctionnalités Obsidian »** (dans les favoris) qui montre en direct les intégrations de notes, les notes de bas de page, les requêtes Dataview et Tasks.
+Le vault de démonstration montre tout ce que FlowNote sait faire. Dans les favoris, **« Tour de l'éditeur »** passe en revue chaque bloc et chaque mise en forme (callouts, admonitions, tableaux, code, maths, diagrammes, graphique, HTML, intégrations), et **« Fonctionnalités Obsidian »** les intégrations de notes, les notes de bas de page, les requêtes Dataview et Tasks. Il contient aussi une base, des tickets, une mind map, un croquis, un canevas, une présentation, un dashboard, une liste de tâches et une liste de lectures.
 
 L'**Accueil** rassemble les raccourcis de création, les pages récentes, les tâches à faire (échéances des tickets et des notes), les tickets ouverts, les liens à lire et l'état de Git. Un clic sur un tag de la carte Vault liste les pages qui le portent (dans le texte ou dans la propriété `tags`).
 
@@ -34,9 +34,9 @@ L'**Accueil** rassemble les raccourcis de création, les pages récentes, les t�
 ### La barre latérale
 
 - **Le vault** en haut : son menu permet de passer en un clic à un vault ouvert récemment, d'en ouvrir un autre ou d'ouvrir les réglages. Le bouton à droite crée une page (`⌘N`).
-- **Accueil**, **Rechercher** (`⌘P`), **Rechercher dans les notes** (`⌘⇧F`), **Tickets**, **Lectures**, **Graphe** et **Documentation** (cette page). Quand une page est ouverte, Accueil, Tickets, Lectures et Graphe s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
+- **Accueil**, **Rechercher** (`⌘P`), **Rechercher dans les notes** (`⌘⇧F`), **Tickets**, **Tâches**, **Lectures**, **Graphe** et **Documentation** (cette page). Quand une page est ouverte, Accueil, Tickets, Tâches, Lectures et Graphe s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
 - **Favoris** : les fichiers mis en favoris dans Obsidian.
-- **Pages** : l'arbre du vault. Une note et le dossier du même nom (`Projets.md` + `Projets/`) forment une page avec ses sous-pages. Le dossier des tickets et la note des lectures n'y figurent pas : ils ont leur propre vue.
+- **Pages** : l'arbre du vault. Une note et le dossier du même nom (`Projets.md` + `Projets/`) forment une page avec ses sous-pages. Le dossier des tickets, la note des lectures et celle des tâches n'y figurent pas : ils ont leur propre vue.
   - Menu « … » ou clic droit : ouvrir dans un nouvel onglet, ouvrir à droite, sous-page, copier le lien, dupliquer, afficher dans le Finder, renommer, supprimer.
   - Glisser-déposer des pages et des dossiers : les liens qui pointent vers eux sont mis à jour à chaque déplacement.
 - En bas : **Git** (`⌘⇧G`), **Réglages** (`⌘,`) et **Aide et raccourcis** (`⌘/`).
@@ -107,7 +107,7 @@ Une page a un **titre** et un **nom de fichier**, indépendants :
 
 ### Les blocs
 
-Tapez `/` en début de ligne pour insérer ou transformer un bloc : texte, titres, listes, tâches, toggle, citation, callouts, admonition HedgeDoc, sous-page, code, Mermaid, organigramme, graphique, maths, tableau, séparateur, sommaire, date… Continuez à taper pour filtrer, `↵` pour choisir.
+Tapez `/` en début de ligne pour insérer ou transformer un bloc : texte, titres, listes, tâches, toggle, citation, callouts, admonition HedgeDoc, sous-page, code, Mermaid, organigramme, graphique, bloc de maths, formule en ligne, tableau, séparateur, sommaire, date… Continuez à taper pour filtrer, `↵` pour choisir.
 
 ![[menu-slash.webp]]
 
@@ -123,6 +123,8 @@ Les raccourcis Markdown marchent aussi à la frappe :
 | `> [!note]` puis espace | un callout Obsidian |
 | `:::info` puis espace | une admonition HedgeDoc |
 | ```` ``` ```` puis espace | un bloc de code (```` ```py ```` propose les langages : `↵` en choisit un) |
+| `$$` puis espace | un bloc de maths |
+| `$x^2$` | une formule en ligne |
 | `---` | un séparateur |
 
 **La poignée** apparaît à gauche du bloc survolé : `+` ajoute un bloc dessous (le menu se referme sans rien laisser si on ne choisit rien), `⋮⋮` le déplace par glisser-déposer (aussi pour l'imbriquer dans une liste) et ouvre son menu (supprimer, dupliquer, monter, descendre, transformer).
@@ -137,7 +139,7 @@ Les raccourcis Markdown marchent aussi à la frappe :
 
 ### La mise en forme
 
-- **Barre de mise en forme** : sélectionnez du texte, une barre apparaît au-dessus, alignée sur le début de la sélection (elle ne bouge pas pendant qu'on s'en sert) : gras, italique, souligné, barré, fluo (et sa couleur, flèche à droite), code, lien, note de bas de page (ajoutée après la sélection) et gomme, qui retire la mise en forme (les liens restent).
+- **Barre de mise en forme** : sélectionnez du texte, une barre apparaît au-dessus, alignée sur le début de la sélection (elle ne bouge pas pendant qu'on s'en sert) : gras, italique, souligné, barré, fluo (et sa couleur, flèche à droite), code, lien, note de bas de page (une petite fenêtre demande son texte ; l'appel se place après la sélection, qui reste intacte) et gomme, qui retire la mise en forme (les liens restent).
 - `⌘B` gras, `⌘I` italique, `⌘U` souligné, `⌘E` code, `⌘⇧S` barré, `⌘⇧H` fluo. Les délimiteurs Markdown (`**gras**`, `*italique*`, `~~barré~~`, `==fluo==`) marchent aussi à la frappe. Markdown n'a pas de souligné : il s'écrit `<u>souligné</u>`, comme dans Obsidian.
 - **Fluo en couleur**, comme Bear : un emoji de couleur juste après `==` (`==🟢vert==`, `==🔴rouge==`, `==🔵bleu==`, `==🟡jaune==`, `==🟣violet==`). Le curseur dans un fluo, un petit crayon apparaît à son début : un clic choisit une autre couleur (ou « Défaut », le jaune sans emoji). Obsidian affiche l'emoji dans un fluo jaune.
 - **Code en ligne** : `` ` `` tapé sur une sélection la met entre accents graves ; posé devant puis derrière un mot (ou l'inverse), le mot devient du code. Curseur dans le code, ses `` ` `` s'affichent en gris : `→` à la fin passe le `` ` `` fermant, puis `⌫` retire le code (le texte reste) ; `⌦` avant le `` ` `` ouvrant, ou `⌘E` dans le code, le retire aussi.
@@ -149,7 +151,7 @@ Les raccourcis Markdown marchent aussi à la frappe :
 - `⌘K` sur un texte sélectionné demande l'adresse d'un lien web ; sur un lien existant, il le modifie ou le retire. Coller une URL sur un texte sélectionné en fait aussi un lien. Une adresse tapée (`https://…`, `www.…`) devient un lien dès qu'on la quitte ; le fichier garde l'adresse telle quelle.
 - Un **clic** sur un lien l'ouvre : dans le navigateur pour une adresse web, dans l'app pour une note. Un **clic molette** l'ouvre dans un nouvel onglet. Au **survol**, une barre affiche l'adresse avec Modifier, Copier et Retirer.
 - Coller ou déposer une image l'enregistre dans le dossier des pièces jointes réglé dans Obsidian et l'intègre à la note. Sans réglage (ou réglé sur la racine du vault), l'image va dans un dossier `attachments` à côté de la note.
-- La syntaxe Markdown tapée à la main devient un lien ou une image dès la parenthèse fermante : `[texte](https://…)` pour un lien, `![texte](https://…/image.png)` pour une image (du web ou du vault). Du texte simple collé (depuis un fichier texte, un terminal ou le mode source d'Obsidian) est lu comme du Markdown ; ce qui est copié d'une page web garde sa mise en forme.
+- La syntaxe Markdown tapée à la main devient un lien ou une image dès la parenthèse fermante : `[texte](https://…)` pour un lien, `![texte](https://…/image.png)` pour une image (du web ou du vault). Du texte simple collé (depuis un fichier texte, un terminal ou le mode source d'Obsidian) est lu comme du Markdown ; ce qui est copié d'une page web garde sa mise en forme. Un **seul bloc** collé (une ligne, un titre ou un élément de liste copié d'une page web) n'apporte que son texte (gras, liens…) : la ligne où il arrive garde son type, un paragraphe ne devient ni un titre ni une puce. Plusieurs blocs gardent les leurs.
 
 ### Intégrer une note
 
@@ -180,11 +182,11 @@ FlowNote garde vos fichiers lisibles[^1].
 [^1]: Même sans FlowNote, dans Obsidian ou un simple éditeur de texte.
 ```
 
-`/note de bas de page` ajoute un appel au curseur (le premier numéro libre) et sa note en fin de page. Les étiquettes peuvent être des mots (`[^source]`) ; une note peut tenir sur plusieurs lignes, les suivantes indentées.
+Sur un texte sélectionné, le bouton **¹** de la barre de mise en forme demande le texte de la note, comme `⌘K` demande l'adresse d'un lien, puis place l'appel après la sélection. `/note de bas de page` ajoute un appel au curseur (le premier numéro libre) et sa note en fin de page, à compléter d'un double-clic. Les étiquettes peuvent être des mots (`[^source]`) ; une note peut tenir sur plusieurs lignes, les suivantes indentées.
 
 ### Les callouts et les admonitions
 
-- **Callouts Obsidian** : `> [!note] Titre`. Cliquez sur l'icône pour changer le type (note, info, astuce, attention, danger…). Un toggle est un callout repliable (`> [!note]-`).
+- **Callouts Obsidian** : `> [!note] Titre`. Cliquez sur l'icône pour changer le type (note, info, astuce, attention, danger…). Un toggle est un callout repliable (`> [!note]-`) : la flèche à sa gauche le replie ou le déplie (la poignée du bloc se place plus à gauche pour la laisser libre).
 - **Admonitions HedgeDoc** : un bloc entre `:::type` et `:::` s'affiche comme un callout et garde sa syntaxe dans le fichier.
 
 ```markdown
@@ -224,7 +226,7 @@ statut: en cours
 - **Mermaid** : un bloc ```` ```mermaid ```` devient un diagramme (`/mermaid`) ; sa source s'affiche quand le curseur entre dans le bloc.
 - **Organigrammes flowchart.js** : un bloc ```` ```flow ```` (comme HedgeDoc, ```` ```flowchart ```` aussi) est dessiné par [flowchart.js](https://flowchart.js.org) (`/organigramme`). On déclare les éléments (`st=>start: Début`, `op=>operation: …`, `cond=>condition: …`, `e=>end: Fin`), puis on les relie (`st->op->cond`, `cond(yes)->e`, `cond(no)->op`). Sans écrire de texte : **Éditeur visuel**, en haut du bloc, liste les étapes (forme et texte) et les flèches (départ, sortie oui/non d'une condition, arrivée, côté de départ). `↵` dans le texte d'une étape en ajoute une à la suite, insérée dans sa flèche. flowchart.js place les formes lui-même.
 - **Graphiques Plotly** (`/graphique`) : au format du plugin obsidian-plotly, avec un éditeur visuel (type, titres, valeurs, import d'un CSV). L'éditeur visuel propose lignes, barres (verticales, horizontales, empilées), aire, points, camembert, anneau et radar ; tous les autres types de Plotly (heatmap, 3D, sankey…) s'affichent aussi et s'écrivent en texte.
-- **Maths** : `$…$` en ligne, `$$…$$` en bloc.
+- **Maths** : des formules LaTeX dessinées par [KaTeX](https://katex.org), comme dans Obsidian. En ligne, `$x^2$` tapé devient une formule au `$` fermant (pas d'espace juste à l'intérieur des `$`, ni de chiffre ou de lettre juste avant le premier : « 5$ et 10$ » reste du texte) ; un clic dessus ouvre une petite fenêtre avec sa source et l'aperçu en direct (`↵` valide, `esc` annule, vide la retire). En bloc, `$$` puis espace (ou `/maths`) ; un double-clic ouvre sa source, l'aperçu suit la frappe sous le champ, `⌘↵` ou un clic à côté valide. Une formule fautive s'affiche en rouge avec l'erreur. Le fichier garde `$…$` et `$$…$$` tels quels ; l'export HTML les écrit en MathML.
 - **Sommaire** : un paragraphe `[TOC]` affiche les titres de la note, cliquables (comme en haut de cette page).
 - **Date** : `/date` insère la date du jour (`/date et heure` avec l'heure).
 - **Requêtes Dataview et Tasks** : voir le chapitre « Requêtes » plus bas.
@@ -261,7 +263,7 @@ layout:
   - `réunion tag:#projet` : « réunion » dans les notes qui portent le tag `#projet` (ou `#projet/site`) ;
   - `path:Projets budget` : « budget » dans le dossier `Projets` ;
   - `[statut:fait]` (sans texte) : les notes dont la propriété `statut` vaut « fait » ; `[statut]` : celles où elle est renseignée.
-- **Notes liées** : sous chaque note, les pages qui pointent vers elle (avec la ligne du lien) et les **mentions non liées** (son titre cité sans lien), avec un bouton « Lier ».
+- **Notes liées** : sous chaque note, les pages qui pointent vers elle, avec la ligne du lien.
 
 ## Requêtes : Dataview et Tasks
 
@@ -482,6 +484,14 @@ title: Bilan du trimestre
 
 ---
 
+## Chiffres clés
+
+- Ventes : +12 %
+<!-- Note de l'orateur : insister sur le second mois. -->
+```
+
+![[presentation.webp]]
+
 ### Dashboard
 
 « Nouveau dashboard » crée `Nom.dashboard.md` : une grille de widgets sur 12 colonnes. Chaque widget est une section `## Titre` de la note, écrite en Markdown normal.
@@ -518,14 +528,6 @@ data:
 « Tâches » dans la barre latérale, la tuile « Nouvelle tâche » de l’accueil ou « Ouvrir les tâches » dans la palette (⌘⇧P) ouvre la liste de tâches : un titre, une catégorie, une échéance et des tags, puis « Ajouter ». Les tâches sont rangées par catégorie ; une échéance passée s'affiche en rouge, celle du jour en jaune. Cocher une tâche la marque faite ; « Afficher les tâches faites » les montre.
 
 Tout est écrit dans `Todo.md`, à la racine du vault, caché de la barre latérale comme la liste de lecture. Une section par catégorie, une tâche par ligne au format du plugin Tasks : `- [ ] Appeler Paul 📅 2026-10-25 #perso`.
-
-## Chiffres clés
-
-- Ventes : +12 %
-<!-- Note de l'orateur : insister sur le second mois. -->
-```
-
-![[presentation.webp]]
 
 ## Les vues
 

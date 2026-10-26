@@ -1,3 +1,4 @@
+import { TextSelection } from "@tiptap/pm/state";
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
 import { destroyEditors, openEditor as open, press, type } from "./testUtils";
@@ -30,6 +31,15 @@ describe("footnotes", () => {
     await settle();
     press(editor, "Enter");
     expect(save()).toBe("Texte[^1]\n\n[^1]: Déjà là.\n\nSuite [^2]\n\n[^2]: Texte de la note.");
+  });
+
+  it("a footnote on selected text keeps the text and takes the typed note", async () => {
+    const { insertFootnote } = await import("./slash");
+    const { editor, save } = open("Un mot ici\n");
+    // "Un mot" selected, as from the format bar.
+    editor.view.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, 1, 7)));
+    insertFootnote(editor, { from: 7, to: 7 }, "Ma note\nsur une ligne");
+    expect(save()).toBe("Un mot[^1] ici\n\n[^1]: Ma note sur une ligne\n");
   });
 });
 

@@ -44,8 +44,18 @@ export function applyLink(editor: Editor, from: number, to: number, href: string
   editor.view.dispatch(tr);
 }
 
-/** A small field under the selection to type the address of a link (⌘K). */
-export function LinkPrompt({ request, onDone }: { request: LinkRequest; onDone: (href: string | null) => void }) {
+/** A small field under the selection to type the address of a link (⌘K), or the text of a footnote. */
+export function LinkPrompt({
+  request,
+  onDone,
+  placeholder = "Coller ou saisir un lien…",
+  label = "Adresse du lien",
+}: {
+  request: LinkRequest;
+  onDone: (href: string | null) => void;
+  placeholder?: string;
+  label?: string;
+}) {
   const [href, setHref] = useState(request.href);
   const left = Math.max(8, Math.min(request.x, window.innerWidth - 340));
   const top = request.y + 300 > window.innerHeight ? request.y - 52 : request.y + 6;
@@ -55,8 +65,8 @@ export function LinkPrompt({ request, onDone }: { request: LinkRequest; onDone: 
         <input
           autoFocus
           value={href}
-          placeholder="Coller ou saisir un lien…"
-          aria-label="Adresse du lien"
+          placeholder={placeholder}
+          aria-label={label}
           spellCheck={false}
           onChange={(e) => setHref(e.target.value)}
           onKeyDown={(e) => {

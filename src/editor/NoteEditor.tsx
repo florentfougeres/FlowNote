@@ -1,4 +1,4 @@
-import { pasteMarkdown } from "./pasteMarkdown";
+import { pasteInline, pasteMarkdown } from "./pasteMarkdown";
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { MutableRefObject, ReactNode } from "react";
@@ -14,6 +14,8 @@ import { TableSizePicker } from "./TableSizePicker";
 import { applyLink, LinkHover, LinkPrompt, linkTarget, type LinkRequest } from "./LinkPrompt";
 import { GrammarPopover } from "./GrammarPopover";
 import { FormatBar } from "./FormatBar";
+import { MathPrompt } from "./MathPrompt";
+import { insertFootnote } from "./slash";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { insertAttachments, type VaultBridge } from "./bridge";
 import { loadMarkdown, NoteSession, serializeTopLevelBlock } from "../markdown/note";
@@ -90,6 +92,8 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
   markdownCallback.current = onMarkdown;
   const [frontmatter, setFrontmatter] = useState<string | null>(null);
   const [linkRequest, setLinkRequest] = useState<LinkRequest | null>(null);
+  /** Where a footnote asked from the format bar goes, while its text is typed. */
+  const [footnoteRequest, setFootnoteRequest] = useState<LinkRequest | null>(null);
   const [gitPopover, setGitPopover] = useState<{ change: GitChange; x: number; y: number } | null>(null);
 
   const editor = useEditor({
@@ -210,7 +214,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         void readFiles(event.dataTransfer.files).then((files) => editorRef.current && insertAttachments(editorRef.current, wiring.bridge.current, files, pos));
         return true;
       },
-      handlePaste: (view, event) => {
+      handlePaste: (view, event, slice) => {
         if (event.clipboardData?.files.length) {
           const pos = view.state.selection.from;
           void readFiles(event.clipboardData.files).then((files) => editorRef.current && insertAttachments(editorRef.current, wiring.bridge.current, files, pos));
@@ -225,7 +229,11 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
           return true;
         }
         // Plain text (no HTML: a text file, a terminal, Obsidian's source) is read as Markdown.
-        if (event.clipboardData?.types.includes("text/html")) return false;
+        // HTML from elsewhere (a web page, Word): one block pasted gives its text only, the line keeps its kind.
+        // Copied from a note (ProseMirror marks its HTML with data-pm-slice), blocks stay as they were.
+        if (event.clipboardData?.types.includes("text/html")) {
+          return !event.clipboardData.getData("text/html").includes("data-pm-slice") && pasteInline(view, slice.content);
+        }
         return pasteMarkdown(view, event.clipboardData?.getData("text/plain") ?? "");
       },
     },
@@ -286,6 +294,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
       <HeadingLevel editor={editor} shell={shell} />
       <TableHandles editor={editor} />
       <CalloutPicker />
+      <MathPrompt editor={editor} />
       <TableSizePicker />
       <LinkHover editor={editor} onEdit={setLinkRequest} />
       <FormatBar
@@ -295,7 +304,24 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
           const start = editor.view.coordsAtPos(target.from);
           setLinkRequest({ ...target, x: start.left, y: editor.view.coordsAtPos(target.to).bottom });
         }}
+        onFootnote={(at) => {
+          if (!editor) return;
+          const end = editor.view.coordsAtPos(at);
+          setFootnoteRequest({ from: at, to: at, href: "", x: end.left, y: end.bottom });
+        }}
       />
+      {footnoteRequest && editor && (
+        <LinkPrompt
+          request={footnoteRequest}
+          placeholder="Texte de la note de bas de page…"
+          label="Texte de la note de bas de page"
+          onDone={(text) => {
+            setFootnoteRequest(null);
+            if (text?.trim()) insertFootnote(editor, { from: footnoteRequest.to, to: footnoteRequest.to }, text);
+            editor.commands.focus();
+          }}
+        />
+      )}
       {linkRequest && editor && (
         <LinkPrompt
           request={linkRequest}

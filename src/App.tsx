@@ -1577,7 +1577,7 @@ export function App() {
                     />
                   )}
                   {!rawMode && !ticketPage && !presentationPage && (
-                    <Backlinks vault={vault} files={files} path={note.path} iconOf={pageIconFor} onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)} onChanged={() => { notify("Lien ajouté"); void refreshGit(); }} />
+                    <Backlinks vault={vault} files={files} path={note.path} iconOf={pageIconFor} onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)} />
                   )}
                 </div>
                 )}

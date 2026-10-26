@@ -104,12 +104,29 @@
   background: transparent;
 }
 
+/* Nothing over a diagram or a query's results: the language shows with the source, cursor in the block.
+   A chart (its header is a row above it) and a flowchart (its buttons, on a background) show theirs on hover. */
 .code-block.is-mermaid:not(.editing) .code-header {
   opacity: 0;
+  pointer-events: none;
 }
 
-.code-block.is-mermaid:not(.editing):hover .code-header {
+.code-block.is-plotly:not(.editing):hover .code-header,
+.code-block.is-flowchart:not(.editing):hover .code-header,
+.code-block.is-mermaid.visual-editing .code-header {
   opacity: 1;
+  pointer-events: auto;
+}
+
+.code-block.is-flowchart:not(.editing):not(.visual-editing) .code-language {
+  display: none;
+}
+
+.note .code-block.is-flowchart:not(.editing):not(.visual-editing) .code-header {
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 0.5px var(--border);
 }
 
 .mermaid-preview {
@@ -1373,4 +1390,62 @@
 
 .plot-editor-table .flow-editor-add:hover {
   color: var(--text);
+}
+
+/* ---- Math drawn by KaTeX (math.ts): $…$ in a line, $$…$$ as a block ---- */
+
+.note .math-inline {
+  padding: 0 2px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.note .math-inline:hover {
+  background: var(--hover);
+}
+
+.note .raw-block .math-block {
+  padding: 6px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 4px;
+  cursor: default;
+}
+
+.note .raw-block:hover .math-block:not(.math-preview) {
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.note .raw-block .math-preview {
+  margin-top: 4px;
+  border: 1px dashed var(--border);
+}
+
+.note .math-empty,
+.math-prompt-preview.math-empty {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.note .katex-display {
+  margin: 0;
+}
+
+.note .katex .katex-error,
+.math-prompt-preview .katex-error {
+  color: var(--danger) !important;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* The field of an inline formula, with its preview below (MathPrompt.tsx). */
+.math-prompt-preview {
+  min-height: 28px;
+  margin-top: 6px;
+  padding: 6px 8px;
+  overflow-x: auto;
+  border-radius: 6px;
+  background: var(--bg);
+  text-align: center;
 }

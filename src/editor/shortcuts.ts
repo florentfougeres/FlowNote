@@ -1,6 +1,7 @@
 import { Extension, InputRule, markInputRule, textblockTypeInputRule, wrappingInputRule } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { canJoin, findWrapping } from "@tiptap/pm/transform";
+import { editMathBlock } from "./views/rawBlock";
 
 /**
  * Markdown shortcuts typed at the start of a block or around a word. Each one
@@ -11,7 +12,8 @@ export const MarkdownShortcuts = Extension.create({
   name: "markdownShortcuts",
 
   addInputRules() {
-    const { nodes, marks } = this.editor.schema;
+    const { editor } = this;
+    const { nodes, marks } = editor.schema;
 
     const taskRule = new InputRule({
       find: /^\[([ xX]?)\]\s$/,
@@ -114,6 +116,31 @@ export const MarkdownShortcuts = Extension.create({
       },
     });
 
+    // `$x^2$` typed in text becomes a formula, with Obsidian's rule: no space just
+    // inside the dollars, no letter or digit just before the first one (5$ et 10$ stays text).
+    const inlineMathRule = new InputRule({
+      find: /(?<![\\$\p{L}\p{N}])\$([^\s$](?:[^$\n]*[^\s$\\])?)\$$/u,
+      handler: ({ state, range, match }) => {
+        const $from = state.doc.resolve(range.from);
+        if ($from.parent.type.spec.code || state.doc.rangeHasMark(range.from, range.to, marks.code)) return null;
+        state.tr.replaceWith(range.from, range.to, nodes.inlineRaw.create({ source: match[0], kind: "inlineMath" }));
+      },
+    });
+    // `$$` then a space at the start of an empty paragraph: a formula block, its source open.
+    const mathBlockRule = new InputRule({
+      find: /^\$\$\s$/,
+      handler: ({ state, range }) => {
+        const { tr } = state;
+        const $from = tr.doc.resolve(range.from);
+        if ($from.parent.type !== nodes.paragraph || range.to !== $from.end()) return null;
+        const start = $from.before();
+        const formula = nodes.rawBlock.create({ source: "$$\n\n$$", kind: "math" });
+        tr.replaceWith(start, $from.after(), [formula, nodes.paragraph.create()]);
+        tr.setSelection(TextSelection.create(tr.doc, start + formula.nodeSize + 1));
+        editMathBlock(editor.view, start);
+      },
+    });
+
     const mark = (find: RegExp, type: (typeof marks)[string], marker?: string) =>
       markInputRule({ find, type, getAttributes: marker ? { marker } : undefined });
 
@@ -143,6 +170,8 @@ export const MarkdownShortcuts = Extension.create({
       dividerRule,
       imageRule,
       linkRule,
+      inlineMathRule,
+      mathBlockRule,
       // Delimiters may follow punctuation (l'*italique*) but not a letter (snake_case).
       mark(/(?<=^|[^\p{L}\p{N}*])(\*\*(?!\s)([^*]+?)\*\*)$/u, marks.bold, "**"),
       mark(/(?<=^|[^\p{L}\p{N}_])(__(?!\s)([^_]+?)__)$/u, marks.bold, "__"),

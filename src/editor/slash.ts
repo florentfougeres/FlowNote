@@ -1,9 +1,11 @@
 import { CALLOUT_TYPES, calloutPicker } from "./callouts";
 import { isoDay } from "../ticket/agenda";
 import { Extension, type Editor, type Range } from "@tiptap/core";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Plugin, PluginKey, type EditorState } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";
 import { insertRawBlock, turnInto, type BlockKind } from "./blocks";
+import { mathPrompt } from "./MathPrompt";
+import { editMathBlock } from "./views/rawBlock";
 import { PLOT_TEMPLATE } from "./plotModel";
 import { tableSizePicker } from "./TableSizePicker";
 import type { BridgeRef, VaultBridge } from "./bridge";
@@ -187,7 +189,37 @@ const SLASH_ITEMS: SlashItem[] = [
     description: "Équation LaTeX $$",
     icon: "∑",
     keywords: ["maths", "équation", "latex", "math"],
-    run: (editor, range) => insertRawBlock(editor, "$$\n\n$$", "math", range),
+    run: (editor, range) => {
+      insertRawBlock(editor, "$$\n\n$$", "math", range);
+      // The new formula's source opens at once.
+      let at = -1;
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name === "rawBlock" && node.attrs.kind === "math" && node.attrs.source === "$$\n\n$$" && pos < editor.state.selection.from) at = pos;
+      });
+      if (at >= 0) editMathBlock(editor.view, at);
+    },
+  },
+  {
+    key: "inlineMath",
+    title: "Formule en ligne",
+    description: "Équation LaTeX dans le texte, $…$",
+    icon: "𝑥",
+    keywords: ["formule", "maths", "équation", "latex", "inline", "ligne"],
+    run: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      const pos = editor.state.selection.from;
+      const at = editor.view.coordsAtPos(pos);
+      mathPrompt.open({
+        editor,
+        x: at.left,
+        y: at.bottom,
+        tex: "",
+        onDone: (tex) => {
+          if (tex?.trim()) editor.chain().focus().insertContentAt(pos, { type: "inlineRaw", attrs: { source: `$${tex.trim()}$`, kind: "inlineMath" } }).run();
+          else editor.commands.focus();
+        },
+      });
+    },
   },
   {
     key: "footnote",
@@ -231,8 +263,12 @@ const SLASH_ITEMS: SlashItem[] = [
   },
 ];
 
-/** Inserts a footnote: its call `[^n]` at the cursor, its text at the end of the note (double-click to write it). */
-export function insertFootnote(editor: Editor, range: Range) {
+/**
+ * Inserts a footnote: its call `[^n]` in place of `range` (after the selected
+ * text when the range is empty), its text at the end of the note
+ * (double-click to change it).
+ */
+export function insertFootnote(editor: Editor, range: Range, text = "Texte de la note.") {
   const used = new Set<string>();
   editor.state.doc.descendants((node) => {
     const label = /^\[\^([^\]]+)\]/.exec(String(node.attrs.source ?? ""))?.[1];
@@ -241,9 +277,10 @@ export function insertFootnote(editor: Editor, range: Range) {
   let n = 1;
   while (used.has(String(n))) n++;
   const { schema } = editor.state;
-  editor.chain().focus().deleteRange(range).insertContent({ type: "inlineRaw", attrs: { source: `[^${n}]`, kind: "footnoteReference" } }).run();
+  // Inserted at the range, not over the selection: selected text stays.
+  editor.chain().focus().deleteRange(range).insertContentAt(range.from, { type: "inlineRaw", attrs: { source: `[^${n}]`, kind: "footnoteReference" } }).run();
   const { tr } = editor.state;
-  tr.insert(tr.doc.content.size, schema.nodes.rawBlock.create({ source: `[^${n}]: Texte de la note.`, kind: "footnoteDefinition" }));
+  tr.insert(tr.doc.content.size, schema.nodes.rawBlock.create({ source: `[^${n}]: ${text.replace(/\s*\n\s*/g, " ").trim()}`, kind: "footnoteDefinition" }));
   editor.view.dispatch(tr);
 }
 
@@ -335,24 +372,61 @@ function freshSlashPlugin(): Plugin<number | null> {
 }
 
 /**
- * `/` inserted by the block handle's + button, with the document right after:
- * closing the menu before anything else changed removes it again.
+ * Position of the `/` inserted by the block handle's + button, followed
+ * through the changes, while it is still there: closing the menu with
+ * nothing typed after it removes it again.
  */
-const handleSlashes = new WeakMap<Editor, { pos: number; doc: unknown }>();
+const handleSlashKey = new PluginKey<number | null>("handleSlash");
+
+function handleSlashPlugin(): Plugin<number | null> {
+  return new Plugin<number | null>({
+    key: handleSlashKey,
+    state: {
+      init: () => null,
+      apply(tr, value) {
+        const meta = tr.getMeta(handleSlashKey) as number | null | undefined;
+        if (meta !== undefined) return meta;
+        if (value === null) return null;
+        const mapped = tr.mapping.mapResult(value);
+        return mapped.deleted || tr.doc.textBetween(mapped.pos, Math.min(mapped.pos + 1, tr.doc.content.size)) !== "/" ? null : mapped.pos;
+      },
+    },
+  });
+}
+
+/** Whether the + button's `/` at `pos` is alone, nothing typed after it. */
+function lonelySlash(state: EditorState, pos: number): boolean {
+  const $pos = state.doc.resolve(pos);
+  return state.doc.textBetween(pos, pos + 1) === "/" && !/\S/.test(state.doc.textBetween(pos + 1, $pos.end()).slice(0, 1));
+}
 
 /** Inserts `/` at the cursor and opens the menu (used by the block handle's + button). */
 export function openSlashMenu(editor: Editor) {
-  const { from, to } = editor.state.selection;
-  editor.view.dispatch(editor.state.tr.insertText("/", from, to).setMeta(freshSlashKey, from));
-  handleSlashes.set(editor, { pos: from, doc: editor.state.doc });
+  const { state } = editor;
+  const tr = state.tr;
+  // A + clicked while the menu of another one was open: the first `/` goes.
+  const previous = handleSlashKey.getState(state);
+  if (previous != null && lonelySlash(state, previous)) tr.delete(previous, previous + 1);
+  const from = tr.mapping.map(state.selection.from);
+  const to = tr.mapping.map(state.selection.to);
+  tr.insertText("/", from, to).setMeta(freshSlashKey, from).setMeta(handleSlashKey, from);
+  editor.view.dispatch(tr);
   editor.view.focus();
 }
 
+/** The menu closed: the + button's `/` goes when nothing was typed after it. */
 function dropHandleSlash(editor: Editor) {
-  const slash = handleSlashes.get(editor);
-  handleSlashes.delete(editor);
   // Deferred: the menu closes while the editor view is updating.
-  if (slash) setTimeout(() => !editor.isDestroyed && editor.state.doc === slash.doc && editor.view.dispatch(editor.state.tr.delete(slash.pos, slash.pos + 1)));
+  setTimeout(() => {
+    if (editor.isDestroyed) return;
+    const pos = handleSlashKey.getState(editor.state);
+    if (pos == null) return;
+    // Still open (the menu closed for another `/`): kept.
+    if (freshSlashKey.getState(editor.state) === pos) return;
+    const tr = editor.state.tr.setMeta(handleSlashKey, null);
+    if (lonelySlash(editor.state, pos)) tr.delete(pos, pos + 1);
+    editor.view.dispatch(tr);
+  });
 }
 
 export const SlashCommand = Extension.create<{ store: SlashMenuStore; bridge: BridgeRef }>({
@@ -378,6 +452,7 @@ export const SlashCommand = Extension.create<{ store: SlashMenuStore; bridge: Br
 
     return [
       freshSlashPlugin(),
+      handleSlashPlugin(),
       Suggestion<SlashItem, SlashItem>({
         editor,
         char: "/",
@@ -385,7 +460,7 @@ export const SlashCommand = Extension.create<{ store: SlashMenuStore; bridge: Br
         allow: ({ state, range }) => freshSlashKey.getState(state) === range.from,
         items: ({ query }) => filterSlashItems(query, SLASH_ITEMS, loadFrecency()),
         command: ({ editor, range, props }) => {
-          handleSlashes.delete(editor);
+          editor.view.dispatch(editor.state.tr.setMeta(handleSlashKey, null));
           recordUse(props.key);
           props.run(editor, range, bridge.current);
         },

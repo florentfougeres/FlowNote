@@ -90,6 +90,9 @@ function findDropTarget(editor: Editor, source: BlockRef, x: number, y: number):
   return { block, side: "below", line: { top: rect.bottom, left, width } };
 }
 
+/** Room taken by a foldable callout's arrow, left of the block (`.callout-fold`, editor.css). */
+const CALLOUT_FOLD_WIDTH = 22;
+
 export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: RefObject<HTMLDivElement | null> }) {
   const [hover, setHover] = useState<Hover | null>(null);
   const [menu, setMenu] = useState<{ block: BlockRef; x: number; y: number } | null>(null);
@@ -116,7 +119,9 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
       // List markers are drawn outside the item box: keep the handle clear of them.
       // The heading holding the cursor has its level icon there (HeadingLevel.tsx): the handle goes further left.
       const besideLevel = block.pos === headingAtCursor(editor)?.pos && editor.view.hasFocus() ? HEADING_LEVEL_WIDTH : 0;
-      const left = (block.node.type.name === "listItem" ? line.left - 26 : dom.getBoundingClientRect().left) - shellRect.left - besideLevel;
+      // A foldable callout (toggle) has its arrow there too: the handle leaves it clickable.
+      const besideFold = block.node.type.name === "callout" && block.node.attrs.fold ? CALLOUT_FOLD_WIDTH : 0;
+      const left = (block.node.type.name === "listItem" ? line.left - 26 : dom.getBoundingClientRect().left) - shellRect.left - besideLevel - besideFold;
       setHover({ block, top: line.top - shellRect.top + Math.min(line.height, 28) / 2 - 12, left });
     };
     const onLeave = () => !drag.current && setHover(null);

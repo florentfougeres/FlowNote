@@ -77,6 +77,24 @@ describe("the + button's slash", () => {
     expect(save()).toBe(before);
   });
 
+  it("goes away when another + is clicked, even after a change elsewhere", async () => {
+    const { editor, save } = open("Un\n\nDeux\n");
+    editor.commands.setTextSelection(3);
+    press(editor, "Enter");
+    openSlashMenu(editor);
+    await new Promise((resolve) => setTimeout(resolve));
+    // A change elsewhere, then the + of an empty line at the end.
+    const end = editor.state.doc.content.size;
+    editor.view.dispatch(editor.state.tr.insert(end, editor.schema.nodes.paragraph.create()));
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+    openSlashMenu(editor);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(save()).toBe("Un\n\nDeux\n\n/\n");
+    press(editor, "Escape");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(save()).toBe("Un\n\nDeux\n");
+  });
+
   it("goes away when the note loses the focus (a click outside it)", async () => {
     const { editor, save } = open("Texte\n");
     press(editor, "Enter");

@@ -34,14 +34,14 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 ## Fonctionnalités
 
 **Interface façon Notion**
-- Onglets en haut de la fenêtre, barre latérale avec le vault (et ses vaults récents), Accueil, Rechercher, Tickets, Lectures, Graphe, Documentation et l'arbre des pages
+- Onglets en haut de la fenêtre, barre latérale avec le vault (et ses vaults récents), Accueil, Rechercher, Tickets, Tâches, Lectures, Graphe, Documentation et l'arbre des pages
 - **Split view** : deux pages côte à côte (`⌥-clic` sur une page, `⌘⌥\` pour fermer le panneau)
 - Documentation intégrée de toutes les fonctionnalités
 - **Palette de commandes** (`⌘⇧P`, ou `>` dans `⌘P`) : toutes les actions de l'app par leur nom, avec leur raccourci
 - Arbre des pages : menu « … » ou clic droit (renommer, supprimer, dupliquer, copier le lien, afficher dans le Finder, sous-page, nouveau dossier), glisser-déposer des pages et des dossiers, liens mis à jour à chaque déplacement
 - Favoris d'Obsidian en haut de la barre latérale
 - Pastille d'état en bas à droite de la page : enregistrement, nombre de mots, messages
-- Réglages dans un onglet (`⌘,`), rangés par catégorie, dont la taille de l'interface
+- Réglages dans un onglet (`⌘,`), rangés par catégorie : thème, taille de l'interface, police (Système, Clarika, Open Sans, Inter), menu des blocs en liste ou en grille d'icônes
 - Barre latérale masquable (`⌘\`), qui réapparaît au survol du bord gauche
 - Pleine largeur par page et mode focus (`⌘⇧M`, Échap pour en sortir)
 - Menu « … » de la page : export en **PDF** (note, présentation, dessin, mind map) et export de la note en page **HTML** autonome, images comprises
@@ -53,13 +53,19 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Menu `/` pour insérer ou transformer un bloc, raccourcis Markdown à la frappe (`#`, `-`, `[]`, `>`, ```` ``` ````)
 - Poignée de bloc : glisser-déposer avec imbrication, dupliquer, transformer, supprimer ; `⌥↑` / `⌥↓` déplacent le bloc
 - Sommaire : `[TOC]` (comme HedgeDoc) affiche les titres de la note, `/sommaire` l'insère
-- Mise en forme en ligne : gras, italique, barré, surligné, code, liens (`⌘K` sur une sélection, ou coller une URL sur du texte sélectionné)
-- Tableaux éditables avec poignées de lignes et de colonnes (insérer, déplacer, aligner, supprimer)
-- Blocs de code avec coloration syntaxique, diagrammes **Mermaid**, maths, emoji (`:calendrier`), date du jour (`/date`)
+- **Barre de mise en forme** sur le texte sélectionné : gras, italique, souligné (`<u>`, comme Obsidian), barré, fluo, code, lien (`⌘K`), note de bas de page, gomme
+- **Fluo en couleur** comme Bear (`==🟢vert==`, rouge, bleu, jaune, violet), modifiable d'un clic sur le crayon
+- Liens : `⌘K` sur une sélection, une URL collée sur du texte sélectionné, une adresse tapée devient cliquable
+- **Niveau des titres** dans la marge, comme Bear (un clic en choisit un autre, `⌘⌥1` … `⌘⌥6`)
+- **HTML** dans les notes affiché mis en page (blocs, texte entouré de balises, images), sans ses scripts
+- Collage : le texte simple est lu comme du Markdown ; un seul bloc collé (une ligne d'une page web) garde le type de la ligne où il arrive
+- Tableaux éditables avec poignées de lignes et de colonnes (insérer, déplacer, aligner, supprimer) ; taille choisie dans une grille à la création
+- Blocs de code avec coloration syntaxique et autocomplétion du langage, diagrammes **Mermaid**, formules mathématiques **KaTeX** (`$x^2$` en ligne, `$$…$$` en bloc, avec aperçu en direct), emoji (`:calendrier`), date du jour (`/date`)
+- **Organigrammes** [flowchart.js](https://flowchart.js.org) (blocs ```` ```flow ````, comme HedgeDoc), avec un éditeur visuel : étapes, formes et flèches sans écrire la syntaxe
 - **Graphiques Plotly** (`/graphique`) au format du plugin Obsidian [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) : blocs ```` ```plotly ```` en YAML ou JSON, graphiques interactifs, éditeur visuel (lignes, barres, aire, points, camembert, anneau, radar ; titres, tableau des valeurs, import d'un CSV), tous les types de Plotly en texte
 - Propriétés YAML (frontmatter) éditables, tags, `[[wikilinks]]` et `![[embeds]]` avec autocomplétion
 - **Notes intégrées** : `![[Note]]`, `![[Note#Section]]` et `![[Note#^bloc]]` affichent le contenu de l'autre note, toujours à jour
-- **Notes de bas de page** `[^1]` : appel en exposant (texte au survol), note numérotée en bas, `/note de bas de page` pour en ajouter une
+- **Notes de bas de page** `[^1]` : appel en exposant (texte au survol), note numérotée en bas ; la barre de mise en forme en ajoute une sur la sélection (une fenêtre demande son texte), `/note de bas de page` au curseur
 - Sous-pages et arborescence dans la barre latérale
 
 **Requêtes Dataview et Tasks**
@@ -97,7 +103,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 
 **Bases**
 - Des bases de données comme dans Notion, au format des Bases d'Obsidian (`Nom.base`) : chaque ligne est une note d'un dossier, chaque colonne une propriété YAML
-- Vues Tableau, Kanban, Galerie et Calendrier ; filtres, tris, groupes, calculs en bas de colonne, formules
+- Vues Tableau, Kanban, Galerie et Calendrier ; filtres, tris, groupes, calculs en bas de colonne, formules (`budget / 7`)
 - Sélections colorées, saisie au clavier, glisser-déposer des colonnes, lignes et cartes
 - Une base s'intègre dans une note avec `![[Nom.base]]`, et la page d'une ligne affiche les propriétés de sa base
 
@@ -116,7 +122,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 **Navigation**
 - Recherche de page (`⌘P`), recherche et remplacement dans la note (`⌘F` / `⌘⌥F`), recherche dans tout le vault (`⌘⇧F`) avec des filtres par tag, dossier, propriété ou date de modification (aussi en syntaxe Obsidian : `tag:#projet`, `path:Dossier`, `[statut:fait]`)
 - Fil d'Ariane cliquable, plan de la note, historique précédent/suivant
-- **Notes liées** sous chaque note (les pages qui pointent vers elle) et mentions non liées, avec un bouton pour en faire un lien
+- **Notes liées** sous chaque note (les pages qui pointent vers elle)
 - Mots et caractères de la sélection dans la pastille d'état
 - Mode Markdown brut (`⌘⇧E`) avec numéros de ligne
 

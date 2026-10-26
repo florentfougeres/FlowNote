@@ -7,7 +7,6 @@ import { keys } from "../keys";
 import { HIGHLIGHT_COLORS } from "../markdown/highlightColors";
 import { clearFormatting, HIGHLIGHT_PENCIL_EVENT, highlightAt, isUnderlined, removeHighlight, setHighlight, toggleUnderline } from "./format";
 import { linkTarget } from "./LinkPrompt";
-import { insertFootnote } from "./slash";
 
 /**
  * Formatting of the selected text, like Bear and MarkText: a bar above the
@@ -20,6 +19,8 @@ interface Props {
   editor: Editor | null;
   /** Opens the address field of a link over a range (⌘K). */
   onLink: (target: { from: number; to: number; href: string }) => void;
+  /** Asks for the text of a footnote to call at `at` (after the selection). */
+  onFootnote: (at: number) => void;
 }
 
 /** Text selected in a text block, outside code: where the bar shows. */
@@ -30,7 +31,7 @@ function formattable(editor: Editor): boolean {
   return $from.parent.isTextblock && !$from.parent.type.spec.code && !$to.parent.type.spec.code && editor.state.doc.textBetween(selection.from, selection.to).trim() !== "";
 }
 
-export function FormatBar({ editor, onLink }: Props) {
+export function FormatBar({ editor, onLink, onFootnote }: Props) {
   const [, refresh] = useReducer((n: number) => n + 1, 0);
   const [selecting, setSelecting] = useState(false);
   const [colors, setColors] = useState<{ x: number; y: number } | null>(null);
@@ -132,7 +133,7 @@ export function FormatBar({ editor, onLink }: Props) {
           <span className="format-bar-separator" />
           {button("Code", "⌘E", isActive("code"), run(() => editor.commands.toggleMark("code")), <Icon name="code" size={14} />)}
           {button("Lien", "⌘K", isActive("link"), openLink, <Icon name="link" size={14} />)}
-          {button("Note de bas de page", null, false, run(() => insertFootnote(editor, { from: state.selection.to, to: state.selection.to })), <span className="format-bar-footnote">¹</span>)}
+          {button("Note de bas de page", null, false, run(() => onFootnote(state.selection.to)), <span className="format-bar-footnote">¹</span>)}
           <span className="format-bar-separator" />
           {button("Effacer la mise en forme", null, false, run(() => clearFormatting(editor)), <Icon name="eraser" size={14} />)}
         </div>
