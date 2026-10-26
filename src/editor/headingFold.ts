@@ -9,6 +9,10 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
  * is untouched and the folds are forgotten when the note is closed. The
  * page's title (a first `# heading`) is not foldable. A cursor landing in a
  * folded section (search, undo) unfolds it.
+ *
+ * The arrow is drawn by CSS on every heading (`::before`, editor.css), not as
+ * a decoration: a long note has thousands of headings, and decorating each one
+ * made every keystroke slow. Only folded sections are decorated.
  */
 
 const key = new PluginKey<FoldState>("headingFold");
@@ -20,45 +24,42 @@ interface Section {
   end: number;
 }
 
-/** The top-level headings with something under them, and the extent of their sections. */
-function sections(doc: PMNode): Section[] {
-  const headings: { pos: number; level: number; size: number }[] = [];
-  doc.forEach((node, pos, index) => {
-    if (node.type.name === "heading" && !(index === 0 && Number(node.attrs.level) === 1)) headings.push({ pos, level: Number(node.attrs.level), size: node.nodeSize });
-  });
-  return headings.flatMap((h, i) => {
-    const next = headings.slice(i + 1).find((other) => other.level <= h.level);
-    const end = next ? next.pos : doc.content.size;
-    return end > h.pos + h.size ? [{ pos: h.pos, end }] : [];
-  });
+const isTitle = (node: PMNode, index: number) => index === 0 && Number(node.attrs.level) === 1;
+
+/** The section of the top-level heading at `pos` (null: not a heading, the title, or nothing under it). */
+function sectionAt(doc: PMNode, pos: number): Section | null {
+  if (pos < 0 || pos >= doc.content.size) return null;
+  const $pos = doc.resolve(pos);
+  const heading = doc.nodeAt(pos);
+  if ($pos.depth !== 0 || heading?.type.name !== "heading" || isTitle(heading, $pos.index())) return null;
+  const level = Number(heading.attrs.level);
+  let end = doc.content.size;
+  let after = pos + heading.nodeSize;
+  for (let i = $pos.index() + 1; i < doc.childCount; i++) {
+    const next = doc.child(i);
+    if (next.type.name === "heading" && Number(next.attrs.level) <= level) {
+      end = after;
+      break;
+    }
+    after += next.nodeSize;
+  }
+  return end > pos + heading.nodeSize ? { pos, end } : null;
 }
 
-function arrow(folded: boolean): HTMLElement {
-  const button = document.createElement("button");
-  button.className = "heading-fold";
-  button.type = "button";
-  button.tabIndex = -1;
-  button.contentEditable = "false";
-  button.title = folded ? "Déplier la section" : "Replier la section";
-  button.setAttribute("aria-label", button.title);
-  button.setAttribute("aria-expanded", String(!folded));
-  return button;
-}
-
-function decorations(state: EditorState, folded: number[]): DecorationSet {
+function decorations(doc: PMNode, folded: number[]): DecorationSet {
+  if (folded.length === 0) return DecorationSet.empty;
   const decos: Decoration[] = [];
-  for (const section of sections(state.doc)) {
-    const isFolded = folded.includes(section.pos);
-    const headingEnd = section.pos + state.doc.nodeAt(section.pos)!.nodeSize;
-    decos.push(Decoration.node(section.pos, headingEnd, { class: isFolded ? "foldable folded" : "foldable" }));
-    decos.push(Decoration.widget(section.pos + 1, () => arrow(isFolded), { side: -1, key: `fold-${isFolded}`, ignoreSelection: true }));
-    if (!isFolded) continue;
-    state.doc.nodesBetween(headingEnd, section.end, (node, pos) => {
-      decos.push(Decoration.node(pos, pos + node.nodeSize, { class: "fold-hidden" }));
+  for (const pos of folded) {
+    const section = sectionAt(doc, pos);
+    if (!section) continue;
+    const headingEnd = pos + doc.nodeAt(pos)!.nodeSize;
+    decos.push(Decoration.node(pos, headingEnd, { class: "folded" }));
+    doc.nodesBetween(headingEnd, section.end, (node, at) => {
+      decos.push(Decoration.node(at, at + node.nodeSize, { class: "fold-hidden" }));
       return false;
     });
   }
-  return DecorationSet.create(state.doc, decos);
+  return DecorationSet.create(doc, decos);
 }
 
 /** Folds or unfolds the heading right after `pos`. */
@@ -72,61 +73,37 @@ interface FoldState {
   decorations: DecorationSet;
 }
 
-/** Whether a change may alter the sections: it touches a top-level heading (before or after), or adds or removes top-level blocks. */
-function changesSections(tr: Transaction): boolean {
-  if (tr.before.childCount !== tr.doc.childCount) return true;
-  const headingIn = (doc: PMNode, from: number, to: number) => {
-    let found = false;
-    doc.nodesBetween(Math.max(0, Math.min(from, doc.content.size)), Math.max(0, Math.min(to, doc.content.size)), (node) => {
-      if (node.type.name === "heading") found = true;
-      return false;
-    });
-    return found;
-  };
-  return tr.mapping.maps.some((map, i) => {
-    const before = tr.mapping.slice(0, i).invert();
-    const after = tr.mapping.slice(i + 1);
-    let touched = false;
-    map.forEach((oldStart, oldEnd, newStart, newEnd) => {
-      touched ||= headingIn(tr.before, before.map(oldStart, -1), before.map(oldEnd, 1)) || headingIn(tr.doc, after.map(newStart, -1), after.map(newEnd, 1));
-    });
-    return touched;
-  });
-}
-
 export function headingFoldPlugin(): Plugin<FoldState> {
   return new Plugin<FoldState>({
     key,
     state: {
-      init: (_config, state) => ({ folded: [], decorations: decorations(state, []) }),
-      apply(tr, value, _old, state) {
+      init: () => ({ folded: [], decorations: DecorationSet.empty }),
+      apply(tr: Transaction, value, _old, state) {
         const toggled = tr.getMeta(key) as number | undefined;
-        const head = state.selection.head;
-        const mapped = value.folded.map((p) => tr.mapping.map(p, 1));
-        const insideFolded = tr.selectionSet && mapped.length > 0 && sections(state.doc).some((s) => mapped.includes(s.pos) && head > s.pos + state.doc.nodeAt(s.pos)!.nodeSize && head < s.end);
-        if (toggled === undefined && !insideFolded && (!tr.docChanged || !changesSections(tr))) {
-          // Typing in a paragraph: the arrows and hidden blocks just move.
-          return tr.docChanged ? { folded: mapped, decorations: value.decorations.map(tr.mapping, tr.doc) } : value;
-        }
+        // Nothing folded: nothing to follow, typing costs nothing.
+        if (toggled === undefined && value.folded.length === 0) return value;
         let folded = value.folded.map((p) => tr.mapping.mapResult(p, 1)).flatMap((r) => (r.deleted ? [] : [r.pos]));
-        if (toggled !== undefined) folded = folded.includes(toggled) ? folded.filter((p) => p !== toggled) : [...folded, toggled];
+        if (toggled !== undefined && sectionAt(state.doc, toggled)) folded = folded.includes(toggled) ? folded.filter((p) => p !== toggled) : [...folded, toggled];
         // Only headings with a section stay folded; a cursor moved inside a folded section opens it.
-        folded = sections(state.doc)
-          .filter((s) => folded.includes(s.pos))
-          .filter((s) => !(tr.selectionSet && head > s.pos + state.doc.nodeAt(s.pos)!.nodeSize && head < s.end))
-          .map((s) => s.pos);
-        return { folded, decorations: decorations(state, folded) };
+        const head = state.selection.head;
+        folded = folded.filter((p) => {
+          const section = sectionAt(state.doc, p);
+          return section !== null && !(tr.selectionSet && head > p + state.doc.nodeAt(p)!.nodeSize && head < section.end);
+        });
+        return { folded, decorations: decorations(state.doc, folded) };
       },
     },
     props: {
       decorations: (state) => key.getState(state)?.decorations,
       handleDOMEvents: {
+        // A press in the arrow, left of a top-level heading.
         mousedown(view, event) {
-          const button = (event.target as HTMLElement).closest(".heading-fold");
-          if (!button) return false;
+          const heading = (event.target as HTMLElement).closest("h1, h2, h3, h4, h5, h6");
+          if (!heading || heading.parentElement !== view.dom || event.clientX >= heading.getBoundingClientRect().left) return false;
+          const pos = view.posAtDOM(heading, 0) - 1;
+          if (!sectionAt(view.state.doc, pos)) return false;
           event.preventDefault();
-          const pos = view.posAtDOM(button, 0) - 1;
-          if (view.state.doc.nodeAt(pos)?.type.name === "heading") view.dispatch(toggleFold(view.state, pos));
+          view.dispatch(toggleFold(view.state, pos));
           return true;
         },
       },

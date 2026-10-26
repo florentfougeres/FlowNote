@@ -9,7 +9,6 @@ afterEach(destroyEditors);
 const NOTE = "# Titre\n\n## Plan\n\nÉtape un\n\n### Détail\n\nTexte\n\n## Budget\n\nChiffres\n";
 
 const hidden = (dom: HTMLElement) => [...dom.querySelectorAll(".fold-hidden")].map((el) => el.textContent);
-const arrows = (dom: HTMLElement) => [...dom.querySelectorAll(".foldable")].map((el) => el.textContent);
 const headingPos = (doc: PMNode, text: string) => {
   let at = -1;
   doc.forEach((node, pos) => {
@@ -19,9 +18,12 @@ const headingPos = (doc: PMNode, text: string) => {
 };
 
 describe("foldable headings", () => {
-  it("offers an arrow on headings with a section, not on the page title", () => {
-    const { editor } = openEditor(NOTE);
-    expect(arrows(editor.view.dom)).toEqual(["Plan", "Détail", "Budget"]);
+  it("does not fold the page title, nor a heading with nothing under it", () => {
+    const { editor } = openEditor(`${NOTE}\n## Vide\n`);
+    editor.view.dispatch(toggleFold(editor.state, headingPos(editor.state.doc, "Titre")));
+    editor.view.dispatch(toggleFold(editor.state, headingPos(editor.state.doc, "Vide")));
+    expect(hidden(editor.view.dom)).toEqual([]);
+    expect(editor.view.dom.querySelectorAll(".folded").length).toBe(0);
   });
 
   it("hides the section down to the next heading of the same level, leaving the file alone", () => {

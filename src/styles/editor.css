@@ -216,25 +216,27 @@
   font-size: 1.25em;
 }
 
-/* Foldable headings (headingFold.ts): the arrow shows on hover, and stays while folded. */
-.note .foldable {
+/*
+ * Foldable headings (headingFold.ts): the arrow is each heading's ::before,
+ * shown on hover and kept while folded, left of the heading (a press there
+ * folds). Not on the page title, nor on a heading with nothing under it.
+ */
+.note > :is(h1, h2, h3, h4, h5, h6) {
   position: relative;
 }
 
-.note .heading-fold {
+.note > :is(h1, h2, h3, h4, h5, h6)::before {
+  content: "▼";
   position: absolute;
   left: -22px;
   top: 50%;
   width: 18px;
   height: 18px;
   margin-top: -9px;
-  padding: 0;
-  border: none;
-  background: none;
   color: var(--muted);
-  font-size: 11px;
-  font-family: var(--font-ui);
-  line-height: 18px;
+  font: 11px/18px var(--font-ui);
+  text-align: center;
+  cursor: pointer;
   opacity: 0;
   transition:
     transform 0.15s,
@@ -243,20 +245,27 @@
   user-select: none;
 }
 
-.note .heading-fold::before {
-  content: "▼";
-}
-
-.note .foldable:hover .heading-fold,
-.note .folded .heading-fold {
+.note > :is(h1, h2, h3, h4, h5, h6):hover::before,
+.note > .folded::before {
   opacity: 1;
 }
 
-.note .folded .heading-fold {
+.note > .folded::before {
   transform: rotate(-90deg);
 }
 
-.note .folded::after {
+.note > h1:first-child::before,
+.note > :is(h1, h2, h3, h4, h5, h6):last-child::before,
+.note > h1:has(+ h1)::before,
+.note > h2:has(+ :is(h1, h2))::before,
+.note > h3:has(+ :is(h1, h2, h3))::before,
+.note > h4:has(+ :is(h1, h2, h3, h4))::before,
+.note > h5:has(+ :is(h1, h2, h3, h4, h5))::before,
+.note > h6:has(+ :is(h1, h2, h3, h4, h5, h6))::before {
+  content: none;
+}
+
+.note > .folded::after {
   content: " …";
   color: var(--muted);
   font-weight: 400;
