@@ -5,12 +5,13 @@ import type { QueryLanguage } from "../../query/render";
 import { filterLanguages, type LanguageItem } from "../codeLanguages";
 
 /**
- * Code blocks with an editable language label. Mermaid blocks also show their
+ * Code blocks with an editable language label. Mermaid and flowchart.js (```flow) blocks also show their
  * diagram, plotly blocks their chart (format of the Obsidian plugin
  * "obsidian-plotly"), and dataview and tasks blocks the results of their
  * query (plugins Dataview and Tasks). A diagram's or a query's source shows
  * only while the cursor is in the block; a chart stays interactive (zoom,
  * hover) and is edited with its header buttons: the visual editor or the text.
+ * A flowchart has the visual editor too (FlowEditor.tsx), besides the click.
  */
 export const codeBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, editor, getPos }) => {
   const dom = element("div", "code-block");
@@ -101,8 +102,9 @@ export const codeBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, e
   let rendered: string | null = null;
   let renderedKind: string | null = null;
   let timer = 0;
-  const kindOf = (): "mermaid" | "plotly" | QueryLanguage | null => {
+  const kindOf = (): "mermaid" | "flowchart" | "plotly" | QueryLanguage | null => {
     const lang = String(current.attrs.language).trim().toLowerCase();
+    if (lang === "flow" || lang === "flowchart") return "flowchart";
     return lang === "mermaid" || lang === "plotly" || lang === "dataview" || lang === "dataviewjs" || lang === "tasks" ? lang : null;
   };
   const isQuery = (kind: string | null): kind is QueryLanguage => kind === "dataview" || kind === "dataviewjs" || kind === "tasks";
@@ -113,7 +115,7 @@ export const codeBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, e
     render();
   };
 
-  /** The visual editor of a chart, mounted while open. */
+  /** The visual editor of a chart or a flowchart, mounted while open. */
   let plotEditor: { update: (props: Parameters<typeof import("../PlotEditor").mountPlotEditor>[1]) => void; unmount: () => void } | null = null;
   let editorOpen = false;
 
@@ -142,8 +144,9 @@ export const codeBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, e
     if (editorOpen || !editor.isEditable) return;
     editorOpen = true;
     dom.classList.add("visual-editing");
-    void import("../PlotEditor").then(({ mountPlotEditor }) => {
-      if (editorOpen && !plotEditor) plotEditor = mountPlotEditor(panel, editorProps());
+    const mount = kindOf() === "flowchart" ? import("../FlowEditor").then((m) => m.mountFlowEditor) : import("../PlotEditor").then((m) => m.mountPlotEditor);
+    void mount.then((mountEditor) => {
+      if (editorOpen && !plotEditor) plotEditor = mountEditor(panel, editorProps());
     });
   };
   function closeEditor() {
@@ -168,7 +171,7 @@ export const codeBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, e
       diagram.replaceChildren();
       rendered = null;
       renderedKind = kind;
-      if (kind !== "plotly") closeEditor();
+      closeEditor();
     }
     if (!kind) return;
     const source = current.textContent;
@@ -183,7 +186,15 @@ export const codeBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, e
       }
       if (!source.trim()) {
         if (kind === "plotly") void import("../plotly").then(({ purgePlot }) => purgePlot(diagram));
-        showMessage("mermaid-empty", kind === "mermaid" ? "Diagramme Mermaid vide : cliquez pour l'écrire." : "Graphique vide : cliquez sur « Texte » pour l'écrire.");
+        showMessage("mermaid-empty", kind === "mermaid" || kind === "flowchart" ? "Diagramme vide : cliquez pour l'écrire." : "Graphique vide : cliquez sur « Texte » pour l'écrire.");
+        return;
+      }
+      if (kind === "flowchart") {
+        import("../flowchart")
+          .then(({ renderFlowchart }) => (rendered === source ? renderFlowchart(diagram, source) : undefined))
+          .catch((error: unknown) => {
+            if (rendered === source) showMessage("mermaid-error", `Diagramme invalide : ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`);
+          });
         return;
       }
       if (kind === "mermaid") {
@@ -241,7 +252,7 @@ export const codeBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, e
   // A diagram or a query is edited by clicking it (not its links and boxes); a chart keeps the click for zoom and hover.
   diagram.addEventListener("mousedown", (event) => {
     const kind = kindOf();
-    if (kind !== "mermaid" && !(isQuery(kind) && !(event.target as Element).closest("a, input, button"))) return;
+    if (kind !== "mermaid" && kind !== "flowchart" && !(isQuery(kind) && !(event.target as Element).closest("a, input, button"))) return;
     const pos = getPos();
     if (pos === undefined || !editor.isEditable) return;
     event.preventDefault();
@@ -252,6 +263,7 @@ export const codeBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, e
     const kind = kindOf();
     dom.classList.toggle("is-mermaid", kind !== null);
     dom.classList.toggle("is-plotly", kind === "plotly");
+    dom.classList.toggle("is-flowchart", kind === "flowchart");
     dom.classList.toggle("is-query", isQuery(kind));
   };
   syncKind();

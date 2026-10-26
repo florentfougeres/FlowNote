@@ -107,7 +107,7 @@ Une page a un **titre** et un **nom de fichier**, indépendants :
 
 ### Les blocs
 
-Tapez `/` en début de ligne pour insérer ou transformer un bloc : texte, titres, listes, tâches, toggle, citation, callouts, admonition HedgeDoc, sous-page, code, Mermaid, graphique, maths, tableau, séparateur, sommaire, date… Continuez à taper pour filtrer, `↵` pour choisir.
+Tapez `/` en début de ligne pour insérer ou transformer un bloc : texte, titres, listes, tâches, toggle, citation, callouts, admonition HedgeDoc, sous-page, code, Mermaid, organigramme, graphique, maths, tableau, séparateur, sommaire, date… Continuez à taper pour filtrer, `↵` pour choisir.
 
 ![[menu-slash.webp]]
 
@@ -222,6 +222,7 @@ statut: en cours
 - **Code** : coloration syntaxique, langage choisi en haut du bloc (la liste des langages s'affiche dès la première lettre) ; `⌘↵` ou trois `↵` en sortent.
 - **HTML** : le HTML écrit dans une note s'affiche mis en page, comme dans MarkText ou HedgeDoc : un bloc (`<div>`, `<details>`, `<table>`…), du texte entouré (`<span style="…">`, `<sup>`, `<kbd>`…) ou une image (`<img src="…">`, même du vault). Tapé dans la note, le HTML s'affiche dès que le curseur quitte la ligne (`<h3>Thaïlande</h3>` puis `↵`). Les scripts, cadres et formulaires sont retirés à l'affichage, jamais du fichier. Double-cliquez sur un bloc HTML pour modifier sa source.
 - **Mermaid** : un bloc ```` ```mermaid ```` devient un diagramme (`/mermaid`) ; sa source s'affiche quand le curseur entre dans le bloc.
+- **Organigrammes flowchart.js** : un bloc ```` ```flow ```` (comme HedgeDoc, ```` ```flowchart ```` aussi) est dessiné par [flowchart.js](https://flowchart.js.org) (`/organigramme`). On déclare les éléments (`st=>start: Début`, `op=>operation: …`, `cond=>condition: …`, `e=>end: Fin`), puis on les relie (`st->op->cond`, `cond(yes)->e`, `cond(no)->op`). Sans écrire de texte : **Éditeur visuel**, en haut du bloc, liste les étapes (forme et texte) et les flèches (départ, sortie oui/non d'une condition, arrivée, côté de départ). `↵` dans le texte d'une étape en ajoute une à la suite, insérée dans sa flèche. flowchart.js place les formes lui-même.
 - **Graphiques Plotly** (`/graphique`) : au format du plugin obsidian-plotly, avec un éditeur visuel (type, titres, valeurs, import d'un CSV). L'éditeur visuel propose lignes, barres (verticales, horizontales, empilées), aire, points, camembert, anneau et radar ; tous les autres types de Plotly (heatmap, 3D, sankey…) s'affichent aussi et s'écrivent en texte.
 - **Maths** : `$…$` en ligne, `$$…$$` en bloc.
 - **Sommaire** : un paragraphe `[TOC]` affiche les titres de la note, cliquables (comme en haut de cette page).

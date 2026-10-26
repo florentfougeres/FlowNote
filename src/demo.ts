@@ -187,6 +187,21 @@ FROM #projet
 WHERE !completed
 \`\`\`
 
+## Organigramme
+
+Un bloc de code \`flow\`, dessiné par flowchart.js (comme HedgeDoc) :
+
+\`\`\`flow
+st=>start: Idée
+op=>operation: Brouillon
+cond=>condition: Relu ?
+e=>end: Publié
+
+st->op->cond
+cond(yes)->e
+cond(no)->op
+\`\`\`
+
 ## Fluo et HTML
 
 Du fluo ==jaune==, ==🟢vert== ou ==🔵bleu== (comme Bear), du texte <u>souligné</u> et du <span style="color: #d9480f">HTML en ligne</span>.

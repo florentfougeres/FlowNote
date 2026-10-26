@@ -96,6 +96,18 @@ const SLASH_ITEMS: SlashItem[] = [
     },
   },
   {
+    key: "flowchart",
+    title: "Organigramme",
+    description: "Diagramme flowchart.js (```flow, comme HedgeDoc)",
+    icon: "⬚",
+    keywords: ["organigramme", "flowchart", "flow", "diagramme", "logigramme"],
+    run: (editor, range) => {
+      turnInto(editor, "code", range);
+      editor.commands.updateAttributes("codeBlock", { language: "flow" });
+      editor.commands.insertContent("st=>start: Début\nop=>operation: Étape\ncond=>condition: Ça marche ?\ne=>end: Fin\n\nst->op->cond\ncond(yes)->e\ncond(no)->op");
+    },
+  },
+  {
     key: "plotly",
     title: "Graphique",
     description: "Courbes, barres, camembert (plugin Obsidian Plotly)",

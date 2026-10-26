@@ -156,7 +156,8 @@
   font-size: 12px;
 }
 
-.code-block.is-plotly .code-action {
+.code-block.is-plotly .code-action,
+.code-block.is-flowchart .code-action {
   display: inline-flex;
   align-items: center;
 }
@@ -171,8 +172,9 @@
   color: var(--text);
 }
 
-/* A chart's header is a row above it: Plotly's own toolbar keeps the top right corner of the chart. */
-.note .code-block.is-plotly .code-header {
+/* A chart's header is a row above it: Plotly's own toolbar keeps the top right corner of the chart. A flowchart's too while its visual editor is open. */
+.note .code-block.is-plotly .code-header,
+.note .code-block.is-flowchart.visual-editing .code-header {
   position: static;
   display: flex;
   align-items: center;
@@ -182,7 +184,8 @@
   padding: 2px 8px 0;
 }
 
-.code-block.is-plotly .code-language {
+.code-block.is-plotly .code-language,
+.code-block.is-flowchart.visual-editing .code-language {
   margin-right: auto;
   width: 120px;
   text-align: left;
@@ -1282,4 +1285,92 @@
 
 .note[contenteditable="false"] .highlight-pencil {
   display: none;
+}
+
+/* ---- flowchart.js diagrams (```flow, flowchart.ts) ---- */
+
+.flowchart-diagram {
+  display: flex;
+  justify-content: center;
+}
+
+.flowchart-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* The visual editor of a flowchart: steps, then arrows, in the chart editor's frame. */
+.flow-editor-section {
+  margin-bottom: -6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.flow-editor-table td {
+  height: 32px;
+  vertical-align: middle;
+}
+
+.plot-editor-table .flow-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  max-width: 100%;
+  height: 26px;
+  margin: 0 3px;
+  padding: 0 7px;
+  opacity: 1;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.plot-editor-table .flow-picker span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plot-editor-table .flow-picker svg:last-child {
+  color: var(--muted);
+}
+
+.plot-editor-table .flow-picker:hover {
+  color: var(--text);
+}
+
+.flow-editor-shape {
+  width: 170px;
+}
+
+/* Arrows: from, way out, →, to, side; the same columns on every row. */
+.flow-editor-branch {
+  width: 80px;
+}
+
+.flow-editor-direction {
+  width: 110px;
+}
+
+.flow-editor-arrow {
+  width: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.flow-editor-table td.flow-editor-branch,
+.flow-editor-table td.flow-editor-arrow,
+.flow-editor-table td.flow-editor-arrow + td {
+  border-left: none;
+}
+
+.plot-editor-table .flow-editor-actions {
+  width: 58px;
+  white-space: nowrap;
+}
+
+.plot-editor-table .flow-editor-add:hover {
+  color: var(--text);
 }

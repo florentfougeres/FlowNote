@@ -58,6 +58,8 @@ const LANGUAGES: [string, string][] = [
   ["vbnet", "Visual Basic .NET"],
   ["wasm", "WebAssembly"],
   ["mermaid", "Diagramme Mermaid"],
+  ["flow", "Diagramme flowchart.js"],
+  ["flowchart", "Diagramme flowchart.js"],
   ["plotly", "Graphique Plotly"],
   ["dataview", "Requête Dataview"],
   ["dataviewjs", "Dataview JavaScript"],

@@ -47,6 +47,7 @@ Le principe qui guide tout le reste : **le vault Obsidian reste la seule source 
 | Propriétés YAML | [yaml](https://eemeli.org/yaml/) | `src/markdown/frontmatter.ts`, `src/base/baseFile.ts` | Modifier le YAML sans perdre commentaires, ordre des clés ni clés inconnues |
 | Coloration du code | [lowlight](https://github.com/wooorm/lowlight) (highlight.js) | `src/editor/codeHighlight.ts` | Coloration des blocs de code, en décorations |
 | Diagrammes | [Mermaid](https://mermaid.js.org) | `src/editor/mermaid.ts` | Blocs ```` ```mermaid ```` |
+| Organigrammes | [flowchart.js](https://flowchart.js.org) (sur [Raphaël](https://dmitrybaranovskiy.github.io/raphael/)) | `src/editor/flowchart.ts` | Blocs ```` ```flow ```` et ```` ```flowchart ```` (comme HedgeDoc) |
 | Graphiques | [Plotly](https://plotly.com/javascript/) (`plotly.js-dist-min`) | `src/editor/plotly.ts` | Blocs ```` ```plotly ```` (format d'obsidian-plotly) |
 | Emoji | [emojibase-data](https://emojibase.dev) | `src/editor/emoji.ts` | Recherche `:nom` (en français) et `:shortcode:` |
 | HTML des notes | [DOMPurify](https://github.com/cure53/DOMPurify) | `src/editor/html.ts` | Nettoie le HTML écrit dans les notes avant de l'afficher (pas de scripts, cadres ni formulaires) |
@@ -62,7 +63,7 @@ Le principe qui guide tout le reste : **le vault Obsidian reste la seule source 
 | Côté Rust | `serde`, `trash`, `ureq`, `tauri-plugin-dialog` | `src-tauri/` | Échanges JSON, corbeille du système, titre et aperçu d'une page web, sélecteur de dossier |
 | Outils | Vite, Vitest + jsdom, oxlint, TypeScript 7 | | Build, tests, lint, types |
 
-Les bibliothèques lourdes (Excalidraw, Mind Elixir, React Flow, Mermaid, Plotly, Marp, l'impression, les données d'emoji) sont chargées par `import()` dynamique, à la première utilisation : ouvrir une note simple ne les charge pas.
+Les bibliothèques lourdes (Excalidraw, Mind Elixir, React Flow, Mermaid, flowchart.js, Plotly, Marp, l'impression, les données d'emoji) sont chargées par `import()` dynamique, à la première utilisation : ouvrir une note simple ne les charge pas.
 
 Deux versions sont figées volontairement : TanStack Table reste en v8 (la v9 change d'API) et Mind Elixir en 5.15.x.
 
@@ -133,6 +134,7 @@ Tout ce qui relève de l'affichage passe par des **décorations** ProseMirror, j
 
 - **Code** : lowlight (le moteur de highlight.js, langages courants) calcule des décorations, mises en cache par nœud.
 - **Mermaid** : rendu au thème de l'app, avec `securityLevel: "strict"`. Le fichier garde un simple bloc de code.
+- **flowchart.js** : blocs ```` ```flow ```` (ou ```` ```flowchart ````) dessinés en SVG par Raphaël, aux couleurs de l'app (`--text`, `--bg`), redessinés au changement de thème. Le dessin reçoit une `viewBox` pour se réduire à la largeur de la note. Même affichage que Mermaid (classe `is-mermaid`, source au clic). L'éditeur visuel (`FlowEditor.tsx`) passe par `flowModel.ts` : étapes et flèches lues de la source, réécrites en gardant l'ordre, les chaînes (`a->b->c`, mémorisées par ligne) et ce qu'il ne montre pas (`|past`, liens `:>`, paramètres, styles `@>`).
 - **Plotly** : blocs ```` ```plotly ```` en YAML ou JSON, au format du plugin [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly). Seules des données statiques sont dessinées, aucun JavaScript n'est exécuté. Plotly 3+ n'affichant plus les titres en texte simple, `plotly.ts` les convertit en `{ text }` au dessin. `PlotEditor.tsx` et `plotModel.ts` forment l'éditeur visuel : un modèle « étiquettes + séries » pour les types qui y tiennent (`keysOf` dit où chacun range étiquettes et valeurs : `x`/`y`, `labels`/`values`, `theta`/`r`) ; les autres s'éditent en texte.
 - **Maths** : reconnues par `remark-math`.
 - **HTML** : un bloc HTML (`rawBlock` de type `html`) s'affiche rendu après passage par DOMPurify (`html.ts`), ses images lues dans le vault ; une balise seule en ligne (`<br>`, `<img>`) aussi. Le fichier garde la source telle quelle ; double-clic pour la modifier.
