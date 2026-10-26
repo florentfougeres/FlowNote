@@ -1,0 +1,223 @@
+/* ---- Flashcards review (review/ReviewView.tsx) ---- */
+
+.review-view {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 32px;
+}
+
+.review-view h1 {
+  margin: 0 0 20px;
+  font-size: 32px;
+}
+
+.review-empty {
+  color: var(--faint);
+}
+
+.review-empty code {
+  font-size: 0.9em;
+}
+
+.review-decks {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.review-decks li + li {
+  border-top: 1px solid var(--border);
+}
+
+.review-decks button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.review-decks button:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.review-decks button:disabled {
+  cursor: default;
+}
+
+.review-deck-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.review-count {
+  min-width: 28px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.review-count.due {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.review-count.new {
+  background: color-mix(in srgb, #2da44e 14%, transparent);
+  color: #2da44e;
+}
+
+.review-legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: 0 0 20px;
+}
+
+.review-primary {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.review-primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.review-primary kbd,
+.review-response kbd {
+  margin-left: 6px;
+  font: inherit;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.review-back,
+.review-source {
+  padding: 2px 6px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--faint);
+  font: inherit;
+  cursor: pointer;
+}
+
+.review-back:hover,
+.review-source:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.review-source {
+  margin-left: auto;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-progress {
+  font-variant-numeric: tabular-nums;
+}
+
+.review-card {
+  min-height: 160px;
+  padding: 24px 28px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.review-card hr {
+  margin: 18px 0;
+  border: none;
+  border-top: 1px dashed var(--border);
+}
+
+.review-error {
+  color: #e5534b;
+  font-size: 13px;
+}
+
+.review-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.review-response {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 120px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.review-response small {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.review-response:hover {
+  background: var(--hover);
+}
+
+.review-response.hard span {
+  color: #e5534b;
+}
+
+.review-response.good span {
+  color: var(--accent);
+}
+
+.review-response.easy span {
+  color: #2da44e;
+}
+
+.review-done {
+  text-align: center;
+  padding-top: 40px;
+}
+
+/* The question and the answer are read-only notes: without the page's margins. */
+.review-card .note {
+  padding: 0;
+}

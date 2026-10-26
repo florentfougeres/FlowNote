@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookmarkedFiles, computeStats } from "./stats";
+import { bookmarkedFiles, computeStats, noteAliases, tagTree } from "./stats";
 
 const notes: [string, string][] = [
   ["Accueil.md", "---\ntags: [projet, perso]\n---\nVoir [[Projets]] et [[Absente]] et [lien](Dossier/Note.md). #idee\n\n```\n[[Pas un lien]] #pasuntag\n```\n"],
@@ -29,5 +29,36 @@ describe("dashboard statistics", () => {
     expect(bookmarkedFiles(json)).toEqual(["A.md", "B.md"]);
     expect(bookmarkedFiles("{}")).toEqual([]);
     expect(bookmarkedFiles("pas du json")).toEqual([]);
+  });
+});
+
+describe("aliases", () => {
+  it("reads the aliases property in its three forms", () => {
+    expect(noteAliases("---\naliases: [Chantiers, \"Mes projets\"]\n---\n")).toEqual(["Chantiers", "Mes projets"]);
+    expect(noteAliases("---\naliases:\n  - Chantiers\n  - Mes projets\n---\n")).toEqual(["Chantiers", "Mes projets"]);
+    expect(noteAliases("---\nalias: Mes projets, Chantiers\n---\n")).toEqual(["Mes projets", "Chantiers"]);
+    expect(noteAliases("Pas de propriétés")).toEqual([]);
+  });
+});
+
+describe("tag tree", () => {
+  it("nests tags on /, counting the notes of each tag and its nested ones", () => {
+    const tree = tagTree([
+      ["A.md", "#projet/site et #Projet/logo"],
+      ["B.md", "---\ntags: [projet, perso]\n---\n#projet/site"],
+      ["C.md", "`#code` seulement"],
+    ]);
+    expect(tree).toEqual([
+      { name: "perso", tag: "perso", count: 1, children: [] },
+      {
+        name: "projet",
+        tag: "projet",
+        count: 2,
+        children: [
+          { name: "logo", tag: "projet/logo", count: 1, children: [] },
+          { name: "site", tag: "projet/site", count: 2, children: [] },
+        ],
+      },
+    ]);
   });
 });

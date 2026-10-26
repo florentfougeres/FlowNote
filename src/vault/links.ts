@@ -3,6 +3,8 @@
  * Obsidian's documented behaviour and settings (`.obsidian/app.json`, read only).
  */
 
+import { headingLinkText, sameHeading } from "../markdown/sections";
+
 export interface ObsidianConfig {
   /** "/" (vault root, default), "./" (note folder), "./sub" (sub-folder of the note folder) or a vault folder. */
   attachmentFolderPath: string;
@@ -198,39 +200,55 @@ export interface LinkRewrite {
  */
 export function rewriteLinks(content: string, change: LinkRewrite): string | null {
   const { oldNotePath, newNotePath, filesBefore, filesAfter, renames } = change;
-  let inFence: string | null = null;
-  let changed = false;
-
-  const rewriteLine = (line: string) => {
-    // Keep code spans intact by splitting them out.
-    return line
-      .split(/(`+[^`]*`+)/)
-      .map((piece, i) => {
-        if (i % 2 === 1) return piece;
-        let out = piece.replace(WIKILINK, (whole, bang: string, target: string, section = "", alias = "") => {
-          const resolved = resolveLink(target, filesBefore, oldNotePath);
-          const moved = resolved && renames.get(resolved);
-          if (!moved) return whole;
-          const next = `${bang}[[${linkTextFor(moved, filesAfter)}${section}${alias}]]`;
-          if (next !== whole) changed = true;
-          return next;
-        });
-        out = out.replace(MARKDOWN_LINK, (whole, open: string, href: string, close: string) => {
-          if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith("#")) return whole;
-          const [pathPart, fragment = ""] = href.split(/(?=#)/);
-          const before = resolveRelative(dirname(oldNotePath), decode(pathPart));
-          const target = renames.get(before) ?? (filesBefore.includes(before) ? before : null);
-          if (!target || (target === before && oldNotePath === newNotePath)) return whole;
-          const next = encodeURI(relativePath(newNotePath, target)) + fragment;
-          if (next === href) return whole;
-          changed = true;
-          return `${open}${next}${close}`;
-        });
-        return out;
+  return rewriteOutsideCode(content, (piece) =>
+    piece
+      .replace(WIKILINK, (whole, bang: string, target: string, section = "", alias = "") => {
+        const resolved = resolveLink(target, filesBefore, oldNotePath);
+        const moved = resolved && renames.get(resolved);
+        return moved ? `${bang}[[${linkTextFor(moved, filesAfter)}${section}${alias}]]` : whole;
       })
-      .join("");
-  };
+      .replace(MARKDOWN_LINK, (whole, open: string, href: string, close: string) => {
+        if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith("#")) return whole;
+        const [pathPart, fragment = ""] = href.split(/(?=#)/);
+        const before = resolveRelative(dirname(oldNotePath), decode(pathPart));
+        const target = renames.get(before) ?? (filesBefore.includes(before) ? before : null);
+        if (!target || (target === before && oldNotePath === newNotePath)) return whole;
+        return `${open}${encodeURI(relativePath(newNotePath, target)) + fragment}${close}`;
+      }),
+  );
+}
 
+/**
+ * Updates the links of one note (`content`, at `notePath`) to a heading of
+ * `target` that was renamed from `from` to `to`, like Obsidian: wikilinks
+ * (`[[Note#Old]]`, `[[Note#Part#Old]]`, `[[#Old]]` inside the note itself) and
+ * Markdown links (`Note.md#Old`). Returns null when nothing changed.
+ */
+export function rewriteHeadingLinks(content: string, notePath: string, files: string[], target: string, from: string, to: string): string | null {
+  const points = (link: string) => (link.trim() === "" ? notePath === target : resolveLink(link, files, notePath) === target);
+  const renamed = (sections: string, encode: (s: string) => string, decodePart: (s: string) => string) =>
+    sections
+      .split("#")
+      .map((part, i) => (i > 0 && sameHeading(decodePart(part), from) ? encode(headingLinkText(to)) : part))
+      .join("#");
+  return rewriteOutsideCode(content, (piece) =>
+    piece
+      .replace(WIKILINK, (whole, bang: string, link: string, section = "", alias = "") =>
+        section.startsWith("#") && !section.startsWith("#^") && points(link) ? `${bang}[[${link}${renamed(section, (s) => s, (s) => s)}${alias}]]` : whole,
+      )
+      .replace(MARKDOWN_LINK, (whole, open: string, href: string, close: string) => {
+        if (/^[a-z][a-z0-9+.-]*:/i.test(href) || !href.includes("#")) return whole;
+        const [pathPart, fragment] = href.split(/(?=#)/);
+        const linked = pathPart ? resolveRelative(dirname(notePath), decode(pathPart)) : notePath;
+        if (linked !== target || fragment.startsWith("#^")) return whole;
+        return `${open}${pathPart}${renamed(fragment, encodeURI, decode)}${close}`;
+      }),
+  );
+}
+
+/** Applies `rewrite` to the text of a note outside code blocks and code spans; null when nothing changed. */
+function rewriteOutsideCode(content: string, rewrite: (text: string) => string): string | null {
+  let inFence: string | null = null;
   const lines = content.split(/(?<=\n)/).map((line) => {
     const fence = /^[ \t]{0,3}(`{3,}|~{3,})/.exec(line);
     if (fence) {
@@ -238,9 +256,15 @@ export function rewriteLinks(content: string, change: LinkRewrite): string | nul
       else if (fence[1][0] === inFence) inFence = null;
       return line;
     }
-    return inFence ? line : rewriteLine(line);
+    if (inFence) return line;
+    // Keep code spans intact by splitting them out.
+    return line
+      .split(/(`+[^`]*`+)/)
+      .map((piece, i) => (i % 2 === 1 ? piece : rewrite(piece)))
+      .join("");
   });
-  return changed ? lines.join("") : null;
+  const next = lines.join("");
+  return next === content ? null : next;
 }
 
 /** Files moved by renaming a note: the note itself and its sub-pages folder. */

@@ -109,7 +109,8 @@ export const SplitPane = memo(function SplitPane({
   onSeparate: () => void;
   onClose: () => void;
   /** A file was written. */
-  onSaved: () => void;
+  /** After a save, with the text before and after (absent for pages that are not notes). */
+  onSaved: (before?: string, after?: string) => void;
   /** Receives how to write pending changes now (before the sides are swapped). */
   saver?: { current: (() => Promise<void>) | null };
   /** Settings and services shared with the left side's toolbar. Spell checking: null when off in the settings. */
@@ -158,7 +159,7 @@ export const SplitPane = memo(function SplitPane({
         pageRef.current = saved;
         setPage((p) => (p ? { ...p, disk: current.markdown } : p));
         setStatus("");
-        savedCallback.current();
+        savedCallback.current(current.disk, current.markdown);
       } catch (error) {
         setStatus(error instanceof ConflictError ? `Conflit : ${error.message}` : String(error));
       }

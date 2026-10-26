@@ -34,11 +34,12 @@ L'**Accueil** rassemble les raccourcis de création, les pages récentes, les t�
 ### La barre latérale
 
 - **Le vault** en haut : son menu permet de passer en un clic à un vault ouvert récemment, d'en ouvrir un autre ou d'ouvrir les réglages. Le bouton à droite crée une page (`⌘N`).
-- **Accueil**, **Rechercher** (`⌘P`), **Rechercher dans les notes** (`⌘⇧F`), **Tickets**, **Tâches**, **Lectures**, **Graphe** et **Documentation** (cette page). Quand une page est ouverte, Accueil, Tickets, Tâches, Lectures et Graphe s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
+- **Accueil**, **Rechercher** (`⌘P`), **Rechercher dans les notes** (`⌘⇧F`), **Tickets**, **Tâches**, **Révisions**, **Lectures**, **Graphe** et **Documentation** (cette page). Quand une page est ouverte, Accueil, Tickets, Tâches, Révisions, Lectures et Graphe s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
 - **Favoris** : les fichiers mis en favoris dans Obsidian.
 - **Pages** : l'arbre du vault. Une note et le dossier du même nom (`Projets.md` + `Projets/`) forment une page avec ses sous-pages. Le dossier des tickets, la note des lectures et celle des tâches n'y figurent pas : ils ont leur propre vue.
   - Menu « … » ou clic droit : ouvrir dans un nouvel onglet, ouvrir à droite, sous-page, copier le lien, dupliquer, afficher dans le Finder, renommer, supprimer.
   - Glisser-déposer des pages et des dossiers : les liens qui pointent vers eux sont mis à jour à chaque déplacement.
+- **Tags** : sous les pages, les tags du vault en arbre (`#projet/site` sous `#projet`), avec le nombre de notes qui portent chacun (tags imbriqués compris). Un clic ouvre la recherche dans les notes, filtrée sur ce tag. Un clic sur le titre « Tags » ouvre ou replie la section.
 - En bas : **Git** (`⌘⇧G`), **Réglages** (`⌘,`) et **Aide et raccourcis** (`⌘/`).
 - `⌘\` masque la barre latérale ; elle réapparaît au survol du bord gauche.
 
@@ -67,7 +68,7 @@ Au-dessus de chaque page : le fil d'Ariane (cliquable, avec le menu des dossiers
 
 ### Les onglets
 
-Chaque page s'ouvre dans un onglet : `⌘T` nouvel onglet, `⌘W` fermer, `⌘1` … `⌘9` aller à un onglet, `⌘⇧[` / `⌘⇧]` onglet précédent / suivant, `⌘-clic` ouvrir dans un nouvel onglet. Les onglets se réordonnent par glisser-déposer. `⌘[` et `⌘]` reviennent à la page précédente ou suivante de l'onglet.
+Chaque page s'ouvre dans un onglet : `⌘T` nouvel onglet, `⌘W` fermer, `⌘1` … `⌘9` aller à un onglet, `⌘⇧[` / `⌘⇧]` onglet précédent / suivant, `⌘-clic` ouvrir dans un nouvel onglet. Les onglets se réordonnent par glisser-déposer. `⌘[` et `⌘]` reviennent à la page précédente ou suivante de l'onglet. Les onglets d'un vault (pages, page de droite, mode lecture) sont retrouvés au prochain lancement ; une page supprimée entre-temps disparaît de la liste.
 
 ### Deux pages côte à côte
 
@@ -135,6 +136,7 @@ Les raccourcis Markdown marchent aussi à la frappe :
 - `↵` en fin de liste vide en sort ; `⇧↵` passe à la ligne dans le même bloc.
 - `⇥` indente : dans une liste, l'élément passe sous celui du dessus ; dans un paragraphe, la ligne devient un élément de liste, rangé sous la liste du dessus s'il y en a une (Markdown n'a pas de texte indenté : quatre espaces en feraient du code). `⇧⇥` désindente.
 - **Niveau d'un titre** : curseur dans un titre, ses `#` s'affichent en gris au début de la ligne. Au début du titre, `⌫` en retire un (un titre 1 redevient du texte) et `#` en ajoute un. Son niveau s'affiche aussi dans la marge à gauche : un clic ouvre la liste des niveaux (titre 1 à 6, ou texte), aussi `⌘⌥1` … `⌘⌥6` et `⌘⌥0`.
+- **Replier une section** : au survol d'un titre, une flèche apparaît à sa gauche ; un clic replie tout ce qui suit jusqu'au titre suivant de même niveau (« … » après le titre), un second le déplie. Seul l'affichage change, rien n'est écrit dans le fichier, et tout est déplié à la prochaine ouverture de la note. Un curseur qui arrive dans une section repliée (recherche, annulation) la déplie.
 - `⌫` au début d'une ligne la remonte au bout de la ligne du dessus, même sous une liste, une citation ou un callout. Sous un tableau, le curseur va dans la dernière cellule ; sous un séparateur, celui-ci est sélectionné (un second `⌫` le supprime).
 
 ### La mise en forme
@@ -148,6 +150,10 @@ Les raccourcis Markdown marchent aussi à la frappe :
 ### Les liens
 
 - `[[` insère un lien vers une note, avec autocomplétion ; `![[` intègre une note, une image ou une base. Les liens suivent les réglages d'Obsidian.
+- **Alias** : une note trouve aussi par ses `aliases` (propriété). Choisie par un alias, elle est liée sous ce nom : `[[Projets|Chantiers]]`.
+- **Lier un titre ou un bloc** : après le nom de la note, `#` liste ses titres (`[[Tarifs#Prestations]]`) et `#^` ses paragraphes et éléments de liste (`[[Tarifs#^kg8i75]]`). Un bloc choisi qui n'a pas encore d'identifiant en reçoit un, écrit à la fin de sa ligne (` ^kg8i75`), comme dans Obsidian : seule cette ligne change. `[[#` liste les titres et `[[#^` les blocs de la note elle-même. Ces liens s'affichent « Tarifs › Prestations ».
+- **Copier le lien vers un bloc** : menu de la poignée `⋮⋮` d'un paragraphe ou d'un élément de liste (l'identifiant est ajouté s'il manque), ou « Copier le lien vers ce titre » sur un titre. Les identifiants s'affichent en gris dans la note.
+- **Renommer un titre** met à jour les liens qui pointent vers lui dans les autres notes (`[[Note#Ancien titre]]` devient `[[Note#Nouveau titre]]`), à l'enregistrement, comme Obsidian (une petite note dit combien). Seule la page affichée à droite, en cours de modification, est laissée telle quelle.
 - `⌘K` sur un texte sélectionné demande l'adresse d'un lien web ; sur un lien existant, il le modifie ou le retire. Coller une URL sur un texte sélectionné en fait aussi un lien. Une adresse tapée (`https://…`, `www.…`) devient un lien dès qu'on la quitte ; le fichier garde l'adresse telle quelle.
 - Un **clic** sur un lien l'ouvre : dans le navigateur pour une adresse web, dans l'app pour une note. Un **clic molette** l'ouvre dans un nouvel onglet. Au **survol**, une barre affiche l'adresse avec Modifier, Copier et Retirer.
 - Coller ou déposer une image l'enregistre dans le dossier des pièces jointes réglé dans Obsidian et l'intègre à la note. Sans réglage (ou réglé sur la racine du vault), l'image va dans un dossier `attachments` à côté de la note.
@@ -544,6 +550,35 @@ data:
 ![[Idées.mindmap.md]]
 ~~~~
 
+### Kanban
+
+Les tableaux du plugin **Kanban** d'Obsidian : une note qui porte `kanban-plugin: board` dans ses propriétés s'ouvre en colonnes. « Nouveau kanban » en crée un, avec trois listes.
+
+- **Cartes** : « Ajouter une carte » au bas d'une liste (`↵` valide, `⇧↵` passe à la ligne) ; double-clic pour modifier une carte, vide pour la supprimer (ou la croix au survol). La case la coche.
+- **Déplacer** : glisser une carte dans sa liste ou dans une autre. Une liste marquée `**Complete**` (comme « Fait ») coche les cartes qui y arrivent.
+- **Listes** : double-clic sur un titre pour le renommer ; « Ajouter une liste » à droite ; une liste vide se supprime par sa croix.
+- Dans les cartes, `[[liens]]` (cliquables), `#tags` et dates `@{2026-10-30}` s'affichent comme dans le plugin.
+
+Le fichier est écrit comme le plugin l'écrit : un tableau non modifié reste identique à l'octet près, et seules les listes touchées sont réécrites ; l'archive et les réglages du plugin (`%% kanban:settings %%`) sont gardés tels quels.
+
+```markdown
+---
+
+kanban-plugin: board
+
+---
+
+## À faire
+
+- [ ] Maquettes mobiles pour [[Site Maison Pain]] @{2026-10-30}
+
+
+## Fait
+
+**Complete**
+- [x] Devis signé
+```
+
 ### Tâches
 
 « Tâches » dans la barre latérale, la tuile « Nouvelle tâche » de l’accueil ou « Ouvrir les tâches » dans la palette (⌘⇧P) ouvre la liste de tâches : un titre, une catégorie, une échéance et des tags, puis « Ajouter ». Les tâches sont rangées par catégorie ; une échéance passée s'affiche en rouge, celle du jour en jaune. Cocher une tâche la marque faite ; « Afficher les tâches faites » les montre.
@@ -557,6 +592,29 @@ Tout est écrit dans `Todo.md`, à la racine du vault, caché de la barre latér
 Les liens entre les notes : les couleurs distinguent les types de page, les points clairs les notes qui n'existent pas encore. Zoom et déplacement à la souris, filtres en haut à droite.
 
 ![[graphe.webp]]
+
+### Révisions
+
+Des cartes de révision (répétition espacée), au format du plugin **Spaced Repetition** d'Obsidian. Une note qui porte le tag `#flashcards` en contient ; `#flashcards/anglais` les range dans le paquet « anglais ».
+
+```markdown
+---
+tags: [flashcards/typographie]
+---
+Longueur de ligne idéale::45 à 90 caractères
+Bonjour:::こんにちは
+
+Quelle espace avant ; ! ? en français ?
+?
+Une espace fine insécable.
+```
+
+- `Question::Réponse` sur une ligne ; `:::` crée deux cartes, une dans chaque sens.
+- Sur plusieurs lignes : la question, une ligne `?` (`??` dans les deux sens), puis la réponse, jusqu'à une ligne vide.
+
+**Révisions** dans la barre latérale liste les paquets, avec les cartes à revoir aujourd'hui, les nouvelles et le total. Un paquet (ou « Tout réviser ») lance la révision : la question, puis la réponse (`espace`), puis **Difficile**, **Correct** ou **Facile** (`1`, `2`, `3`), chacun avec le délai avant la prochaine révision. Le calcul est celui du plugin : « Correct » multiplie l'intervalle par la facilité de la carte (2,5 au départ), « Facile » l'augmente, « Difficile » la baisse et réduit l'intervalle.
+
+La prochaine date est écrite après la carte, comme le fait le plugin : `<!--SR:!2026-10-30,3,250-->` (date, intervalle en jours, facilité), à la fin de la ligne ou sur la ligne qui suit une carte de plusieurs lignes. Seul ce commentaire change dans la note ; FlowNote l'affiche en petite pastille (« ↻ 30/10 »). Obsidian, avec le plugin, reprend les révisions là où elles en sont.
 
 ### Lectures
 

@@ -8,6 +8,7 @@ import {
   pastedImageName,
   relativePath,
   renamePlan,
+  rewriteHeadingLinks,
   rewriteLinks,
   resolveLink,
   sanitizeName,
@@ -133,5 +134,26 @@ describe("links to drawings", () => {
     expect(resolveLink("img.png", files)).toBe("img.png");
     expect(noteTitle("Dossier/Croquis.excalidraw.md")).toBe("Croquis");
     expect(linkTextFor("Croquis.excalidraw.md", files)).toBe("Croquis.excalidraw");
+  });
+});
+
+describe("updating links after a heading is renamed", () => {
+  const files = ["Projets/Mon Carnet.md", "Accueil.md", "Archive/Stack.md"];
+  const rename = (content: string, notePath = "Accueil.md") => rewriteHeadingLinks(content, notePath, files, "Projets/Mon Carnet.md", "Plan", "Plan : 2027");
+
+  it("rewrites wikilinks to the heading, keeping nested headings and aliases", () => {
+    expect(rename("Voir [[Mon Carnet#Plan]], [[Mon Carnet#Plan#Budget|le budget]] et ![[Mon Carnet#plan]].")).toBe(
+      "Voir [[Mon Carnet#Plan 2027]], [[Mon Carnet#Plan 2027#Budget|le budget]] et ![[Mon Carnet#Plan 2027]].",
+    );
+  });
+
+  it("rewrites Markdown links and links inside the note itself", () => {
+    expect(rename("[plan](Projets/Mon%20Carnet.md#Plan)")).toBe("[plan](Projets/Mon%20Carnet.md#Plan%202027)");
+    expect(rename("Plus haut : [[#Plan]].", "Projets/Mon Carnet.md")).toBe("Plus haut : [[#Plan 2027]].");
+  });
+
+  it("leaves other notes, other headings, blocks and code alone", () => {
+    expect(rename("[[Stack#Plan]] [[Mon Carnet#Planning]] [[Mon Carnet#^Plan]] `[[Mon Carnet#Plan]]` [[#Plan]]")).toBeNull();
+    expect(rename("```\n[[Mon Carnet#Plan]]\n```\n")).toBeNull();
   });
 });

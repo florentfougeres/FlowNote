@@ -1,6 +1,6 @@
 import { isMap, isScalar, isSeq, parseDocument } from "yaml";
-import { dirname, renamePlan, rewriteLinks, sanitizeName, subpageFolder } from "./links";
-import type { Vault } from "./vault";
+import { dirname, renamePlan, rewriteHeadingLinks, rewriteLinks, sanitizeName, subpageFolder } from "./links";
+import { readAllNotes, type Vault } from "./vault";
 
 /** Page operations spanning several files: rename (with link updates) and delete. */
 
@@ -48,6 +48,24 @@ async function updateLinks(vault: Vault, filesBefore: string[], filesAfter: stri
     if (next === null) continue;
     await vault.write(after, next, content);
     updatedNotes.push(after);
+  }
+  return updatedNotes;
+}
+
+/**
+ * After a heading of `target` was renamed from `from` to `to`, updates the
+ * links to it in the other notes of the vault, like Obsidian. The notes open
+ * in an editor (`open`, `target` among them) are left alone: their editor
+ * would no longer match the file. Returns the notes changed.
+ */
+export async function renameHeadingLinks(vault: Vault, files: string[], target: string, from: string, to: string, open: string[]): Promise<string[]> {
+  const updatedNotes: string[] = [];
+  for (const [path, content] of await readAllNotes(vault, files)) {
+    if (path === target || open.includes(path) || !content.includes("#")) continue;
+    const next = rewriteHeadingLinks(content, path, files, target, from, to);
+    if (next === null) continue;
+    await vault.write(path, next, content);
+    updatedNotes.push(path);
   }
   return updatedNotes;
 }

@@ -26,11 +26,13 @@ import { dueDatePlugin } from "../ticket/dueDates";
 import { NULL_BRIDGE, type BridgeRef } from "./bridge";
 import { highlightPencilPlugin, toggleUnderline } from "./format";
 import { typedHtmlPlugin } from "./typedHtml";
+import { headingFoldPlugin } from "./headingFold";
+import { blockIdPlugin } from "./blockLinks";
 
 const Editing = Extension.create({
   priority: 150,
   name: "editing",
-  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin(), codeHighlightPlugin(), findPlugin(), grammarPlugin(), dueDatePlugin(), tocPlugin(), backtickPlugin(), syntaxMarksPlugin(), autolinkPlugin(), gitGutterPlugin(), highlightPencilPlugin(), typedHtmlPlugin()],
+  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin(), codeHighlightPlugin(), findPlugin(), grammarPlugin(), dueDatePlugin(), tocPlugin(), backtickPlugin(), syntaxMarksPlugin(), autolinkPlugin(), gitGutterPlugin(), highlightPencilPlugin(), typedHtmlPlugin(), headingFoldPlugin(), blockIdPlugin()],
   addKeyboardShortcuts() {
     return {
       "Mod-z": () => undo(this.editor.state, this.editor.view.dispatch),

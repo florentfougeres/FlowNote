@@ -90,7 +90,8 @@ export function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
         dom.textContent = `${resolved?.endsWith(".md") ? "📄" : "📎"} ${alias ?? (resolved ? noteTitle(resolved) : target)}`;
       } else {
         dom.className = resolved ? "wikilink" : "wikilink unresolved";
-        dom.textContent = alias ?? target;
+        // `Note#Titre` reads "Note › Titre", `#Titre` (in the note itself) "Titre".
+        dom.textContent = alias ?? target.split("#").filter(Boolean).join(" › ");
       }
     };
     render(node);

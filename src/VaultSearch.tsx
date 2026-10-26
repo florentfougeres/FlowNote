@@ -30,6 +30,7 @@ const FILTER_ICONS: Record<SearchFilter["kind"], IconName> = { tag: "hash", fold
 export function VaultSearch({
   vault,
   initialQuery,
+  initialFilters = [],
   iconOf,
   onOpen,
   onOpenPage,
@@ -37,6 +38,8 @@ export function VaultSearch({
 }: {
   vault: Vault;
   initialQuery: string;
+  /** Filters already set (a tag clicked in the sidebar). */
+  initialFilters?: SearchFilter[];
   /** Icon of a page: its emoji, or the icon of its kind. */
   iconOf: (path: string) => ReactNode;
   onOpen: (hit: SearchHit, occurrence: number, query: string) => void;
@@ -45,7 +48,7 @@ export function VaultSearch({
   onClose: () => void;
 }) {
   const [query, setQuery] = useState(initialQuery);
-  const [filters, setFilters] = useState<SearchFilter[]>([]);
+  const [filters, setFilters] = useState<SearchFilter[]>(initialFilters);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [searching, setSearching] = useState(false);

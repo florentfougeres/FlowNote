@@ -28,6 +28,8 @@
 @import "./styles/canvas.css";
 @import "./styles/dashboardPage.css";
 @import "./styles/todo.css";
+@import "./styles/review.css";
+@import "./styles/kanban.css";
 @import "./styles/database.css";
 @import "./styles/dialogs.css";
 @import "./styles/settings.css";

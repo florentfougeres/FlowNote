@@ -216,6 +216,62 @@
   font-size: 1.25em;
 }
 
+/* Foldable headings (headingFold.ts): the arrow shows on hover, and stays while folded. */
+.note .foldable {
+  position: relative;
+}
+
+.note .heading-fold {
+  position: absolute;
+  left: -22px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin-top: -9px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  font-family: var(--font-ui);
+  line-height: 18px;
+  opacity: 0;
+  transition:
+    transform 0.15s,
+    opacity 0.15s;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.note .heading-fold::before {
+  content: "▼";
+}
+
+.note .foldable:hover .heading-fold,
+.note .folded .heading-fold {
+  opacity: 1;
+}
+
+.note .folded .heading-fold {
+  transform: rotate(-90deg);
+}
+
+.note .folded::after {
+  content: " …";
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.note .fold-hidden {
+  display: none;
+}
+
+/* A block identifier (` ^id`), the anchor of `[[Note#^id]]` links (blockLinks.ts). */
+.note .block-id {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
 /*
  * Bullets and numbers are drawn inside the item, not as native markers:
  * WebKit forgets to repaint a marker (painted in the list's margin) after an

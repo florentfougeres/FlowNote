@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { insertAttachments, type VaultBridge } from "./bridge";
-import { linkItems } from "./wikilinks";
+import { anchorItems, linkItems } from "./wikilinks";
 import { destroyEditors, openEditor, press, type } from "./testUtils";
 import { DEFAULT_CONFIG } from "../vault/links";
 
@@ -29,6 +29,24 @@ describe("link suggestions", () => {
     expect(linkItems("cli", FILES, true).map((i) => i.path)).toEqual(["Écrits/img/cli.png"]);
   });
 
+  it("finds notes by their aliases, written as the link's text", () => {
+    const aliases = new Map([["Projets.md", ["Chantiers"]]]);
+    const [found] = linkItems("chant", FILES, false, aliases);
+    expect(found).toMatchObject({ path: "Projets.md", alias: "Chantiers", title: "Chantiers" });
+    expect(linkItems("Chantiers", FILES, false, aliases).some((i) => i.create)).toBe(false);
+    expect(linkItems("pro", FILES, false, aliases)[0].alias).toBeUndefined();
+  });
+
+  it("lists the headings or the blocks of a note after #", () => {
+    const headings = [
+      { level: 1, text: "Titre" },
+      { level: 2, text: "Plan : 2027" },
+    ];
+    const blocks = [{ line: 4, pos: null, text: "Une idée", id: null }];
+    expect(anchorItems("pla", "Note.md", headings, blocks).map((i) => i.heading)).toEqual(["Plan 2027"]);
+    expect(anchorItems("^idée", "Note.md", headings, blocks)).toMatchObject([{ block: { line: 4, id: null }, title: "Une idée" }]);
+  });
+
   it("[[ inserts the shortest unambiguous link", async () => {
     const { editor, links, save } = openEditor("", vault());
     type(editor, "Voir [[Proj");
@@ -36,6 +54,26 @@ describe("link suggestions", () => {
     expect(links.state?.items[0].title).toBe("Projets");
     press(editor, "Enter");
     expect(save()).toBe("Voir [[Projets]]\n");
+  });
+
+  it("[[#^ links to a block of the note, giving it an identifier", async () => {
+    const { editor, links, save } = openEditor("Une idée à garder.\n\nVoir :\n", vault());
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+    type(editor, " [[#^idée");
+    await tick();
+    expect(links.state?.items[0].title).toBe("Une idée à garder.");
+    press(editor, "Enter");
+    await tick();
+    expect(save()).toMatch(/^Une idée à garder\. \^([a-z0-9]{6})\n\nVoir : \[\[#\^\1\]\]\n$/);
+  });
+
+  it("[[Note# links to a heading of another note", async () => {
+    const { editor, save } = openEditor("", vault({ readNote: async () => "# Projets\n\n## Plan : 2027\n\ntexte\n" }));
+    type(editor, "[[Projets#plan");
+    await tick();
+    await tick();
+    press(editor, "Enter");
+    expect(save()).toBe("[[Projets#Plan 2027]]\n");
   });
 
   it("ambiguous names get their path", async () => {

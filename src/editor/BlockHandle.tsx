@@ -7,6 +7,10 @@ import { blockAt, deleteBlock, duplicateBlock, moveBlock, moveBlockByOne, movabl
 import { openSlashMenu } from "./slash";
 import { HEADING_LEVEL_WIDTH, headingAtCursor } from "./HeadingLevel";
 import { DragVisual } from "./dragMotion";
+import { blockAtPos, ensureBlockId } from "./blockLinks";
+import type { BridgeRef } from "./bridge";
+import { headingLinkText } from "../markdown/sections";
+import { linkTextFor } from "../vault/links";
 
 /**
  * Gutter controls shown next to the hovered block: "+" inserts a
@@ -94,10 +98,10 @@ function findDropTarget(editor: Editor, source: BlockRef, x: number, y: number):
   return { block, side: "below", line: { top: rect.bottom, left, width } };
 }
 
-/** Room taken by a foldable callout's arrow, left of the block (`.callout-fold`, editor.css). */
-const CALLOUT_FOLD_WIDTH = 22;
+/** Room taken by the arrow of a foldable callout or heading, left of the block (`.callout-fold`, `.heading-fold`, editor.css). */
+const FOLD_WIDTH = 22;
 
-export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: RefObject<HTMLDivElement | null> }) {
+export function BlockHandle({ editor, shell, bridge }: { editor: Editor | null; shell: RefObject<HTMLDivElement | null>; bridge: BridgeRef }) {
   const [hover, setHover] = useState<Hover | null>(null);
   const [menu, setMenu] = useState<{ block: BlockRef; x: number; y: number } | null>(null);
   const drag = useRef<Drag | null>(null);
@@ -123,8 +127,8 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
       // List markers are drawn outside the item box: keep the handle clear of them.
       // The heading holding the cursor has its level icon there (HeadingLevel.tsx): the handle goes further left.
       const besideLevel = block.pos === headingAtCursor(editor)?.pos && editor.view.hasFocus() ? HEADING_LEVEL_WIDTH : 0;
-      // A foldable callout (toggle) has its arrow there too: the handle leaves it clickable.
-      const besideFold = block.node.type.name === "callout" && block.node.attrs.fold ? CALLOUT_FOLD_WIDTH : 0;
+      // A foldable callout (toggle) or heading has its arrow there too: the handle leaves it clickable.
+      const besideFold = (block.node.type.name === "callout" && block.node.attrs.fold) || dom.classList.contains("foldable") ? FOLD_WIDTH : 0;
       const stacked = note.closest(".page.wide") !== null;
       const marker = besideLevel + besideFold > 0;
       // Stacked, the handle keeps the margin's one column: under the marker, not left of it (out of the page).
@@ -259,12 +263,12 @@ export function BlockHandle({ editor, shell }: { editor: Editor | null; shell: R
           </button>
         </div>
       )}
-      {menu && editor && <BlockMenu editor={editor} block={menu.block} x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
+      {menu && editor && <BlockMenu editor={editor} bridge={bridge} block={menu.block} x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
     </>
   );
 }
 
-function BlockMenu({ editor, block, x, y, onClose }: { editor: Editor; block: BlockRef; x: number; y: number; onClose: () => void }) {
+function BlockMenu({ editor, bridge, block, x, y, onClose }: { editor: Editor; bridge: BridgeRef; block: BlockRef; x: number; y: number; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [turnOpen, setTurnOpen] = useState(false);
 
@@ -283,6 +287,18 @@ function BlockMenu({ editor, block, x, y, onClose }: { editor: Editor; block: Bl
     action();
     onClose();
     editor.view.focus();
+  };
+  // A heading is linked by its text, a paragraph or a list item by an identifier (added when it has none).
+  const heading = block.node.type.name === "heading" ? headingLinkText(block.node.textContent) : "";
+  const linkable = heading ? null : blockAtPos(editor.state.doc, block.pos + 1);
+  const copyLink = () => {
+    const { notePath, files } = bridge.current;
+    const target = heading ? `#${heading}` : linkable ? `#^${ensureBlockId(editor, linkable)}` : "";
+    const link = `[[${linkTextFor(notePath, files)}${target}]]`;
+    navigator.clipboard.writeText(link).then(
+      () => bridge.current.notify?.(`Lien copié : ${link}`),
+      (error: unknown) => bridge.current.notify?.(`Copie impossible : ${String(error)}`),
+    );
   };
   const selectBlock = () => editor.view.dispatch(editor.state.tr.setSelection(Selection.near(editor.state.doc.resolve(block.pos + 1))));
 
@@ -316,6 +332,7 @@ function BlockMenu({ editor, block, x, y, onClose }: { editor: Editor; block: Bl
       >
         Descendre <kbd>{keys("⌥↓")}</kbd>
       </button>
+      {(heading || linkable) && <button onClick={() => run(copyLink)}>Copier le lien vers {heading ? "ce titre" : "ce bloc"}</button>}
       <button onClick={() => setTurnOpen(!turnOpen)}>Transformer en {turnOpen ? "▾" : "▸"}</button>
       {turnOpen && (
         <div className="block-menu-sub">

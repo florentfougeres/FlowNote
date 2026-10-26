@@ -290,7 +290,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
       {header?.(frontmatter, changeFrontmatter)}
       {properties && <PropertiesPanel raw={frontmatter} readOnly={!editable} onChange={changeFrontmatter} hidden={hiddenProperties} />}
       <EditorContent editor={editor} />
-      <BlockHandle editor={editor} shell={shell} />
+      <BlockHandle editor={editor} shell={shell} bridge={wiring.bridge} />
       <HeadingLevel editor={editor} shell={shell} />
       <TableHandles editor={editor} />
       <CalloutPicker />

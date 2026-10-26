@@ -13,6 +13,8 @@ import { isMindmapPath } from "./mindmap/format";
 import { isCanvasPath } from "./canvas/format";
 import { isDashboardPath } from "./dashboardPage/format";
 import { DashboardBoard } from "./dashboardPage/DashboardBoard";
+import { KanbanPage } from "./kanban/KanbanPage";
+import { isKanbanMarkdown } from "./kanban/format";
 import { CanvasEditor } from "./canvas/CanvasEditor";
 import { MindmapEditor, type MindmapControls } from "./mindmap/MindmapEditor";
 import { isBasePath, parseBase, serializeBase, writeColumn, type SelectOption } from "./base/baseFile";
@@ -36,10 +38,13 @@ import { Icon, type IconName } from "./Icon";
 import { GraphPage } from "./graph/GraphPage";
 import { ReadingView } from "./reading/ReadingView";
 import { TodoView } from "./todo/TodoView";
+import { ReviewView } from "./review/ReviewView";
 import { AddLinkDialog } from "./reading/AddLinkDialog";
 import { addLink, newReadingList, parseReadingList, readingTagsOf } from "./reading/readingList";
 import { noteIcon, pageTitle } from "./vault/icon";
 import { setProperty } from "./markdown/frontmatter";
+import { headingRename, newBlockId, noteBlocks } from "./markdown/sections";
+import { renameHeadingLinks } from "./vault/pageOps";
 import type { FrontmatterControl } from "./editor/NoteEditor";
 import { GitPanel } from "./GitPanel";
 import { ToolButton, ToolGroup, Toolbar } from "./Toolbar";
@@ -71,7 +76,7 @@ import { hasConflictMarkers } from "./vault/conflicts";
 import { currentTauriVault, forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
 import { Welcome } from "./Welcome";
 import { TabBar, type Tab } from "./TabBar";
-import { joinTab as joinTabs, nextPageTab, separateTab as separateTabs, splitOf as splitIn, swapReading, withReading, withSplit } from "./tabs";
+import { joinTab as joinTabs, nextPageTab, readSavedTabs, restoredTabs, saveTabs, separateTab as separateTabs, splitOf as splitIn, swapReading, tabsToSave, withReading, withSplit } from "./tabs";
 import { Dashboard } from "./Dashboard";
 import { TicketView } from "./ticket/TicketView";
 import { TicketsView } from "./ticket/TicketsView";
@@ -83,7 +88,8 @@ import { Presenter } from "./presentation/Presenter";
 import { SplitPane } from "./SplitPane";
 import { recordRecentPage } from "./dashboard/recents";
 import { countWords, readingMinutes } from "./markdown/wordCount";
-import { bookmarkedFiles } from "./dashboard/stats";
+import { bookmarkedFiles, noteAliases, noteTags, tagTree, type TagNode } from "./dashboard/stats";
+import type { SearchFilter } from "./vault/searchFilters";
 import { invoke } from "@tauri-apps/api/core";
 
 interface OpenNote {
@@ -107,6 +113,8 @@ const READING_VIEW = "flownote:reading";
 /** Pseudo-path of the to-do list view. */
 const TODO_VIEW = "flownote:todo";
 const TODO_PATH = "Todo.md";
+/** Pseudo-path of the flashcards review. */
+const REVIEW_VIEW = "flownote:review";
 /** Pseudo-path of the settings page. */
 const SETTINGS_VIEW = "flownote:settings";
 /** Pseudo-path of the documentation (a read-only note shipped with the app). */
@@ -117,6 +125,7 @@ const VIEWS: Record<string, { title: string; icon: IconName }> = {
   [GRAPH_VIEW]: { title: "Graphe", icon: "graph" },
   [READING_VIEW]: { title: "Lectures", icon: "bookmark" },
   [TODO_VIEW]: { title: "Tâches", icon: "checkbox" },
+  [REVIEW_VIEW]: { title: "Révisions", icon: "cards" },
   [SETTINGS_VIEW]: { title: "Réglages", icon: "sliders" },
   [DOCS_VIEW]: { title: "Documentation", icon: "book" },
 };
@@ -317,6 +326,12 @@ export function App() {
 
   const dirty = note !== null && note.markdown !== note.disk;
 
+  /** The vault's tags, nested, for the sidebar's "Tags" section. */
+  const [tags, setTags] = useState<TagNode[]>([]);
+  const refreshTags = useCallback(async (v: Vault) => setTags(tagTree(await readAllNotes(v, filesRef.current))), []);
+  /** Filters the vault search opens with (a tag clicked in the sidebar). */
+  const [searchFilters, setSearchFilters] = useState<SearchFilter[]>([]);
+
   const refresh = useCallback(async (v: Vault) => {
     const [newTree, newFiles, bookmarksJson, templatesJson] = await Promise.all([
       v.tree(),
@@ -329,7 +344,8 @@ export function App() {
     setFiles(newFiles);
     filesRef.current = newFiles;
     setBookmarks(bookmarkedFiles(bookmarksJson).filter((p) => newFiles.includes(p)));
-  }, []);
+    void refreshTags(v);
+  }, [refreshTags]);
 
   const open = async (pending: Vault | null | Promise<Vault | null>) => {
     const picked = await pending;
@@ -343,16 +359,19 @@ export function App() {
       images.current.clear();
       setVault(opened);
       setNote(null);
-      // A vault opens on the dashboard, in a single tab (FLOWNOTE_OPEN opens a page, for debugging).
-      const first = { id: newTabId(), path: null };
+      // A vault opens on the tabs it had when it was left, or on the dashboard (FLOWNOTE_OPEN opens a page, for debugging).
+      const exists = (path: string) => isView(path) || filesRef.current.includes(path);
+      const restored = restoredTabs(readSavedTabs(opened.name), exists, newTabId) ?? { tabs: [{ id: newTabId(), path: null }], active: "" };
+      const active = restored.tabs.find((t) => t.id === restored.active) ?? restored.tabs[0];
       tabState.current.clear();
       back.current = [];
       forward.current = [];
-      activeRef.current = first.id;
-      setTabs([first]);
-      setActiveTab(first.id);
+      activeRef.current = active.id;
+      tabsRef.current = restored.tabs;
+      setTabs(restored.tabs);
+      setActiveTab(active.id);
       const forced = isTauri() ? await invoke<string | null>("startup_note").catch(() => null) : null;
-      if (forced) setPendingOpen(forced);
+      if (forced ?? active.path) setPendingOpen(forced ?? active.path);
     } catch (error) {
       setStatus(`Impossible d'ouvrir le vault : ${String(error)}`);
     }
@@ -385,6 +404,19 @@ export function App() {
     };
   }, [refreshGit]);
 
+  /** A heading renamed in a saved note: the links to it in the other notes follow, like in Obsidian. */
+  const followHeadingRename = useCallback(
+    (path: string, before: string, after: string) => {
+      const renamed = headingRename(before, after);
+      if (!vault || !renamed) return;
+      const open = [noteRef.current?.path, tabsRef.current.find((t) => t.id === activeRef.current)?.split].filter((p): p is string => !!p);
+      renameHeadingLinks(vault, filesRef.current, path, renamed.from, renamed.to, open)
+        .then((updated) => updated.length > 0 && notify(`Liens vers « ${renamed.to} » mis à jour dans ${updated.length} note${updated.length > 1 ? "s" : ""}`))
+        .catch((error: unknown) => setStatus(`Liens vers « ${renamed.to} » : ${String(error)}`));
+    },
+    [vault, notify],
+  );
+
   /** Writes the open note if it changed. Saves are serialized. */
   const saveNow = useCallback(async () => {
     const run = async () => {
@@ -396,6 +428,8 @@ export function App() {
         noteRef.current = { ...current, disk: current.markdown };
         setStatus("");
         void refreshGit();
+        followHeadingRename(current.path, current.disk, current.markdown);
+        if (noteTags(current.markdown).join() !== noteTags(current.disk).join()) void refreshTags(vault);
         // The page tree shows icons read from the files: re-read it when the icon changed.
         if (noteIcon(current.markdown) !== noteIcon(current.disk) || isPresentationMarkdown(current.markdown) !== isPresentationMarkdown(current.disk)) void refresh(vault);
       } catch (error) {
@@ -405,7 +439,7 @@ export function App() {
     };
     saving.current = saving.current.then(run, run);
     return saving.current;
-  }, [vault, refreshGit, refresh]);
+  }, [vault, refreshGit, refresh, followHeadingRename, refreshTags]);
 
   // Autosave (can be turned off in the settings).
   useEffect(() => {
@@ -413,6 +447,11 @@ export function App() {
     const timer = window.setTimeout(() => void saveNow().catch(() => {}), AUTOSAVE_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [note?.markdown, dirty, saveNow, settings.autosave]);
+
+  // The tabs are remembered for the next launch, per vault.
+  useEffect(() => {
+    if (vault) saveTabs(vault.name, tabsToSave(tabs, activeTab));
+  }, [vault, tabs, activeTab]);
 
   /** Shows a page (or the dashboard) in the active tab, without touching its history. */
   const load = useCallback(
@@ -604,7 +643,10 @@ export function App() {
       addLink: () => void openAddLink(),
       find: () => void (findable && openFind(false)),
       replace: () => void (findable && openFind(true)),
-      vaultSearch: () => setModal("search"),
+      vaultSearch: () => {
+        setSearchFilters([]);
+        setModal("search");
+      },
       raw: () => (noteRef.current ? toggleRaw() : false),
       reading: () => (readable ? toggleReading() : false),
       focus: toggleFocus,
@@ -801,6 +843,26 @@ export function App() {
       const [notes, stats] = await Promise.all([readAllNotes(vault, filesRef.current), vault.stats?.().catch(() => []) ?? Promise.resolve([])]);
       return { notes, stats };
     },
+    noteAliases: async () => {
+      if (!vault) return new Map();
+      const notes = await readAllNotes(vault, filesRef.current);
+      return new Map(notes.flatMap(([path, text]) => (text.includes("alias") ? [[path, noteAliases(text)] as const] : [])));
+    },
+    addBlockId: async (path, line) => {
+      if (!vault) throw new Error("Aucun vault ouvert.");
+      // Only the block's line changes; the write is refused if the note changed meanwhile.
+      const text = await vault.read(path);
+      const block = noteBlocks(text).find((b) => b.line === line);
+      if (!block) throw new Error(`${noteTitle(path)} a changé : le bloc n'est plus à cette ligne.`);
+      if (block.id) return block.id;
+      const id = newBlockId(noteBlocks(text).flatMap((b) => (b.id ? [b.id] : [])));
+      const lines = text.split("\n");
+      const eol = lines[line].endsWith("\r") ? "\r" : "";
+      lines[line] = `${lines[line].replace(/\r$/, "").trimEnd()} ^${id}${eol}`;
+      await vault.write(path, lines.join("\n"), text);
+      return id;
+    },
+    notify,
     toggleTask: async (path, line, done) => {
       if (!vault) return;
       // Only the task's line changes; the write is refused if the note changed meanwhile.
@@ -847,6 +909,9 @@ export function App() {
       readNote: (path) => splitBridgeLatest.current.readNote!(path),
       queryVault: () => splitBridgeLatest.current.queryVault!(),
       toggleTask: (path, line, done) => splitBridgeLatest.current.toggleTask!(path, line, done),
+      noteAliases: () => splitBridgeLatest.current.noteAliases!(),
+      addBlockId: (path, line) => splitBridgeLatest.current.addBlockId!(path, line),
+      notify: (text) => splitBridgeLatest.current.notify?.(text),
       get pickTemplate() {
         return splitBridgeLatest.current.pickTemplate;
       },
@@ -867,14 +932,16 @@ export function App() {
   const dashboardPage = note !== null && isDashboardPath(note.path);
   /** The open page is a base (Name.base, Obsidian's format). */
   const basePage = note !== null && isBasePath(note.path);
-  const ticketPage = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !basePage && isTicketMarkdown(note.loaded);
+  /** The open page is a board of Obsidian's Kanban plugin (`kanban-plugin: board`). */
+  const kanbanPage = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !basePage && isKanbanMarkdown(note.loaded);
+  const ticketPage = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && isTicketMarkdown(note.loaded);
   /** Reading mode (per tab, ⌘⇧R): notes, tickets and presentations, nothing editable. */
-  const readable = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !basePage;
+  const readable = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage;
   const readingOn = Boolean(tabs.find((t) => t.id === activeTab)?.reading);
   const reading = readable && readingOn && !rawMode;
   const toggleReading = () => replaceTabs(withReading(tabsRef.current, activeTab, "page", !readingOn));
   /** The open page is a presentation (`marp: true`), read from the current text so a conversion shows at once. */
-  const presentationPage = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !basePage && !ticketPage && isPresentationMarkdown(note.markdown);
+  const presentationPage = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !ticketPage && isPresentationMarkdown(note.markdown);
   /**
    * A note's title is its first `# heading` (the file name without one): editing the
    * title writes that heading, never renames the file (titleHeading.ts).
@@ -893,7 +960,7 @@ export function App() {
     if (tr) editor!.view.dispatch(tr);
     return true;
   };
-  const outlineShown = showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && !canvasPage && !dashboardPage && !basePage;
+  const outlineShown = showOutline && !outlineHidden && !rawMode && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage;
   const historyShown = showHistory && Boolean(vault?.git);
   const slides = useSlides(presentationPage ? note.markdown : "", note?.path ?? "", files, loadImage, presentationPage);
   /** Bases embedded in the open note (`![[X.base]]`), rendered with the app's current files. */
@@ -930,7 +997,7 @@ export function App() {
       live = false;
     };
   }, [vault, baseFiles, note?.path]);
-  const rowBase = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !basePage && !ticketPage ? baseOfNote(note.path, bases) : null;
+  const rowBase = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !ticketPage ? baseOfNote(note.path, bases) : null;
   /** Saves a select's options in the base file of the open row. */
   const setRowOptions = async (property: string, options: SelectOption[]) => {
     if (!vault || !rowBase) return;
@@ -1165,13 +1232,24 @@ export function App() {
     const command = (id: string, label: string, section: string, run: () => unknown, icon?: IconName, action?: GlobalAction): Command => ({ id, label, section, icon, keys: action && shortcutOf(action), run: () => void run() });
     const list: Command[] = [
       command("switcher", "Rechercher une page", "Navigation", () => setModal("switcher"), "search", "switcher"),
-      command("vaultSearch", "Rechercher dans les notes", "Navigation", () => setModal("search"), "searchText", "vaultSearch"),
+      command(
+        "vaultSearch",
+        "Rechercher dans les notes",
+        "Navigation",
+        () => {
+          setSearchFilters([]);
+          setModal("search");
+        },
+        "searchText",
+        "vaultSearch",
+      ),
       command("back", "Page précédente", "Navigation", goBack, "chevronLeft", "back"),
       command("forward", "Page suivante", "Navigation", goForward, "chevronRight", "forward"),
       command("home", "Ouvrir l'accueil", "Vues", () => openView(null, false), "home"),
       command("tickets", "Ouvrir les tickets", "Vues", () => openView(TICKETS_VIEW, false), "ticket"),
       command("readingList", "Ouvrir les lectures", "Vues", () => openView(READING_VIEW, false), "bookmark"),
       command("todoList", "Ouvrir les tâches", "Vues", () => openView(TODO_VIEW, false), "checkbox"),
+      command("review", "Réviser les cartes", "Vues", () => openView(REVIEW_VIEW, false), "cards"),
       command("graph", "Ouvrir le graphe", "Vues", () => openView(GRAPH_VIEW, false), "graph"),
       command("docs", "Ouvrir la documentation", "Vues", () => openView(DOCS_VIEW, false), "book"),
       command("settings", "Ouvrir les réglages", "Vues", () => select(SETTINGS_VIEW, "push"), "sliders", "settings"),
@@ -1209,13 +1287,13 @@ export function App() {
       );
       if (!presentationPage) list.push(command("exportHtml", "Exporter en HTML", "Page", exportAsHtml, "export"), command("toPresentation", "Transformer en présentation", "Page", convertToPresentation, "slides"));
     }
-    if (page && !canvasPage && !dashboardPage && !basePage) list.push(command("exportPdf", "Exporter en PDF", "Page", exportCurrentPdf, "export"));
+    if (page && !canvasPage && !dashboardPage && !kanbanPage && !basePage) list.push(command("exportPdf", "Exporter en PDF", "Page", exportCurrentPdf, "export"));
     if (presentationPage) list.push(command("present", "Présenter", "Page", present, "play", "present"));
     return list;
   };
 
   // Words and reading time of a plain note (not a drawing, mind map nor base).
-  const words = note && !drawing && !mindmap && !canvasPage && !dashboardPage && !basePage ? countWords(note.markdown) : null;
+  const words = note && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage ? countWords(note.markdown) : null;
   /**
    * Status pill, at the bottom right of the page:
    * the save state and the words, or a passing message. It takes no room and
@@ -1264,7 +1342,8 @@ export function App() {
     onSwap: () => void swapSplit(),
     onSeparate: () => void separateTab(activeTab),
     onClose: () => setTabSplit(activeTab, null),
-    onSaved: () => {
+    onSaved: (before?: string, after?: string) => {
+      if (splitPath && before !== undefined && after !== undefined) followHeadingRename(splitPath, before, after);
       void refreshGit();
       if (vault) void refresh(vault);
     },
@@ -1294,11 +1373,19 @@ export function App() {
     onMove: (item: { path: string; folder: boolean }, target: string) => void moveItem(item, target),
     onRename: (path: string) => void askName("Renommer la page", noteTitle(path)).then((name) => (name ? renamePath(path, name) : false)),
     onSearch: () => setModal("switcher"),
-    onVaultSearch: () => setModal("search"),
+    onVaultSearch: () => {
+      setSearchFilters([]);
+      setModal("search");
+    },
+    onTag: (tag: string) => {
+      setSearchFilters([{ kind: "tag", tag }]);
+      setModal("search");
+    },
     onHome: (newTabRequested: boolean) => void openView(null, newTabRequested),
     onTickets: (newTabRequested: boolean) => void openView(TICKETS_VIEW, newTabRequested),
     onGraph: (newTabRequested: boolean) => void openView(GRAPH_VIEW, newTabRequested),
     onTodo: (newTabRequested: boolean) => void openView(TODO_VIEW, newTabRequested),
+    onReview: (newTabRequested: boolean) => void openView(REVIEW_VIEW, newTabRequested),
     onReading: (newTabRequested: boolean) => void openView(READING_VIEW, newTabRequested),
     onDocs: (newTabRequested: boolean) => void openView(DOCS_VIEW, newTabRequested),
     onGit: () => toggleGit(),
@@ -1348,12 +1435,13 @@ export function App() {
       ticketsFolder={settings.ticketsFolder}
       hidden={sidebarHidden}
       selected={note?.path}
-      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === TODO_VIEW ? "todo" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
+      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === TODO_VIEW ? "todo" : activePath === REVIEW_VIEW ? "review" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
       liveIcon={sidebarLiveIcon}
       showTitles={settings.showTitles}
       gitChanges={vault.git ? gitChanges : null}
       gitOpen={gitOpen}
       favorites={bookmarks}
+      tags={tags}
       otherVaults={otherVaults}
       {...sidebarHandlers}
     />
@@ -1446,7 +1534,7 @@ export function App() {
                       <ToolButton icon="export" label="Exporter en image (PNG)" onClick={() => void exportMindmap()} disabled={!mindmapControls} />
                     </>
                   )}
-                  {!drawing && !mindmap && !canvasPage && !dashboardPage && !basePage && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
+                  {!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
                   {readable && <ToolButton icon="eye" label={reading ? "Quitter le mode lecture (⌘⇧R)" : "Mode lecture (⌘⇧R)"} onClick={toggleReading} active={reading} disabled={rawMode} />}
                   {readable && !reading && settings.spellChecker !== "off" && (
                     <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={toggleSpelling} active={spellingOn} />
@@ -1458,13 +1546,13 @@ export function App() {
                     <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportCurrent()} />
                   </>
                 )}
-                {!drawing && !mindmap && !canvasPage && !dashboardPage && !basePage && !ticketPage && !presentationPage && !reading && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
+                {!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !ticketPage && !presentationPage && !reading && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
                 {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
-                  {!drawing && !mindmap && !canvasPage && !dashboardPage && !basePage && !presentationPage && (
+                  {!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !presentationPage && (
                     <ToolButton icon="width" label={widePages.has(note.path) ? "Largeur normale" : "Pleine largeur"} onClick={() => toggleWide(note.path)} active={widePages.has(note.path)} />
                   )}
                   <ToolButton icon="focus" label={focusMode ? "Quitter le mode focus (⌘⇧M)" : "Mode focus (⌘⇧M)"} onClick={toggleFocus} active={focusMode} />
-                  {!basePage && !ticketPage && !canvasPage && !dashboardPage && (
+                  {!basePage && !ticketPage && !canvasPage && !dashboardPage && !kanbanPage && (
                     <ToolButton icon="more" label="Exporter, copier…" onClick={(event) => setPageMenu(event.currentTarget.getBoundingClientRect())} active={pageMenu !== null} disabled={rawMode} />
                   )}
                   <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : mindmap ? "Voir le fichier brut de la mind map (⌘⇧E)" : basePage ? "Voir le fichier .base (⌘⇧E)" : canvasPage ? "Voir le fichier .canvas (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
@@ -1478,13 +1566,13 @@ export function App() {
               onClose={() => setPageMenu(null)}
               items={[
                 { label: "Exporter en PDF…", icon: "export", run: () => void exportCurrentPdf() },
-                ...(!drawing && !mindmap && !canvasPage && !dashboardPage && !presentationPage ? [{ label: "Exporter en HTML…", icon: "export", run: () => void exportAsHtml() } satisfies MenuItem] : []),
+                ...(!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !presentationPage ? [{ label: "Exporter en HTML…", icon: "export", run: () => void exportAsHtml() } satisfies MenuItem] : []),
               ]}
             />
           )}
           {note ? (
             <>
-              {findRequest && !rawMode && !drawing && !mindmap && !canvasPage && !dashboardPage && !basePage && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
+              {findRequest && !rawMode && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
               <div className="panes">
                 {drawing && !rawMode ? (
                   <div className="drawing-pane">
@@ -1499,6 +1587,8 @@ export function App() {
                       onToolChange={setDrawingTool}
                     />
                   </div>
+                ) : kanbanPage && !rawMode ? (
+                  <KanbanPage key={`${note.path}#${note.reloads ?? 0}`} source={note.loaded} onChange={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk) && !reading} />
                 ) : dashboardPage && !rawMode ? (
                   <DashboardBoard key={`${note.path}#${note.reloads ?? 0}`} source={note.loaded} onChange={onMarkdown} bridge={bridge} editable={!hasConflictMarkers(note.disk) && !reading} />
                 ) : canvasPage && !rawMode ? (
@@ -1640,6 +1730,8 @@ export function App() {
               />
             ) : activePath === TODO_VIEW ? (
               <TodoView key={activeTab} vault={vault} path={TODO_PATH} exists={files.includes(TODO_PATH)} onCreated={() => void refresh(vault)} />
+            ) : activePath === REVIEW_VIEW ? (
+              <ReviewView key={activeTab} vault={vault} files={files} bridge={bridge} onOpenNote={(path, newTabRequested) => void select(path, "push", newTabRequested)} />
             ) : activePath === READING_VIEW ? (
               <ReadingView
                 key={activeTab}
@@ -1772,7 +1864,8 @@ export function App() {
       {modal === "search" && (
         <VaultSearch
           vault={vault}
-          initialQuery={findRequest?.query ?? selectedText()}
+          initialQuery={searchFilters.length ? "" : (findRequest?.query ?? selectedText())}
+          initialFilters={searchFilters}
           iconOf={pageIconFor}
           onOpen={(hit, occurrence, query) => {
             setRawMode(false);

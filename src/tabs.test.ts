@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { joinTab, nextPageTab, separateTab, splitOf, swapReading, withReading, withSplit } from "./tabs";
+import { joinTab, nextPageTab, restoredTabs, separateTab, splitOf, swapReading, tabsToSave, withReading, withSplit } from "./tabs";
 import type { Tab } from "./TabBar";
 
 const isPage = (path: string) => !path.startsWith("flownote:");
@@ -43,5 +43,39 @@ describe("Split view in the tab list", () => {
     expect(nextPageTab(tabs, "a", isPage)?.id).toBe("c");
     expect(nextPageTab(tabs, "c", isPage)?.id).toBe("a");
     expect(splitOf(withSplit(tabs, "c", "X.md"), "c")).toBe("X.md");
+  });
+});
+
+describe("Tabs remembered between launches", () => {
+  const ids = () => {
+    let n = 0;
+    return () => `t${++n}`;
+  };
+  const tabs: Tab[] = [
+    { id: "a", path: null },
+    { id: "b", path: "A.md", split: "B.md", splitReading: true },
+    { id: "c", path: "flownote:graph" },
+    { id: "d", path: "Gone.md", split: "C.md" },
+    { id: "e", path: "Gone.md" },
+  ];
+
+  it("comes back with new ids, the same pages and the active one", () => {
+    const back = restoredTabs(tabsToSave(tabs, "c"), (p) => p !== "Gone.md", ids());
+    expect(back).toEqual({
+      tabs: [
+        { id: "t1", path: null, reading: false },
+        { id: "t2", path: "A.md", reading: false, split: "B.md", splitReading: true },
+        { id: "t3", path: "flownote:graph", reading: false },
+        { id: "t4", path: "C.md", reading: false },
+      ],
+      active: "t3",
+    });
+  });
+
+  it("falls back on the first tab when the active one is gone, and on nothing when all are", () => {
+    expect(restoredTabs(tabsToSave(tabs, "e"), (p) => p !== "Gone.md", ids())?.active).toBe("t1");
+    expect(restoredTabs(tabsToSave([tabs[4]], "e"), () => false, ids())).toBeNull();
+    expect(restoredTabs("pas du JSON", () => true, ids())).toBeNull();
+    expect(restoredTabs(null, () => true, ids())).toBeNull();
   });
 });

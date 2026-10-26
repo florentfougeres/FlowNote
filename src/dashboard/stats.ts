@@ -25,28 +25,47 @@ function withoutCode(text: string): string {
   return text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, "").replace(/`[^`\n]*`/g, "");
 }
 
+const FRONTMATTER = /^\uFEFF?---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
+
+/**
+ * A list property of the frontmatter (`key` a pattern for its names), written
+ * `[a, b]`, as `- a` lines, or `a, b` on one line (split on `separator`).
+ */
+function listProperty(yaml: string, key: string, separator: RegExp): string[] {
+  const unquote = (s: string) => s.trim().replace(/^["']|["']$/g, "");
+  const inline = new RegExp(`^${key}:[ \\t]*\\[([^\\]]*)\\]`, "m").exec(yaml);
+  if (inline) return inline[1].split(",").map(unquote).filter(Boolean);
+  const block = new RegExp(`^${key}:[ \\t]*\\r?\\n((?:[ \\t]*-[^\\n]*\\r?\\n?)+)`, "m").exec(yaml);
+  if (block) return block[1].split("\n").map((l) => unquote(l.replace(/^[ \t]*-[ \t]*/, ""))).filter(Boolean);
+  const single = new RegExp(`^${key}:[ \\t]*([^\\s[][^\\n]*)$`, "m").exec(yaml);
+  return single ? single[1].split(separator).map(unquote).filter(Boolean) : [];
+}
+
 function frontmatter(text: string): { body: string; tags: string[] } {
-  const match = /^﻿?---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(text);
+  const match = FRONTMATTER.exec(text);
   if (!match) return { body: text, tags: [] };
-  const yaml = match[1];
-  const tags: string[] = [];
-  const inline = /^tags?:[ \t]*\[([^\]]*)\]/m.exec(yaml);
-  if (inline) tags.push(...inline[1].split(",").map((t) => t.trim().replace(/^["']|["']$/g, "")));
-  const block = /^tags?:[ \t]*\r?\n((?:[ \t]*-[^\n]*\r?\n?)+)/m.exec(yaml);
-  if (block) tags.push(...block[1].split("\n").map((l) => l.replace(/^[ \t]*-[ \t]*/, "").trim().replace(/^["']|["']$/g, "")));
-  const single = /^tags?:[ \t]*([^\s[][^\n]*)$/m.exec(yaml);
-  if (single && !inline) tags.push(...single[1].split(/[,\s]+/));
-  return { body: text.slice(match[0].length), tags: tags.filter(Boolean).map((t) => t.replace(/^#/, "")) };
+  return { body: text.slice(match[0].length), tags: listProperty(match[1], "tags?", /[,\s]+/).map((t) => t.replace(/^#/, "")) };
+}
+
+/** The other names of a note (`aliases` property), which links can use. */
+export function noteAliases(text: string): string[] {
+  const match = FRONTMATTER.exec(text);
+  return match ? listProperty(match[1], "alias(?:es)?", /,/) : [];
 }
 
 const TAG = /(?:^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
 const WIKILINK = /(!?)\[\[([^\]|#^\n]+)(?:[#^][^\]|\n]*)?(?:\|[^\]\n]*)?\]\]/g;
 const MDLINK = /\[[^\]\n]*\]\(([^)\s]+\.md)(?:#[^)]*)?\)/g;
 
-/** Tags of a note, from its `tags` property and its prose outside code, without `#`, in their written case. */
+/** Text without HTML: the lines of an HTML block, and the markup of inline tags (`style="color: #3f5e4b"` is no tag). */
+function withoutHtml(text: string): string {
+  return text.replace(/^[ \t]*<.*$/gm, "").replace(/<[^>\n]*>/g, " ");
+}
+
+/** Tags of a note, from its `tags` property and its prose outside code and HTML, without `#`, in their written case. */
 export function noteTags(text: string): string[] {
   const { body, tags } = frontmatter(text);
-  return [...tags, ...[...withoutCode(body).matchAll(TAG)].map((m) => m[1])];
+  return [...tags, ...[...withoutHtml(withoutCode(body)).matchAll(TAG)].map((m) => m[1])];
 }
 
 /** Link targets written in a note's prose (wikilinks and Markdown links to notes), outside code. */
@@ -107,4 +126,46 @@ export function bookmarkedFiles(json: string): string[] {
   } catch {
     return [];
   }
+}
+
+/** A tag of the tag tree: `#projet/site` is the child `site` of `projet`. */
+export interface TagNode {
+  /** Its last part, as first written in the vault. */
+  name: string;
+  /** The whole tag, lowercase, without `#` (what the search filter takes). */
+  tag: string;
+  /** Notes carrying it or one of its nested tags. */
+  count: number;
+  children: TagNode[];
+}
+
+/** The vault's tags as a tree, nested on `/`, sorted by name. */
+export function tagTree(notes: [string, string][]): TagNode[] {
+  const nodes = new Map<string, { name: string; pages: Set<string>; children: Set<string> }>();
+  const roots = new Set<string>();
+  for (const [path, text] of notes) {
+    if (isDrawingPath(path)) continue;
+    for (const written of noteTags(text)) {
+      const parts = written.split("/").filter(Boolean);
+      parts.forEach((part, i) => {
+        const tag = parts
+          .slice(0, i + 1)
+          .join("/")
+          .toLowerCase();
+        const node = nodes.get(tag) ?? { name: part, pages: new Set(), children: new Set() };
+        node.pages.add(path);
+        nodes.set(tag, node);
+        if (i === 0) roots.add(tag);
+        else nodes.get(parts.slice(0, i).join("/").toLowerCase())!.children.add(tag);
+      });
+    }
+  }
+  const build = (tags: Set<string>): TagNode[] =>
+    [...tags]
+      .map((tag) => {
+        const node = nodes.get(tag)!;
+        return { name: node.name, tag, count: node.pages.size, children: build(node.children) };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }));
+  return build(roots);
 }

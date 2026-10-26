@@ -6,6 +6,7 @@ import { renderMath, texOf } from "../math";
 import { editInlineMath } from "../MathPrompt";
 import { element } from "./dom";
 import { showImage } from "./image";
+import { reviewMark } from "../../review/cards";
 
 /** Inline HTML elements shown rendered on their own (`<br>`, `<img src="…">`); other tags stay as written. */
 const VOID_HTML = /^<(br|img|wbr)\b[^<>]*>$/i;
@@ -61,8 +62,15 @@ export const inlineRawView = (bridge: BridgeRef): NodeViewRenderer => ({ node, e
   if (label === null) {
     const dom = element("span", "inline-raw");
     dom.dataset.kind = node.attrs.kind;
-    dom.textContent = node.attrs.source;
-    return { dom, update: (n) => n.type === node.type && n.attrs.kind === node.attrs.kind && ((dom.textContent = n.attrs.source), true) };
+    // A flashcard's review comment shows its next date (review/cards.ts); the file keeps the comment.
+    const paint = (source: string) => {
+      const mark = reviewMark(source);
+      dom.classList.toggle("review-mark", mark !== null);
+      dom.textContent = mark ? `↻ ${mark}` : source;
+      dom.title = mark ? `Prochaine révision : ${source}` : "";
+    };
+    paint(node.attrs.source);
+    return { dom, update: (n) => n.type === node.type && n.attrs.kind === node.attrs.kind && (paint(n.attrs.source), true) };
   }
   const dom = element("sup", "footnote-ref");
   dom.textContent = label;

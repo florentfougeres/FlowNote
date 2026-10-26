@@ -20,6 +20,7 @@ Voici le carnet de Camille Roux, qui conçoit des sites et des identités visuel
 - [[Processus projet]] : un organigramme flowchart.js, un diagramme de Gantt
 - [[Snippets]] : du code dans plusieurs langages, du HTML
 - [[Plan 2027.canvas|Plan 2027]] : un canevas avec textes, note, image, lien web, vidéo et groupe
+- [[Production]] : un tableau au format du plugin Kanban, avec liens et dates
 
 **Un projet de bout en bout**
 
@@ -35,8 +36,9 @@ Voici le carnet de Camille Roux, qui conçoit des sites et des identités visuel
 - [[Journal]] : des notes datées, rassemblées par une requête
 - [[Réunions]] : des comptes rendus, créés depuis le modèle [[Réunion]]
 - [[Voyages.base|Voyages]] : une seconde base, côté perso
+- [[Mémo typo]] et [[Japonais]] : des cartes de révision (`#flashcards`), à réviser dans **Révisions**
 
-Et dans la barre latérale : **Tickets** (les demandes des clients, en liste ou en kanban), **Tâches** (la liste de tâches du studio), **Lectures** (la veille à lire) et **Graphe** (les liens entre toutes ces notes).
+Et dans la barre latérale : **Tickets** (les demandes des clients, en liste ou en kanban), **Tâches** (la liste de tâches du studio), **Révisions** (les cartes à revoir), **Lectures** (la veille à lire), **Graphe** (les liens entre toutes ces notes) et, sous les pages, les **Tags** en arbre.
 
 ## À essayer
 
@@ -47,3 +49,5 @@ Et dans la barre latérale : **Tickets** (les demandes des clients, en liste ou 
 - [ ] Cocher une tâche dans les résultats de [[Comptabilité 2026#Tâches de la semaine]]
 - [ ] Modifier une note, commiter dans le panneau Git (`⌘⇧G`), puis récupérer : un conflit attend sur [[Projets]]
 - [ ] Rechercher `tag:#client` dans tout le vault (`⌘⇧F`)
+- [ ] Taper `[[Tarifs#` pour lier un titre de [[Tarifs]], ou `[[Tarifs#^` pour un de ses paragraphes
+- [ ] Replier une section par la flèche à gauche d'un titre, ici « Ce qu'il y a dans ce vault »

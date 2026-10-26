@@ -28,6 +28,12 @@ export interface VaultBridge {
   toggleTask?(path: string, line: number, done: boolean): Promise<void>;
   /** `/modèle`: asks for a template and gives its text filled in for the note titled `title` (null: cancelled). Absent without templates. */
   pickTemplate?(title: string): Promise<string | null>;
+  /** Each note's other names (`aliases` property), offered by `[[`. */
+  noteAliases?(): Promise<Map<string, string[]>>;
+  /** Gives the block on this 0-based line of another note an identifier (` ^id`), unless it has one; returns it. */
+  addBlockId?(path: string, line: number): Promise<string>;
+  /** A passing message in the status pill ("Lien copié"). */
+  notify?(text: string): void;
   /** How many notes embed this one (`![[…]]` inside `![[…]]`), to stop at a depth. */
   embedDepth?: number;
 }

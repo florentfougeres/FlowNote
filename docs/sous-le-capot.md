@@ -160,6 +160,7 @@ Chaque type a son dossier et un format de fichier compatible avec Obsidian ou se
 | Dashboard | `*.dashboard.md` | grille CSS, pointer events | Sections `## Titre` = widgets, positions `[x, y, w, h]` dans `flownote-dashboard` (front matter), les widgets gênants poussés vers le bas (`settle`) |
 | Ticket | note avec `type: ticket` | Tiptap | Note et commentaires en callouts |
 | Présentation | note avec `marp: true` | Marp | Diapos séparées par `---` |
+| Kanban | note avec `kanban-plugin: board` | pointer events | Format du plugin Kanban : `## Liste`, `- [ ] carte` |
 | Lectures | une note | | Titres = thèmes, tâches = liens |
 
 ### Bases (`src/base/`)
@@ -205,6 +206,14 @@ Une note avec `type: ticket` dans ses propriétés, affichée comme une issue Gi
 
 Une note avec `marp: true`, découpée en diapos par `---` : c'est la syntaxe de **Marp**, aussi lue par les plugins de diapos d'Obsidian. Marp produit le HTML des miniatures, du mode présentation et de l'export HTML. Les liens et embeds d'Obsidian sont convertis pour Marp à l'affichage seulement (`forMarp`) : le fichier n'est jamais modifié. Marp tourne avec `inlineSVG: false`, car WebKit dessine mal `foreignObject`. Les notes de l'orateur sont des commentaires HTML.
 
+### Kanban (`src/kanban/`)
+
+Une note avec `kanban-plugin: board` dans ses propriétés, au format du plugin **Kanban** d'Obsidian : une liste par titre `## `, une carte par élément `- [ ] ` (ses lignes suivantes comprises), `**Complete**` pour une liste qui coche les cartes qui y arrivent. `format.ts` garde tel quel ce qui précède la première liste et ce qui suit la dernière (archive `***`, réglages `%% kanban:settings %%`) ; une liste n'est réécrite que si elle change, comme le plugin l'écrit (`## Titre`, ligne vide, cartes, deux lignes vides), donc un tableau non modifié reste identique à l'octet près. Le glisser-déposer suit le pointeur (pointer events), comme le tableau des tickets, dont il reprend les styles.
+
+### Révisions (`src/review/`)
+
+Les cartes de révision du plugin **Spaced Repetition**, lues dans les notes tagguées `#flashcards` (`#flashcards/x` : un paquet) : `Q::R`, `Q:::R` (deux sens), et sur plusieurs lignes `?` / `??`. `cards.ts` lit les cartes et leur révision, un commentaire `<!--SR:!date,intervalle,facilité-->` (une entrée par sens, `!2000-01-01,1,250` pour un sens jamais revu, comme le plugin), calcule la suivante avec l'algorithme du plugin (SM-2 adapté : facilité de départ 250, bonus « Facile » 1,3, intervalle divisé par deux sur « Difficile », une part du retard comptée), et la réécrit en ne changeant que ce commentaire, après avoir relu la note (écriture refusée si elle a changé). Dans l'éditeur, ces commentaires s'affichent en pastille (`reviewMark`).
+
 ### Lectures et graphe
 
 - **Lectures** (`src/reading/`) : une note où chaque titre est un thème et chaque lien une tâche, cochée une fois lue. Une modification ne touche que ce qu'elle doit : cocher un lien change un caractère. Le titre d'une page ajoutée est lu par le backend (`web.rs`, `og:title` sinon `<title>`). C'est la seule requête réseau que l'app fait d'elle-même, et seulement quand on ajoute un lien.
@@ -223,7 +232,7 @@ Autour de cette interface :
 - **`noteCache.ts`** enveloppe le vault ouvert : les vues qui lisent toutes les notes (accueil, graphe, tickets, bases, notes liées) sont servies depuis une copie en mémoire. Les écritures de l'app la tiennent à jour, et elle est oubliée quand la fenêtre reprend le focus, car les fichiers ont pu changer ailleurs.
 - **`links.ts`** résout les liens comme Obsidian et lit ses réglages (`.obsidian/app.json`, en lecture seule) : dossier des pièces jointes, emplacement des nouvelles notes, wikilinks ou liens Markdown.
 - **`templates.ts`** : les modèles du dossier réglé dans `.obsidian/templates.json` (commande `vault_templates_config`, en lecture seule). Remplit `{{title}}`, `{{date}}`, `{{time}}` et `{{date:format}}` avec un sous-ensemble des codes de Moment (`YYYY`, `MMMM`, `dddd`, `HH`…, texte entre crochets gardé), en français. `noteFromTemplate` fait une nouvelle page (titre `# Nom` après les propriétés du modèle), `templateBody` ce que `/modèle` insère (`insertMarkdownBlocks`, blocs gardés tels quels). Sans dossier réglé, l'interface ne propose rien.
-- **`pageOps.ts`** : renommer, déplacer et dupliquer une page, en mettant à jour les liens qui pointent vers elle.
+- **`pageOps.ts`** : renommer, déplacer et dupliquer une page, en mettant à jour les liens qui pointent vers elle. Un titre renommé dans une note (`headingRename` de `markdown/sections.ts`, comparé à l'enregistrement) fait réécrire les liens `[[Note#Titre]]` des autres notes (`renameHeadingLinks`, `rewriteHeadingLinks` dans `links.ts`), sauf celles affichées dans un éditeur (la note et la page de droite), dont l'éditeur ne correspondrait plus au fichier.
 - **`backlinks.ts`**, **`search.ts`** : notes liées et recherche dans le vault.
 - **`conflicts.ts`** : lecture des marqueurs de conflit Git (`<<<<<<<`, `=======`, `>>>>>>>`, y compris le style diff3) pour l'outil de résolution.
 

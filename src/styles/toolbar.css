@@ -374,7 +374,8 @@
 
 .sidebar-tree {
   flex: 1;
-  min-height: 0;
+  /* Room for a few pages when favorites and tags take theirs. */
+  min-height: 96px;
   overflow: auto;
 }
 
@@ -729,4 +730,38 @@ body.tree-dragging * {
   .status-pill {
     transition: none;
   }
+}
+
+/* ---- Tags section of the sidebar, below the pages (Sidebar.tsx) ---- */
+
+.sidebar-section-toggle {
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar-section-toggle svg {
+  margin-right: 4px;
+}
+
+.sidebar-tags {
+  flex: none;
+  max-height: 30vh;
+  overflow: auto;
+}
+
+.tag-hash {
+  color: var(--muted);
+  font-weight: 600;
+  text-align: center;
+}
+
+.tag-count {
+  margin-left: auto;
+  padding: 0 6px 0 8px;
+  color: var(--faint, var(--muted));
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }

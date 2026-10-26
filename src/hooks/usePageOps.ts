@@ -7,6 +7,7 @@ import { MINDMAP_SUFFIX, newMindmapFile } from "../mindmap/format";
 import { CANVAS_SUFFIX, newCanvasFile } from "../canvas/format";
 import { DASHBOARD_SUFFIX, newDashboardFile } from "../dashboardPage/format";
 import { newPresentationFile } from "../presentation/format";
+import { NEW_KANBAN } from "../kanban/format";
 import type { Settings } from "../SettingsPage";
 import { ticketInfo } from "../ticket/agenda";
 import { newTicketFile, nextTicketId } from "../ticket/format";
@@ -287,7 +288,7 @@ export function usePageOps(ctx: PageOpsContext) {
       // A note from a template: the template filled in, under its title.
       const fromTemplate = template && ctx.templates ? noteFromTemplate(await vault.read(template), title, new Date(), ctx.templates.config) : null;
       // A base's rows are the notes of the folder named after it, next to it (like sub-pages).
-      await createFile(path, fromTemplate ?? (kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "canvas" ? newCanvasFile() : kind === "dashboard" ? newDashboardFile() : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : `# ${title}\n`));
+      await createFile(path, fromTemplate ?? (kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "canvas" ? newCanvasFile() : kind === "dashboard" ? newDashboardFile() : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : kind === "kanban" ? NEW_KANBAN : `# ${title}\n`));
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";

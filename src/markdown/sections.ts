@@ -96,3 +96,119 @@ export function embedSection(markdown: string, subpath: string): string | null {
     wanted.split("#").filter((part) => part.trim()),
   );
 }
+
+/** A block identifier at the end of a line: ` ^id`. */
+export const BLOCK_ID = /\s\^([A-Za-z0-9-]+)\s*$/;
+
+export interface NoteHeading {
+  level: number;
+  text: string;
+}
+
+/** A block a link can point to (`[[Note#^id]]`): a list item or a paragraph. */
+export interface NoteBlock {
+  /** 0-based line of the note where its identifier is (or goes): the item's line, the paragraph's last line. */
+  line: number;
+  /** Its text, without list marker or identifier. */
+  text: string;
+  id: string | null;
+}
+
+/** The note's lines after its properties, and how many lines the properties take. */
+function bodyLines(markdown: string): { lines: { text: string; code: boolean }[]; offset: number } {
+  const front = FRONTMATTER.exec(markdown)?.[0] ?? "";
+  return { lines: linesOf(markdown.slice(front.length)), offset: front ? front.split("\n").length - 1 : 0 };
+}
+
+/** The headings of a note, in order (none from code blocks). */
+export function noteHeadings(markdown: string): NoteHeading[] {
+  const headings: NoteHeading[] = [];
+  for (const line of bodyLines(markdown).lines) {
+    const heading = !line.code && HEADING.exec(line.text);
+    if (heading) headings.push({ level: heading[1].length, text: heading[2] });
+  }
+  return headings;
+}
+
+const ITEM = /^\s*(?:[-*+]|\d+[.)])\s+(?:\[.\]\s+)?(.*)$/;
+/** Lines that are neither paragraphs nor list items: tables, quotes, rules, math, HTML, footnotes, embeds. */
+const NOT_TEXT = /^\s*(?:\||>|-{3,}\s*$|\*{3,}\s*$|\$\$|<|\[\^|!\[\[|:::)/;
+
+/** A line of Markdown as read: without emphasis, code ticks, footnote calls or link syntax. */
+function plainText(line: string): string {
+  return line
+    .replace(/!?\[\[([^\]|]*)\|([^\]]*)\]\]/g, "$2")
+    .replace(/!?\[\[([^\]]*)\]\]/g, "$1")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[\^[^\]]*\]/g, "")
+    .replace(/(\*\*|__|==|~~|`)/g, "")
+    .replace(/(^|\s)[*_](\S[^*_]*\S|\S)[*_](?=\s|$|[.,;:!?])/g, "$1$2")
+    .trim();
+}
+
+/** The list items and paragraphs of a note, the blocks `[[Note#^id]]` can point to. */
+export function noteBlocks(markdown: string): NoteBlock[] {
+  const { lines, offset } = bodyLines(markdown);
+  const blocks: NoteBlock[] = [];
+  let paragraph: string[] = [];
+  let math = false;
+  const text = (raw: string) => plainText(raw.replace(BLOCK_ID, ""));
+  lines.forEach((line, i) => {
+    // A `$$` block: its lines are not paragraphs.
+    const fence = !line.code && /^\s*\$\$/.test(line.text) && !/^\s*\$\$.*\S.*\$\$\s*$/.test(line.text);
+    if (fence) math = !math;
+    const plain = !fence && !math && !line.code && line.text.trim() !== "" && !HEADING.test(line.text) && !NOT_TEXT.test(line.text);
+    const item = plain ? ITEM.exec(line.text) : null;
+    if (item) {
+      paragraph = [];
+      if (text(item[1])) blocks.push({ line: offset + i, text: text(item[1]), id: BLOCK_ID.exec(line.text)?.[1] ?? null });
+      return;
+    }
+    if (!plain) {
+      paragraph = [];
+      return;
+    }
+    paragraph.push(text(line.text));
+    const next = lines[i + 1];
+    const ends = !next || next.code || next.text.trim() === "" || HEADING.test(next.text) || ITEM.test(next.text) || NOT_TEXT.test(next.text);
+    if (ends) {
+      blocks.push({ line: offset + i, text: paragraph.join(" "), id: BLOCK_ID.exec(line.text)?.[1] ?? null });
+      paragraph = [];
+    }
+  });
+  return blocks;
+}
+
+/** A new block identifier, six letters and digits like Obsidian's, not in `taken`. */
+export function newBlockId(taken: Iterable<string>): string {
+  const used = new Set(taken);
+  for (;;) {
+    const id = Math.random().toString(36).slice(2, 8);
+    if (id.length === 6 && !used.has(id)) return id;
+  }
+}
+
+/** A heading as a link names it: Obsidian replaces the characters links cannot hold with spaces. */
+export function headingLinkText(heading: string): string {
+  return heading.replace(/[#|^:[\]\\]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** Whether a link's `#heading` names this heading. */
+export function sameHeading(link: string, heading: string): boolean {
+  return same(link, heading);
+}
+
+/**
+ * The heading renamed between two versions of a note: same headings, exactly
+ * one with another (non-empty) text. Null for any other change.
+ */
+export function headingRename(before: string, after: string): { from: string; to: string } | null {
+  const old = noteHeadings(before);
+  const now = noteHeadings(after);
+  if (old.length !== now.length) return null;
+  const changed = old.flatMap((h, i) => (same(h.text, now[i].text) ? [] : [i]));
+  if (changed.length !== 1) return null;
+  const from = old[changed[0]].text;
+  const to = now[changed[0]].text;
+  return headingLinkText(from) && headingLinkText(to) ? { from, to } : null;
+}

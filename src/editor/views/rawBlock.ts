@@ -5,6 +5,7 @@ import { sanitizeHtml } from "../html";
 import { renderMath, texOf } from "../math";
 import { element, updateAttrs } from "./dom";
 import { showImage } from "./image";
+import { reviewMark } from "../../review/cards";
 
 /** HTML with something to see once rendered (not a comment, not empty tags). */
 function rendersSomething(fragment: DocumentFragment): boolean {
@@ -41,6 +42,11 @@ export const rawBlockView = (bridge: BridgeRef): NodeViewRenderer => ({ node, ed
       const fragment = sanitizeHtml(source);
       const shown = rendersSomething(fragment);
       pre.classList.toggle("source", !shown);
+      // A flashcard's review comment shows its next date (review/cards.ts).
+      const mark = reviewMark(source);
+      pre.classList.toggle("review-mark", mark !== null);
+      pre.title = mark ? `Prochaine révision : ${source.trim()}` : "";
+      if (mark) return void (pre.textContent = `↻ ${mark}`);
       if (!shown) return void (pre.textContent = source);
       for (const img of fragment.querySelectorAll("img")) showImage(img, img.getAttribute("src") ?? "", bridge);
       pre.replaceChildren(fragment);

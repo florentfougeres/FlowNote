@@ -1,6 +1,6 @@
 import type { IconName } from "./Icon";
 
-export type PageKind = "note" | "base" | "drawing" | "mindmap" | "canvas" | "ticket" | "presentation" | "dashboard" | "todo";
+export type PageKind = "note" | "base" | "drawing" | "mindmap" | "canvas" | "ticket" | "presentation" | "dashboard" | "kanban" | "todo";
 
 /** The page types, shared by the home page and the "Nouvelle page" dialog. */
 export const PAGE_KINDS: readonly { kind: PageKind; label: string; create: string; icon: IconName; description: string }[] = [
@@ -11,6 +11,7 @@ export const PAGE_KINDS: readonly { kind: PageKind; label: string; create: strin
   { kind: "canvas", label: "Canevas", create: "Nouveau canevas", icon: "canvas", description: "Notes, textes et liens reliés" },
   { kind: "ticket", label: "Ticket", create: "Nouveau ticket", icon: "ticket", description: "Suivi, commentaires, échéance" },
   { kind: "presentation", label: "Présentation", create: "Nouvelle présentation", icon: "slides", description: "Diapos en Markdown (Marp)" },
+  { kind: "kanban", label: "Kanban", create: "Nouveau kanban", icon: "board", description: "Listes et cartes, au format du plugin Kanban" },
   { kind: "dashboard", label: "Dashboard", create: "Nouveau dashboard", icon: "blocks", description: "Widgets à placer : requêtes, graphiques, notes" },
   { kind: "todo", label: "Tâche", create: "Nouvelle tâche", icon: "checkbox", description: "Échéance, catégorie et tags" },
 ];

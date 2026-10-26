@@ -9,6 +9,8 @@ import { isCanvasPath } from "./canvas/format";
 import { isDashboardPath } from "./dashboardPage/format";
 import { dirname, noteTitle } from "./vault/links";
 import { keys } from "./keys";
+import type { TagNode } from "./dashboard/stats";
+import { usePersistentFlag } from "./hooks/usePersistentFlag";
 
 /**
  * Sidebar: the vault (with its menu) and a "new page"
@@ -167,7 +169,7 @@ interface Props {
   tree: VaultEntry[];
   selected?: string;
   /** What the active tab shows when it is not a page. */
-  view: "home" | "tickets" | "todo" | "graph" | "reading" | "settings" | "docs" | null;
+  view: "home" | "tickets" | "todo" | "review" | "graph" | "reading" | "settings" | "docs" | null;
   /** Folder of the tickets (a setting): numbered by the app, so it never moves nor receives drops. */
   ticketsFolder: string;
   /** Paths left out of the tree: the tickets folder and the reading list have their own views. */
@@ -193,6 +195,10 @@ interface Props {
   onDeleteFolder: (folder: string) => void;
   /** Obsidian's bookmarked files, shown above the tree. */
   favorites: string[];
+  /** The vault's tags, nested (section "Tags"). */
+  tags: TagNode[];
+  /** Searches the notes carrying a tag (or one of its nested tags). */
+  onTag: (tag: string) => void;
   /** A copy of the page next to it. */
   onDuplicate: (notePath: string) => void;
   /** Copies a `[[link]]` to the page. */
@@ -208,6 +214,7 @@ interface Props {
   onTickets: (newTab: boolean) => void;
   onGraph: (newTab: boolean) => void;
   onTodo: (newTab: boolean) => void;
+  onReview: (newTab: boolean) => void;
   onReading: (newTab: boolean) => void;
   onDocs: (newTab: boolean) => void;
   onGit: () => void;
@@ -466,6 +473,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
         <NavRow icon="searchText" label="Rechercher dans les notes" shortcut="⌘⇧F" onClick={props.onVaultSearch} />
         <NavRow icon="ticket" label="Tickets" active={view === "tickets"} onClick={(event) => props.onTickets(event.metaKey || event.ctrlKey)} />
         <NavRow icon="checkbox" label="Tâches" active={view === "todo"} onClick={(event) => props.onTodo(event.metaKey || event.ctrlKey)} />
+        <NavRow icon="cards" label="Révisions" active={view === "review"} onClick={(event) => props.onReview(event.metaKey || event.ctrlKey)} />
         <NavRow icon="bookmark" label="Lectures" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
         <NavRow icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />
         <NavRow icon="book" label="Documentation" active={view === "docs"} onClick={(event) => props.onDocs(event.metaKey || event.ctrlKey)} />
@@ -530,6 +538,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
       >
         {render(pages, 0)}
       </div>
+      {props.tags.length > 0 && <TagsSection tags={props.tags} onTag={props.onTag} />}
       <div className="sidebar-footer">
         {gitChanges !== null && <NavRow icon="branch" label="Git" shortcut="⌘⇧G" active={gitOpen} badge={gitChanges} onClick={props.onGit} />}
         <NavRow icon="sliders" label="Réglages" shortcut="⌘," active={view === "settings"} onClick={(event) => props.onSettings(event.metaKey || event.ctrlKey)} />
@@ -575,4 +584,53 @@ function startSidebarResize(event: React.PointerEvent) {
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
+}
+
+/**
+ * The vault's tags as a tree, below the pages, like Obsidian's tag pane: each
+ * with the number of notes carrying it (nested tags included); a click
+ * searches those notes. The section opens on its title (folded at first, remembered).
+ */
+function TagsSection({ tags, onTag }: { tags: TagNode[]; onTag: (tag: string) => void }) {
+  const [shown, setShown] = usePersistentFlag("flownote:tags-section", false, ["shown", "hidden"]);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const toggle = (tag: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (!next.delete(tag)) next.add(tag);
+      return next;
+    });
+  const render = (list: TagNode[], depth: number) => (
+    <ul className="tree">
+      {list.map((node) => {
+        const open = expanded.has(node.tag);
+        return (
+          <li key={node.tag}>
+            <div className="page-row tag-row" style={{ paddingLeft: depth * 14 + 4 }}>
+              <button className="page-toggle" onClick={() => toggle(node.tag)} aria-label={open ? "Replier" : "Déplier"} disabled={node.children.length === 0}>
+                {node.children.length > 0 && <Icon name={open ? "chevronDown" : "chevronRight"} size={12} />}
+              </button>
+              <button className="page-name" onClick={() => onTag(node.tag)} title={`Rechercher les notes #${node.tag}`}>
+                <span className="page-icon tag-hash" aria-hidden="true">
+                  #
+                </span>
+                <span className="page-label">{node.name}</span>
+                <span className="tag-count">{node.count}</span>
+              </button>
+            </div>
+            {open && node.children.length > 0 && render(node.children, depth + 1)}
+          </li>
+        );
+      })}
+    </ul>
+  );
+  return (
+    <>
+      <button className="sidebar-section sidebar-section-toggle" onClick={() => setShown(!shown)} aria-expanded={shown}>
+        Tags
+        <Icon name={shown ? "chevronDown" : "chevronRight"} size={12} />
+      </button>
+      {shown && <div className="sidebar-tags">{render(tags, 0)}</div>}
+    </>
+  );
 }
