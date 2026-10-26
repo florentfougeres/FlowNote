@@ -92,7 +92,7 @@ describe("link suggestions", () => {
 });
 
 describe("sub-pages", () => {
-  it("the slash command creates Note/Name.md, links it and opens it", async () => {
+  it("the slash command creates Note/Name.md with its title, links it and opens it", async () => {
     const openPath = vi.fn();
     const bridge = vault({ askName: async () => "Ma sous-page", openPath });
     const { editor, save } = openEditor("", bridge);
@@ -101,7 +101,7 @@ describe("sub-pages", () => {
     press(editor, "Enter");
     await tick();
     await tick();
-    expect(bridge.createFile).toHaveBeenCalledWith("Note/Ma sous-page.md", "");
+    expect(bridge.createFile).toHaveBeenCalledWith("Note/Ma sous-page.md", "# Ma sous-page\n");
     expect(save()).toBe("[[Ma sous-page]]\n");
     expect(openPath).toHaveBeenCalledWith("Note/Ma sous-page.md");
   });

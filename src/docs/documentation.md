@@ -102,7 +102,7 @@ Une page a un **titre** et un **nom de fichier**, indépendants :
 
 - **Le titre** s'affiche en haut de la page ; cliquez dessus pour le modifier. Pour une note, c'est sa première ligne `# Titre` (ajoutée si besoin) ; pour une présentation, sa propriété `title`. Le modifier ne renomme jamais le fichier.
 - **Le nom du fichier** s'affiche en gris sous le titre (`Réunion.md`) : cliquez dessus pour renommer le fichier. On renomme aussi depuis la barre latérale ou le fil d'Ariane.
-- Une nouvelle note commence par `# Nom` : titre et nom sont égaux au départ.
+- Une nouvelle note commence par `# Nom` : titre et nom sont égaux au départ. C'est vrai aussi d'une sous-page créée par `/sous-page`, rangée dans le dossier de la note et liée depuis elle.
 - Le bouton **T** de la section « Pages » de la barre latérale choisit d'afficher les titres ou les noms de fichier, dans la barre latérale et les onglets ; l'autre s'affiche au survol.
 
 ### Les blocs

@@ -24,13 +24,14 @@ export interface SlashItem extends MenuItem {
   run: (editor: Editor, range: Range, bridge: VaultBridge) => void;
 }
 
-/** Sub-page: a new note in a folder named after this one, linked from here. */
+/** Sub-page: a new note in a folder named after this one, linked from here; it starts with its title, like a new page. */
 async function createSubpage(editor: Editor, range: Range, bridge: VaultBridge) {
   editor.chain().focus().deleteRange(range).run();
   const name = await bridge.askName("Nom de la sous-page", "Sans titre");
   if (!name || !bridge.notePath) return editor.commands.focus();
-  const path = uniquePath(subpageFolder(bridge.notePath), `${sanitizeName(name) || "Sans titre"}.md`, bridge.files);
-  await bridge.createFile(path, "");
+  const title = sanitizeName(name) || "Sans titre";
+  const path = uniquePath(subpageFolder(bridge.notePath), `${title}.md`, bridge.files);
+  await bridge.createFile(path, `# ${title}\n`);
   const link = editor.schema.nodes.wikilink.create({ target: linkTextFor(path, bridge.files), alias: null, embed: false });
   editor.chain().focus().insertContent(link.toJSON()).run();
   bridge.openPath(path);
