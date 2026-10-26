@@ -2,6 +2,11 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Supprimé
+- Les cartes de révision (Révisions) : la vue, ses notes de démo et l'affichage des commentaires `<!--SR:…-->`, qui redeviennent du texte comme les autres commentaires.
+
 ## [0.22.0] - 2026-10-26
 
 ### Ajouté

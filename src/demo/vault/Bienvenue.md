@@ -36,9 +36,8 @@ Voici le carnet de Camille Roux, qui conçoit des sites et des identités visuel
 - [[Journal]] : des notes datées, rassemblées par une requête
 - [[Réunions]] : des comptes rendus, créés depuis le modèle [[Réunion]]
 - [[Voyages.base|Voyages]] : une seconde base, côté perso
-- [[Mémo typo]] et [[Japonais]] : des cartes de révision (`#flashcards`), à réviser dans **Révisions**
 
-Et dans la barre latérale : **Tickets** (les demandes des clients, en liste ou en kanban), **Tâches** (la liste de tâches du studio), **Révisions** (les cartes à revoir), **Lectures** (la veille à lire), **Graphe** (les liens entre toutes ces notes) et, sous les pages, les **Tags** en arbre.
+Et dans la barre latérale : **Tickets** (les demandes des clients, en liste ou en kanban), **Tâches** (la liste de tâches du studio), **Lectures** (la veille à lire), **Graphe** (les liens entre toutes ces notes) et, sous les pages, les **Tags** en arbre.
 
 ## À essayer
 

@@ -997,20 +997,6 @@
   cursor: text;
 }
 
-/* A flashcard's review comment (`<!--SR:…-->`): its next date, small and grey. */
-.note .review-mark,
-.note .raw-block .html-block.review-mark {
-  display: inline-block;
-  padding: 0 6px;
-  border: none;
-  border-radius: 999px;
-  background: var(--code-bg);
-  color: var(--muted);
-  font: 11px var(--font-ui);
-  line-height: 18px;
-  white-space: nowrap;
-}
-
 .note .raw-block:hover .html-block:not(.source) {
   box-shadow: 0 0 0 1px var(--border);
   border-radius: 4px;

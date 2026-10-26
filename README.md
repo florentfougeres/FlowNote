@@ -114,9 +114,6 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 **Kanban**
 - Les tableaux du plugin Kanban d'Obsidian (`kanban-plugin: board`) : listes et cartes glissées, cochées, modifiées en place, écrits comme le plugin
 
-**Révisions**
-- Les cartes de révision du plugin Spaced Repetition (`Question::Réponse`, `:::` dans les deux sens, `?` sur plusieurs lignes, notes `#flashcards`), revues par paquet avec son algorithme ; la date de la prochaine révision est écrite dans la note
-
 **Mind maps**
 - Des cartes mentales éditées à la souris et au clavier ([Mind Elixir](https://mind-elixir.com)) : Tab pour un enfant, Entrée pour un frère, glisser pour réorganiser, export PNG
 - Stockées dans une note `Nom.mindmap.md`, avec un plan lisible pour Obsidian

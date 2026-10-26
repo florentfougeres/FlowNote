@@ -171,7 +171,7 @@ interface Props {
   tree: VaultEntry[];
   selected?: string;
   /** What the active tab shows when it is not a page. */
-  view: "home" | "tickets" | "todo" | "review" | "graph" | "reading" | "settings" | "docs" | null;
+  view: "home" | "tickets" | "todo" | "graph" | "reading" | "settings" | "docs" | null;
   /** Folder of the tickets (a setting): numbered by the app, so it never moves nor receives drops. */
   ticketsFolder: string;
   /** Paths left out of the tree: the tickets folder and the reading list have their own views. */
@@ -216,7 +216,6 @@ interface Props {
   onTickets: (newTab: boolean) => void;
   onGraph: (newTab: boolean) => void;
   onTodo: (newTab: boolean) => void;
-  onReview: (newTab: boolean) => void;
   onReading: (newTab: boolean) => void;
   onDocs: (newTab: boolean) => void;
   onGit: () => void;
@@ -475,7 +474,6 @@ export const Sidebar = memo(function Sidebar(props: Props) {
         <NavRow icon="searchText" label="Rechercher dans les notes" shortcut="⌘⇧F" onClick={props.onVaultSearch} />
         <NavRow icon="ticket" label="Tickets" active={view === "tickets"} onClick={(event) => props.onTickets(event.metaKey || event.ctrlKey)} />
         <NavRow icon="checkbox" label="Tâches" active={view === "todo"} onClick={(event) => props.onTodo(event.metaKey || event.ctrlKey)} />
-        <NavRow icon="cards" label="Révisions" active={view === "review"} onClick={(event) => props.onReview(event.metaKey || event.ctrlKey)} />
         <NavRow icon="bookmark" label="Lectures" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
         <NavRow icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />
         <NavRow icon="book" label="Documentation" active={view === "docs"} onClick={(event) => props.onDocs(event.metaKey || event.ctrlKey)} />

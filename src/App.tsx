@@ -38,7 +38,6 @@ import { Icon, type IconName } from "./Icon";
 import { GraphPage } from "./graph/GraphPage";
 import { ReadingView } from "./reading/ReadingView";
 import { TodoView } from "./todo/TodoView";
-import { ReviewView } from "./review/ReviewView";
 import { AddLinkDialog } from "./reading/AddLinkDialog";
 import { addLink, newReadingList, parseReadingList, readingTagsOf } from "./reading/readingList";
 import { noteIcon, pageTitle } from "./vault/icon";
@@ -113,8 +112,6 @@ const READING_VIEW = "flownote:reading";
 /** Pseudo-path of the to-do list view. */
 const TODO_VIEW = "flownote:todo";
 const TODO_PATH = "Todo.md";
-/** Pseudo-path of the flashcards review. */
-const REVIEW_VIEW = "flownote:review";
 /** Pseudo-path of the settings page. */
 const SETTINGS_VIEW = "flownote:settings";
 /** Pseudo-path of the documentation (a read-only note shipped with the app). */
@@ -125,7 +122,6 @@ const VIEWS: Record<string, { title: string; icon: IconName }> = {
   [GRAPH_VIEW]: { title: "Graphe", icon: "graph" },
   [READING_VIEW]: { title: "Lectures", icon: "bookmark" },
   [TODO_VIEW]: { title: "Tâches", icon: "checkbox" },
-  [REVIEW_VIEW]: { title: "Révisions", icon: "cards" },
   [SETTINGS_VIEW]: { title: "Réglages", icon: "sliders" },
   [DOCS_VIEW]: { title: "Documentation", icon: "book" },
 };
@@ -1250,7 +1246,6 @@ export function App() {
       command("tickets", "Ouvrir les tickets", "Vues", () => openView(TICKETS_VIEW, false), "ticket"),
       command("readingList", "Ouvrir les lectures", "Vues", () => openView(READING_VIEW, false), "bookmark"),
       command("todoList", "Ouvrir les tâches", "Vues", () => openView(TODO_VIEW, false), "checkbox"),
-      command("review", "Réviser les cartes", "Vues", () => openView(REVIEW_VIEW, false), "cards"),
       command("graph", "Ouvrir le graphe", "Vues", () => openView(GRAPH_VIEW, false), "graph"),
       command("docs", "Ouvrir la documentation", "Vues", () => openView(DOCS_VIEW, false), "book"),
       command("settings", "Ouvrir les réglages", "Vues", () => select(SETTINGS_VIEW, "push"), "sliders", "settings"),
@@ -1387,7 +1382,6 @@ export function App() {
     onTickets: (newTabRequested: boolean) => void openView(TICKETS_VIEW, newTabRequested),
     onGraph: (newTabRequested: boolean) => void openView(GRAPH_VIEW, newTabRequested),
     onTodo: (newTabRequested: boolean) => void openView(TODO_VIEW, newTabRequested),
-    onReview: (newTabRequested: boolean) => void openView(REVIEW_VIEW, newTabRequested),
     onReading: (newTabRequested: boolean) => void openView(READING_VIEW, newTabRequested),
     onDocs: (newTabRequested: boolean) => void openView(DOCS_VIEW, newTabRequested),
     onGit: () => toggleGit(),
@@ -1437,7 +1431,7 @@ export function App() {
       ticketsFolder={settings.ticketsFolder}
       hidden={sidebarHidden}
       selected={note?.path}
-      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === TODO_VIEW ? "todo" : activePath === REVIEW_VIEW ? "review" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
+      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === TODO_VIEW ? "todo" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
       liveIcon={sidebarLiveIcon}
       showTitles={settings.showTitles}
       gitChanges={vault.git ? gitChanges : null}
@@ -1733,8 +1727,6 @@ export function App() {
               />
             ) : activePath === TODO_VIEW ? (
               <TodoView key={activeTab} vault={vault} path={TODO_PATH} exists={files.includes(TODO_PATH)} onCreated={() => void refresh(vault)} />
-            ) : activePath === REVIEW_VIEW ? (
-              <ReviewView key={activeTab} vault={vault} files={files} bridge={bridge} onOpenNote={(path, newTabRequested) => void select(path, "push", newTabRequested)} />
             ) : activePath === READING_VIEW ? (
               <ReadingView
                 key={activeTab}

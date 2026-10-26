@@ -34,7 +34,7 @@ L'**Accueil** rassemble les raccourcis de création, les pages récentes, les t�
 ### La barre latérale
 
 - **Le vault** en haut : son menu permet de passer en un clic à un vault ouvert récemment, d'en ouvrir un autre ou d'ouvrir les réglages. Le bouton à droite crée une page (`⌘N`).
-- **Accueil**, **Rechercher** (`⌘P`), **Rechercher dans les notes** (`⌘⇧F`), **Tickets**, **Tâches**, **Révisions**, **Lectures**, **Graphe** et **Documentation** (cette page). Quand une page est ouverte, Accueil, Tickets, Tâches, Révisions, Lectures et Graphe s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
+- **Accueil**, **Rechercher** (`⌘P`), **Rechercher dans les notes** (`⌘⇧F`), **Tickets**, **Tâches**, **Lectures**, **Graphe** et **Documentation** (cette page). Quand une page est ouverte, Accueil, Tickets, Tâches, Lectures et Graphe s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
 - **Favoris** : les fichiers mis en favoris dans Obsidian.
 - **Pages** : l'arbre du vault. Une note et le dossier du même nom (`Projets.md` + `Projets/`) forment une page avec ses sous-pages. Le dossier des tickets, la note des lectures et celle des tâches n'y figurent pas : ils ont leur propre vue.
   - Menu « … » ou clic droit : ouvrir dans un nouvel onglet, ouvrir à droite, sous-page, copier le lien, dupliquer, afficher dans le Finder, renommer, supprimer.
@@ -598,29 +598,6 @@ Tout est écrit dans `Todo.md`, à la racine du vault, caché de la barre latér
 Les liens entre les notes : les couleurs distinguent les types de page, les points clairs les notes qui n'existent pas encore. Zoom et déplacement à la souris, filtres en haut à droite.
 
 ![[graphe.webp]]
-
-### Révisions
-
-Des cartes de révision (répétition espacée), au format du plugin **Spaced Repetition** d'Obsidian. Une note qui porte le tag `#flashcards` en contient ; `#flashcards/anglais` les range dans le paquet « anglais ».
-
-```markdown
----
-tags: [flashcards/typographie]
----
-Longueur de ligne idéale::45 à 90 caractères
-Bonjour:::こんにちは
-
-Quelle espace avant ; ! ? en français ?
-?
-Une espace fine insécable.
-```
-
-- `Question::Réponse` sur une ligne ; `:::` crée deux cartes, une dans chaque sens.
-- Sur plusieurs lignes : la question, une ligne `?` (`??` dans les deux sens), puis la réponse, jusqu'à une ligne vide.
-
-**Révisions** dans la barre latérale liste les paquets, avec les cartes à revoir aujourd'hui, les nouvelles et le total. Un paquet (ou « Tout réviser ») lance la révision : la question, puis la réponse (`espace`), puis **Difficile**, **Correct** ou **Facile** (`1`, `2`, `3`), chacun avec le délai avant la prochaine révision. Le calcul est celui du plugin : « Correct » multiplie l'intervalle par la facilité de la carte (2,5 au départ), « Facile » l'augmente, « Difficile » la baisse et réduit l'intervalle.
-
-La prochaine date est écrite après la carte, comme le fait le plugin : `<!--SR:!2026-10-30,3,250-->` (date, intervalle en jours, facilité), à la fin de la ligne ou sur la ligne qui suit une carte de plusieurs lignes. Seul ce commentaire change dans la note ; FlowNote l'affiche en petite pastille (« ↻ 30/10 »). Obsidian, avec le plugin, reprend les révisions là où elles en sont.
 
 ### Lectures
 
