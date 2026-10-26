@@ -889,7 +889,12 @@ body:has(.db-board.dragging) {
   color: var(--muted);
 }
 
+/* A value on a card stays inside it: a long address is cut (.db-url), long words break. */
 .db-card-prop {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   font-size: 12.5px;
   color: var(--muted);
 }

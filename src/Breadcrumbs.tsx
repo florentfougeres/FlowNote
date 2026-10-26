@@ -6,7 +6,8 @@ import { PageIcon } from "./Sidebar";
 
 /**
  * Location of the open page, navigable: a folder opens its folder note
- * ("Projets.md" next to "Projets/", or "Projets/Projets.md") when there is one,
+ * ("Projets.md" next to "Projets/", or "Projets/Projets.md") or the base whose
+ * rows it holds ("Clients.base" next to "Clients/") when there is one,
  * otherwise lists the pages it contains.
  */
 export function Breadcrumbs({
@@ -46,7 +47,7 @@ export function Breadcrumbs({
 
   const openFolder = (folder: string, element: HTMLElement) => {
     const name = folder.split("/").pop()!;
-    const folderNote = [`${folder}.md`, `${folder}/${name}.md`].find((candidate) => files.includes(candidate));
+    const folderNote = [`${folder}.md`, `${folder}/${name}.md`, `${folder}.base`].find((candidate) => files.includes(candidate));
     if (folderNote && folderNote !== path) return onOpen(folderNote);
     const box = ref.current!.getBoundingClientRect();
     setMenu({ folder, left: element.getBoundingClientRect().left - box.left });

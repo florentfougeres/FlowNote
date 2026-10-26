@@ -70,6 +70,7 @@ export const SplitPane = memo(function SplitPane({
   isRow,
   onOpen,
   onRenameRow,
+  onDeleteRow,
   onSwap,
   onSeparate,
   onClose,
@@ -103,6 +104,7 @@ export const SplitPane = memo(function SplitPane({
   isRow: boolean;
   onOpen: (path: string, newTab: boolean) => void;
   onRenameRow: (path: string, name: string) => Promise<boolean>;
+  onDeleteRow: (path: string) => Promise<void>;
   /** Shows this page on the left (and the left one here). */
   onSwap: () => void;
   /** Moves this page to a tab of its own. */
@@ -326,6 +328,7 @@ export const SplitPane = memo(function SplitPane({
         onSource={onMarkdown}
         onOpen={onOpen}
         onRenameRow={onRenameRow}
+        onDeleteRow={onDeleteRow}
         loadImage={bridge.loadImage}
         onChanged={onSaved}
       />

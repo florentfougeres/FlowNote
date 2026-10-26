@@ -25,6 +25,7 @@ views:
       - note.statut
       - note.ville
       - note.contact
+      - note.site
       - note.montant
       - note.rdv
     groupBy:

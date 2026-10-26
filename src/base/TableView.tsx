@@ -8,6 +8,7 @@ import type { ColumnInfo } from "./columns";
 import { ValueView } from "./columns";
 import { FILE_PROPERTIES, SUMMARIES, summarize, type BaseRow } from "./rows";
 import { Cell, OptionPill, TYPE_ICONS } from "./cells";
+import { PopoverMenu, type MenuItem } from "../Sidebar";
 
 export type { ColumnInfo } from "./columns";
 
@@ -16,6 +17,8 @@ export interface TableActions {
   onOptions: (property: string, options: SelectOption[]) => void;
   onOpen: (path: string, newTab: boolean) => void;
   onRenameRow: (row: BaseRow, name: string) => void;
+  /** Deletes the row's note (after confirmation). */
+  onDeleteRow: (row: BaseRow) => void;
   /** The name of a new row was typed (or left as is). */
   onEdited: () => void;
   onNewRow: (values?: Record<string, PropertyValue>) => void;
@@ -253,7 +256,7 @@ function AddColumnMenu({ hidden, labels, actions, onClose }: { hidden: string[];
 }
 
 /** The name of a row: opens it; the pencil (or a new row) renames the note. */
-function NameCell({ row, editable, autoEdit, actions }: { row: BaseRow; editable: boolean; autoEdit: boolean; actions: TableActions }) {
+function NameCell({ row, editable, autoEdit, renaming = false, actions }: { row: BaseRow; editable: boolean; autoEdit: boolean; renaming?: boolean; actions: TableActions }) {
   const [editing, setEditing] = useState(autoEdit);
   const [text, setText] = useState(autoEdit ? "" : row.name);
   useEffect(() => {
@@ -262,6 +265,13 @@ function NameCell({ row, editable, autoEdit, actions }: { row: BaseRow; editable
       setText("");
     }
   }, [autoEdit]);
+  // "Renommer" in the row's menu: the name, ready to be changed.
+  useEffect(() => {
+    if (renaming) {
+      setEditing(true);
+      setText(row.name);
+    }
+  }, [renaming, row.name]);
   const commit = (input: HTMLInputElement | null) => {
     setEditing(false);
     const next = text.trim();
@@ -297,7 +307,7 @@ function NameCell({ row, editable, autoEdit, actions }: { row: BaseRow; editable
   }
   return (
     <div className="db-cell db-name">
-      <button className="db-name-link" tabIndex={-1} onClick={(e) => actions.onOpen(row.path, e.metaKey || e.ctrlKey)} title="Ouvrir la page">
+      <button className="db-name-link" tabIndex={-1} onClick={() => actions.onOpen(row.path, true)} title="Ouvrir dans un nouvel onglet">
         <Icon name="doc" size={14} />
         <span>{row.name}</span>
       </button>
@@ -421,6 +431,9 @@ export function TableView({
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [colDrag, setColDrag] = useState<{ id: string; target: number } | null>(null);
   const [rowDrag, setRowDrag] = useState<{ path: string; target: number } | null>(null);
+  /** The menu of a row (right click, or a click on its handle), and the row being renamed from it. */
+  const [rowMenu, setRowMenu] = useState<{ path: string; anchor: DOMRect } | null>(null);
+  const [renaming, setRenaming] = useState<string | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   useEffect(() => setSizing(sizes), [sizes]);
   const actionsRef = useRef(actions);
@@ -495,13 +508,21 @@ export function TableView({
   const startRowDrag = (e: React.PointerEvent, path: string) => {
     if (e.button !== 0) return;
     e.preventDefault();
+    const handle = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const startY = e.clientY;
+    let moved = false;
     const trs = () => [...(tableRef.current?.querySelectorAll<HTMLElement>("tbody tr[data-path]") ?? [])];
     const targetAt = (y: number) => trs().filter((tr) => y > tr.getBoundingClientRect().top + tr.offsetHeight / 2).length;
-    const move = (ev: PointerEvent) => setRowDrag({ path, target: targetAt(ev.clientY) });
+    const move = (ev: PointerEvent) => {
+      moved ||= Math.abs(ev.clientY - startY) > 3;
+      if (moved) setRowDrag({ path, target: targetAt(ev.clientY) });
+    };
     const up = (ev: PointerEvent) => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       setRowDrag(null);
+      // A click on the handle, without a drag: the row's menu.
+      if (!moved) return setRowMenu({ path, anchor: handle });
       const paths = trs().map((tr) => tr.dataset.path!);
       const at = targetAt(ev.clientY);
       const from = paths.indexOf(path);
@@ -577,7 +598,15 @@ export function TableView({
                   const r = rowIndex++;
                   const dropBefore = rowDrag && rowDrag.target === visibleRows.indexOf(row) && rowDrag.path !== row.path;
                   return (
-                    <tr key={row.path} data-path={row.path} className={[rowDrag?.path === row.path ? "dragging" : "", dropBefore ? "drop-before" : ""].join(" ").trim() || undefined}>
+                    <tr
+                      key={row.path}
+                      data-path={row.path}
+                      className={[rowDrag?.path === row.path ? "dragging" : "", dropBefore ? "drop-before" : ""].join(" ").trim() || undefined}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setRowMenu({ path: row.path, anchor: new DOMRect(e.clientX, e.clientY, 0, 0) });
+                      }}
+                    >
                       {columns.map((column, c) => (
                         <td
                           key={column.property}
@@ -592,11 +621,11 @@ export function TableView({
                           {column.kind === "name" ? (
                             <>
                               {editable && !group && (
-                                <button className="db-row-handle" tabIndex={-1} aria-label="Déplacer la ligne" title={sorted ? "Glisser pour ordonner à la main (retire le tri)" : "Glisser pour déplacer"} onPointerDown={(e) => startRowDrag(e, row.path)}>
+                                <button className="db-row-handle" tabIndex={-1} aria-label="Déplacer la ligne, ou son menu" title={sorted ? "Glisser pour ordonner à la main (retire le tri) · Cliquer pour le menu" : "Glisser pour déplacer · Cliquer pour le menu"} onPointerDown={(e) => startRowDrag(e, row.path)}>
                                   <Icon name="grip" size={12} />
                                 </button>
                               )}
-                              <NameCell row={row} editable={editable} autoEdit={editRow === row.path} actions={actions} />
+                              <NameCell row={row} editable={editable} autoEdit={editRow === row.path} renaming={renaming === row.path} actions={{ ...actions, onEdited: () => (setRenaming(null), actions.onEdited()), onRenameRow: (r, name) => (setRenaming(null), actions.onRenameRow(r, name)) }} />
                             </>
                           ) : column.kind === "note" ? (
                             <Cell
@@ -643,8 +672,25 @@ export function TableView({
           <Icon name="plus" size={14} /> Nouveau
         </button>
       )}
+      {rowMenu && <RowMenu row={rows.find((r) => r.path === rowMenu.path)} anchor={rowMenu.anchor} editable={editable} actions={actions} onRename={setRenaming} onClose={() => setRowMenu(null)} />}
     </div>
   );
+}
+
+/** A row's menu: open it, rename or delete its note. */
+function RowMenu({ row, anchor, editable, actions, onRename, onClose }: { row: BaseRow | undefined; anchor: DOMRect; editable: boolean; actions: TableActions; onRename: (path: string) => void; onClose: () => void }) {
+  if (!row) return null;
+  const items: MenuItem[] = [
+    { label: "Ouvrir dans un nouvel onglet", icon: "open", run: () => actions.onOpen(row.path, true) },
+    { label: "Ouvrir ici", icon: "doc", run: () => actions.onOpen(row.path, false) },
+    ...(editable
+      ? [
+          { label: "Renommer", icon: "pencil", run: () => onRename(row.path) } satisfies MenuItem,
+          { label: "Supprimer", icon: "trash", danger: true, run: () => actions.onDeleteRow(row) } satisfies MenuItem,
+        ]
+      : []),
+  ];
+  return createPortal(<PopoverMenu anchor={anchor} items={items} onClose={onClose} />, document.body);
 }
 
 function GroupRows({ children }: { children: React.ReactNode }) {

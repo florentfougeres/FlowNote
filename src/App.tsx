@@ -973,6 +973,7 @@ export function App() {
         editable: note !== null && !hasConflictMarkers(note.disk),
         onOpen: (path, newTabRequested) => void select(path, "push", newTabRequested),
         onRenameRow: renamePath,
+        onDeleteRow: removePage,
         onChanged: () => {
           void refresh(vault);
           void refreshGit();
@@ -1339,6 +1340,7 @@ export function App() {
   const splitHandlers = useHandlers({
     onOpen: (path: string, newTabRequested: boolean) => (newTabRequested ? void newTab(path) : setTabSplit(activeTab, path)),
     onRenameRow: renamePath,
+    onDeleteRow: removePage,
     onSwap: () => void swapSplit(),
     onSeparate: () => void separateTab(activeTab),
     onClose: () => setTabSplit(activeTab, null),
@@ -1614,6 +1616,7 @@ export function App() {
                     onSource={onMarkdown}
                     onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
                     onRenameRow={renamePath}
+                    onDeleteRow={removePage}
                     loadImage={loadImage}
                     onChanged={() => {
                       void refresh(vault);

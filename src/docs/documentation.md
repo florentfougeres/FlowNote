@@ -392,6 +392,8 @@ Des bases de données au format des Bases d'Obsidian (`Voyages.base`). Chaque li
 - **Filtres** : la colonne, la condition et la valeur se choisissent dans des menus ; la valeur propose celles de la colonne (options d'une sélection, valeurs déjà saisies). Un filtre sans valeur ne masque encore rien.
 - **Colonne Nom** : chaque ligne est une note, cette colonne est son nom de fichier. Elle ne se supprime pas, mais se renomme dans son menu (le nom est gardé dans la base, `displayName`, comme dans Obsidian).
 - **Renommer la base** : son nom, en haut, se modifie en place (`↵` valide, `esc` annule). Le dossier de ses lignes est renommé avec elle, et les liens suivent.
+- **Ouvrir une ligne** : un clic sur son nom (ou sur une carte, une entrée du calendrier) l'ouvre dans un nouvel onglet, la base reste ouverte. Depuis la note, le fil d'Ariane ramène à la base (le dossier des lignes y mène).
+- **Menu d'une ligne** : clic droit sur la ligne, ou clic sur sa poignée `⋮⋮` (qui sert aussi à la glisser) : ouvrir dans un nouvel onglet ou ici, renommer ou supprimer sa note (après confirmation, vers la corbeille dans l'app de bureau).
 - « Nouveau » crée une note dans le dossier de la base.
 - Une base s'intègre dans une note avec `![[Voyages.base]]`.
 

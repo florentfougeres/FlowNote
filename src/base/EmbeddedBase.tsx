@@ -9,6 +9,7 @@ export interface EmbedProps {
   editable: boolean;
   onOpen: (path: string, newTab: boolean) => void;
   onRenameRow: (path: string, name: string) => Promise<boolean>;
+  onDeleteRow: (path: string) => Promise<void>;
   onChanged: () => void;
   loadImage: (path: string) => Promise<string>;
 }

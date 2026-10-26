@@ -264,6 +264,8 @@ export interface BaseViewProps {
   onSource: (text: string) => void;
   onOpen: (path: string, newTab: boolean) => void;
   onRenameRow: (path: string, name: string) => Promise<boolean>;
+  /** Deletes a row's note, after confirmation. */
+  onDeleteRow: (path: string) => Promise<void>;
   /** Notes were created or renamed: the app reads the vault again. */
   onChanged: () => void;
   /** Blob URL of a vault image (gallery covers). */
@@ -278,7 +280,7 @@ export interface BaseViewProps {
  * text: its edits go through `onSource` like a note's. Cells are written to the
  * rows' notes.
  */
-export function BaseView({ vault, files, path, source, editable, onSource, onOpen, onRenameRow, onChanged, loadImage, embedded = false }: BaseViewProps) {
+export function BaseView({ vault, files, path, source, editable, onSource, onOpen, onRenameRow, onDeleteRow, onChanged, loadImage, embedded = false }: BaseViewProps) {
   const parsed = useMemo(() => parseBase(source), [source]);
   const { model } = parsed;
   const [rows, setRows] = useState<BaseRow[] | null>(null);
@@ -384,6 +386,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
       void onRenameRow(row.path, name).then((ok) => ok && void load());
     },
     onEdited: () => setEditRow(null),
+    onDeleteRow: (row) => void onDeleteRow(row.path).then(() => void load()),
     onNewRow: (values) => void newRow(values),
     onResize: (sizes) => editView({ columnSize: Object.fromEntries(Object.entries(sizes).filter(([k]) => order.includes(k))) }),
     onSort: (property, direction) => editView({ sort: [{ property, direction }] }),
@@ -474,6 +477,8 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
           : null;
   const cardColumns = columns.filter((c) => c.property !== NAME && c.property !== view.groupBy && c.property !== view.image);
 
+  /** A row (a card, an entry of the calendar) opens in a tab of its own: the base stays open. */
+  const openRow = (row: string) => onOpen(row, true);
   // `[[liens]]` written in cells open their note, resolved from the base's folder.
   const openLink = (target: string, newTab: boolean) => {
     const found = resolveLink(target, files, path);
@@ -587,7 +592,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
               if (view.groupBy && value !== null) void setCell(row, view.groupBy, value);
               if (paths) setRowOrder(paths);
             }}
-            onOpen={onOpen}
+            onOpen={openRow}
             onNewRow={(value) => void newRow(value !== undefined && view.groupBy ? { [view.groupBy]: valueFor(view.groupBy, value) } : {})}
           />
         ) : view.type === "table" ? (
@@ -606,7 +611,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
             actions={actions}
           />
         ) : view.type === "cards" ? (
-          <GalleryView rows={shown} shown={cardColumns} formulas={model.formulas} image={view.image} files={files} editable={editable} loadImage={loadImage} onOpen={onOpen} onNewRow={() => void newRow()} />
+          <GalleryView rows={shown} shown={cardColumns} formulas={model.formulas} image={view.image} files={files} editable={editable} loadImage={loadImage} onOpen={openRow} onNewRow={() => void newRow()} />
         ) : view.type === "calendar" ? (
           <CalendarView
             rows={shown}
@@ -615,7 +620,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
             editable={editable}
             onDate={(property) => editView({ dateProperty: property })}
             onMove={(row, value) => view.dateProperty && void setCell(row, view.dateProperty, value)}
-            onOpen={onOpen}
+            onOpen={openRow}
             onNewRow={(day) => view.dateProperty && void newRow({ [view.dateProperty]: day })}
           />
         ) : (
