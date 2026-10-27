@@ -7,6 +7,10 @@ import type { Tab } from "./TabBar";
  * The list is remembered per vault between launches (in this app only).
  */
 
+let tabCounter = 0;
+/** A tab id unique for this session. */
+export const newTabId = () => `tab-${Date.now().toString(36)}-${(tabCounter++).toString(36)}`;
+
 /** The page on the right of a tab, or null. */
 export const splitOf = (tabs: Tab[], id: string): string | null => tabs.find((t) => t.id === id)?.split ?? null;
 

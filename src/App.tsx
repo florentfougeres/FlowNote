@@ -75,8 +75,9 @@ import { useSystemDark } from "./hooks/useSystemDark";
 import { hasConflictMarkers } from "./vault/conflicts";
 import { currentTauriVault, forgetTauriVault, isTauri, lastTauriVault, openTauriVault, pickTauriVault, recentTauriVaults } from "./vault/tauriVault";
 import { Welcome } from "./Welcome";
-import { TabBar, type Tab } from "./TabBar";
-import { joinTab as joinTabs, nextPageTab, readSavedTabs, restoredTabs, saveTabs, separateTab as separateTabs, splitOf as splitIn, swapReading, tabsToSave, withReading, withSplit } from "./tabs";
+import { TabBar } from "./TabBar";
+import { joinTab as joinTabs, newTabId, nextPageTab, separateTab as separateTabs, swapReading, withReading } from "./tabs";
+import { useTabs } from "./hooks/useTabs";
 import { Dashboard } from "./Dashboard";
 import { TaskView } from "./tasks/TaskView";
 import { readTaskConfig, taskViewTitle, type TaskConfig } from "./tasks/config";
@@ -122,9 +123,6 @@ const VIEWS: Record<string, { title: string; icon: IconName }> = {
   [DOCS_VIEW]: { title: "Documentation", icon: "book" },
 };
 const isView = (path: string | null) => path !== null && path in VIEWS;
-
-let tabCounter = 0;
-const newTabId = () => `tab-${Date.now().toString(36)}-${(tabCounter++).toString(36)}`;
 
 interface Dialog {
   title: string;
@@ -289,33 +287,43 @@ export function App() {
     document.documentElement.classList.toggle("native-vibrancy", isTauri() && navigator.userAgent.includes("Mac"));
   }, []);
 
-  // Visited pages of the active tab, for back/forward navigation.
-  const back = useRef<string[]>([]);
-  const forward = useRef<string[]>([]);
-
-  // ---- Tabs: one page (or the dashboard) each; only the active tab has an editor. ----
-  const [tabs, setTabs] = useState<Tab[]>(() => [{ id: newTabId(), path: null }]);
-  const tabsRef = useRef(tabs);
-  tabsRef.current = tabs;
-  const [activeTab, setActiveTab] = useState(() => tabs[0].id);
-  const activeRef = useRef(activeTab);
-  /** Back/forward history and scroll position of the inactive tabs. */
-  const tabState = useRef(new Map<string, { back: string[]; forward: string[]; scroll: number }>());
-  const contentRef = useRef<HTMLElement>(null);
-  /** Page on the right of the split view: part of the active tab (one tab for the pair). */
-  const splitOf = (id: string) => splitIn(tabsRef.current, id);
   /** Writes the right side's pending changes. */
   const splitSaver = useRef<(() => Promise<void>) | null>(null);
+  // ---- Tabs: one page (or the dashboard) each; only the active tab has an editor. ----
+  const {
+    tabs,
+    activeTab,
+    tabsRef,
+    activeRef,
+    contentRef,
+    canBack,
+    canForward,
+    splitOf,
+    replaceTabs,
+    setTabSplit,
+    restore: restoreTabs,
+    select,
+    switchTab,
+    newTab,
+    closeTab,
+    forgetTab,
+    reorderTab,
+    goBack,
+    goForward,
+    cycleTab,
+    openView,
+    followMoves: tabsFollowMoves,
+    forgetPages,
+  } = useTabs({
+    vault,
+    show: (path) => showPage(path),
+    saveNow: () => saveNow(),
+    splitSaver,
+    openPath: () => noteRef.current?.path ?? null,
+    isView,
+  });
   const [tabMenu, setTabMenu] = useState<{ id: string; anchor: DOMRect } | null>(null);
   const [splitWidth, startSplitResize] = useSplitWidth();
-  const setTabPath = (id: string, path: string | null) => setTabs((list) => list.map((t) => (t.id === id ? { ...t, path } : t)));
-  /** Sets (or, with null, closes) the page on the right of a tab. */
-  const setTabSplit = (id: string, split: string | null) => replaceTabs(withSplit(tabsRef.current, id, split));
-  /** Replaces the tab list now (the ref too, for the callbacks that follow). */
-  const replaceTabs = (next: Tab[]) => {
-    tabsRef.current = next;
-    setTabs(next);
-  };
 
   // Latest values for async callbacks.
   const noteRef = useRef(note);
@@ -367,16 +375,7 @@ export function App() {
       setVault(opened);
       setNote(null);
       // A vault opens on the tabs it had when it was left, or on the dashboard (FLOWNOTE_OPEN opens a page, for debugging).
-      const exists = (path: string) => isView(path) || filesRef.current.includes(path);
-      const restored = restoredTabs(readSavedTabs(opened.name), exists, newTabId) ?? { tabs: [{ id: newTabId(), path: null }], active: "" };
-      const active = restored.tabs.find((t) => t.id === restored.active) ?? restored.tabs[0];
-      tabState.current.clear();
-      back.current = [];
-      forward.current = [];
-      activeRef.current = active.id;
-      tabsRef.current = restored.tabs;
-      setTabs(restored.tabs);
-      setActiveTab(active.id);
+      const active = restoreTabs(opened.name, (path) => isView(path) || filesRef.current.includes(path));
       const forced = isTauri() ? await invoke<string | null>("startup_note").catch(() => null) : null;
       if (forced ?? active.path) setPendingOpen(forced ?? active.path);
     } catch (error) {
@@ -421,7 +420,7 @@ export function App() {
         .then((updated) => updated.length > 0 && notify(`Liens vers « ${renamed.to} » mis à jour dans ${updated.length} note${updated.length > 1 ? "s" : ""}`))
         .catch((error: unknown) => setStatus(`Liens vers « ${renamed.to} » : ${String(error)}`));
     },
-    [vault, notify],
+    [vault, notify, tabsRef, activeRef],
   );
 
   /** Writes the open note if it changed. Saves are serialized. */
@@ -455,173 +454,32 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [note?.markdown, dirty, saveNow, settings.autosave]);
 
-  // The tabs are remembered for the next launch, per vault.
-  useEffect(() => {
-    if (vault) saveTabs(vault.name, tabsToSave(tabs, activeTab));
-  }, [vault, tabs, activeTab]);
-
-  /** Shows a page (or the dashboard) in the active tab, without touching its history. */
-  const load = useCallback(
-    async (path: string | null): Promise<boolean> => {
-      if (!vault) return false;
-      if (path === null || isView(path)) {
-        setNote(null);
-        setTabPath(activeRef.current, path);
-        setStatus("");
-        return true;
-      }
-      let disk: string;
-      try {
-        disk = await vault.read(path);
-      } catch (error) {
-        setStatus(`Impossible d'ouvrir ${path} : ${String(error)}`);
-        return false;
-      }
-      setNote({ path, loaded: disk, disk, markdown: disk });
-      setTabPath(activeRef.current, path);
+  /** Shows a page (or a view, or the dashboard) in the editor area; the tabs say where. */
+  const showPage = async (path: string | null): Promise<boolean> => {
+    if (!vault) return false;
+    if (path === null || isView(path)) {
+      setNote(null);
       setStatus("");
-      recordRecentPage(vault.name, path);
       return true;
-    },
-    [vault],
-  );
-
-  /** Makes another tab active: its page is read again, its scroll position restored. */
-  const activate = useCallback(
-    async (id: string) => {
-      const target = tabsRef.current.find((t) => t.id === id);
-      if (!target) return;
-      tabState.current.set(activeRef.current, { back: back.current, forward: forward.current, scroll: contentRef.current?.scrollTop ?? 0 });
-      const saved = tabState.current.get(id) ?? { back: [], forward: [], scroll: 0 };
-      back.current = saved.back;
-      forward.current = saved.forward;
-      activeRef.current = id;
-      setActiveTab(id);
-      await load(target.path);
-      requestAnimationFrame(() => requestAnimationFrame(() => contentRef.current && (contentRef.current.scrollTop = saved.scroll)));
-    },
-    [load],
-  );
-
-  const switchTab = useCallback(
-    async (id: string) => {
-      if (id === activeRef.current) return;
-      try {
-        await saveNow();
-      } catch {
-        return; // keep the note open so the conflict can be resolved
-      }
-      await activate(id);
-    },
-    [saveNow, activate],
-  );
-
-  /** A new tab after the active one, with a page or the dashboard. */
-  const newTab = useCallback(
-    async (path: string | null = null) => {
-      try {
-        await saveNow();
-      } catch {
-        return;
-      }
-      const tab = { id: newTabId(), path };
-      setTabs((list) => {
-        const index = list.findIndex((t) => t.id === activeRef.current);
-        return [...list.slice(0, index + 1), tab, ...list.slice(index + 1)];
-      });
-      tabsRef.current = [...tabsRef.current, tab];
-      await activate(tab.id);
-    },
-    [saveNow, activate],
-  );
-
-  const closeTab = useCallback(
-    async (id: string) => {
-      const list = tabsRef.current;
-      const index = list.findIndex((t) => t.id === id);
-      if (index < 0) return;
-      const closingActive = id === activeRef.current;
-      if (closingActive) {
-        try {
-          await saveNow();
-          await splitSaver.current?.();
-        } catch {
-          return;
-        }
-      }
-      tabState.current.delete(id);
-      let remaining = list.filter((t) => t.id !== id);
-      if (remaining.length === 0) remaining = [{ id: newTabId(), path: null }];
-      tabsRef.current = remaining;
-      setTabs(remaining);
-      if (closingActive) {
-        // The tab being closed keeps no state: the next one starts from its own.
-        activeRef.current = id;
-        await activate(remaining[Math.min(index, remaining.length - 1)].id);
-      }
-    },
-    [saveNow, activate],
-  );
-
-  const reorderTab = (id: string, before: string | null) =>
-    setTabs((list) => {
-      const moved = list.find((t) => t.id === id);
-      if (!moved) return list;
-      const rest = list.filter((t) => t.id !== id);
-      const index = before === null ? rest.length : rest.findIndex((t) => t.id === before);
-      return [...rest.slice(0, index), moved, ...rest.slice(index)];
-    });
-
-  /** Opens a page: in the active tab (with history), in a new tab, or in the tab already showing it. */
-  const select = useCallback(
-    async (path: string, navigation: "push" | "history" = "push", newTabRequested = false) => {
-      if (!vault) return;
-      if (newTabRequested) return newTab(path);
-      const elsewhere = tabsRef.current.find((t) => t.path === path && t.id !== activeRef.current);
-      if (elsewhere && navigation === "push") return switchTab(elsewhere.id);
-      try {
-        await saveNow();
-      } catch {
-        return; // keep the note open so the conflict can be resolved
-      }
-      const previous = tabsRef.current.find((t) => t.id === activeRef.current)?.path ?? noteRef.current?.path;
-      if (!(await load(path))) return;
-      // Another page opens at its top, not where the list it was opened from was scrolled.
-      if (previous !== path) requestAnimationFrame(() => contentRef.current && (contentRef.current.scrollTop = 0));
-      if (navigation === "push" && previous && previous !== path) {
-        back.current.push(previous);
-        forward.current = [];
-      }
-    },
-    [vault, saveNow, load, newTab, switchTab],
-  );
+    }
+    let disk: string;
+    try {
+      disk = await vault.read(path);
+    } catch (error) {
+      setStatus(`Impossible d'ouvrir ${path} : ${String(error)}`);
+      return false;
+    }
+    setNote({ path, loaded: disk, disk, markdown: disk });
+    setStatus("");
+    recordRecentPage(vault.name, path);
+    return true;
+  };
 
   useEffect(() => {
     if (!pendingOpen || !vault) return;
     setPendingOpen(null);
     void select(pendingOpen, "history");
   }, [pendingOpen, vault, select]);
-
-  const goBack = useCallback(() => {
-    const path = back.current.pop();
-    if (!path) return;
-    if (noteRef.current) forward.current.push(noteRef.current.path);
-    void select(path, "history");
-  }, [select]);
-
-  const goForward = useCallback(() => {
-    const path = forward.current.pop();
-    if (!path) return;
-    if (noteRef.current) back.current.push(noteRef.current.path);
-    void select(path, "history");
-  }, [select]);
-
-  const cycleTab = (step: number) => {
-    const list = tabsRef.current;
-    const index = list.findIndex((t) => t.id === activeRef.current);
-    const next = list[(index + step + list.length) % list.length];
-    if (next) void switchTab(next.id);
-  };
 
   // Application shortcuts (editor shortcuts live in the editor extensions).
   const shortcuts = useRef<(event: KeyboardEvent) => void>(() => {});
@@ -753,10 +611,8 @@ export function App() {
   const followMoves = async (moved: (path: string) => string, updatedNotes: string[]) => {
     if (!vault) return;
     await refresh(vault);
-    back.current = back.current.map(moved);
-    forward.current = forward.current.map(moved);
+    tabsFollowMoves(moved);
     followWide(moved);
-    setTabs((list) => list.map((t) => ({ ...t, path: t.path && !isView(t.path) ? moved(t.path) : t.path, split: t.split ? moved(t.split) : t.split })));
     const current = noteRef.current;
     if (current && (moved(current.path) !== current.path || updatedNotes.includes(moved(current.path)))) {
       const openPath = moved(current.path);
@@ -776,9 +632,7 @@ export function App() {
     const files = await vault.files().catch(() => filesRef.current);
     await refresh(vault);
     const gone = (p: string | null) => p !== null && !isView(p) && removed(p) && !files.includes(p);
-    back.current = back.current.filter((p) => !gone(p));
-    forward.current = forward.current.filter((p) => !gone(p));
-    setTabs((list) => list.map((t) => ({ ...t, path: gone(t.path) ? null : t.path, split: gone(t.split ?? null) ? null : t.split })));
+    forgetPages(gone);
     if (noteRef.current && gone(noteRef.current.path)) {
       noteRef.current = null;
       setNote(null);
@@ -1096,33 +950,6 @@ export function App() {
       });
   };
 
-  /** Shows the dashboard in the active tab; Back returns to the page. */
-  const showHome = async () => {
-    try {
-      await saveNow();
-    } catch {
-      return;
-    }
-    const previous = tabsRef.current.find((t) => t.id === activeRef.current)?.path ?? null;
-    if ((await load(null)) && previous && !isView(previous)) {
-      back.current.push(previous);
-      forward.current = [];
-    }
-  };
-
-  /**
-   * Opens the dashboard or a view from the sidebar: in the tab already showing
-   * it, else in place when the active tab shows a view, else in a new tab (the
-   * open page stays where it is).
-   */
-  const openView = (path: string | null, newTabRequested: boolean) => {
-    const existing = tabsRef.current.find((t) => t.path === path);
-    if (existing && !newTabRequested) return switchTab(existing.id);
-    const current = tabsRef.current.find((t) => t.id === activeRef.current)?.path ?? null;
-    if (newTabRequested || (current !== null && !isView(current))) return newTab(path);
-    return path === null ? showHome() : select(path, "push");
-  };
-
   /** Shows a page on the right of the active tab (replacing the one there). */
   const openRight = (path: string) => {
     if (!isView(path)) setTabSplit(activeRef.current, path);
@@ -1136,7 +963,7 @@ export function App() {
   const joinTab = (id: string) => {
     const next = joinTabs(tabsRef.current, activeRef.current, id, newTabId(), (path) => !isView(path));
     if (!next) return;
-    tabState.current.delete(id);
+    forgetTab(id);
     replaceTabs(next);
   };
 
@@ -1512,8 +1339,8 @@ export function App() {
           toggleSidebar();
         }}
         onPeek={(shown) => (shown ? openPeek() : closePeekSoon())}
-        canBack={back.current.length > 0}
-        canForward={forward.current.length > 0}
+        canBack={canBack}
+        canForward={canForward}
         onBack={goBack}
         onForward={goForward}
       >
