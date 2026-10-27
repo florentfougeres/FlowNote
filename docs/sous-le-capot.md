@@ -12,7 +12,7 @@ flowchart LR
     UI["App, onglets, barre latérale<br/>src/App.tsx"]
     ED["Éditeur Tiptap / ProseMirror<br/>src/editor/"]
     MD["Moteur de fidélité Markdown<br/>src/markdown/ (remark)"]
-    PT["Types de page<br/>bases, dessins, mind maps,<br/>tickets, présentations…"]
+    PT["Types de page<br/>bases, dessins, mind maps,<br/>tâches, présentations…"]
     VA["Accès au vault<br/>src/vault/"]
   end
   subgraph Rust["Backend Rust : src-tauri/"]
@@ -158,7 +158,7 @@ Chaque type a son dossier et un format de fichier compatible avec Obsidian ou se
 | Mind map | `*.mindmap.md` | Mind Elixir | Plan lisible et JSON de la carte |
 | Canevas | `*.canvas` | React Flow | JSON Canvas, écrit comme Obsidian |
 | Dashboard | `*.dashboard.md` | grille CSS, pointer events | Sections `## Titre` = widgets, positions `[x, y, w, h]` dans `flownote-dashboard` (front matter), les widgets gênants poussés vers le bas (`settle`) |
-| Ticket | note avec `type: ticket` | Tiptap | Note et commentaires en callouts |
+| Tâche | note avec le tag `task` (format TaskNotes) | Tiptap | Note et commentaires en callouts |
 | Présentation | note avec `marp: true` | Marp | Diapos séparées par `---` |
 | Kanban | note avec `kanban-plugin: board` | pointer events | Format du plugin Kanban : `## Liste`, `- [ ] carte` |
 | Lectures | une note | | Titres = thèmes, tâches = liens |
@@ -170,7 +170,8 @@ Un fichier `X.base` au **format natif des Bases d'Obsidian** (YAML) décrit les 
 - Vues : tableau (TanStack Table), kanban, galerie, calendrier. FlowNote écrit le kanban en `type: kanban` (type natif d'Obsidian) et le calendrier, qu'Obsidian n'a pas, en `type: cards` avec `flownoteView: calendar`.
 - Ce que les Bases ne stockent pas (types de colonnes, couleurs des options) va sous une clé `flownote:`. Obsidian conserve les clés qu'il ne connaît pas.
 - Le YAML est modifié par l'API Document de `yaml`, pour ne rien perdre.
-- `formula.ts` est un petit interpréteur d'un sous-ensemble du langage de formules d'Obsidian (nombres, texte, dates, `if()`, méthodes courantes). Ce qu'il ne comprend pas s'affiche en erreur dans la cellule, et la formule reste écrite telle quelle.
+- `formula.ts` est un petit interpréteur d'un sous-ensemble du langage de formules d'Obsidian (nombres, texte, dates, `if()`, méthodes courantes, `map`/`filter`/`reduce` avec `value` et `acc`, `file.hasTag()`, `file.inFolder()`). Ce qu'il ne comprend pas s'affiche en erreur dans la cellule, et la formule reste écrite telle quelle. Il évalue aussi les filtres (`filterMatches` : expressions et groupes `and`/`or`/`not`) ; un filtre qu'il ne sait pas évaluer est ignoré plutôt que de vider la vue.
+- `serializeBase` ne réécrit que les nœuds YAML modifiés depuis la lecture : le reste du fichier (indentation, commentaires, guillemets) est gardé tel quel. Quand un changement ne peut pas être placé ainsi (clé ajoutée, liste allongée), tout le fichier est réécrit.
 
 ### Dessins (`src/drawing/`)
 
@@ -198,9 +199,11 @@ Une note `Nom.mindmap.md` éditée avec **Mind Elixir**. Le fichier contient un 
 
 Un fichier `Nom.canvas` au format **JSON Canvas** d'Obsidian, affiché avec **React Flow**. `format.ts` lit le fichier (les flèches sans côté prennent celui qui fait face à l'autre carte, comme Obsidian) et l'écrit comme Obsidian 1.14 (vérifié dans son code) : indentation par tabulations, un objet dont toutes les valeurs sont simples tient sur une ligne, clés dans l'ordre d'Obsidian (`id, x, y, width, height, color, type`, puis le contenu ; `fromEnd`, `toEnd`, `color`, `label` après les côtés d'une flèche), clés inconnues gardées en tête, clés du fichier à leur place. Les cartes de texte et de note sont des `NoteEditor` (lecture seule, ou édition au double-clic). Une carte de lien demande au backend le titre et l'image d'aperçu de la page (`fetch_page_preview` : `og:title`, `og:image`, rendue absolue), une fois par adresse. La mention « React Flow » reste affichée, comme son éditeur le demande hors abonnement Pro.
 
-### Tickets (`src/ticket/`)
+### Tâches (`src/tasks/`)
 
-Une note avec `type: ticket` dans ses propriétés, affichée comme une issue GitHub. Le fichier est coupé en deux : la tête (propriétés et description), éditée par l'éditeur de notes, et la section `## Commentaires`, lue comme un fil de callouts `> [!comment]` imbriqués. Chaque partie est réécrite telle quelle tant qu'elle ne change pas. Les tâches datées (`📅 2026-10-16`) alimentent les échéances.
+Une note au format du plugin **TaskNotes** d'Obsidian (MIT), affichée comme une issue. `config.ts` lit les réglages du plugin (`.obsidian/plugins/tasknotes/data.json`, commande `vault_tasknotes_config`, jamais écrit) : dossier, tag `task` ou propriété qui désigne une tâche, noms des propriétés, statuts (dont ceux marqués terminés), priorités, nom des fichiers ; sans le plugin, ses valeurs par défaut. `task.ts` lit une tâche et l'écrit comme TaskNotes : propriétés dans son ordre, `dateCreated` et `dateModified` en heure locale avec millisecondes et décalage, `completedDate` posé quand le statut devient terminé et retiré à la réouverture (pas pour une tâche récurrente). Le fichier est coupé en deux : la tête (propriétés et description), éditée par l'éditeur de notes, et la section `## Commentaires` (ajout de FlowNote, ignoré par TaskNotes), lue comme un fil de callouts `> [!comment]` imbriqués (`comments.ts`). Chaque partie est réécrite telle quelle tant qu'elle ne change pas.
+
+Les vues sont celles de TaskNotes, des fichiers `.base` (`TaskNotes/Views/`) dont les vues ont les types `tasknotesTaskList` et `tasknotesKanban` : `BaseView` les passe à `TaskBaseView` (liste groupée, tableau). Leurs filtres sont évalués par `formula.ts`. Les fichiers par défaut (`src/tasks/views/`) sont ceux que TaskNotes écrit avec ses réglages par défaut, créés quand ils manquent. L'ordre manuel du tableau est le rang de TaskNotes (`tasknotes_manual_order: tn` + 10 lettres, comparé comme du texte, le plus grand en haut) : déplacer une carte n'écrit qu'elle tant qu'il y a de la place entre ses voisines, sinon la colonne est renumérotée. Les cases datées des notes (`📅 2026-10-16`) et les tâches non terminées alimentent les échéances de l'accueil.
 
 ### Présentations (`src/presentation/`)
 
@@ -208,7 +211,7 @@ Une note avec `marp: true`, découpée en diapos par `---` : c'est la syntaxe de
 
 ### Kanban (`src/kanban/`)
 
-Une note avec `kanban-plugin: board` dans ses propriétés, au format du plugin **Kanban** d'Obsidian : une liste par titre `## `, une carte par élément `- [ ] ` (ses lignes suivantes comprises), `**Complete**` pour une liste qui coche les cartes qui y arrivent. `format.ts` garde tel quel ce qui précède la première liste et ce qui suit la dernière (archive `***`, réglages `%% kanban:settings %%`) ; une liste n'est réécrite que si elle change, comme le plugin l'écrit (`## Titre`, ligne vide, cartes, deux lignes vides), donc un tableau non modifié reste identique à l'octet près. Le glisser-déposer suit le pointeur (pointer events), comme le tableau des tickets, dont il reprend les styles.
+Une note avec `kanban-plugin: board` dans ses propriétés, au format du plugin **Kanban** d'Obsidian : une liste par titre `## `, une carte par élément `- [ ] ` (ses lignes suivantes comprises), `**Complete**` pour une liste qui coche les cartes qui y arrivent. `format.ts` garde tel quel ce qui précède la première liste et ce qui suit la dernière (archive `***`, réglages `%% kanban:settings %%`) ; une liste n'est réécrite que si elle change, comme le plugin l'écrit (`## Titre`, ligne vide, cartes, deux lignes vides), donc un tableau non modifié reste identique à l'octet près. Le glisser-déposer suit le pointeur (pointer events), comme le tableau des tâches, dont il reprend les styles.
 
 ### Lectures et graphe
 
@@ -225,7 +228,7 @@ Une note avec `kanban-plugin: board` dans ses propriétés, au format du plugin 
 
 Autour de cette interface :
 
-- **`noteCache.ts`** enveloppe le vault ouvert : les vues qui lisent toutes les notes (accueil, graphe, tickets, bases, notes liées) sont servies depuis une copie en mémoire. Les écritures de l'app la tiennent à jour, et elle est oubliée quand la fenêtre reprend le focus, car les fichiers ont pu changer ailleurs.
+- **`noteCache.ts`** enveloppe le vault ouvert : les vues qui lisent toutes les notes (accueil, graphe, tâches, bases, notes liées) sont servies depuis une copie en mémoire. Les écritures de l'app la tiennent à jour, et elle est oubliée quand la fenêtre reprend le focus, car les fichiers ont pu changer ailleurs.
 - **`links.ts`** résout les liens comme Obsidian et lit ses réglages (`.obsidian/app.json`, en lecture seule) : dossier des pièces jointes, emplacement des nouvelles notes, wikilinks ou liens Markdown.
 - **`templates.ts`** : les modèles du dossier réglé dans `.obsidian/templates.json` (commande `vault_templates_config`, en lecture seule). Remplit `{{title}}`, `{{date}}`, `{{time}}` et `{{date:format}}` avec un sous-ensemble des codes de Moment (`YYYY`, `MMMM`, `dddd`, `HH`…, texte entre crochets gardé), en français. `noteFromTemplate` fait une nouvelle page (titre `# Nom` après les propriétés du modèle), `templateBody` ce que `/modèle` insère (`insertMarkdownBlocks`, blocs gardés tels quels). Sans dossier réglé, l'interface ne propose rien.
 - **`pageOps.ts`** : renommer, déplacer et dupliquer une page, en mettant à jour les liens qui pointent vers elle. Un titre renommé dans une note (`headingRename` de `markdown/sections.ts`, comparé à l'enregistrement) fait réécrire les liens `[[Note#Titre]]` des autres notes (`renameHeadingLinks`, `rewriteHeadingLinks` dans `links.ts`), sauf celles affichées dans un éditeur (la note et la page de droite), dont l'éditeur ne correspondrait plus au fichier.
@@ -242,7 +245,7 @@ Le backend est volontairement petit, et **unique** : la bibliothèque `flownote-
 
 **Ajouter une commande** : une fonction dans le bon module de `core/`, une ligne dans `dispatch` et dans `COMMANDS`, puis un appel `backend("…")` côté web. Rien d'autre.
 
-- **`vault.rs`** : les fichiers. Les chemins reçus sont relatifs au vault et vérifiés ; les entrées cachées (`.obsidian`, `.git`, `.trash`…) ne sont jamais listées, lues ni écrites. L'écriture est **atomique** (fichier temporaire puis `rename`, pour qu'Obsidian ou un client de synchronisation ne voie jamais un fichier à moitié écrit) et **contrôlée** : elle n'a lieu que si le fichier contient encore ce que l'app avait chargé, sinon l'erreur commence par `CONFLICT:`. La suppression passe par la corbeille du système (crate `trash`). L'arbre renvoie aussi, pour chaque note, ce que l'interface affiche sans la lire en entier (ticket, présentation, icône, titre), à partir des 4 premiers Ko du fichier.
+- **`vault.rs`** : les fichiers. Les chemins reçus sont relatifs au vault et vérifiés ; les entrées cachées (`.obsidian`, `.git`, `.trash`…) ne sont jamais listées, lues ni écrites. L'écriture est **atomique** (fichier temporaire puis `rename`, pour qu'Obsidian ou un client de synchronisation ne voie jamais un fichier à moitié écrit) et **contrôlée** : elle n'a lieu que si le fichier contient encore ce que l'app avait chargé, sinon l'erreur commence par `CONFLICT:`. La suppression passe par la corbeille du système (crate `trash`). L'arbre renvoie aussi, pour chaque note, ce que l'interface affiche sans la lire en entier (présentation, icône, titre), à partir des 4 premiers Ko du fichier.
 - **`git.rs`** : le gestionnaire Git lance le **`git` du système** (avec la configuration, les identifiants et les hooks de l'utilisateur), avec `-C <vault>` et `core.fsmonitor=false`. Il gère statut, diff, indexation, commit, historique, fetch, pull, push et résolution des conflits de fusion.
 - **`grammar.rs`** : lance le compagnon Grammalecte au premier besoin et le garde ouvert.
 - **`web.rs`** : ouvre les liens `http(s)` et `mailto:` dans le navigateur (et rien d'autre), lit le titre et l'image d'aperçu d'une page web (`ureq`, 6 s et 512 Ko au plus), écrit les exports (`.html`, `.png`) là où l'utilisateur l'a choisi.
@@ -259,7 +262,7 @@ Le backend est volontairement petit, et **unique** : la bibliothèque `flownote-
 
 ## Le reste de l'interface
 
-- **`App.tsx`** : état global, onglets, choix du type de page selon le fichier. Les vues hors page (tickets, graphe, lectures, réglages, documentation) sont des pseudo-chemins `flownote:…`.
+- **`App.tsx`** : état global, onglets, choix du type de page selon le fichier. Les vues hors page (graphe, lectures, réglages, documentation) sont des pseudo-chemins `flownote:…`.
 - **`tabs.ts`** : les onglets et le split view en fonctions pures, testées. Les deux pages du split view forment un seul onglet.
 - **Performances** : `Sidebar` et `SplitPane` sont enveloppés dans `memo` pour ne pas se redessiner à chaque frappe ; on leur passe des fonctions stables (`useHandlers`) et des objets mémoïsés.
 - **Exports** : PDF par le panneau d'impression du système (`print.ts`, `styles/print.css`), pour garder un texte vectoriel et sélectionnable ; PNG et HTML (`pageExport.ts`) ; copie d'une note en HTML pour un mail (`copyHtml.ts`).

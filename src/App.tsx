@@ -37,7 +37,6 @@ import { PageIcon, PopoverMenu, Sidebar, type MenuItem } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
 import { GraphPage } from "./graph/GraphPage";
 import { ReadingView } from "./reading/ReadingView";
-import { TodoView } from "./todo/TodoView";
 import { AddLinkDialog } from "./reading/AddLinkDialog";
 import { addLink, newReadingList, parseReadingList, readingTagsOf } from "./reading/readingList";
 import { noteIcon, pageTitle } from "./vault/icon";
@@ -77,9 +76,10 @@ import { Welcome } from "./Welcome";
 import { TabBar, type Tab } from "./TabBar";
 import { joinTab as joinTabs, nextPageTab, readSavedTabs, restoredTabs, saveTabs, separateTab as separateTabs, splitOf as splitIn, swapReading, tabsToSave, withReading, withSplit } from "./tabs";
 import { Dashboard } from "./Dashboard";
-import { TicketView } from "./ticket/TicketView";
-import { TicketsView } from "./ticket/TicketsView";
-import { isTicketMarkdown } from "./ticket/format";
+import { TaskView } from "./tasks/TaskView";
+import { readTaskConfig } from "./tasks/config";
+import { isTaskMarkdown, tasksOf } from "./tasks/task";
+import { defaultViewFile } from "./tasks/views";
 import { isPresentationMarkdown } from "./presentation/format";
 import { slideAt, useSlides } from "./presentation/useSlides";
 import { SlidesPanel } from "./presentation/SlidesPanel";
@@ -103,25 +103,18 @@ interface OpenNote {
   markdown: string;
 }
 
-/** Pseudo-path of the tickets list (a tab can show it like a page). */
-const TICKETS_VIEW = "flownote:tickets";
 /** Pseudo-path of the vault graph. */
 const GRAPH_VIEW = "flownote:graph";
 /** Pseudo-path of the reading list view. */
 const READING_VIEW = "flownote:reading";
-/** Pseudo-path of the to-do list view. */
-const TODO_VIEW = "flownote:todo";
-const TODO_PATH = "Todo.md";
 /** Pseudo-path of the settings page. */
 const SETTINGS_VIEW = "flownote:settings";
 /** Pseudo-path of the documentation (a read-only note shipped with the app). */
 const DOCS_VIEW = "flownote:docs";
 /** Views shown in a tab instead of a page. */
 const VIEWS: Record<string, { title: string; icon: IconName }> = {
-  [TICKETS_VIEW]: { title: "Tickets", icon: "ticket" },
   [GRAPH_VIEW]: { title: "Graphe", icon: "graph" },
   [READING_VIEW]: { title: "Lectures", icon: "bookmark" },
-  [TODO_VIEW]: { title: "Tâches", icon: "checkbox" },
   [SETTINGS_VIEW]: { title: "Réglages", icon: "sliders" },
   [DOCS_VIEW]: { title: "Documentation", icon: "book" },
 };
@@ -156,6 +149,11 @@ export function App() {
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   /** Obsidian's templates settings (.obsidian/templates.json), null when no folder is set: templates are then hidden. */
   const [templatesConfig, setTemplatesConfig] = useState<TemplatesConfig | null>(null);
+  /** The TaskNotes plugin's settings (its data.json, "{}" without the plugin): how tasks are written. */
+  const [tasksJson, setTasksJson] = useState("{}");
+  const taskConfig = useMemo(() => readTaskConfig(tasksJson), [tasksJson]);
+  /** The notes that are tasks, for their icon. */
+  const [taskPaths, setTaskPaths] = useState<Set<string>>(new Set());
   /** `/modèle`: the template list shown, until one is chosen. */
   const [templatePick, setTemplatePick] = useState<{ resolve: (path: string | null) => void } | null>(null);
   const [files, setFiles] = useState<string[]>([]);
@@ -329,13 +327,15 @@ export function App() {
   const [searchFilters, setSearchFilters] = useState<SearchFilter[]>([]);
 
   const refresh = useCallback(async (v: Vault) => {
-    const [newTree, newFiles, bookmarksJson, templatesJson] = await Promise.all([
+    const [newTree, newFiles, bookmarksJson, templatesJson, tasksSettings] = await Promise.all([
       v.tree(),
       v.files(),
       v.bookmarks?.().catch(() => "{}") ?? "{}",
       v.templatesConfig?.().catch(() => "{}") ?? "{}",
+      v.tasksConfig?.().catch(() => "{}") ?? "{}",
     ]);
     setTemplatesConfig(readTemplatesConfig(templatesJson));
+    setTasksJson(tasksSettings);
     setTree(newTree);
     setFiles(newFiles);
     filesRef.current = newFiles;
@@ -346,7 +346,7 @@ export function App() {
   const open = async (pending: Vault | null | Promise<Vault | null>) => {
     const picked = await pending;
     if (!picked) return;
-    // The views reading every note (dashboard, graph, tickets, bases, backlinks) share one copy of them.
+    // The views reading every note (dashboard, graph, tasks, bases, backlinks) share one copy of them.
     const opened = withNoteCache(picked);
     try {
       await refresh(opened);
@@ -575,6 +575,8 @@ export function App() {
       }
       const previous = tabsRef.current.find((t) => t.id === activeRef.current)?.path ?? noteRef.current?.path;
       if (!(await load(path))) return;
+      // Another page opens at its top, not where the list it was opened from was scrolled.
+      if (previous !== path) requestAnimationFrame(() => contentRef.current && (contentRef.current.scrollTop = 0));
       if (navigation === "push" && previous && previous !== path) {
         back.current.push(previous);
         forward.current = [];
@@ -713,12 +715,21 @@ export function App() {
 
   const askConfirm = (message: string, confirmLabel: string) => new Promise<boolean>((resolve) => setConfirm({ message, confirmLabel, resolve }));
 
-  const ticketPaths = useMemo(() => {
-    const found = new Set<string>();
-    const walk = (entries: VaultEntry[]) => entries.forEach((e) => (e.ticket ? found.add(e.path) : e.children && walk(e.children)));
-    walk(tree);
-    return found;
-  }, [tree]);
+  // The tasks are told by their front matter (TaskNotes' tag), read again with the tree.
+  useEffect(() => {
+    if (!vault) return;
+    let cancelled = false;
+    void readAllNotes(vault, filesRef.current)
+      .then((notes) => {
+        if (cancelled) return;
+        const found = new Set(tasksOf(notes, taskConfig).map((t) => t.path));
+        setTaskPaths((current) => (current.size === found.size && [...found].every((p) => current.has(p)) ? current : found));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [vault, tree, taskConfig]);
 
   /**
    * After files moved (`moved` maps old paths to new ones): the tree, tabs,
@@ -769,16 +780,14 @@ export function App() {
   const templateList = useMemo(() => templateFiles(templatesConfig, files), [templatesConfig, files]);
   const templates = useMemo(() => (templatesConfig && templateList.length > 0 ? { config: templatesConfig, files: templateList } : null), [templatesConfig, templateList]);
 
-  const { createFile, renamePath, renameCurrent, newFolder, renameFolderPath, moveItem, duplicatePage, copyLink, removeFolder, removePage, newPage } = usePageOps({
+  const { createFile, renamePath, renameCurrent, newFolder, renameFolderPath, moveItem, duplicatePage, copyLink, removeFolder, removePage, newPage, newTask } = usePageOps({
     vault,
     tree,
     filesRef,
     noteRef,
     config,
     templates,
-    ticketPaths,
-    settings,
-    changeSettings,
+    tasks: taskConfig,
     saveNow,
     refresh,
     refreshGit,
@@ -791,6 +800,23 @@ export function App() {
     followMoves,
     forgetRemoved,
   });
+
+  /** Opens a TaskNotes view (`TaskNotes/Views/*.base`), created as the plugin writes it when missing. */
+  const openTasks = async (view: "tasks" | "kanban", newTabRequested: boolean) => {
+    const path = taskConfig.views[view];
+    if (!vault) return;
+    if (!filesRef.current.includes(path)) {
+      try {
+        await createFile(path, defaultViewFile(view));
+      } catch (error) {
+        setStatus(String(error));
+        return;
+      }
+    }
+    await select(path, "push", newTabRequested);
+  };
+  /** TaskNotes' views in a base: its settings, and a new task in a board column's status. */
+  const baseTasks = useMemo(() => ({ config: taskConfig, onNew: (status?: string) => void newTask(status) }), [taskConfig, newTask]);
 
   const loadImage = useCallback(
     async (path: string) => {
@@ -919,7 +945,6 @@ export function App() {
 
   /** The open page is a drawing (Name.excalidraw.md). */
   const drawing = note !== null && isDrawingPath(note.path);
-  /** The open page is a ticket (front matter type: ticket), read from the loaded text. */
   /** The open page is a mind map (Name.mindmap.md). */
   const mindmap = note !== null && isMindmapPath(note.path);
   /** The open page is a canvas (Name.canvas). */
@@ -930,19 +955,20 @@ export function App() {
   const basePage = note !== null && isBasePath(note.path);
   /** The open page is a board of Obsidian's Kanban plugin (`kanban-plugin: board`). */
   const kanbanPage = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !basePage && isKanbanMarkdown(note.loaded);
-  const ticketPage = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && isTicketMarkdown(note.loaded);
-  /** Reading mode (per tab, ⌘⇧R): notes, tickets and presentations, nothing editable. */
+  /** The open page is a task (TaskNotes' tag in its front matter), read from the loaded text. */
+  const taskPage = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && isTaskMarkdown(note.loaded, taskConfig);
+  /** Reading mode (per tab, ⌘⇧R): notes, tasks and presentations, nothing editable. */
   const readable = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage;
   const readingOn = Boolean(tabs.find((t) => t.id === activeTab)?.reading);
   const reading = readable && readingOn && !rawMode;
   const toggleReading = () => replaceTabs(withReading(tabsRef.current, activeTab, "page", !readingOn));
   /** The open page is a presentation (`marp: true`), read from the current text so a conversion shows at once. */
-  const presentationPage = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !ticketPage && isPresentationMarkdown(note.markdown);
+  const presentationPage = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !taskPage && isPresentationMarkdown(note.markdown);
   /**
    * A note's title is its first `# heading` (the file name without one): editing the
    * title writes that heading, never renames the file (titleHeading.ts).
    */
-  const titledNote = readable && !ticketPage && !presentationPage && !rawMode;
+  const titledNote = readable && !taskPage && !presentationPage && !rawMode;
   /** Pages whose title is their own, the file name shown under it. */
   const titledPage = titledNote || presentationPage;
   const headingTitle = titledNote && editor && !editor.isDestroyed ? titleHeadingOf(editor.state.doc) : null;
@@ -994,7 +1020,7 @@ export function App() {
       live = false;
     };
   }, [vault, baseFiles, note?.path]);
-  const rowBase = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !ticketPage ? baseOfNote(note.path, bases) : null;
+  const rowBase = note !== null && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !taskPage ? baseOfNote(note.path, bases) : null;
   /** Saves a select's options in the base file of the open row. */
   const setRowOptions = async (property: string, options: SelectOption[]) => {
     if (!vault || !rowBase) return;
@@ -1134,7 +1160,7 @@ export function App() {
   }, [tree]);
   const iconOf = (path: string) => (note?.path === path ? liveIcon : (treeIcons.get(path) ?? null));
   /** Titles of the pages (vault.ts), live from the text for the open page. */
-  const liveTitle = note && !basePage ? pageTitle(note.markdown, readable && !ticketPage && !presentationPage) : null;
+  const liveTitle = note && !basePage ? pageTitle(note.markdown, readable && !taskPage && !presentationPage) : null;
   const treeTitles = useMemo(() => {
     const found = new Map<string, string>();
     const walk = (entries: VaultEntry[]) => entries.forEach((e) => (e.title && found.set(e.path, e.title), e.children && walk(e.children)));
@@ -1153,7 +1179,7 @@ export function App() {
   const isPresentation = (path: string) => (note?.path === path ? presentationPage : presentationPaths.has(path));
   /** A note of the folder next to a base (`X/` and `X.base`) is one of its rows. */
   const isBaseRow = (path: string) => path.endsWith(".md") && path.includes("/") && files.includes(`${dirname(path)}.base`);
-  const pageIconFor = (path: string) => <PageIcon path={path} icon={iconOf(path)} ticket={ticketPaths.has(path)} presentation={isPresentation(path)} row={isBaseRow(path)} />;
+  const pageIconFor = (path: string) => <PageIcon path={path} icon={iconOf(path)} task={taskPaths.has(path)} presentation={isPresentation(path)} row={isBaseRow(path)} />;
   /** Presents from the slide under the cursor. */
   const present = () => {
     const current = editorRef.current;
@@ -1243,9 +1269,9 @@ export function App() {
       command("back", "Page précédente", "Navigation", goBack, "chevronLeft", "back"),
       command("forward", "Page suivante", "Navigation", goForward, "chevronRight", "forward"),
       command("home", "Ouvrir l'accueil", "Vues", () => openView(null, false), "home"),
-      command("tickets", "Ouvrir les tickets", "Vues", () => openView(TICKETS_VIEW, false), "ticket"),
+      command("tasks", "Ouvrir les tâches", "Vues", () => void openTasks("tasks", false), "task"),
+      command("taskBoard", "Ouvrir le tableau des tâches", "Vues", () => void openTasks("kanban", false), "board"),
       command("readingList", "Ouvrir les lectures", "Vues", () => openView(READING_VIEW, false), "bookmark"),
-      command("todoList", "Ouvrir les tâches", "Vues", () => openView(TODO_VIEW, false), "checkbox"),
       command("graph", "Ouvrir le graphe", "Vues", () => openView(GRAPH_VIEW, false), "graph"),
       command("docs", "Ouvrir la documentation", "Vues", () => openView(DOCS_VIEW, false), "book"),
       command("settings", "Ouvrir les réglages", "Vues", () => select(SETTINGS_VIEW, "push"), "sliders", "settings"),
@@ -1325,7 +1351,7 @@ export function App() {
   const saveState = dirty && !settings.autosave ? <span className="save-state dirty">{keys("Non enregistré · ⌘S")}</span> : null;
 
   // The sidebar is memoized: typing in a note does not draw it again (see useHandlers).
-  const sidebarHidden = useMemo(() => [settings.ticketsFolder, readingPath, TODO_PATH].filter(Boolean), [settings.ticketsFolder, readingPath]);
+  const sidebarHidden = useMemo(() => [taskConfig.folder, readingPath].filter(Boolean), [taskConfig.folder, readingPath]);
   const notePath = note?.path;
   const sidebarLiveIcon = useMemo(() => (notePath ? { path: notePath, icon: liveIcon, title: liveTitle } : undefined), [notePath, liveIcon, liveTitle]);
   const otherVaults = useMemo(
@@ -1337,6 +1363,7 @@ export function App() {
     onRenameRow: renamePath,
     onDeleteRow: removePage,
     onSwap: () => void swapSplit(),
+    onNewTask: (status?: string) => void newTask(status),
     onSeparate: () => void separateTab(activeTab),
     onClose: () => setTabSplit(activeTab, null),
     onSaved: (before?: string, after?: string) => {
@@ -1379,9 +1406,8 @@ export function App() {
       setModal("search");
     },
     onHome: (newTabRequested: boolean) => void openView(null, newTabRequested),
-    onTickets: (newTabRequested: boolean) => void openView(TICKETS_VIEW, newTabRequested),
+    onTasks: (newTabRequested: boolean) => void openTasks("tasks", newTabRequested),
     onGraph: (newTabRequested: boolean) => void openView(GRAPH_VIEW, newTabRequested),
-    onTodo: (newTabRequested: boolean) => void openView(TODO_VIEW, newTabRequested),
     onReading: (newTabRequested: boolean) => void openView(READING_VIEW, newTabRequested),
     onDocs: (newTabRequested: boolean) => void openView(DOCS_VIEW, newTabRequested),
     onGit: () => toggleGit(),
@@ -1428,10 +1454,10 @@ export function App() {
     <Sidebar
       vaultName={vault.name}
       tree={tree}
-      ticketsFolder={settings.ticketsFolder}
+      taskPaths={taskPaths}
       hidden={sidebarHidden}
       selected={note?.path}
-      view={activePath === null ? "home" : activePath === TICKETS_VIEW ? "tickets" : activePath === GRAPH_VIEW ? "graph" : activePath === TODO_VIEW ? "todo" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
+      view={activePath === null ? "home" : activePath === taskConfig.views.tasks || activePath === taskConfig.views.kanban ? "tasks" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
       liveIcon={sidebarLiveIcon}
       showTitles={settings.showTitles}
       gitChanges={vault.git ? gitChanges : null}
@@ -1463,7 +1489,7 @@ export function App() {
           dirty={dirty}
           titleOf={(tab) => (tab.path === null ? "Accueil" : (VIEWS[tab.path]?.title ?? shownName(tab.path)))}
           iconOf={(tab) =>
-            tab.path === null ? <Icon name="home" size={13} /> : isView(tab.path) ? <Icon name={VIEWS[tab.path].icon} size={13} /> : <PageIcon path={tab.path} icon={iconOf(tab.path)} ticket={ticketPaths.has(tab.path)} presentation={isPresentation(tab.path)} size={13} />
+            tab.path === null ? <Icon name="home" size={13} /> : isView(tab.path) ? <Icon name={VIEWS[tab.path].icon} size={13} /> : <PageIcon path={tab.path} icon={iconOf(tab.path)} task={taskPaths.has(tab.path)} presentation={isPresentation(tab.path)} size={13} />
           }
           onSelect={(id) => void switchTab(id)}
           onClose={(id) => void closeTab(id)}
@@ -1542,13 +1568,13 @@ export function App() {
                     <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportCurrent()} />
                   </>
                 )}
-                {!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !ticketPage && !presentationPage && !reading && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
+                {!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !taskPage && !presentationPage && !reading && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
                 {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
                   {!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !presentationPage && (
                     <ToolButton icon="width" label={widePages.has(note.path) ? "Largeur normale" : "Pleine largeur"} onClick={() => toggleWide(note.path)} active={widePages.has(note.path)} />
                   )}
                   <ToolButton icon="focus" label={focusMode ? "Quitter le mode focus (⌘⇧M)" : "Mode focus (⌘⇧M)"} onClick={toggleFocus} active={focusMode} />
-                  {!basePage && !ticketPage && !canvasPage && !dashboardPage && !kanbanPage && (
+                  {!basePage && !taskPage && !canvasPage && !dashboardPage && !kanbanPage && (
                     <ToolButton icon="more" label="Exporter, copier…" onClick={(event) => setPageMenu(event.currentTarget.getBoundingClientRect())} active={pageMenu !== null} disabled={rawMode} />
                   )}
                   <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : mindmap ? "Voir le fichier brut de la mind map (⌘⇧E)" : basePage ? "Voir le fichier .base (⌘⇧E)" : canvasPage ? "Voir le fichier .canvas (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
@@ -1616,6 +1642,7 @@ export function App() {
                       void refresh(vault);
                       void refreshGit();
                     }}
+                    tasks={baseTasks}
                   />
                 ) : mindmap && !rawMode ? (
                   <div className="drawing-pane">
@@ -1637,7 +1664,7 @@ export function App() {
                       {vault.git && <button onClick={() => toggleGit(true)}>Résoudre</button>}
                     </div>
                   )}
-                  {!rawMode && !ticketPage && (
+                  {!rawMode && !taskPage && (
                     <PageTitle
                       title={(presentationPage ? liveTitle : headingTitle) ?? noteTitle(note.path)}
                       fileName={titledPage ? noteTitle(note.path) : undefined}
@@ -1648,8 +1675,8 @@ export function App() {
                       onIcon={drawing ? undefined : setPageIcon}
                     />
                   )}
-                  {ticketPage && !rawMode ? (
-                    <TicketView
+                  {taskPage && !rawMode ? (
+                    <TaskView
                       key={`${note.path}#${note.reloads ?? 0}`}
                       path={note.path}
                       source={note.loaded}
@@ -1658,7 +1685,7 @@ export function App() {
                       bridge={bridge}
                       editable={!hasConflictMarkers(note.disk) && !reading}
                       onEditor={setEditor}
-                      columns={settings.ticketColumns}
+                      config={taskConfig}
                     />
                   ) : rawMode ? (
                     <RawEditor key={`${note.path}#${note.reloads ?? 0}`} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} />
@@ -1691,7 +1718,7 @@ export function App() {
                       }
                     />
                   )}
-                  {!rawMode && !ticketPage && !presentationPage && (
+                  {!rawMode && !taskPage && !presentationPage && (
                     <Backlinks vault={vault} files={files} path={note.path} iconOf={pageIconFor} onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)} />
                   )}
                 </div>
@@ -1719,14 +1746,13 @@ export function App() {
                 settings={settings}
                 vaultName={vault.name}
                 grammarAvailable={isTauri()}
+                tasks={taskConfig}
                 onChange={(next) => {
                   setSettings(next);
                   saveSettings(next);
                 }}
                 onChangeVault={changeVault}
               />
-            ) : activePath === TODO_VIEW ? (
-              <TodoView key={activeTab} vault={vault} path={TODO_PATH} exists={files.includes(TODO_PATH)} onCreated={() => void refresh(vault)} />
             ) : activePath === READING_VIEW ? (
               <ReadingView
                 key={activeTab}
@@ -1739,24 +1765,6 @@ export function App() {
               />
             ) : activePath === GRAPH_VIEW ? (
               <GraphPage key={activeTab} vault={vault} files={files} onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)} />
-            ) : activePath === TICKETS_VIEW ? (
-              <TicketsView
-                key={activeTab}
-                vault={vault}
-                files={files}
-                columns={settings.ticketColumns}
-                onColumns={(ticketColumns) => {
-                  const next = { ...settings, ticketColumns };
-                  setSettings(next);
-                  saveSettings(next);
-                }}
-                onChanged={() => {
-                  void refreshGit();
-                  void refresh(vault);
-                }}
-                onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
-                onCreate={() => void newPage(null, undefined, undefined, "ticket")}
-              />
             ) : (
             <Dashboard
               key={activeTab}
@@ -1767,12 +1775,12 @@ export function App() {
               onCreate={(kind) => void newPage(null, undefined, undefined, kind)}
               onOpenGit={() => toggleGit(true)}
               onSearch={() => setModal("switcher")}
-              onOpenTickets={(newTabRequested) => void select(TICKETS_VIEW, "push", newTabRequested)}
+              onOpenTasks={(newTabRequested) => void openTasks("tasks", newTabRequested)}
+              tasksConfig={taskConfig}
               onOpenGraph={(newTabRequested) => void select(GRAPH_VIEW, "push", newTabRequested)}
               readingList={readingPath}
               readingVersion={readingVersion}
               onOpenReading={(newTabRequested) => void select(READING_VIEW, "push", newTabRequested)}
-              onOpenTodo={() => void select(TODO_VIEW, "push", false)}
               onAddLink={() => void openAddLink()}
             />
             )
@@ -1795,7 +1803,7 @@ export function App() {
                 files={files}
                 bridge={splitBridge}
                 theme={settings.theme === "dark" || (settings.theme === "system" && systemDark) ? "dark" : "light"}
-                ticketColumns={settings.ticketColumns}
+                tasks={taskConfig}
                 openOnLeft={note?.path === splitPath}
                 autosave={settings.autosave}
                 icon={iconOf(splitPath)}

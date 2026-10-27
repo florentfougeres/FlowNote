@@ -38,6 +38,7 @@ function tauriVault(root: string): Vault {
     stats: () => backend<{ path: string; ctime: number; mtime: number }[]>("vault_stats", { root }),
     bookmarks: () => backend<string>("vault_bookmarks", { root }),
     templatesConfig: () => backend<string>("vault_templates_config", { root }),
+    tasksConfig: () => backend<string>("vault_tasknotes_config", { root }),
   };
 }
 

@@ -7,15 +7,15 @@
   box-sizing: border-box;
 }
 
-.reading-view .tickets-header p {
+.reading-view .tasks-header p {
   margin: 2px 0 0;
 }
 
-.reading-view .tickets-header > div {
+.reading-view .tasks-header > div {
   margin-right: auto;
 }
 
-.reading-view .tickets-header button {
+.reading-view .tasks-header button {
   display: inline-flex;
   align-items: center;
   gap: 6px;

@@ -8,11 +8,10 @@ import { CANVAS_SUFFIX, newCanvasFile } from "../canvas/format";
 import { DASHBOARD_SUFFIX, newDashboardFile } from "../dashboardPage/format";
 import { newPresentationFile } from "../presentation/format";
 import { NEW_KANBAN } from "../kanban/format";
-import type { Settings } from "../SettingsPage";
-import { ticketInfo } from "../ticket/agenda";
-import { newTicketFile, nextTicketId } from "../ticket/format";
+import type { TaskConfig } from "../tasks/config";
+import { newTaskFile, taskFileName } from "../tasks/task";
 import { linkTextFor, newNoteFolder, noteTitle, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "../vault/links";
-import { deletePage, followFolder, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "../vault/pageOps";
+import { deletePage, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "../vault/pageOps";
 import { isTauri } from "../vault/tauriVault";
 import type { Vault, VaultEntry } from "../vault/vault";
 import { noteFromTemplate, templateName, type TemplatesConfig } from "../vault/templates";
@@ -36,10 +35,8 @@ export interface PageOpsContext {
   config: ObsidianConfig;
   /** Obsidian's templates folder and its notes, when one is set. */
   templates: { config: TemplatesConfig; files: string[] } | null;
-  ticketPaths: Set<string>;
-  settings: Settings;
-  /** Applies and saves the settings (the tickets folder follows its folder). */
-  changeSettings: (next: Settings) => void;
+  /** The tasks' settings (TaskNotes): where a new task goes and how it is written. */
+  tasks: TaskConfig;
   saveNow: () => Promise<void>;
   refresh: (vault: Vault) => Promise<void>;
   refreshGit: () => Promise<void>;
@@ -64,7 +61,7 @@ const linksUpdated = (count: number) => (count > 0 ? `liens mis à jour dans ${c
  * `followMoves` and `forgetRemoved`.
  */
 export function usePageOps(ctx: PageOpsContext) {
-  const { vault, filesRef, noteRef, settings, refresh } = ctx;
+  const { vault, filesRef, noteRef, refresh } = ctx;
 
   const createFile = useCallback(
     async (path: string, content: string | Uint8Array) => {
@@ -118,12 +115,6 @@ export function usePageOps(ctx: PageOpsContext) {
     }
   };
 
-  /** The tickets folder setting follows its folder (or a parent) when it moves, and is back to "Tickets" when it is deleted. */
-  const followTicketsFolder = (from: string, to: string | null) => {
-    const ticketsFolder = followFolder(settings.ticketsFolder, from, to, "Tickets");
-    if (ticketsFolder !== settings.ticketsFolder) ctx.changeSettings({ ...settings, ticketsFolder });
-  };
-
   /** Renames a folder; links to its pages and bases' folder filters follow. */
   const renameFolderPath = async (folder: string) => {
     if (!vault) return;
@@ -133,7 +124,6 @@ export function usePageOps(ctx: PageOpsContext) {
       await ctx.saveNow();
       const result = await renameFolder(vault, folder, title);
       if (result.path === folder) return;
-      followTicketsFolder(folder, result.path);
       await ctx.followMoves((p) => (p.startsWith(`${folder}/`) ? result.path + p.slice(folder.length) : p), result.updatedNotes);
       moveRecentPage(vault.name, folder, result.path);
       const others = linksUpdated(result.updatedNotes.filter((p) => !p.startsWith(`${result.path}/`)).length);
@@ -151,7 +141,6 @@ export function usePageOps(ctx: PageOpsContext) {
       await ctx.saveNow();
       const result = item.folder ? await moveFolder(vault, item.path, target) : await movePage(vault, item.path, target);
       if (result.path === item.path) return;
-      if (item.folder) followTicketsFolder(item.path, result.path);
       const from = item.folder ? item.path : subpageFolder(item.path);
       const to = item.folder ? result.path : subpageFolder(result.path);
       await ctx.followMoves((p) => (p === item.path ? result.path : p.startsWith(`${from}/`) ? to + p.slice(from.length) : p), result.updatedNotes);
@@ -204,7 +193,6 @@ export function usePageOps(ctx: PageOpsContext) {
     if (noteRef.current?.path.startsWith(`${folder}/`)) await ctx.saveNow().catch(() => {});
     try {
       await vault.remove(folder);
-      followTicketsFolder(folder, null);
       ctx.setStatus("");
     } catch (error) {
       ctx.setStatus(String(error));
@@ -275,20 +263,14 @@ export function usePageOps(ctx: PageOpsContext) {
       if (chooseFolder) folder = result.folder;
     }
     const title = sanitizeName(name) || "Sans titre";
-    // Tickets go to their folder, numbered: "Tickets/12 - Titre.md".
-    const usedIds =
-      kind === "ticket" ? await Promise.all([...ctx.ticketPaths].map((p) => vault.read(p).then((text) => ticketInfo(p, text).id ?? 0, () => 0))) : [];
-    const ticketId = kind === "ticket" ? nextTicketId(filesRef.current, settings.ticketsFolder, usedIds) : 0;
-    const path =
-      kind === "ticket"
-        ? uniquePath(settings.ticketsFolder, `${ticketId} - ${title}.md`, filesRef.current)
-        : uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : kind === "canvas" ? CANVAS_SUFFIX : kind === "dashboard" ? DASHBOARD_SUFFIX : kind === "base" ? BASE_SUFFIX : ".md"}`, filesRef.current);
+    if (kind === "task") return createTask(name);
+    const path = uniquePath(folder, `${title}${kind === "drawing" ? DRAWING_SUFFIX : kind === "mindmap" ? MINDMAP_SUFFIX : kind === "canvas" ? CANVAS_SUFFIX : kind === "dashboard" ? DASHBOARD_SUFFIX : kind === "base" ? BASE_SUFFIX : ".md"}`, filesRef.current);
     try {
       await ctx.saveNow();
       // A note from a template: the template filled in, under its title.
       const fromTemplate = template && ctx.templates ? noteFromTemplate(await vault.read(template), title, new Date(), ctx.templates.config) : null;
       // A base's rows are the notes of the folder named after it, next to it (like sub-pages).
-      await createFile(path, fromTemplate ?? (kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "canvas" ? newCanvasFile() : kind === "dashboard" ? newDashboardFile() : kind === "ticket" ? newTicketFile(ticketId) : kind === "presentation" ? newPresentationFile(title) : kind === "kanban" ? NEW_KANBAN : `# ${title}\n`));
+      await createFile(path, fromTemplate ?? (kind === "base" ? newBaseFile(subpageFolder(path)) : kind === "drawing" ? newDrawingFile() : kind === "mindmap" ? newMindmapFile(title) : kind === "canvas" ? newCanvasFile() : kind === "dashboard" ? newDashboardFile() : kind === "presentation" ? newPresentationFile(title) : kind === "kanban" ? NEW_KANBAN : `# ${title}\n`));
       if (parent) {
         const content = await vault.read(parent);
         const separator = content === "" ? "" : content.endsWith("\n") ? "\n" : "\n\n";
@@ -300,5 +282,23 @@ export function usePageOps(ctx: PageOpsContext) {
     }
   };
 
-  return { createFile, renamePath, renameCurrent, newFolder, renameFolderPath, moveItem, duplicatePage, copyLink, removeFolder, removePage, newPage };
+  /** A task in TaskNotes' folder, named by its title (or an id, as TaskNotes is set), in the status of a board column. */
+  const createTask = async (title: string, status?: string) => {
+    if (!vault) return;
+    const now = new Date();
+    const path = uniquePath(ctx.tasks.folder, `${taskFileName(title, ctx.tasks, now)}.md`, filesRef.current);
+    try {
+      await ctx.saveNow();
+      await createFile(path, newTaskFile(title, ctx.tasks, now, { status }));
+      await ctx.select(path);
+    } catch (error) {
+      ctx.setStatus(String(error));
+    }
+  };
+  const newTask = async (status?: string) => {
+    const title = await ctx.askName("Nouvelle tâche", "");
+    if (title?.trim()) await createTask(title.trim(), status);
+  };
+
+  return { createFile, renamePath, renameCurrent, newFolder, renameFolderPath, moveItem, duplicatePage, copyLink, removeFolder, removePage, newPage, newTask };
 }

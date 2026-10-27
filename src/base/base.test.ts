@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { defaultView, filterExpression, NAME, newBaseFile, writeFormula, parseBase, parseFilter, renameInBase, reparse, serializeBase, writeColumn, writeDisplayName, writeView } from "./baseFile";
 import { columnInfo, usedValues } from "./columns";
 import { cellValue, columnMeta, optionsOf, rowsOf, setNoteProperty, summarize, viewRows } from "./rows";
@@ -229,5 +230,31 @@ describe("column summaries", () => {
     expect(summarize(rows, "prioritaire", "Checked")).toBe("1");
     expect(summarize(rows, "statut", "Unique")).toBe("3");
     expect(summarize(rows, "echéance", "Latest")).toBe("1 nov. 2026");
+  });
+});
+
+describe("TaskNotes views", () => {
+  const read = (name: string) => readFileSync(`src/tasks/views/${name}.base`, "utf8");
+  const notes: [string, string][] = [
+    ["TaskNotes/Tasks/A.md", "---\nstatus: open\ndue: 2000-01-01\ntags: [task]\n---\n"],
+    ["TaskNotes/Tasks/B.md", "---\nstatus: done\ntags: [task]\n---\n"],
+    ["Notes/C.md", "---\nstatus: open\n---\n"],
+  ];
+
+  it("keep their filters, sorts and comments when a view is renamed", () => {
+    const source = read("tasks-default");
+    const file = parseBase(source);
+    expect(file.model.views[1].sort).toEqual([{ property: "due", direction: "ASC" }]);
+    writeView(file, 3, { ...file.model.views[3], name: "Aujourd'hui" });
+    const out = serializeBase(file);
+    expect(out).toBe(source.replace('name: "Today"', "name: \"Aujourd'hui\""));
+  });
+
+  it("select their rows with the base and view filters", () => {
+    const { model } = parseBase(read("tasks-default"));
+    const rows = rowsOf(notes, model);
+    expect(rows.map((r) => r.path)).toEqual(["TaskNotes/Tasks/A.md", "TaskNotes/Tasks/B.md"]);
+    const overdue = model.views.find((v) => v.name === "Overdue")!;
+    expect(viewRows(rows, overdue.filters, overdue.sort, "", model.formulas, [], overdue.where).map((r) => r.path)).toEqual(["TaskNotes/Tasks/A.md"]);
   });
 });

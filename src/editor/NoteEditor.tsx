@@ -45,7 +45,7 @@ interface Props {
   header?: (frontmatter: string | null, setFrontmatter: (raw: string | null) => void) => ReactNode;
   /** Lets the app read and change the front matter through the editor's session. */
   frontmatterControl?: MutableRefObject<FrontmatterControl | null>;
-  /** False for text without front matter (ticket comments): no properties panel. */
+  /** False for text without front matter (task comments): no properties panel. */
   properties?: boolean;
   /** The page shows the note's first `# heading` as its title: the editor hides it. */
   titleHeading?: boolean;

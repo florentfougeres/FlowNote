@@ -1,6 +1,6 @@
 import { readProperties, renameProperty, setProperty, type PropertyValue } from "../markdown/frontmatter";
 import { noteTitle } from "../vault/links";
-import { evaluateFormulas, numeric, type FValue } from "./formula";
+import { evaluateFormulas, filterMatches, numeric, type FValue } from "./formula";
 import { NAME, type BaseModel, type ColumnMeta, type ColumnType, type SimpleFilter, type SortRule } from "./baseFile";
 
 /** File properties of a row (Obsidian's `file.*`). */
@@ -40,7 +40,12 @@ const IMAGE = /!\[\[([^\]|#]+\.(?:png|jpe?g|gif|webp|svg|avif|bmp))(?:[|#][^\]]*
 
 const FRONTMATTER = /^(﻿?---[ \t]*\r?\n)([\s\S]*?)(\r?\n---[ \t]*(?:\r?\n|$))/;
 
-/** The notes of the base's folder (sub-folders included, like `file.inFolder`). */
+/** Whether a row passes filters written as Obsidian expressions (those FlowNote cannot evaluate are left out). */
+export function rowMatches(row: BaseRow, where: unknown[], formulas: Record<string, string> = {}): boolean {
+  return where.length === 0 || filterMatches({ and: where }, row.values, { ...row.file, basename: row.file.name, properties: row.values }, formulas);
+}
+
+/** The notes of the base's folder (sub-folders included, like `file.inFolder`) that pass its other filters. */
 export function rowsOf(notes: [string, string][], model: BaseModel, stats: { path: string; ctime: number; mtime: number }[] = []): BaseRow[] {
   const prefix = model.folder ? `${model.folder.replace(/\/+$/, "")}/` : "";
   const times = new Map(stats.map((s) => [s.path, s]));
@@ -71,7 +76,8 @@ export function rowsOf(notes: [string, string][], model: BaseModel, stats: { pat
         },
         image: image ? (image[1] ?? image[2] ?? image[3]) : null,
       };
-    });
+    })
+    .filter((row) => rowMatches(row, model.where, model.formulas));
 }
 
 const formulaCache = new WeakMap<BaseRow, { source: Record<string, string>; results: Record<string, FValue | Error> }>();
@@ -181,12 +187,12 @@ function compare(a: PropertyValue | string | undefined, b: PropertyValue | strin
 }
 
 /** Rows filtered, searched and sorted as the view says (by name when no sort). */
-export function viewRows(rows: BaseRow[], filters: SimpleFilter[], sort: SortRule[], search = "", formulas: Record<string, string> = {}, rowOrder: string[] = []): BaseRow[] {
+export function viewRows(rows: BaseRow[], filters: SimpleFilter[], sort: SortRule[], search = "", formulas: Record<string, string> = {}, rowOrder: string[] = [], where: unknown[] = []): BaseRow[] {
   const q = search.trim().toLowerCase();
   currentFormulas = formulas;
   const manual = sort.length === 0 && rowOrder.length > 0;
   return (manual ? inManualOrder(rows, rowOrder) : rows)
-    .filter((row) => filters.every((f) => matches(row, f)))
+    .filter((row) => filters.every((f) => matches(row, f)) && rowMatches(row, where, formulas))
     .filter((row) => !q || row.name.toLowerCase().includes(q) || Object.values(row.values).some((v) => textOf(v).toLowerCase().includes(q)))
     .sort((a, b) => {
       for (const rule of sort) {

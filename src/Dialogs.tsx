@@ -122,11 +122,11 @@ export function NameDialog({
           </div>
         )}
 
-        {folders && kind !== "ticket" && <FolderPicker folders={folders} folder={folder} onChange={setFolder} />}
+        {folders && kind !== "task" && <FolderPicker folders={folders} folder={folder} onChange={setFolder} />}
         {kinds && kind === "note" && templates.length > 0 && <TemplatePicker templates={templates} template={template} onChange={setTemplate} />}
-        {kinds && kind === "ticket" && (
+        {kinds && kind === "task" && (
           <p className="name-dialog-note">
-            <Icon name="info" size={13} /> Numéroté automatiquement et rangé dans le dossier des tickets.
+            <Icon name="info" size={13} /> Rangée dans le dossier des tâches, au format de TaskNotes.
           </p>
         )}
 

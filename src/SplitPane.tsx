@@ -10,9 +10,9 @@ import { isCanvasPath } from "./canvas/format";
 import { CanvasEditor } from "./canvas/CanvasEditor";
 import { isBasePath } from "./base/baseFile";
 import { BaseView } from "./base/BaseView";
-import { TicketView } from "./ticket/TicketView";
-import { isTicketMarkdown } from "./ticket/format";
-import type { TicketColumn } from "./ticket/board";
+import { TaskView } from "./tasks/TaskView";
+import { isTaskMarkdown } from "./tasks/task";
+import type { TaskConfig } from "./tasks/config";
 import { hasConflictMarkers } from "./vault/conflicts";
 import { noteTitle } from "./vault/links";
 import { ConflictError, type Vault } from "./vault/vault";
@@ -53,7 +53,7 @@ interface Loaded {
 
 /**
  * The right side of the split view: a second page, read and saved on its own
- * (autosave, conflict check), next to the active tab. Notes, tickets,
+ * (autosave, conflict check), next to the active tab. Notes, tasks,
  * drawings, mind maps and bases are shown; a page already open on the left is
  * not edited twice.
  */
@@ -63,7 +63,8 @@ export const SplitPane = memo(function SplitPane({
   files,
   bridge,
   theme,
-  ticketColumns,
+  tasks,
+  onNewTask,
   openOnLeft,
   autosave,
   icon,
@@ -95,7 +96,10 @@ export const SplitPane = memo(function SplitPane({
   /** The app's bridge, bound to this page. */
   bridge: VaultBridge;
   theme: "light" | "dark";
-  ticketColumns: TicketColumn[];
+  /** The tasks' settings (TaskNotes). */
+  tasks: TaskConfig;
+  /** A new task (in a board column's status). */
+  onNewTask: (status?: string) => void;
   /** The left side shows the same page: it is edited there only. */
   openOnLeft: boolean;
   autosave: boolean;
@@ -122,7 +126,7 @@ export const SplitPane = memo(function SplitPane({
   onToggleFocus: () => void;
   wide: boolean;
   onToggleWide: () => void;
-  /** Reading mode of this side (notes, tickets, presentations). */
+  /** Reading mode of this side (notes, tasks, presentations). */
   reading: boolean;
   onToggleReading: () => void;
   git: GitApi | null;
@@ -228,12 +232,12 @@ export const SplitPane = memo(function SplitPane({
   const mindmap = isMindmapPath(path);
   const base = isBasePath(path);
   const canvas = isCanvasPath(path);
-  const ticket = page !== null && !drawing && !mindmap && !base && !canvas && isTicketMarkdown(page.loaded);
+  const task = page !== null && !drawing && !mindmap && !base && !canvas && isTaskMarkdown(page.loaded, tasks);
   const note = !drawing && !mindmap && !base && !canvas;
-  const presentation = page !== null && note && !ticket && isPresentationMarkdown(page.markdown);
+  const presentation = page !== null && note && !task && isPresentationMarkdown(page.markdown);
   const reading = readingOn && note && !raw;
   /** The note's first `# heading`, shown as its title (titleHeading.ts). */
-  const headingTitle = note && !ticket && !presentation && !raw && editor && !editor.isDestroyed ? titleHeadingOf(editor.state.doc) : null;
+  const headingTitle = note && !task && !presentation && !raw && editor && !editor.isDestroyed ? titleHeadingOf(editor.state.doc) : null;
   const editable = page !== null && !hasConflictMarkers(page.disk) && !openOnLeft && !reading;
   // The icon as now in the text (set here, or by the left side): the tree's one comes after saving.
   const pageIcon = page ? noteIcon(page.markdown) : icon;
@@ -331,12 +335,13 @@ export const SplitPane = memo(function SplitPane({
         onDeleteRow={onDeleteRow}
         loadImage={bridge.loadImage}
         onChanged={onSaved}
+        tasks={{ config: tasks, onNew: onNewTask }}
       />
     );
   } else if (page) {
     body = (
       <div className={`${presentation ? "page presentation-page" : wide ? "page wide" : "page"}${reading ? " reading" : ""}`}>
-        {!ticket && (
+        {!task && (
           <div className={pageIcon ? "page-heading split-heading has-icon" : "page-heading split-heading"}>
             <PageHeadingIcon icon={pageIcon} onIcon={editable && !raw ? setPageIcon : undefined} />
             <h1 className="page-title" title={headingTitle !== null ? `Fichier : ${noteTitle(path)}` : undefined}>
@@ -344,8 +349,8 @@ export const SplitPane = memo(function SplitPane({
             </h1>
           </div>
         )}
-        {ticket ? (
-          <TicketView key={key} path={path} source={page.loaded} markdown={page.markdown} onMarkdown={onMarkdown} bridge={bridge} editable={editable} onEditor={setEditor} columns={ticketColumns} />
+        {task ? (
+          <TaskView key={key} path={path} source={page.loaded} markdown={page.markdown} onMarkdown={onMarkdown} bridge={bridge} editable={editable} onEditor={setEditor} config={tasks} />
         ) : (
           <NoteEditor key={key} source={page.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={editable} hiddenProperties={["icon"]} onEditor={setEditor} frontmatterControl={frontmatter} titleHeading={!presentation} gitBase={gitBase} />
         )}
@@ -357,7 +362,7 @@ export const SplitPane = memo(function SplitPane({
     <section className="split-pane" aria-label={`Panneau de droite : ${noteTitle(path)}`}>
       <header className="split-pane-bar toolbar">
         <span className="split-pane-icon">
-          <PageIcon path={path} icon={icon} ticket={ticket} presentation={presentation} row={isRow} />
+          <PageIcon path={path} icon={icon} task={task} presentation={presentation} row={isRow} />
         </span>
         <span className="split-pane-title" title={path}>
           {noteTitle(path)}
@@ -390,13 +395,13 @@ export const SplitPane = memo(function SplitPane({
               <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportSlides().catch(report("Export"))} />
             </>
           )}
-          {note && !ticket && !presentation && !openOnLeft && !reading && (
+          {note && !task && !presentation && !openOnLeft && !reading && (
             <ToolButton icon="slides" label="Transformer en présentation" onClick={() => frontmatter.current?.set(setProperty(frontmatter.current.get(), "marp", true))} disabled={!editable || raw} />
           )}
           {git && <ToolButton icon="clock" label="Historique de la note" onClick={() => setHistory(!history)} active={history} />}
           {note && !presentation && <ToolButton icon="width" label={wide ? "Largeur normale" : "Pleine largeur"} onClick={onToggleWide} active={wide} />}
           <ToolButton icon="focus" label={focusOn ? "Quitter le mode focus (⌘⇧M)" : "Mode focus (⌘⇧M)"} onClick={onToggleFocus} active={focusOn} />
-          {!base && !ticket && !canvas && !openOnLeft && (
+          {!base && !task && !canvas && !openOnLeft && (
             <ToolButton icon="more" label="Exporter, copier…" onClick={(event) => setMenu(event.currentTarget.getBoundingClientRect())} active={menu !== null} disabled={raw || !page} />
           )}
           {!openOnLeft && <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin" : mindmap ? "Voir le fichier brut de la mind map" : base ? "Voir le fichier .base" : canvas ? "Voir le fichier .canvas" : "Mode Markdown brut"} onClick={toggleRaw} active={raw} disabled={!page} />}

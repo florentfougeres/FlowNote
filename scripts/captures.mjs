@@ -156,24 +156,20 @@ const SHOTS = {
     await expand(page, "Site Maison Pain");
     await openPage(page, "Présentation de la maquette", 3000);
   },
-  ticket: async (page) => {
-    await expand(page, "Projets");
-    await nav(page, "Tickets");
-    await wait(page, 1000);
-    await page.getByText("Horaires du dimanche faux").first().click();
+  tache: async (page) => {
+    await nav(page, "Tâches");
+    await wait(page, 1200);
+    await page.getByText("Photos du fournil").first().click();
     await wait(page, 1500);
   },
-  "tickets-liste": async (page) => {
-    await expand(page, "Projets");
-    await nav(page, "Tickets");
-    await wait(page, 1200);
+  "taches-liste": async (page) => {
+    await nav(page, "Tâches");
+    await wait(page, 1500);
   },
-  "tickets-tableau": async (page) => {
-    await expand(page, "Projets");
-    await nav(page, "Tickets");
-    await wait(page, 800);
-    await page.getByRole("radio", { name: "Tableau" }).first().click();
-    await wait(page, 1200);
+  "taches-tableau": async (page) => {
+    await expand(page, "TaskNotes");
+    await expand(page, "Views");
+    await openPage(page, "kanban-default", 1500);
   },
 };
 

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { DEFAULT_COLUMNS, normalizeColumns, statusFor, type TicketColumn } from "./ticket/board";
+import type { TaskConfig } from "./tasks/config";
 import { Icon, type IconName } from "./Icon";
 import { keys } from "./keys";
 
@@ -15,10 +15,6 @@ export interface Settings {
   autosave: boolean;
   theme: Theme;
   spellChecker: SpellChecker;
-  /** Folder of the tickets, relative to the vault. */
-  ticketsFolder: string;
-  /** Columns of the tickets board (values of `status`). */
-  ticketColumns: TicketColumn[];
   /** Note of the reading list, relative to the vault. */
   readingList: string;
   /** Read the title of the pages added to the reading list. */
@@ -36,8 +32,6 @@ export interface Settings {
 const AUTOSAVE_KEY = "flownote:autosave";
 const THEME_KEY = "flownote:theme";
 const SPELL_KEY = "flownote:spellchecker";
-const TICKETS_KEY = "flownote:tickets-folder";
-const COLUMNS_KEY = "flownote:ticket-columns";
 const READING_KEY = "flownote:reading-list";
 const TITLES_KEY = "flownote:fetch-titles";
 const SCALE_KEY = "flownote:ui-scale";
@@ -71,15 +65,6 @@ function readScale(): number {
   return UI_SCALES.some(([scale]) => scale === value) ? value : 1;
 }
 
-function readColumns(): TicketColumn[] {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(COLUMNS_KEY) ?? "null");
-    if (Array.isArray(parsed)) return normalizeColumns(parsed.filter((c): c is TicketColumn => typeof c?.status === "string" && typeof c?.label === "string"));
-  } catch {
-    // default columns
-  }
-  return DEFAULT_COLUMNS;
-}
 /** Former on/off setting of Grammalecte, read once to keep the user's choice. */
 const LEGACY_GRAMMAR_KEY = "flownote:grammar";
 
@@ -96,8 +81,6 @@ export function loadSettings(): Settings {
       autosave: localStorage.getItem(AUTOSAVE_KEY) !== "false",
       theme: theme === "light" || theme === "dark" ? theme : "system",
       spellChecker: readSpellChecker(),
-      ticketsFolder: localStorage.getItem(TICKETS_KEY) ?? "Tickets",
-      ticketColumns: readColumns(),
       readingList: localStorage.getItem(READING_KEY) || "Lectures.md",
       fetchTitles: localStorage.getItem(TITLES_KEY) !== "false",
       uiScale: readScale(),
@@ -107,7 +90,7 @@ export function loadSettings(): Settings {
       blockMenu: localStorage.getItem(BLOCK_MENU_KEY) === "grid" ? "grid" : "list",
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte", ticketsFolder: "Tickets", ticketColumns: DEFAULT_COLUMNS, readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true, gitGutter: false, font: "system", blockMenu: "list" };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true, gitGutter: false, font: "system", blockMenu: "list" };
   }
 }
 
@@ -122,8 +105,6 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(AUTOSAVE_KEY, String(settings.autosave));
     localStorage.setItem(THEME_KEY, settings.theme);
     localStorage.setItem(SPELL_KEY, settings.spellChecker);
-    localStorage.setItem(TICKETS_KEY, settings.ticketsFolder);
-    localStorage.setItem(COLUMNS_KEY, JSON.stringify(settings.ticketColumns));
     localStorage.setItem(READING_KEY, settings.readingList);
     localStorage.setItem(TITLES_KEY, String(settings.fetchTitles));
     localStorage.setItem(SCALE_KEY, String(settings.uiScale));
@@ -187,12 +168,12 @@ const THEMES: [Theme, string][] = [
   ["dark", "Sombre"],
 ];
 
-type Category = "general" | "editor" | "tickets" | "reading" | "vault";
+type Category = "general" | "editor" | "tasks" | "reading" | "vault";
 
 const CATEGORIES: { id: Category; label: string; icon: IconName }[] = [
   { id: "general", label: "Général", icon: "sliders" },
   { id: "editor", label: "Éditeur", icon: "spelling" },
-  { id: "tickets", label: "Tickets", icon: "ticket" },
+  { id: "tasks", label: "Tâches", icon: "task" },
   { id: "reading", label: "Lectures", icon: "bookmark" },
   { id: "vault", label: "Vault", icon: "folder" },
 ];
@@ -238,12 +219,15 @@ export function SettingsPage({
   settings,
   vaultName,
   grammarAvailable,
+  tasks,
   onChange,
   onChangeVault,
 }: {
   settings: Settings;
   vaultName: string;
   grammarAvailable: boolean;
+  /** The tasks' settings, read from TaskNotes. */
+  tasks: TaskConfig;
   onChange: (s: Settings) => void;
   onChangeVault: () => void;
 }) {
@@ -337,21 +321,41 @@ export function SettingsPage({
             </Row>
           </section>
         )}
-        {category === "tickets" && (
+        {category === "tasks" && (
           <>
             <section className="settings-card">
-              <Row label="Dossier des tickets" help="Les nouveaux tickets y sont créés et numérotés (« 12 - Titre.md »).">
-                <input
-                  className="setting-text"
-                  value={settings.ticketsFolder}
-                  placeholder="Racine du vault"
-                  aria-label="Dossier des tickets"
-                  onChange={(e) => onChange({ ...settings, ticketsFolder: e.target.value.trim().replace(/^\/+|\/+$/g, "") })}
-                />
+              <p className="settings-note">
+                {tasks.fromPlugin
+                  ? "Les tâches suivent les réglages du plugin TaskNotes de ce vault (lus dans .obsidian, jamais modifiés). Changez-les dans Obsidian."
+                  : "Les tâches suivent le format du plugin TaskNotes, avec ses réglages par défaut : installez-le dans Obsidian pour les changer."}
+              </p>
+              <Row label="Dossier des nouvelles tâches">
+                <code>{tasks.folder || "Racine du vault"}</code>
+              </Row>
+              <Row label="Une tâche porte" help={tasks.identification === "tag" ? "Les notes avec ce tag dans leurs propriétés, où qu'elles soient." : "Les notes avec cette propriété."}>
+                <code>{tasks.identification === "tag" ? `#${tasks.tag}` : `${tasks.property.name}: ${tasks.property.value}`}</code>
               </Row>
             </section>
             <section className="settings-card">
-              <ColumnsSetting columns={settings.ticketColumns} onChange={(ticketColumns) => onChange({ ...settings, ticketColumns })} />
+              <Row label="Statuts" help="Les colonnes du tableau, dans cet ordre." column>
+                <div className="task-tags">
+                  {tasks.statuses.map((s) => (
+                    <span key={s.value} className="task-tag neutral">
+                      <span className="board-dot" style={{ background: s.color }} /> {s.label}
+                      {s.done ? " ✓" : ""}
+                    </span>
+                  ))}
+                </div>
+              </Row>
+              <Row label="Priorités" column>
+                <div className="task-tags">
+                  {tasks.priorities.map((p) => (
+                    <span key={p.value} className="task-tag neutral">
+                      <span className="board-dot" style={{ background: p.color }} /> {p.label}
+                    </span>
+                  ))}
+                </div>
+              </Row>
             </section>
           </>
         )}
@@ -384,55 +388,3 @@ export function SettingsPage({
   );
 }
 
-/**
- * Columns of the tickets board. The first and last ones are the open and
- * closed states (only their titles change); the ones between can be added,
- * renamed, moved and removed. Renaming keeps the `status` value already
- * written in the tickets.
- */
-export function ColumnsSetting({ columns, onChange }: { columns: TicketColumn[]; onChange: (columns: TicketColumn[]) => void }) {
-  const [draft, setDraft] = useState("");
-  const update = (next: TicketColumn[]) => onChange(normalizeColumns(next));
-  const rename = (i: number, label: string) => onChange(columns.map((c, j) => (j === i ? { ...c, label } : c)));
-  const move = (i: number, step: number) => {
-    const next = [...columns];
-    [next[i], next[i + step]] = [next[i + step], next[i]];
-    update(next);
-  };
-  const add = () => {
-    const label = draft.trim();
-    if (!label) return;
-    update([...columns.slice(0, -1), { status: statusFor(label, columns), label }, columns[columns.length - 1]]);
-    setDraft("");
-  };
-  return (
-    <Row label="Colonnes du tableau" help="La première ouvre le ticket, la dernière le ferme. La valeur entre crochets est écrite dans « status » du ticket." column>
-      <ol className="columns-setting">
-        {columns.map((c, i) => {
-          const fixed = i === 0 || i === columns.length - 1;
-          return (
-            <li key={c.status}>
-              <input value={c.label} aria-label={`Titre de la colonne ${c.status}`} onChange={(e) => rename(i, e.target.value)} onBlur={() => update(columns)} />
-              <code>[{c.status}]</code>
-              <button disabled={fixed || i === 1} onClick={() => move(i, -1)} aria-label="Monter" title="Monter">
-                <Icon name="chevronUp" size={12} />
-              </button>
-              <button disabled={fixed || i === columns.length - 2} onClick={() => move(i, 1)} aria-label="Descendre" title="Descendre">
-                <Icon name="chevronDown" size={12} />
-              </button>
-              <button disabled={fixed} onClick={() => update(columns.filter((_, j) => j !== i))} aria-label="Supprimer la colonne" title="Supprimer (ses tickets iront dans la première colonne)">
-                <Icon name="trash" size={12} />
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-      <div className="columns-add">
-        <input value={draft} placeholder="Nouvelle colonne (ex. En revue)" onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
-        <button onClick={add} disabled={!draft.trim()}>
-          Ajouter
-        </button>
-      </div>
-    </Row>
-  );
-}

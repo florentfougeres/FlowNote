@@ -11,6 +11,8 @@ import { GalleryView } from "./GalleryView";
 import { CalendarView } from "./CalendarView";
 import { columnInfo, type ColumnInfo } from "./columns";
 import { BaseLinks, TYPE_ICONS } from "./cells";
+import { isTaskView, TaskBaseView, taskViewName } from "../tasks/TaskBaseView";
+import type { TaskConfig } from "../tasks/config";
 
 const OPS: [SimpleFilter["op"], string][] = [
   ["is", "est"],
@@ -272,6 +274,8 @@ export interface BaseViewProps {
   loadImage: (path: string) => Promise<string>;
   /** Embedded in a note: no page title, a smaller frame. */
   embedded?: boolean;
+  /** The tasks' settings and their creation, for TaskNotes' views. */
+  tasks?: { config: TaskConfig; onNew: (status?: string) => void };
 }
 
 /**
@@ -280,10 +284,12 @@ export interface BaseViewProps {
  * text: its edits go through `onSource` like a note's. Cells are written to the
  * rows' notes.
  */
-export function BaseView({ vault, files, path, source, editable, onSource, onOpen, onRenameRow, onDeleteRow, onChanged, loadImage, embedded = false }: BaseViewProps) {
+export function BaseView({ vault, files, path, source, editable, onSource, onOpen, onRenameRow, onDeleteRow, onChanged, loadImage, embedded = false, tasks }: BaseViewProps) {
   const parsed = useMemo(() => parseBase(source), [source]);
   const { model } = parsed;
   const [rows, setRows] = useState<BaseRow[] | null>(null);
+  /** The notes' text, for TaskNotes' views (comments, checkboxes). */
+  const [texts, setTexts] = useState<Map<string, string>>(new Map());
   const [viewIndex, setViewIndex] = useState(0);
   const [search, setSearch] = useState("");
   const [popover, setPopover] = useState<"filter" | "sort" | "views" | "options" | null>(null);
@@ -298,6 +304,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
   const load = useCallback(async () => {
     const [notes, stats] = await Promise.all([readAllNotes(vault, files), vault.stats?.().catch(() => []) ?? Promise.resolve([])]);
     setRows(rowsOf(notes, parseBase(source).model, stats));
+    setTexts(new Map(notes));
   }, [vault, files, model.folder]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     void load().catch(() => setRows([]));
@@ -331,7 +338,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
   const order = view.order.length ? (view.order.includes(NAME) ? view.order : [NAME, ...view.order]) : [NAME, ...properties, ...formulaIds];
   const columns = order.filter(known).map(info);
   const hidden = [...properties, ...formulaIds, ...FILE_IDS].filter((p) => !order.includes(p));
-  const shown = viewRows(all, view.filters, view.sort, search, model.formulas, view.rowOrder);
+  const shown = viewRows(all, view.filters, view.sort, search, model.formulas, view.rowOrder, view.where);
 
   /** Writes one note, shown at once; the list is read again if it fails. */
   const writeRow = async (row: BaseRow, change: (text: string) => string, local: (row: BaseRow) => BaseRow) => {
@@ -493,7 +500,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
             <h1>
               <Icon name="database" size={26} /> <BaseTitle name={noteTitle(path)} editable={editable} onRename={(name) => onRenameRow(path, name)} />
             </h1>
-            <p className="dash-muted">{model.folder !== null ? `Les pages du dossier « ${model.folder || "racine"} »` : "Toutes les pages du vault"}</p>
+            <p className="dash-muted">{tasks && model.views.some((v) => isTaskView(v.type)) ? "Les tâches du vault, au format du plugin TaskNotes" : model.folder !== null ? `Les pages du dossier « ${model.folder || "racine"} »` : "Toutes les pages du vault"}</p>
           </header>
         )}
         <div className="db-toolbar">
@@ -505,7 +512,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
             )}
             {model.views.map((v, i) => (
               <button key={i} role="tab" aria-selected={i === index} className={i === index ? "db-tab active" : "db-tab"} onClick={() => setViewIndex(i)} onDoubleClick={() => editable && setRenaming(i)}>
-                <Icon name={viewIcon(v.type)} size={14} /> {v.name}
+                <Icon name={isTaskView(v.type) ? (v.type === "tasknotesKanban" ? "board" : "task") : viewIcon(v.type)} size={14} /> {tasks && isTaskView(v.type) ? taskViewName(v.name) : v.name}
                 {i === index && model.views.length > 1 && editable && (
                   <span
                     className="db-tab-remove"
@@ -532,7 +539,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
             )}
           </div>
           <div className="db-tools">
-            <label className="tickets-search db-search">
+            <label className="tasks-search db-search">
               <Icon name="search" size={14} />
               <input placeholder="Rechercher" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setSearch("")} />
             </label>
@@ -557,7 +564,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
               </span>
             )}
             {editable && (
-              <button className="primary db-new" onClick={() => void newRow()}>
+              <button className="primary db-new" onClick={() => (tasks && isTaskView(view.type) ? tasks.onNew() : void newRow())}>
                 <Icon name="plus" size={13} /> Nouveau
               </button>
             )}
@@ -579,6 +586,8 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
         )}
         {rows === null ? (
           <p className="dash-muted">Lecture des pages…</p>
+        ) : tasks && isTaskView(view.type) ? (
+          <TaskBaseView view={view} rows={shown} texts={texts} config={tasks.config} vault={vault} editable={editable} onOpen={onOpen} onChanged={() => void load()} onNew={tasks.onNew} />
         ) : view.type === "board" ? (
           <BoardView
             rows={shown}

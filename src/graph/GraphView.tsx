@@ -101,7 +101,7 @@ export function GraphView({ graph, onOpen, compact = false }: { graph: VaultGrap
       for (const n of nodes) {
         const kind = n.node.kind;
         ctx.globalAlpha = lit && !lit.has(n) ? 0.15 : kind === "missing" ? 0.45 : 1;
-        ctx.fillStyle = n === hover ? c.accent : kind === "ticket" ? c.accent : kind === "drawing" ? DRAWING_COLOR : kind === "presentation" ? PRESENTATION_COLOR : kind === "mindmap" ? MINDMAP_COLOR : c.muted;
+        ctx.fillStyle = n === hover ? c.accent : kind === "task" ? c.accent : kind === "drawing" ? DRAWING_COLOR : kind === "presentation" ? PRESENTATION_COLOR : kind === "mindmap" ? MINDMAP_COLOR : c.muted;
         ctx.beginPath();
         ctx.arc(n.x!, n.y!, n.r, 0, Math.PI * 2);
         ctx.fill();

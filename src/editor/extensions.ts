@@ -22,7 +22,7 @@ import { autolinkPlugin } from "./autolink";
 import { grammarPlugin } from "./grammar";
 import { titleHeadingPlugin } from "./titleHeading";
 import { gitGutterPlugin } from "./gitGutter";
-import { dueDatePlugin } from "../ticket/dueDates";
+import { dueDatePlugin } from "../tasks/dueDates";
 import { NULL_BRIDGE, type BridgeRef } from "./bridge";
 import { highlightPencilPlugin, toggleUnderline } from "./format";
 import { typedHtmlPlugin } from "./typedHtml";

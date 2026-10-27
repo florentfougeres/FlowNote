@@ -20,14 +20,13 @@
 @import "./styles/drawing.css";
 @import "./styles/tabs.css";
 @import "./styles/dashboard.css";
-@import "./styles/tickets.css";
+@import "./styles/tasks.css";
 @import "./styles/graph.css";
 @import "./styles/reading.css";
 @import "./styles/presentation.css";
 @import "./styles/mindmap.css";
 @import "./styles/canvas.css";
 @import "./styles/dashboardPage.css";
-@import "./styles/todo.css";
 @import "./styles/kanban.css";
 @import "./styles/database.css";
 @import "./styles/dialogs.css";

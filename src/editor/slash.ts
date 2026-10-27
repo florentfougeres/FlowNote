@@ -1,5 +1,5 @@
 import { CALLOUT_TYPES, calloutPicker } from "./callouts";
-import { isoDay } from "../ticket/agenda";
+import { isoDay } from "../tasks/agenda";
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";

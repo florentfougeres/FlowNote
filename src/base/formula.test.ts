@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { display, evaluateFormulas } from "./formula";
+import { display, evaluateFormulas, filterMatches } from "./formula";
 
 const run = (formula: string, note: Record<string, unknown> = {}, file: Record<string, unknown> = {}) => {
   const r = evaluateFormulas({ x: formula }, note, file).x;
@@ -55,5 +55,34 @@ describe("base formulas", () => {
 describe("empty values", () => {
   it("leaves arithmetic on an empty property empty", () => {
     expect(evaluateFormulas({ d: "pages * 2", s: "pages + 1", t: 'titre + "!"' }, { titre: "A" }, {})).toEqual({ d: null, s: null, t: "A!" });
+  });
+});
+
+describe("filters as Obsidian and TaskNotes write them", () => {
+  const today = new Date();
+  const day = (offset: number) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + offset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  it("map, filter and reduce over lists", () => {
+    expect(run("list(nums).map(value * 2)", { nums: [1, 2] })).toEqual([2, 4]);
+    expect(run("nums.filter(value > 1).reduce(acc + value, 0)", { nums: [1, 2, 3] })).toBe(5);
+    expect(run('entries.filter(value.end).map(value.end).length', { entries: [{ end: "a" }, { start: "b" }] })).toBe(1);
+    expect(run('complete_instances.map(date(value).format("YYYY-MM-DD")).contains(today().format("YYYY-MM-DD"))', { complete_instances: [day(0)] })).toBe(true);
+    expect(run('(today() + "7 days").format("YYYY-MM-DD")')).toBe(day(7));
+    expect(run('date(due).isEmpty()', { due: null })).toBe(true);
+    expect(run('value.isType("object")', {}, {})).toBe(false);
+  });
+
+  it("evaluates and/or/not groups, file.hasTag and file.inFolder", () => {
+    const file = { tags: ["task", "client/pain"], folder: "TaskNotes/Tasks" };
+    expect(filterMatches({ and: ['file.hasTag("task")', 'file.inFolder("TaskNotes")'] }, {}, file)).toBe(true);
+    expect(filterMatches('file.hasTag("client")', {}, file)).toBe(true);
+    expect(filterMatches({ or: ['status == "done"', "due.isEmpty()"] }, { status: "open", due: day(1) }, file)).toBe(false);
+    expect(filterMatches({ not: ['status == "done"'] }, { status: "open" }, file)).toBe(true);
+    // What FlowNote cannot evaluate is left out instead of hiding every row.
+    expect(filterMatches({ and: ["inconnue(1)", 'status == "open"'] }, { status: "open" }, file)).toBe(true);
   });
 });

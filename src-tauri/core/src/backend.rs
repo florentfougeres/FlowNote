@@ -11,7 +11,7 @@ use serde_json::Value;
 pub const COMMANDS: &[&str] = &[
     "vault_tree", "vault_read", "vault_write", "vault_files", "vault_create", "vault_create_dir",
     "vault_reveal", "vault_config", "vault_rename", "vault_trash", "vault_search", "vault_read_notes", "vault_stats",
-    "vault_bookmarks", "vault_templates_config", "git_status", "git_diff", "git_stage", "git_unstage", "git_discard", "git_commit", "git_log",
+    "vault_bookmarks", "vault_templates_config", "vault_tasknotes_config", "git_status", "git_diff", "git_stage", "git_unstage", "git_discard", "git_commit", "git_log",
     "git_show", "git_fetch", "git_pull", "git_push", "git_conflict", "git_resolve", "git_merge_continue",
     "git_merge_abort", "git_activity", "git_last_commit", "grammar_check", "fetch_page_title", "fetch_page_preview", "open_url", "save_export",
     "open_export",
@@ -66,6 +66,7 @@ pub fn dispatch(command: &str, args: &Value) -> Result<Value, String> {
         "vault_stats" => json(vault::vault_stats(root()?)),
         "vault_bookmarks" => json(vault::vault_bookmarks(root()?)),
         "vault_templates_config" => json(vault::vault_templates_config(root()?)),
+        "vault_tasknotes_config" => json(vault::vault_tasknotes_config(root()?)),
         "git_status" => json(git::git_status(root()?)?),
         "git_diff" => json(git::git_diff(root()?, path()?, boolean(args, "staged"), boolean(args, "untracked"))?),
         "git_stage" => json(git::git_stage(root()?, strings(args, "paths"))?),

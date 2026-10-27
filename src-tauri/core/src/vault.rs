@@ -15,9 +15,6 @@ pub struct VaultEntry {
     kind: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     children: Option<Vec<VaultEntry>>,
-    /// The note is a ticket (front matter with `type: ticket`).
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
-    ticket: bool,
     /// The note is a presentation (front matter with `marp: true`).
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     presentation: bool,
@@ -44,12 +41,6 @@ fn split_front_matter(text: &str) -> (Option<&str>, &str) {
     let Some(end) = rest.find("\n---") else { return (None, text) };
     let body = rest[end + 4..].split_once('\n').map_or("", |(_, b)| b);
     (Some(&rest[..end]), body)
-}
-
-/// Front matter of a note, read from the beginning of the file only.
-#[cfg(test)]
-fn front_matter(path: &Path) -> Option<String> {
-    head(path).and_then(|text| split_front_matter(&text).0.map(str::to_string))
 }
 
 /// A page's title (see `pageTitle` in icon.ts): a plain note's first line when it is
@@ -84,10 +75,6 @@ fn property<'a>(yaml: &'a str, key: &str) -> Option<&'a str> {
     })
 }
 
-fn is_ticket(yaml: &str) -> bool {
-    property(yaml, "type") == Some("ticket")
-}
-
 fn is_presentation(yaml: &str) -> bool {
     property(yaml, "marp") == Some("true")
 }
@@ -95,11 +82,6 @@ fn is_presentation(yaml: &str) -> bool {
 /// The `icon` property when it is an emoji (not a plugin icon name like "LiHome").
 fn icon_of(yaml: &str) -> Option<String> {
     property(yaml, "icon").filter(|v| !v.is_empty() && v.chars().count() <= 16 && !v.is_ascii()).map(str::to_string)
-}
-
-#[cfg(test)]
-fn is_ticket_file(path: &Path) -> bool {
-    front_matter(path).is_some_and(|yaml| is_ticket(&yaml))
 }
 
 fn is_hidden(name: &str) -> bool {
@@ -190,24 +172,23 @@ fn list(dir: &Path, prefix: &str) -> Result<Vec<VaultEntry>, String> {
             let children = list(&entry.path(), &path)?;
             // An empty folder is shown (just created); one holding only attachments is not.
             if !children.is_empty() || is_empty_dir(&entry.path()) {
-                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children), ticket: false, presentation: false, icon: None, title: None });
+                entries.push(VaultEntry { path, name, kind: "dir", children: Some(children), presentation: false, icon: None, title: None });
             }
         } else if let Some(stem) = name.strip_suffix(".md") {
             let text = head(&entry.path()).unwrap_or_default();
             let (yaml, body) = split_front_matter(&text);
-            let ticket = yaml.is_some_and(is_ticket);
             let presentation = yaml.is_some_and(is_presentation);
             let icon = yaml.and_then(icon_of);
             let lower = name.to_lowercase();
-            let plain_note = !ticket && !presentation && !lower.ends_with(".excalidraw.md") && !lower.ends_with(".mindmap.md");
+            let plain_note = !presentation && !lower.ends_with(".excalidraw.md") && !lower.ends_with(".mindmap.md");
             let title = title_of(yaml, body, plain_note);
-            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket, presentation, icon, title });
+            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, presentation, icon, title });
         } else if let Some(stem) = name.strip_suffix(".base") {
             // A base (Obsidian's format): shown as a page whose rows are its folder's notes.
-            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket: false, presentation: false, icon: None, title: None });
+            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, presentation: false, icon: None, title: None });
         } else if let Some(stem) = name.strip_suffix(".canvas") {
             // A canvas (Obsidian's JSON Canvas): cards and arrows on a board.
-            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, ticket: false, presentation: false, icon: None, title: None });
+            entries.push(VaultEntry { name: stem.to_string(), path, kind: "file", children: None, presentation: false, icon: None, title: None });
         }
     }
     entries.sort_by(|a, b| {
@@ -420,6 +401,12 @@ pub fn vault_templates_config(root: String) -> String {
     fs::read_to_string(base.join(".obsidian").join("templates.json")).unwrap_or_else(|_| "{}".into())
 }
 
+/// The TaskNotes plugin's settings (.obsidian/plugins/tasknotes/data.json: tasks folder, property names, statuses), read only; "{}" when absent.
+pub fn vault_tasknotes_config(root: String) -> String {
+    let Ok(base) = check_root(&root) else { return "{}".into() };
+    fs::read_to_string(base.join(".obsidian").join("plugins").join("tasknotes").join("data.json")).unwrap_or_else(|_| "{}".into())
+}
+
 /// Renames a note or a folder; never overwrites an existing path.
 pub fn vault_rename(root: String, from: String, to: String) -> Result<(), String> {
     let source = resolve(&root, &from)?;
@@ -456,7 +443,7 @@ mod tests {
         assert!(is_presentation("marp: true\ntheme: gaia"));
         assert!(is_presentation("marp: \"true\"\r"));
         assert!(!is_presentation("marp: false"));
-        assert!(!is_presentation("type: ticket"));
+        assert!(!is_presentation("type: note"));
     }
 
     #[test]
@@ -474,22 +461,7 @@ mod tests {
         assert_eq!(icon_of("icon: \"📚\"\r"), Some("📚".into()));
         assert_eq!(icon_of("icon: LiHome"), None);
         assert_eq!(icon_of("icon:"), None);
-        assert_eq!(icon_of("type: ticket"), None);
-    }
-
-    #[test]
-    fn tickets_are_recognised_by_their_front_matter() {
-        let dir = std::env::temp_dir().join(format!("flownote-tk-{}", std::process::id()));
-        fs::create_dir_all(&dir).unwrap();
-        let write = |name: &str, text: &str| {
-            fs::write(dir.join(name), text).unwrap();
-            is_ticket_file(&dir.join(name))
-        };
-        assert!(write("a.md", "---\ntype: ticket\nstatus: open\n---\nTexte\n"));
-        assert!(write("b.md", "---\r\ntype: \"ticket\"\r\n---\r\n"));
-        assert!(!write("c.md", "---\ntype: note\n---\n"));
-        assert!(!write("d.md", "type: ticket\n"));
-        let _ = fs::remove_dir_all(dir);
+        assert_eq!(icon_of("type: note"), None);
     }
 
     #[test]

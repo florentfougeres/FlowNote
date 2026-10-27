@@ -3,8 +3,11 @@
  * language: numbers, text, true/false, property names (`prix`, `note.prix`,
  * `file.name`, `formula.autre`), + - * / %, comparisons, && || !, if(),
  * dates (date(), today(), now(); a date minus a date is a duration with
- * .days), and methods on text, lists, dates and numbers. What is not
- * understood shows as an error in its cell; the formula is kept as written.
+ * .days, a date plus "7 days" is a date), methods on text, lists, dates and
+ * numbers, list.map(value…), .filter() and .reduce(acc…), file.hasTag() and
+ * file.inFolder(). What is not understood shows as an error in its cell; the
+ * formula is kept as written. The same expressions filter the rows
+ * (`filterMatches`).
  */
 
 export type FValue = number | string | boolean | null | FDate | FDuration | FValue[];
@@ -22,6 +25,8 @@ export interface FormulaScope {
   file: Record<string, unknown>;
   /** Value of another formula of the base. */
   formula: (name: string) => FValue;
+  /** `value`, `index` and `acc` inside map(), filter() and reduce(). */
+  locals?: Record<string, FValue>;
 }
 
 type Token = { type: "num"; value: number } | { type: "str"; value: string } | { type: "id"; value: string } | { type: "op"; value: string };
@@ -81,6 +86,23 @@ type Node =
   | { k: "list"; items: Node[] };
 
 const PRECEDENCE: Record<string, number> = { "||": 1, "&&": 2, "==": 3, "!=": 3, "<": 4, ">": 4, "<=": 4, ">=": 4, "+": 5, "-": 5, "*": 6, "/": 6, "%": 6 };
+
+const parsedCache = new Map<string, Node | Error>();
+
+/** Parsed once per expression text (the rows of a base share their formulas and filters). */
+function parseCached(source: string): Node {
+  let node = parsedCache.get(source);
+  if (!node) {
+    try {
+      node = parseFormula(source);
+    } catch (e) {
+      node = e as Error;
+    }
+    parsedCache.set(source, node);
+  }
+  if (node instanceof Error) throw node;
+  return node;
+}
 
 function parseFormula(source: string): Node {
   const tokens = tokenize(source);
@@ -160,6 +182,15 @@ function parseFormula(source: string): Node {
 const isDate = (v: unknown): v is FDate => typeof v === "object" && v !== null && (v as FDate).kind === "date";
 const isDuration = (v: unknown): v is FDuration => typeof v === "object" && v !== null && (v as FDuration).kind === "duration";
 
+/** "7 days", "2w", "3 jours"… as a duration, or null. */
+function parseDuration(text: string): FDuration | null {
+  const m = /^\s*(-?\d+(?:\.\d+)?)\s*(days?|d|weeks?|w|hours?|h|minutes?|m|months?|M|years?|y|jours?|j|semaines?|mois|ans?)\s*$/.exec(text);
+  if (!m) return null;
+  const unit = m[2];
+  const ms = /^(d|day|j|jour)/.test(unit) ? DAY : /^(w|week|semaine)/.test(unit) ? 7 * DAY : /^(h|hour)/.test(unit) ? 3600000 : /^(M|month|mois)/.test(unit) ? 30 * DAY : /^(y|year|an)/.test(unit) ? 365 * DAY : 60000;
+  return { kind: "duration", ms: Number(m[1]) * ms };
+}
+
 function toDate(v: unknown): FDate | null {
   if (isDate(v)) return v;
   if (typeof v === "string") {
@@ -221,6 +252,7 @@ function evaluate(node: Node, scope: FormulaScope): FValue {
     case "list":
       return node.items.map(ev);
     case "id":
+      if (scope.locals && node.name in scope.locals) return scope.locals[node.name];
       if (node.name === "note" || node.name === "file" || node.name === "formula") return { kind: "ns", name: node.name } as unknown as FValue;
       return wrap(scope.note[node.name]);
     case "unary": {
@@ -250,6 +282,7 @@ function evaluate(node: Node, scope: FormulaScope): FValue {
           return compareValues(a, b) >= 0;
         case "+":
           if (isDate(a) && isDuration(b)) return { kind: "date", ms: a.ms + b.ms };
+          if (isDate(a) && typeof b === "string" && parseDuration(b)) return { kind: "date", ms: a.ms + parseDuration(b)!.ms };
           if (typeof a === "string" || typeof b === "string") return `${display(a)}${display(b)}`;
           if (Array.isArray(a)) return [...a, ...(Array.isArray(b) ? b : [b])];
           if (a === null || b === null) return null;
@@ -258,6 +291,7 @@ function evaluate(node: Node, scope: FormulaScope): FValue {
           if (a === null || b === null) return null;
           const da = toDate(a);
           const db = toDate(b);
+          if (isDate(a) && typeof b === "string" && parseDuration(b)) return { kind: "date", ms: a.ms - parseDuration(b)!.ms };
           if (isDate(a) || (da && db && typeof a === "string" && typeof b === "string" && /^\d{4}-/.test(a))) {
             if (isDuration(b)) return { kind: "date", ms: da!.ms - b.ms };
             if (db) return { kind: "duration", ms: da!.ms - db.ms };
@@ -296,14 +330,64 @@ function evaluate(node: Node, scope: FormulaScope): FValue {
       if (typeof obj === "string") return obj[num(i, "Index")] ?? null;
       return null;
     }
-    case "method":
-      return method(ev(node.obj), node.name, node.args.map(ev));
+    case "method": {
+      const obj = ev(node.obj);
+      if ((obj as { kind?: string })?.kind === "ns" && (obj as { name?: string }).name === "file") return fileMethod(scope.file, node.name, node.args.map(ev));
+      if (Array.isArray(obj) && LAMBDAS.has(node.name)) return lambda(obj, node.name, node.args, scope);
+      return method(obj, node.name, node.args.map(ev));
+    }
     case "call":
       return call(node.fn, node.args, scope);
   }
 }
 
+const LAMBDAS = new Set(["map", "filter", "reduce"]);
+
+/** map(), filter() and reduce(): the argument is evaluated for each item, as `value` (and `index`, `acc`). */
+function lambda(list: FValue[], name: string, args: Node[], scope: FormulaScope): FValue {
+  if (!args[0]) throw new Error(`.${name}() : expression attendue`);
+  const at = (locals: Record<string, FValue>) => evaluate(args[0], { ...scope, locals: { ...scope.locals, ...locals } });
+  if (name === "map") return list.map((value, index) => at({ value, index }));
+  if (name === "filter") return list.filter((value, index) => truthy(at({ value, index })));
+  let acc = args[1] ? evaluate(args[1], scope) : null;
+  list.forEach((value, index) => (acc = at({ value, index, acc })));
+  return acc;
+}
+
+/** Obsidian's file.hasTag(), file.inFolder(), file.hasProperty(). */
+function fileMethod(file: Record<string, unknown>, name: string, args: FValue[]): FValue {
+  const text = (v: FValue) => display(v).replace(/^#/, "");
+  switch (name) {
+    case "hasTag": {
+      const tags = Array.isArray(file.tags) ? (file.tags as unknown[]).map((t) => String(t).replace(/^#/, "").toLowerCase()) : [];
+      return args.some((a) => {
+        const tag = text(a).toLowerCase();
+        return tags.some((t) => t === tag || t.startsWith(`${tag}/`));
+      });
+    }
+    case "inFolder": {
+      const folder = String(file.folder ?? "");
+      const wanted = text(args[0] ?? "").replace(/\/+$/, "");
+      return wanted === "" || folder === wanted || folder.startsWith(`${wanted}/`);
+    }
+    case "hasProperty":
+      return file.properties !== undefined && text(args[0] ?? "") in (file.properties as Record<string, unknown>);
+  }
+  throw new Error(`Méthode inconnue : file.${name}()`);
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v) && !isDate(v) && !isDuration(v);
+
+function typeOf(v: FValue): string {
+  if (v === null) return "null";
+  if (Array.isArray(v)) return "list";
+  if (isDate(v)) return "date";
+  if (isDuration(v)) return "duration";
+  return isObject(v) ? "object" : typeof v;
+}
+
 function member(obj: FValue, name: string): FValue {
+  if (isObject(obj)) return wrap(obj[name]);
   if (isDuration(obj)) {
     const units: Record<string, number> = { days: DAY, hours: 3600000, minutes: 60000, seconds: 1000, weeks: 7 * DAY };
     if (name in units) return Math.floor(obj.ms / units[name]);
@@ -349,13 +433,24 @@ function method(obj: FValue, name: string, args: FValue[]): FValue {
         return obj.map(display).join(args.length ? text(args[0]) : ", ");
       case "isEmpty":
         return obj.length === 0;
+      case "unique":
+        return obj.filter((v, i) => obj.findIndex((w) => equal(v, w)) === i);
+      case "flat":
+        return obj.flat() as FValue[];
     }
   }
+  if (name === "isType") return typeOf(obj) === text(args[0]).toLowerCase();
+  if (name === "toString") return display(obj);
   if (obj === null && name === "isEmpty") return true;
+  if (isObject(obj) && name === "isEmpty") return Object.keys(obj).length === 0;
+  if ((isDate(obj) || isDuration(obj) || typeof obj === "boolean") && name === "isEmpty") return false;
   if (isDate(obj) && name === "format") return formatDate(obj, args.length ? text(args[0]) : undefined);
   if (typeof obj === "number") {
     if (name === "toFixed") return obj.toFixed(num(args[0] ?? 0, "toFixed"));
     if (name === "round") return Math.round(obj);
+    if (name === "floor") return Math.floor(obj);
+    if (name === "ceil") return Math.ceil(obj);
+    if (name === "abs") return Math.abs(obj);
     if (name === "isEmpty") return false;
   }
   throw new Error(`Méthode inconnue : .${name}()`);
@@ -377,12 +472,13 @@ function call(fn: string, nodes: Node[], scope: FormulaScope): FValue {
     case "now":
       return { kind: "date", ms: Date.now() };
     case "date": {
+      if (args[0] === null || args[0] === "") return null;
       const d = toDate(args[0]);
       if (!d) throw new Error("date() : date invalide");
       return d;
     }
     case "number":
-      return num(args[0], "number()");
+      return isDate(args[0]) || isDuration(args[0]) ? args[0].ms : num(args[0], "number()");
     case "min":
       return Math.min(...args.flat().map((a) => num(a as FValue, "min()")));
     case "max":
@@ -401,13 +497,11 @@ function call(fn: string, nodes: Node[], scope: FormulaScope): FValue {
     case "concat":
       return args.map(display).join("");
     case "list":
-      return args;
+      return args.length === 1 && Array.isArray(args[0]) ? args[0] : args.length === 1 && args[0] === null ? [] : args;
     case "duration": {
-      const m = /^\s*(-?\d+(?:\.\d+)?)\s*(d|day|days|j|jours?|w|weeks?|h|hours?|m|minutes?)\s*$/i.exec(display(args[0]));
-      if (!m) throw new Error("duration() : par ex. \"3d\"");
-      const unit = m[2].toLowerCase()[0];
-      const ms = { d: DAY, j: DAY, w: 7 * DAY, h: 3600000, m: 60000 }[unit] ?? DAY;
-      return { kind: "duration", ms: Number(m[1]) * ms };
+      const d = parseDuration(display(args[0]));
+      if (!d) throw new Error('duration() : par ex. "3d"');
+      return d;
     }
   }
   throw new Error(`Fonction inconnue : ${fn}()`);
@@ -434,14 +528,9 @@ export function numeric(v: FValue): number | null {
   return null;
 }
 
-/**
- * Evaluates the formulas of a row: `{ name: value | Error }`. Formulas may use
- * one another (`formula.autre`); a loop gives an error instead of hanging.
- */
-export function evaluateFormulas(formulas: Record<string, string>, note: Record<string, unknown>, file: Record<string, unknown>): Record<string, FValue | Error> {
-  const results: Record<string, FValue | Error> = {};
+/** The formulas of a row, each evaluated once when first asked (a loop is an error, not a hang). */
+function formulaGetter(formulas: Record<string, string>, note: Record<string, unknown>, file: Record<string, unknown>, results: Record<string, FValue | Error> = {}): (name: string) => FValue {
   const running = new Set<string>();
-  const parsed: Record<string, Node | Error> = {};
   const get = (name: string): FValue => {
     if (name in results) {
       const r = results[name];
@@ -452,16 +541,7 @@ export function evaluateFormulas(formulas: Record<string, string>, note: Record<
     if (running.has(name)) throw new Error(`Boucle dans les formules (${name})`);
     running.add(name);
     try {
-      parsed[name] ??= (() => {
-        try {
-          return parseFormula(formulas[name]);
-        } catch (e) {
-          return e as Error;
-        }
-      })();
-      const node = parsed[name];
-      if (node instanceof Error) throw node;
-      const value = evaluate(node, { note, file, formula: get });
+      const value = evaluate(parseCached(formulas[name]), { note, file, formula: get });
       results[name] = value;
       return value;
     } catch (e) {
@@ -471,6 +551,16 @@ export function evaluateFormulas(formulas: Record<string, string>, note: Record<
       running.delete(name);
     }
   };
+  return get;
+}
+
+/**
+ * Evaluates the formulas of a row: `{ name: value | Error }`. Formulas may use
+ * one another (`formula.autre`); a loop gives an error instead of hanging.
+ */
+export function evaluateFormulas(formulas: Record<string, string>, note: Record<string, unknown>, file: Record<string, unknown>): Record<string, FValue | Error> {
+  const results: Record<string, FValue | Error> = {};
+  const get = formulaGetter(formulas, note, file, results);
   for (const name of Object.keys(formulas)) {
     try {
       get(name);
@@ -479,4 +569,35 @@ export function evaluateFormulas(formulas: Record<string, string>, note: Record<
     }
   }
   return results;
+}
+
+/**
+ * Whether a row passes a filter of a base, as Obsidian writes them: an
+ * expression, or `{ and: […] }`, `{ or: […] }`, `{ not: […] }` (none true).
+ * An expression FlowNote cannot evaluate is left out, as if it were not
+ * written: the rows stay shown rather than vanish.
+ */
+export function filterMatches(filter: unknown, note: Record<string, unknown>, file: Record<string, unknown>, formulas: Record<string, string> = {}): boolean {
+  const formula = formulaGetter(formulas, note, file);
+  const test = (node: unknown): boolean | null => {
+    if (typeof node === "string") {
+      try {
+        return truthy(evaluate(parseCached(node), { note, file, formula }));
+      } catch {
+        return null;
+      }
+    }
+    if (typeof node === "boolean") return node;
+    if (!node || typeof node !== "object") return null;
+    const group = node as { and?: unknown; or?: unknown; not?: unknown };
+    const items = (v: unknown) => (Array.isArray(v) ? v : v === undefined ? [] : [v]).map(test).filter((r): r is boolean => r !== null);
+    if (group.and !== undefined) return items(group.and).every(Boolean);
+    if (group.or !== undefined) {
+      const results = items(group.or);
+      return results.length === 0 ? null : results.some(Boolean);
+    }
+    if (group.not !== undefined) return !items(group.not).some(Boolean);
+    return null;
+  };
+  return test(filter) !== false;
 }

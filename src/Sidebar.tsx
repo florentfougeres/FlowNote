@@ -28,7 +28,7 @@ interface Page {
   /** Note opened by clicking the row; null for a plain folder. */
   notePath: string | null;
   children: Page[];
-  ticket?: boolean;
+  task?: boolean;
   presentation?: boolean;
   icon?: string;
   /** The page's own title (vault.ts), shown in place of its name with `showTitles`. */
@@ -37,7 +37,7 @@ interface Page {
   row?: boolean;
 }
 
-function toPages(entries: VaultEntry[], rows = false): Page[] {
+function toPages(entries: VaultEntry[], tasks: Set<string>, rows = false): Page[] {
   const dirs = new Map(entries.filter((e) => e.kind === "dir").map((e) => [e.name, e]));
   const usedDirs = new Set<string>();
   const pages: Page[] = [];
@@ -47,16 +47,16 @@ function toPages(entries: VaultEntry[], rows = false): Page[] {
     const same = dirs.get(entry.name);
     const folder = same && ((same.children ?? []).length > 0 || isBasePath(entry.path)) ? same : undefined;
     if (folder) usedDirs.add(folder.name);
-    const children = folder ? toPages(folder.children ?? [], isBasePath(entry.path)) : [];
-    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children, ticket: entry.ticket, presentation: entry.presentation, icon: entry.icon, title: entry.title, row: rows && entry.path.endsWith(".md") });
+    const children = folder ? toPages(folder.children ?? [], tasks, isBasePath(entry.path)) : [];
+    pages.push({ key: entry.path, name: entry.name, notePath: entry.path, children, task: tasks.has(entry.path), presentation: entry.presentation, icon: entry.icon, title: entry.title, row: rows && entry.path.endsWith(".md") });
   }
   const folders = entries
     .filter((e) => e.kind === "dir" && !usedDirs.has(e.name))
-    .map((e) => ({ key: e.path, name: e.name, notePath: null, children: toPages(e.children ?? []) }));
+    .map((e) => ({ key: e.path, name: e.name, notePath: null, children: toPages(e.children ?? [], tasks) }));
   return [...folders, ...pages];
 }
 
-/** The tree without the entries the app shows elsewhere (tickets folder, reading list). */
+/** The tree without the entries the app shows elsewhere (tasks folder, reading list). */
 function withoutPaths(entries: VaultEntry[], hidden: Set<string>): VaultEntry[] {
   return entries.filter((e) => !hidden.has(e.path)).map((e) => (e.kind === "dir" && e.children ? { ...e, children: withoutPaths(e.children, hidden) } : e));
 }
@@ -66,7 +66,7 @@ function containsPath(page: Page, path: string): boolean {
 }
 
 /** Emoji of the page, or the icon of its kind (folder when `path` is null). */
-export function PageIcon({ path, icon, ticket, presentation, row, size = 14 }: { path: string | null; icon?: string | null; ticket?: boolean; presentation?: boolean; row?: boolean; size?: number }) {
+export function PageIcon({ path, icon, task, presentation, row, size = 14 }: { path: string | null; icon?: string | null; task?: boolean; presentation?: boolean; row?: boolean; size?: number }) {
   if (icon) {
     return (
       <span className="page-emoji" style={{ fontSize: size, width: size + 2 }}>
@@ -74,7 +74,7 @@ export function PageIcon({ path, icon, ticket, presentation, row, size = 14 }: {
       </span>
     );
   }
-  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isCanvasPath(path) ? "canvas" : isDashboardPath(path) ? "blocks" : isBasePath(path) ? "database" : ticket ? "ticket" : presentation ? "slides" : row ? "baseRow" : "doc";
+  const name: IconName = path === null ? "folder" : isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isCanvasPath(path) ? "canvas" : isDashboardPath(path) ? "blocks" : isBasePath(path) ? "database" : task ? "task" : presentation ? "slides" : row ? "baseRow" : "doc";
   return <Icon name={name} size={size} />;
 }
 
@@ -156,7 +156,6 @@ function NavRow({
 interface DragItem {
   path: string;
   folder: boolean;
-  ticket?: boolean;
   label: string;
   icon: React.ReactNode;
 }
@@ -171,10 +170,10 @@ interface Props {
   tree: VaultEntry[];
   selected?: string;
   /** What the active tab shows when it is not a page. */
-  view: "home" | "tickets" | "todo" | "graph" | "reading" | "settings" | "docs" | null;
-  /** Folder of the tickets (a setting): numbered by the app, so it never moves nor receives drops. */
-  ticketsFolder: string;
-  /** Paths left out of the tree: the tickets folder and the reading list have their own views. */
+  view: "home" | "tasks" | "graph" | "reading" | "settings" | "docs" | null;
+  /** The notes that are tasks (TaskNotes), shown with their icon. */
+  taskPaths: Set<string>;
+  /** Paths left out of the tree: the tasks folder and the reading list have their own views. */
   hidden: string[];
   /** Live icon of the open page (its front matter may not be saved yet). */
   liveIcon?: { path: string; icon: string | null; title: string | null };
@@ -213,9 +212,8 @@ interface Props {
   onSearch: () => void;
   onVaultSearch: () => void;
   onHome: (newTab: boolean) => void;
-  onTickets: (newTab: boolean) => void;
+  onTasks: (newTab: boolean) => void;
   onGraph: (newTab: boolean) => void;
-  onTodo: (newTab: boolean) => void;
   onReading: (newTab: boolean) => void;
   onDocs: (newTab: boolean) => void;
   onGit: () => void;
@@ -237,8 +235,8 @@ export const Sidebar = memo(function Sidebar(props: Props) {
   const { vaultName, tree, selected, view, liveIcon, gitChanges, gitOpen } = props;
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ anchor: DOMRect; items: MenuItem[] } | null>(null);
-  const pages = toPages(withoutPaths(tree, new Set(props.hidden)));
-  /** What the tree knows of each note (icon, ticket, presentation), for the favorites. */
+  const pages = toPages(withoutPaths(tree, new Set(props.hidden)), props.taskPaths);
+  /** What the tree knows of each note (icon, presentation), for the favorites. */
   const entries = new Map<string, VaultEntry>();
   const index = (list: VaultEntry[]) => list.forEach((e) => (e.kind === "file" ? entries.set(e.path, e) : index(e.children ?? [])));
   index(tree);
@@ -283,14 +281,12 @@ export const Sidebar = memo(function Sidebar(props: Props) {
     setMenu({ anchor: new DOMRect(event.clientX, event.clientY - 4, 0, 0), items });
   };
 
-  const pageMenu = (path: string, ticket = false): MenuItem[] => pageMenuItems(path, ticket, props);
+  const pageMenu = (path: string): MenuItem[] => pageMenuItems(path, props);
 
   /** Where an item may be dropped: a plain folder other than its own (and not inside itself), or the root. */
-  /** In the tickets folder (the vault root holds everything, so it does not count). */
-  const inTickets = (path: string) => props.ticketsFolder !== "" && (path === props.ticketsFolder || path.startsWith(`${props.ticketsFolder}/`));
 
   const dropTarget = (item: DragItem, target: string | null): string | null => {
-    if (target === null || target === dirname(item.path) || inTickets(target)) return null;
+    if (target === null || target === dirname(item.path)) return null;
     if (item.folder && (target === item.path || target.startsWith(`${item.path}/`))) return null;
     return target;
   };
@@ -310,8 +306,6 @@ export const Sidebar = memo(function Sidebar(props: Props) {
    */
   const startDrag = (event: React.PointerEvent, item: DragItem) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey) return;
-    // Tickets and their folder stay where the app numbers them.
-    if (item.ticket || inTickets(item.path)) return;
     const start = { x: event.clientX, y: event.clientY };
     let active = false;
     let hovered: string | null = null;
@@ -397,12 +391,11 @@ export const Sidebar = memo(function Sidebar(props: Props) {
                 startDrag(event, {
                   path: page.notePath ?? page.key,
                   folder: !page.notePath,
-                  ticket: page.ticket,
                   label: page.notePath ? noteTitle(page.notePath) : page.name,
-                  icon: <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} presentation={page.presentation} row={page.row} />,
+                  icon: <PageIcon path={page.notePath} icon={icon} task={page.task} presentation={page.presentation} row={page.row} />,
                 })
               }
-              onContextMenu={(event) => openContextMenu(event, page.notePath ? pageMenu(page.notePath, page.ticket) : folderMenu(page.key))}
+              onContextMenu={(event) => openContextMenu(event, page.notePath ? pageMenu(page.notePath) : folderMenu(page.key))}
             >
               <button className="page-toggle" onClick={() => toggle(page.key)} aria-label={open ? "Replier" : "Déplier"} disabled={page.children.length === 0}>
                 {page.children.length > 0 && <Icon name={open ? "chevronDown" : "chevronRight"} size={12} />}
@@ -413,7 +406,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
                 onAuxClick={(event) => event.button === 1 && page.notePath && props.onSelect(page.notePath, true)}
               >
                 <span className="page-icon">
-                  <PageIcon path={page.notePath} icon={icon} ticket={page.ticket} presentation={page.presentation} row={page.row} />
+                  <PageIcon path={page.notePath} icon={icon} task={page.task} presentation={page.presentation} row={page.row} />
                 </span>
                 <span className="page-label" title={page.notePath ? (props.showTitles ? `Fichier : ${noteTitle(page.notePath)}` : (shownTitle ?? undefined)) : undefined}>
                   {page.notePath ? (props.showTitles && shownTitle ? shownTitle : noteTitle(page.notePath)) : page.name}
@@ -423,7 +416,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
                 className="page-add"
                 title="Renommer, supprimer…"
                 aria-label="Plus d'actions"
-                onClick={(event) => openMenu(event, page.notePath ? pageMenu(page.notePath, page.ticket) : folderMenu(page.key))}
+                onClick={(event) => openMenu(event, page.notePath ? pageMenu(page.notePath) : folderMenu(page.key))}
               >
                 <Icon name="more" size={14} />
               </button>
@@ -472,8 +465,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
         <NavRow icon="home" label="Accueil" active={view === "home"} onClick={(event) => props.onHome(event.metaKey || event.ctrlKey)} />
         <NavRow icon="search" label="Rechercher" shortcut="⌘P" onClick={props.onSearch} />
         <NavRow icon="searchText" label="Rechercher dans les notes" shortcut="⌘⇧F" onClick={props.onVaultSearch} />
-        <NavRow icon="ticket" label="Tickets" active={view === "tickets"} onClick={(event) => props.onTickets(event.metaKey || event.ctrlKey)} />
-        <NavRow icon="checkbox" label="Tâches" active={view === "todo"} onClick={(event) => props.onTodo(event.metaKey || event.ctrlKey)} />
+        <NavRow icon="task" label="Tâches" active={view === "tasks"} onClick={(event) => props.onTasks(event.metaKey || event.ctrlKey)} />
         <NavRow icon="bookmark" label="Lectures" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
         <NavRow icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />
         <NavRow icon="book" label="Documentation" active={view === "docs"} onClick={(event) => props.onDocs(event.metaKey || event.ctrlKey)} />
@@ -487,7 +479,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
                 <div
                   className={path === selected && view === null ? "page-row selected" : "page-row"}
                   style={{ paddingLeft: 4 }}
-                  onContextMenu={(event) => openContextMenu(event, pageMenu(path, entries.get(path)?.ticket))}
+                  onContextMenu={(event) => openContextMenu(event, pageMenu(path))}
                 >
                   <span className="page-toggle" aria-hidden="true" />
                   <button className="page-name" onClick={(event) => (event.altKey ? props.onOpenRight(path) : props.onSelect(path, event.metaKey || event.ctrlKey))} onAuxClick={(event) => event.button === 1 && props.onSelect(path, true)}>
@@ -495,7 +487,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
                       <PageIcon
                         path={path}
                         icon={path === liveIcon?.path ? liveIcon.icon : entries.get(path)?.icon}
-                        ticket={entries.get(path)?.ticket}
+                        task={props.taskPaths.has(path)}
                         presentation={entries.get(path)?.presentation}
                       />
                     </span>

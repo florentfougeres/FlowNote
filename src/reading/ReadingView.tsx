@@ -94,7 +94,7 @@ export function ReadingView({
 
   return (
     <div className="reading-view">
-      <header className="tickets-header">
+      <header className="tasks-header">
         <div>
           <h1>Lectures</h1>
           <p className="dash-muted">{text === null ? "Lecture de la liste…" : `${unread.length} à lire · ${all.length - unread.length} lu${all.length - unread.length > 1 ? "s" : ""}`}</p>
@@ -106,8 +106,8 @@ export function ReadingView({
           <Icon name="plus" size={13} /> Ajouter un lien
         </button>
       </header>
-      <div className="tickets-toolbar">
-        <label className="tickets-search">
+      <div className="tasks-toolbar">
+        <label className="tasks-search">
           <Icon name="search" size={14} />
           <input placeholder="Rechercher un lien" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setQuery("")} />
         </label>
@@ -169,12 +169,12 @@ export function ReadingView({
       )}
       {error && <p className="status warning">{error}</p>}
       {text !== null && all.length === 0 ? (
-        <div className="tickets-empty">
+        <div className="tasks-empty">
           <Icon name="bookmark" size={22} />
           <p>Aucun lien pour l'instant. Ajoutez-en un avec « Ajouter un lien » ou ⌘⇧L.</p>
         </div>
       ) : text !== null && shown.length === 0 && (filtering || q) ? (
-        <div className="tickets-empty">
+        <div className="tasks-empty">
           <Icon name="tag" size={22} />
           <p>{filtering ? "Aucun lien avec ces tags." : "Aucun lien ne correspond à la recherche."}</p>
         </div>

@@ -1,7 +1,8 @@
 import { noteLinkTargets } from "../dashboard/stats";
 import { isDrawingPath } from "../drawing/format";
 import { isMindmapPath } from "../mindmap/format";
-import { isTicketMarkdown } from "../ticket/format";
+import { DEFAULT_TASK_CONFIG, type TaskConfig } from "../tasks/config";
+import { isTaskMarkdown } from "../tasks/task";
 import { isPresentationMarkdown } from "../presentation/format";
 import { noteIcon } from "../vault/icon";
 import { extension, linkPath, noteTitle, resolveLink } from "../vault/links";
@@ -13,7 +14,7 @@ import { extension, linkPath, noteTitle, resolveLink } from "../vault/links";
  * computed from the notes' text.
  */
 
-export type GraphNodeKind = "note" | "ticket" | "drawing" | "mindmap" | "presentation" | "missing";
+export type GraphNodeKind = "note" | "task" | "drawing" | "mindmap" | "presentation" | "missing";
 
 export interface GraphNode {
   /** Note path, or "missing:<name>" for a link to a note that does not exist. */
@@ -35,10 +36,10 @@ export interface VaultGraph {
   edges: GraphEdge[];
 }
 
-export function buildGraph(notes: [string, string][], files: string[]): VaultGraph {
+export function buildGraph(notes: [string, string][], files: string[], tasks: TaskConfig = DEFAULT_TASK_CONFIG): VaultGraph {
   const nodes = new Map<string, GraphNode>();
   for (const [path, text] of notes) {
-    const kind: GraphNodeKind = isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isTicketMarkdown(text) ? "ticket" : isPresentationMarkdown(text) ? "presentation" : "note";
+    const kind: GraphNodeKind = isDrawingPath(path) ? "drawing" : isMindmapPath(path) ? "mindmap" : isTaskMarkdown(text, tasks) ? "task" : isPresentationMarkdown(text) ? "presentation" : "note";
     nodes.set(path, { id: path, title: noteTitle(path), kind, icon: kind === "drawing" || kind === "mindmap" ? null : noteIcon(text), degree: 0 });
   }
   const edges = new Map<string, GraphEdge>();

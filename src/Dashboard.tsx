@@ -14,7 +14,9 @@ import { syncSummary } from "./vault/gitMessages";
 import { noteTitle } from "./vault/links";
 import { recentPages } from "./dashboard/recents";
 import { bookmarkedFiles, computeStats, type VaultStats } from "./dashboard/stats";
-import { agenda, dueLabel, ticketsOf, urgency, type AgendaItem, type TicketInfo } from "./ticket/agenda";
+import { agenda, dueLabel, urgency, type AgendaItem } from "./tasks/agenda";
+import { statusOf, type TaskConfig } from "./tasks/config";
+import { tasksOf, type TaskInfo } from "./tasks/task";
 
 /**
  * Home of an empty tab: recent pages, quick creation, Git state, a year of
@@ -89,10 +91,10 @@ export function Dashboard({
   onCreate,
   onOpenGit,
   onSearch,
-  onOpenTickets,
+  onOpenTasks,
   onOpenGraph,
   readingList,
-  onOpenTodo,
+  tasksConfig,
   readingVersion,
   onOpenReading,
   onAddLink,
@@ -105,10 +107,10 @@ export function Dashboard({
   onCreate: (kind: CreateKind) => void;
   onOpenGit: () => void;
   onSearch: () => void;
-  onOpenTickets: (newTab: boolean) => void;
+  onOpenTasks: (newTab: boolean) => void;
   onOpenGraph: (newTab: boolean) => void;
-  /** Opens the to-do list. */
-  onOpenTodo: () => void;
+  /** The tasks' settings (TaskNotes). */
+  tasksConfig: TaskConfig;
   /** Path of the reading list note. */
   readingList: string;
   /** Bumped when a link was added. */
@@ -121,7 +123,7 @@ export function Dashboard({
   const [activity, setActivity] = useState<[string, number][] | null>(null);
   const [stats, setStats] = useState<VaultStats | null>(null);
   const [todo, setTodo] = useState<AgendaItem[] | null>(null);
-  const [tickets, setTickets] = useState<TicketInfo[]>([]);
+  const [tasks, setTasks] = useState<TaskInfo[]>([]);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [graph, setGraph] = useState<VaultGraph | null>(null);
   const [toRead, setToRead] = useState<ReadingItem[] | null>(null);
@@ -151,16 +153,16 @@ export function Dashboard({
     (async () => {
       const notes = await readAllNotes(vault, files);
       if (cancelled) return;
-      setGraph(buildGraph(notes, files));
+      setGraph(buildGraph(notes, files, tasksConfig));
       setStats(computeStats(notes, files));
-      setTodo(agenda(notes));
-      setTickets(ticketsOf(notes));
+      setTodo(agenda(notes, tasksConfig));
+      setTasks(tasksOf(notes, tasksConfig));
     })().catch(reportError);
     return () => {
       cancelled = true;
     };
     // The dashboard reloads its data when it is shown again (files change while it is hidden).
-  }, [vault, files]);
+  }, [vault, files, tasksConfig]);
 
   const existing = useMemo(() => new Set(files), [files]);
   const recents = recentPages(vault.name).filter((p) => existing.has(p.path)).slice(0, 8);
@@ -185,7 +187,7 @@ export function Dashboard({
 
       <section className="dash-create" aria-label="Créer">
         {PAGE_KINDS.map((k) => (
-          <button key={k.kind} onClick={() => (k.kind === "todo" ? onOpenTodo() : onCreate(k.kind))}>
+          <button key={k.kind} onClick={() => onCreate(k.kind)}>
             <span className={kindIconClass(k.kind)}>
               <Icon name={k.icon} size={20} />
             </span>
@@ -217,12 +219,12 @@ export function Dashboard({
           {todo === null ? (
             <p className="dash-muted">Recherche des échéances…</p>
           ) : todo.length === 0 ? (
-            <p className="dash-muted">Aucune échéance. Ajoutez « 📅 date » à une tâche ou une échéance à un ticket.</p>
+            <p className="dash-muted">Aucune échéance. Ajoutez une échéance à une tâche, ou « 📅 date » à une case à cocher.</p>
           ) : (
             <div className="dash-list">
               {todo.slice(0, 8).map((item, i) => (
                 <button key={`${item.path}-${item.line ?? "t"}-${i}`} className="dash-page dash-todo" onClick={(e) => onOpen(item.path, e.metaKey || e.ctrlKey)} title={item.path}>
-                  <Icon name={item.kind === "ticket" ? "ticket" : "checkbox"} size={14} />
+                  <Icon name={item.kind === "task" ? "task" : "checkbox"} size={14} />
                   <span className="dash-page-title">{item.text || noteTitle(item.path)}</span>
                   <span className={`due-chip ${urgency(item.due)}`}>{dueLabel(item.due)}</span>
                 </button>
@@ -234,25 +236,25 @@ export function Dashboard({
 
         <section className="dash-card">
           <h2>
-            Tickets
-            <button className="dash-card-action" onClick={(e) => onOpenTickets(e.metaKey || e.ctrlKey)}>
+            Tâches
+            <button className="dash-card-action" onClick={(e) => onOpenTasks(e.metaKey || e.ctrlKey)}>
               Tout voir
             </button>
           </h2>
           {(() => {
-            const open = tickets.filter((t) => t.status === "open");
-            if (tickets.length === 0) return <p className="dash-muted">Aucun ticket. Créez-en un avec « Nouveau ticket ».</p>;
+            const open = tasks.filter((t) => !t.done);
+            if (tasks.length === 0) return <p className="dash-muted">Aucune tâche. Créez-en une avec « Nouvelle tâche ».</p>;
             return (
               <>
                 <p className="dash-muted">
-                  {open.length} ouvert{open.length > 1 ? "s" : ""} · {tickets.length - open.length} fermé{tickets.length - open.length > 1 ? "s" : ""}
+                  {open.length} à faire · {tasks.length - open.length} terminée{tasks.length - open.length > 1 ? "s" : ""}
                 </p>
                 <div className="dash-list">
                   {open
                     .sort((a, b) => (b.created ?? "").localeCompare(a.created ?? ""))
                     .slice(0, 5)
                     .map((t) => (
-                      <PageLink iconOf={iconOf} key={t.path} path={t.path} onOpen={onOpen} detail={t.id !== null ? `#${t.id}` : ""} />
+                      <PageLink iconOf={iconOf} key={t.path} path={t.path} onOpen={onOpen} detail={statusOf(tasksConfig, t.status || null).label} />
                     ))}
                 </div>
               </>

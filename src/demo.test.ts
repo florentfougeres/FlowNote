@@ -41,7 +41,7 @@ describe("demo vault", () => {
   });
 
   it("has bases and canvases that parse", () => {
-    for (const path of paths.filter((p) => p.endsWith(".base"))) expect(parseBase(DEMO_FILES[path]).model.views.length).toBeGreaterThan(1);
+    for (const path of paths.filter((p) => p.endsWith(".base"))) expect(parseBase(DEMO_FILES[path]).model.views.length).toBeGreaterThan(0);
     for (const path of paths.filter((p) => p.endsWith(".canvas"))) expect(JSON.parse(DEMO_FILES[path]).nodes.length).toBeGreaterThan(0);
   });
 

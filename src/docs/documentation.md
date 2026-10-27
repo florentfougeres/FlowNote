@@ -1,6 +1,6 @@
 # Documentation de FlowNote
 
-FlowNote édite votre vault Obsidian par blocs, avec un menu `/`, des bases, des dessins, des tickets, des présentations… Chaque page reste un fichier texte que vous pouvez continuer à ouvrir dans Obsidian et à versionner avec Git.
+FlowNote édite votre vault Obsidian par blocs, avec un menu `/`, des bases, des dessins, des tâches, des présentations… Chaque page reste un fichier texte que vous pouvez continuer à ouvrir dans Obsidian et à versionner avec Git.
 
 ![[editeur.webp]]
 
@@ -17,15 +17,15 @@ FlowNote édite votre vault Obsidian par blocs, avec un menu `/`, des bases, des
 ## Prendre en main
 
 1. **Ouvrez un vault** : au lancement, « Ouvrir un vault Obsidian… » et choisissez son dossier. Un dossier sans `.obsidian` convient aussi : il devient un vault. « Essayer avec un exemple » ouvre un vault de démonstration, en mémoire, sans rien écrire sur le disque.
-2. **Créez une page** avec `⌘N` (ou le bouton en haut de la barre latérale) et choisissez son type : note, base, dessin, mind map, canevas, ticket, présentation ou dashboard.
+2. **Créez une page** avec `⌘N` (ou le bouton en haut de la barre latérale) et choisissez son type : note, base, dessin, mind map, canevas, tâche, présentation, kanban ou dashboard.
 3. **Écrivez** : le texte se tape directement, `/` ouvre le menu des blocs, `[[` insère un lien vers une autre note.
 4. **Retrouvez une page** avec `⌘P`, ou un mot dans tout le vault avec `⌘⇧F`.
 5. **Tout s'enregistre seul** : la pastille en bas à droite indique « Enregistré ». Le fichier est lisible tel quel dans Obsidian.
 6. **Une commande dont vous ne connaissez pas le raccourci** : `⌘⇧P` ouvre la palette de commandes.
 
-Le vault de démonstration est le carnet de Camille, qui crée des sites et des identités visuelles à son compte : des clients, des projets, des réunions, un journal, des voyages. Il montre tout ce que FlowNote sait faire, en situation. Sa note **« Bienvenue »** (dans les favoris) dit où voir chaque fonctionnalité : le projet « Site Maison Pain » et ses sous-pages (cahier des charges, moodboard, croquis, présentation), la base « Clients » et ses quatre vues, le dashboard, le canevas, les tarifs (maths, admonitions), la comptabilité (graphiques, Dataview, Tasks), les tickets, la liste de tâches et les lectures.
+Le vault de démonstration est le carnet de Camille, qui crée des sites et des identités visuelles à son compte : des clients, des projets, des réunions, un journal, des voyages. Il montre tout ce que FlowNote sait faire, en situation. Sa note **« Bienvenue »** (dans les favoris) dit où voir chaque fonctionnalité : le projet « Site Maison Pain » et ses sous-pages (cahier des charges, moodboard, croquis, présentation), la base « Clients » et ses quatre vues, le dashboard, le canevas, les tarifs (maths, admonitions), la comptabilité (graphiques, Dataview, Tasks), les tâches et les lectures.
 
-L'**Accueil** rassemble les raccourcis de création, les pages récentes, les tâches à faire (échéances des tickets et des notes), les tickets ouverts, les liens à lire et l'état de Git. Un clic sur un tag de la carte Vault liste les pages qui le portent (dans le texte ou dans la propriété `tags`).
+L'**Accueil** rassemble les raccourcis de création, les pages récentes, les échéances à venir (des tâches et des cases à cocher datées des notes), les tâches à faire, les liens à lire et l'état de Git. Un clic sur un tag de la carte Vault liste les pages qui le portent (dans le texte ou dans la propriété `tags`).
 
 ![[accueil.webp]]
 
@@ -34,9 +34,9 @@ L'**Accueil** rassemble les raccourcis de création, les pages récentes, les t�
 ### La barre latérale
 
 - **Le vault** en haut : son menu permet de passer en un clic à un vault ouvert récemment, d'en ouvrir un autre ou d'ouvrir les réglages. Le bouton à droite crée une page (`⌘N`).
-- **Accueil**, **Rechercher** (`⌘P`), **Rechercher dans les notes** (`⌘⇧F`), **Tickets**, **Tâches**, **Lectures**, **Graphe** et **Documentation** (cette page). Quand une page est ouverte, Accueil, Tickets, Tâches, Lectures et Graphe s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
+- **Accueil**, **Rechercher** (`⌘P`), **Rechercher dans les notes** (`⌘⇧F`), **Tâches**, **Lectures**, **Graphe** et **Documentation** (cette page). Quand une page est ouverte, Accueil, Tâches, Lectures et Graphe s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
 - **Favoris** : les fichiers mis en favoris dans Obsidian.
-- **Pages** : l'arbre du vault. Une note et le dossier du même nom (`Projets.md` + `Projets/`) forment une page avec ses sous-pages. Le dossier des tickets, la note des lectures et celle des tâches n'y figurent pas : ils ont leur propre vue.
+- **Pages** : l'arbre du vault. Une note et le dossier du même nom (`Projets.md` + `Projets/`) forment une page avec ses sous-pages. Le dossier des tâches et la note des lectures n'y figurent pas : ils ont leur propre vue.
   - Menu « … » ou clic droit : ouvrir dans un nouvel onglet, ouvrir à droite, sous-page, copier le lien, dupliquer, afficher dans le Finder, renommer, supprimer.
   - Glisser-déposer des pages et des dossiers : les liens qui pointent vers eux sont mis à jour à chaque déplacement.
 - **Tags** : sous les pages, les tags du vault en arbre (`#projet/site` sous `#projet`), avec le nombre de notes qui portent chacun (tags imbriqués compris). Un clic ouvre la recherche dans les notes, filtrée sur ce tag. Un clic sur le titre « Tags » ouvre ou replie la section.
@@ -89,7 +89,7 @@ Ouverts dans un onglet (`⌘,`) et rangés par catégorie :
 
 - **Général** : apparence (système, clair, sombre), taille de l'interface (petite, normale, grande, très grande), police (celle du système, **Clarika**, douce et arrondie, **Open Sans** ou **Inter**), enregistrement automatique.
 - **Éditeur** : correcteur (Grammalecte, celui de macOS, ou aucun) ; menu des blocs en **liste** (avec les descriptions) ou en **grille** d'icônes, plus compacte (le nom de chaque bloc au survol, les flèches dans les deux sens) ; modifications depuis le dernier commit dans la marge (désactivé par défaut, voir Git).
-- **Tickets** : dossier des tickets et colonnes du tableau.
+- **Tâches** : les réglages du plugin TaskNotes lus dans le vault (dossier, tag, statuts, priorités), en lecture seule.
 - **Lectures** : note des lectures et lecture automatique du titre des liens.
 - **Vault** : changer de vault.
 
@@ -421,38 +421,51 @@ views:
       direction: ASC
 ```
 
-### Tickets
+### Tâches
 
-Un ticket est une note du dossier des tickets (`Tickets/1 - Exporter en PDF.md`), avec un état, des tags, une échéance, des tâches et un fil de commentaires.
+Une tâche est une note au format du plugin Obsidian **TaskNotes** : la même note s'ouvre dans Obsidian avec le plugin, et ses vues aussi. Elle a un statut, une priorité, une échéance, une date prévue, des projets (des liens vers des notes), des contextes, des tags, une estimation, une description avec des cases à cocher et un fil de commentaires.
 
-![[ticket.webp]]
+![[tache.webp]]
 
-La vue **Tickets** les liste (ouverts ou fermés, tri par échéance, date ou numéro, recherche, filtre par tag) :
+« Nouvelle tâche » (dans `⌘N`, l'accueil ou la palette `⌘⇧P`) la crée dans le dossier des tâches (`TaskNotes/Tasks` par défaut). En haut de la page, chaque champ se change d'un clic ; « Terminer la tâche » la passe au statut terminé et note la date.
 
-![[tickets-liste.webp]]
+**Tâches** dans la barre latérale ouvre la liste (`TaskNotes/Views/tasks-default.base`) : groupée par statut, avec les vues de TaskNotes (aujourd'hui, en retard, cette semaine, sans date…). Le rond devant une tâche la termine.
 
-…ou les range en **tableau kanban**, avec glisser-déposer entre les colonnes. Le bouton **Colonnes** personnalise les colonnes (aussi dans les réglages).
+![[taches-liste.webp]]
+ « Ouvrir le tableau des tâches » dans la palette ouvre le **tableau** (`kanban-default.base`) : une colonne par statut, avec glisser-déposer entre les colonnes et dans une colonne.
 
-![[tickets-tableau.webp]]
+![[taches-tableau.webp]]
 
-Dans le fichier, l'état et l'échéance sont des propriétés, les commentaires des callouts :
+Ces vues sont des bases (`.base`) : FlowNote les crée comme TaskNotes quand elles manquent, applique leurs filtres et leurs tris, et ne réécrit que ce qui change quand vous les modifiez.
+
+Si le plugin est installé, FlowNote suit ses réglages (dossier, tag `#task` ou propriété, noms des propriétés, statuts, priorités, nom des fichiers), sans jamais les modifier. Sinon, il prend ceux du plugin par défaut. Dans le fichier :
 
 ```markdown
 ---
-type: ticket
-id: 1
-status: open
-tags: [idée, export]
-due: 2026-10-18
+status: in-progress
+priority: high
+due: 2026-10-20
+scheduled: 2026-10-18
+projects:
+  - "[[Site Maison Pain]]"
+contexts:
+  - atelier
+timeEstimate: 90
+dateCreated: 2026-10-14T13:40:00.000+02:00
+dateModified: 2026-10-15T09:12:00.000+02:00
+tags:
+  - task
 ---
 
-Pouvoir exporter une note en PDF depuis la barre d'outils.
+Les photos du fournil pour la page « La maison ».
 
 ## Commentaires
 
 > [!comment] 14/10/2026 09:12
-> Bonne idée, à prévoir pour la prochaine version.
+> Marc veut bien être pris en photo, mais pas de face !
 ```
+
+Les commentaires sont un ajout de FlowNote, que TaskNotes laisse tels quels. Le calendrier, l'agenda et la récurrence de TaskNotes arrivent bientôt ; en attendant, leurs vues s'affichent en liste.
 
 ### Dessins
 
@@ -584,12 +597,6 @@ kanban-plugin: board
 **Complete**
 - [x] Devis signé
 ```
-
-### Tâches
-
-« Tâches » dans la barre latérale, la tuile « Nouvelle tâche » de l’accueil ou « Ouvrir les tâches » dans la palette (⌘⇧P) ouvre la liste de tâches : un titre, une catégorie, une échéance et des tags, puis « Ajouter ». Les tâches sont rangées par catégorie ; une échéance passée s'affiche en rouge, celle du jour en jaune. Cocher une tâche la marque faite ; « Afficher les tâches faites » les montre.
-
-Tout est écrit dans `Todo.md`, à la racine du vault, caché de la barre latérale comme la liste de lecture. Une section par catégorie, une tâche par ligne au format du plugin Tasks : `- [ ] Appeler Paul 📅 2026-10-25 #perso`.
 
 ## Les vues
 

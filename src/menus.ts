@@ -21,14 +21,14 @@ export interface PageMenuActions {
 const reveal = (path: string, onReveal?: (path: string) => void): MenuItem[] =>
   onReveal ? [{ label: "Afficher dans le Finder", icon: "folder", run: () => onReveal(path) }] : [];
 
-/** A page of the sidebar. Tickets are numbered and bases share their rows' folder: neither is duplicated. */
-export function pageMenu(path: string, ticket: boolean, a: PageMenuActions): MenuItem[] {
+/** A page of the sidebar. Bases share their rows' folder: they are not duplicated. */
+export function pageMenu(path: string, a: PageMenuActions): MenuItem[] {
   return [
     { label: "Ouvrir dans un nouvel onglet", icon: "open", run: () => a.onSelect(path, true) },
     { label: "Ouvrir à droite", icon: "split", run: () => a.onOpenRight(path) },
     { label: "Ajouter une sous-page", icon: "plus", run: () => a.onNewPage(path) },
     { label: "Copier le lien", icon: "link", run: () => a.onCopyLink(path) },
-    ...(ticket || isBasePath(path) ? [] : [{ label: "Dupliquer", icon: "copy" as IconName, run: () => a.onDuplicate(path) }]),
+    ...(isBasePath(path) ? [] : [{ label: "Dupliquer", icon: "copy" as IconName, run: () => a.onDuplicate(path) }]),
     ...reveal(path, a.onReveal),
     { label: "Renommer", icon: "pencil", run: () => a.onRename(path) },
     { label: "Supprimer", icon: "trash", danger: true, run: () => a.onDelete(path) },
