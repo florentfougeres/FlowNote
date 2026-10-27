@@ -20,7 +20,10 @@ import { PropertiesPanel } from "./PropertiesPanel";
 import { insertAttachments, type VaultBridge } from "./bridge";
 import { loadMarkdown, NoteSession, serializeTopLevelBlock } from "../markdown/note";
 import { pastedImageName, resolveLink } from "../vault/links";
-import { openUrl } from "../reading/web";
+import { fetchTitle, openUrl } from "../reading/web";
+import { pastedUrl, pasteUrlWithTitle } from "./linkTitle";
+import { extractToNote, selectionRange } from "./extract";
+import { reportError } from "../errors";
 import { markdownForClipboard } from "./clipboard";
 import { inlineVaultImages } from "./imageCopies";
 import { schema } from "./schema";
@@ -92,6 +95,8 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
   markdownCallback.current = onMarkdown;
   const [frontmatter, setFrontmatter] = useState<string | null>(null);
   const [linkRequest, setLinkRequest] = useState<LinkRequest | null>(null);
+  /** ⌘⇧V: the next paste keeps a web address bare. */
+  const plainPaste = useRef(false);
   /** Where a footnote asked from the format bar goes, while its text is typed. */
   const [footnoteRequest, setFootnoteRequest] = useState<LinkRequest | null>(null);
   const [gitPopover, setGitPopover] = useState<{ change: GitChange; x: number; y: number } | null>(null);
@@ -132,6 +137,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
       clipboardTextSerializer: (slice) => markdownForClipboard(slice),
       clipboardSerializer: CLIPBOARD_SERIALIZER,
       handleKeyDown: (view, event) => {
+        plainPaste.current = (event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "v";
         // ⌘K on selected text (or in a link): its address.
         if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "k" || !view.editable) return false;
         const target = linkTarget(view.state);
@@ -228,6 +234,11 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
           view.dispatch(view.state.tr.removeMark(selection.from, selection.to, schema.marks.link).addMark(selection.from, selection.to, schema.marks.link.create({ href: url, title: null, kind: "inline" })));
           return true;
         }
+        // A web address pasted alone takes the page's title (⌘⇧V: kept bare).
+        const plain = plainPaste.current;
+        plainPaste.current = false;
+        const pasted = pastedUrl(url);
+        if (pasted && selection.empty && !plain && pasteUrlWithTitle(view, pasted, fetchTitle)) return true;
         // Plain text (no HTML: a text file, a terminal, Obsidian's source) is read as Markdown.
         // HTML from elsewhere (a web page, Word): one block pasted gives its text only, the line keeps its kind.
         // Copied from a note (ProseMirror marks its HTML with data-pm-slice), blocks stay as they were.
@@ -308,6 +319,12 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
           if (!editor) return;
           const end = editor.view.coordsAtPos(at);
           setFootnoteRequest({ from: at, to: at, href: "", x: end.left, y: end.bottom });
+        }}
+        onExtract={() => {
+          if (!editor) return;
+          const { from, to } = editor.state.selection;
+          const range = selectionRange(editor.state.doc, from, to);
+          if (range) void extractToNote(editor, wiring.bridge.current, range).catch(reportError);
         }}
       />
       {footnoteRequest && editor && (

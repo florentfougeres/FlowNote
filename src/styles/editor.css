@@ -808,6 +808,132 @@ li.drag-ghost {
   max-width: 100%;
 }
 
+/* A YouTube or Vimeo video, `![](https://youtu.be/…)`: thumbnail, then the player. */
+.note-video {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 16 / 9;
+  margin: 4px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+
+.note-video iframe,
+.note-video-thumbnail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: #000 center / cover no-repeat;
+  cursor: pointer;
+}
+
+.note-video-play {
+  width: 56px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.72);
+  transition: background 120ms;
+}
+
+.note-video-play::after {
+  content: "";
+  display: block;
+  margin: 12px 0 0 23px;
+  border: 8px solid transparent;
+  border-left: 13px solid #fff;
+}
+
+.note-video-thumbnail:hover .note-video-play {
+  background: #ff0033;
+}
+
+.ProseMirror-selectednode.note-video {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* An image with its resize handle (editor/views/imageResize.ts); a double click shows it full size. */
+.note .image-frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: bottom;
+}
+
+.note .image-frame > img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  cursor: zoom-in;
+}
+
+.image-resize {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  cursor: nwse-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 120ms;
+}
+
+.ProseMirror[contenteditable="true"] .image-frame:hover > .image-resize,
+.ProseMirror[contenteditable="true"] .image-frame.resizing > .image-resize,
+.ProseMirror[contenteditable="true"] .ProseMirror-selectednode .image-resize,
+.ProseMirror[contenteditable="true"] .ProseMirror-selectednode.image-frame > .image-resize {
+  opacity: 1;
+}
+
+.image-frame.resizing {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.image-frame.resizing > img {
+  outline: 2px solid var(--accent);
+}
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgba(0, 0, 0, 0.82);
+  cursor: zoom-out;
+  animation: image-lightbox-in 140ms ease-out;
+}
+
+.image-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 6px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+  object-fit: contain;
+}
+
+@keyframes image-lightbox-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* Changes since the last commit (option): a bar in the margin beside the block. */
 .note > .git-added,
 .note > .git-modified {

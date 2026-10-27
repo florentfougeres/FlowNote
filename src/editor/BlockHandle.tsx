@@ -11,6 +11,8 @@ import { blockAtPos, ensureBlockId } from "./blockLinks";
 import type { BridgeRef } from "./bridge";
 import { headingLinkText } from "../markdown/sections";
 import { linkTextFor } from "../vault/links";
+import { blockRange, extractToNote } from "./extract";
+import { reportError } from "../errors";
 
 /**
  * Gutter controls shown next to the hovered block: "+" inserts a
@@ -300,6 +302,7 @@ function BlockMenu({ editor, bridge, block, x, y, onClose }: { editor: Editor; b
       (error: unknown) => bridge.current.notify?.(`Copie impossible : ${String(error)}`),
     );
   };
+  const extract = editor.isEditable ? blockRange(editor.state.doc, block) : null;
   const selectBlock = () => editor.view.dispatch(editor.state.tr.setSelection(Selection.near(editor.state.doc.resolve(block.pos + 1))));
 
   return createPortal(
@@ -333,6 +336,7 @@ function BlockMenu({ editor, bridge, block, x, y, onClose }: { editor: Editor; b
         Descendre <kbd>{keys("⌥↓")}</kbd>
       </button>
       {(heading || linkable) && <button onClick={() => run(copyLink)}>Copier le lien vers {heading ? "ce titre" : "ce bloc"}</button>}
+      {extract && <button onClick={() => run(() => void extractToNote(editor, bridge.current, extract).catch(reportError))}>Extraire {heading ? "la section" : "le bloc"} vers une note</button>}
       <button onClick={() => setTurnOpen(!turnOpen)}>Transformer en {turnOpen ? "▾" : "▸"}</button>
       {turnOpen && (
         <div className="block-menu-sub">

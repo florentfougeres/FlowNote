@@ -2,6 +2,16 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Ajouté
+- Aperçu au survol : une demi-seconde sur un lien vers une note montre la note (ou le titre, le bloc visé ; un dessin, une mind map, une image) dans une petite fenêtre qui défile, son titre l'ouvre.
+- Une adresse web collée seule devient `[Titre de la page](adresse)` dès que le titre arrive (app de bureau) ; `⌘⇧V` la colle sans titre.
+- Extraire vers une nouvelle note : la sélection (barre de mise en forme), un bloc ou la section d'un titre (menu de la poignée) part dans une note créée à côté, un lien `[[…]]` prend sa place.
+- Images redimensionnées en tirant leur coin : la largeur s'écrit comme Obsidian la lit (`![[image.png|320]]`, `![texte|320](image.png)`) ; un double-clic les montre en grand.
+- Vidéos YouTube et Vimeo écrites comme des images (`![](https://youtu.be/…)`), comme dans Obsidian : miniature, puis le lecteur au clic, sans cookies.
+- Vault de démo : un logo redimensionné et une vidéo dans « Moodboard », de nouveaux essais dans « Bienvenue ».
+
 ## [0.23.0] - 2026-10-27
 
 ### Ajouté

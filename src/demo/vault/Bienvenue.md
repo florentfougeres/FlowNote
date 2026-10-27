@@ -26,7 +26,7 @@ Voici le carnet de Camille Roux, qui conçoit des sites et des identités visuel
 
 - [[Site Maison Pain]] : une note de projet avec propriétés, tâches datées, tableau, Mermaid, intégrations, sous-pages
 - [[Cahier des charges]] : un long document avec sommaire, notes de bas de page, callouts, liens vers des sections
-- [[Moodboard]] : des images du vault, du HTML mis en page
+- [[Moodboard]] : des images du vault (à redimensionner par leur coin, à voir en grand d'un double-clic), une vidéo YouTube, du HTML mis en page
 - [[Arborescence.excalidraw|Arborescence]] : un croquis Excalidraw
 - [[Présentation de la maquette]] : une présentation Marp, avec notes de l'orateur
 - [[Pistes de logo.mindmap|Pistes de logo]] : une mind map, pour un autre projet
@@ -50,4 +50,7 @@ Et dans la barre latérale : **Tâches** (les demandes des clients et les tâche
 - [ ] Rechercher `tag:#client` dans tout le vault (`⌘⇧F`)
 - [ ] Taper `[[Tarifs#` pour lier un titre de [[Tarifs]], ou `[[Tarifs#^` pour un de ses paragraphes
 - [ ] Replier une section par la flèche à gauche d'un titre, ici « Ce qu'il y a dans ce vault »
+- [ ] Survoler un lien, comme [[Site Maison Pain]] : un aperçu de la note s'ouvre
+- [ ] Sélectionner une ligne de cette liste, puis « Extraire vers une nouvelle note » au bout de la barre de mise en forme
+- [ ] Coller une adresse web seule dans une note : elle devient un lien au titre de la page (dans l'app de bureau)
 - [ ] Ouvrir le **Plan** (barre de page) et glisser « À essayer » au-dessus de « Ce qu'il y a dans ce vault » : la section entière se déplace

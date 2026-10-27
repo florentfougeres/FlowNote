@@ -2,7 +2,8 @@ import type { NodeViewRenderer } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { type BridgeRef, isImage } from "../bridge";
 import { basename, noteTitle, resolveLink } from "../../vault/links";
-import { element } from "./dom";
+import { element, updateAttrs } from "./dom";
+import { applySize, isImageEvent, resizableImage, sizeOf } from "./imageResize";
 import { rememberImage } from "../imageCopies";
 
 /** Notes embedded inside embedded notes stop at this depth (a note embedding itself). */
@@ -10,7 +11,7 @@ const EMBED_DEPTH = 3;
 
 /** `[[links]]` and `![[embeds]]`: images, bases and notes are displayed, other files become cards, unresolved links are dimmed. */
 export function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
-  return ({ node }) => {
+  return ({ node, editor, getPos }) => {
     const dom = element("span");
     dom.contentEditable = "false";
     let rendered = "";
@@ -76,15 +77,11 @@ export function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
         dom.className = "embed-image";
         const img = element("img");
         img.alt = basename(resolved);
-        // `![[image.png|300]]` or `|300x200` sets the displayed size.
-        const size = /^(\d+)(?:x(\d+))?$/.exec(alias ?? "");
-        if (size) {
-          img.width = Number(size[1]);
-          if (size[2]) img.height = Number(size[2]);
-        }
+        // `![[image.png|300]]` or `|300x200` sets the displayed size; the handle writes a new width there.
+        applySize(img, sizeOf(alias));
         void bridge.current.loadImage(resolved).then((url) => (img.src = url));
         rememberImage(`embed:${target}`, img);
-        dom.append(img);
+        dom.append(alias === null || sizeOf(alias) ? resizableImage(img, (width) => updateAttrs(editor, getPos as () => number | undefined, { alias: String(width) })) : img);
       } else if (embed) {
         dom.className = resolved ? "embed-card" : "embed-card unresolved";
         dom.textContent = `${resolved?.endsWith(".md") ? "📄" : "📎"} ${alias ?? (resolved ? noteTitle(resolved) : target)}`;
@@ -103,7 +100,7 @@ export function wikilinkView(bridge: BridgeRef): NodeViewRenderer {
         return true;
       },
       // Clicks and keys inside an embedded base or note belong to it, not to the editor.
-      stopEvent: () => dom.classList.contains("embed-base") || dom.classList.contains("embed-note"),
+      stopEvent: (event) => dom.classList.contains("embed-base") || dom.classList.contains("embed-note") || isImageEvent(event),
       ignoreMutation: () => true,
       destroy: () => unmount?.(),
     };

@@ -1,6 +1,8 @@
 import { DOMSerializer, type Node as PMNode } from "@tiptap/pm/model";
 import { isTocParagraph } from "./toc";
 import { inlineVaultImages } from "./imageCopies";
+import { splitAlt } from "./views/imageResize";
+import { videoOf } from "../reading/web";
 import { sanitizeHtml } from "./html";
 import { mathMarkup, texOf } from "./math";
 import { saveExport } from "../presentation/exportHtml";
@@ -57,7 +59,16 @@ export function noteToHtml(doc: PMNode, title: string): string {
   }
   for (const link of body.querySelectorAll(".wikilink, .embed")) link.replaceWith(link.textContent ?? "");
   for (const image of body.querySelectorAll("img")) {
-    if (!/^(https?:\/\/|data:)/i.test(image.getAttribute("src") ?? "")) image.remove();
+    const src = image.getAttribute("src") ?? "";
+    if (!/^(https?:\/\/|data:)/i.test(src)) image.remove();
+    // A video written as an image (`![](https://youtu.be/…)`): a link to it.
+    else if (videoOf(src)) image.replaceWith(Object.assign(document.createElement("a"), { href: src, textContent: `▶︎ ${src}` }));
+    else {
+      // The width written in the alt text (`![Logo|300](…)`), as on screen.
+      const { text, size } = splitAlt(image.getAttribute("alt") ?? "");
+      image.setAttribute("alt", text);
+      if (size) image.setAttribute("width", String(size.width));
+    }
   }
   for (const softBreak of body.querySelectorAll("br.soft")) softBreak.replaceWith(" ");
   for (const item of body.querySelectorAll("li.task")) {

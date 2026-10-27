@@ -164,19 +164,6 @@ export function serializeCanvas(data: CanvasData): string {
   return lines({ ...data, nodes: data.nodes.map(nodeForFile), edges: data.edges.map(edgeForFile) }).join("\n");
 }
 
-/** The YouTube video of a web address (watch, youtu.be, shorts, embed), or null. */
-export function youtubeId(url: string): string | null {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return null;
-  }
-  const host = parsed.hostname.replace(/^(www|m|music)\./, "");
-  const id = host === "youtu.be" ? parsed.pathname.slice(1) : host === "youtube.com" || host === "youtube-nocookie.com" ? (parsed.searchParams.get("v") ?? /^\/(?:shorts|embed|live)\/([^/?#]+)/.exec(parsed.pathname)?.[1] ?? "") : "";
-  return /^[\w-]{11}$/.test(id) ? id : null;
-}
-
 /** A new card or arrow id, like Obsidian's (16 hexadecimal digits). */
 export function newCanvasId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(8));

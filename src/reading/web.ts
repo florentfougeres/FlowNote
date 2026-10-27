@@ -40,3 +40,45 @@ export function urlIn(text: string): string | null {
   if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(trimmed)) return `https://${trimmed}`;
   return null;
 }
+
+/** The YouTube video of a web address (watch, youtu.be, shorts, embed), or null. */
+export function youtubeId(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  const host = parsed.hostname.replace(/^(www|m|music)\./, "");
+  const id = host === "youtu.be" ? parsed.pathname.slice(1) : host === "youtube.com" || host === "youtube-nocookie.com" ? (parsed.searchParams.get("v") ?? /^\/(?:shorts|embed|live)\/([^/?#]+)/.exec(parsed.pathname)?.[1] ?? "") : "";
+  return /^[\w-]{11}$/.test(id) ? id : null;
+}
+
+/** The Vimeo video of a web address (vimeo.com/123, player.vimeo.com/video/123), or null. */
+export function vimeoId(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  const host = parsed.hostname.replace(/^www\./, "");
+  const id = host === "vimeo.com" ? /^\/(\d+)/.exec(parsed.pathname)?.[1] : host === "player.vimeo.com" ? /^\/video\/(\d+)/.exec(parsed.pathname)?.[1] : undefined;
+  return id ?? null;
+}
+
+export interface Video {
+  /** The player's address, without cookies when the site allows it. */
+  player: string;
+  /** A thumbnail read without asking the page (which may answer with a cookie consent), or null. */
+  thumbnail: string | null;
+}
+
+/** The YouTube or Vimeo video of a web address, as Obsidian embeds `![](address)`, or null. */
+export function videoOf(url: string): Video | null {
+  const youtube = youtubeId(url);
+  if (youtube) return { player: `https://www.youtube-nocookie.com/embed/${youtube}`, thumbnail: `https://i.ytimg.com/vi/${youtube}/hqdefault.jpg` };
+  const vimeo = vimeoId(url);
+  if (vimeo) return { player: `https://player.vimeo.com/video/${vimeo}?dnt=1`, thumbnail: null };
+  return null;
+}

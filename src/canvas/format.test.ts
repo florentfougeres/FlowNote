@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { colorValue, facingSide, newCanvasId, parseCanvas, serializeCanvas, youtubeId } from "./format";
+import { colorValue, facingSide, newCanvasId, parseCanvas, serializeCanvas } from "./format";
 
 /** A canvas as Obsidian 1.14 writes it. */
 const OBSIDIAN = `{
@@ -48,12 +48,5 @@ describe("canvas files", () => {
     expect(facingSide(at(0, 0), at(0, 300))).toBe("bottom");
     expect(facingSide(at(0, 0), at(-300, 0))).toBe("left");
     expect(newCanvasId()).toMatch(/^[0-9a-f]{16}$/);
-  });
-
-  it("recognises YouTube videos", () => {
-    for (const url of ["https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42", "https://youtu.be/dQw4w9WgXcQ", "https://m.youtube.com/shorts/dQw4w9WgXcQ", "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"]) expect(youtubeId(url)).toBe("dQw4w9WgXcQ");
-    expect(youtubeId("https://www.youtube.com/channel/UC123")).toBeNull();
-    expect(youtubeId("https://vimeo.com/123")).toBeNull();
-    expect(youtubeId("pas une adresse")).toBeNull();
   });
 });

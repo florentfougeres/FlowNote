@@ -21,6 +21,8 @@ interface Props {
   onLink: (target: { from: number; to: number; href: string }) => void;
   /** Asks for the text of a footnote to call at `at` (after the selection). */
   onFootnote: (at: number) => void;
+  /** Moves the selection to a new note, a link taking its place. */
+  onExtract: () => void;
 }
 
 /** Text selected in a text block, outside code: where the bar shows. */
@@ -31,7 +33,7 @@ function formattable(editor: Editor): boolean {
   return $from.parent.isTextblock && !$from.parent.type.spec.code && !$to.parent.type.spec.code && editor.state.doc.textBetween(selection.from, selection.to).trim() !== "";
 }
 
-export function FormatBar({ editor, onLink, onFootnote }: Props) {
+export function FormatBar({ editor, onLink, onFootnote, onExtract }: Props) {
   const [, refresh] = useReducer((n: number) => n + 1, 0);
   const [selecting, setSelecting] = useState(false);
   const [colors, setColors] = useState<{ x: number; y: number } | null>(null);
@@ -136,6 +138,7 @@ export function FormatBar({ editor, onLink, onFootnote }: Props) {
           {button("Note de bas de page", null, false, run(() => onFootnote(state.selection.to)), <span className="format-bar-footnote">¹</span>)}
           <span className="format-bar-separator" />
           {button("Effacer la mise en forme", null, false, run(() => clearFormatting(editor)), <Icon name="eraser" size={14} />)}
+          {button("Extraire vers une nouvelle note", null, false, run(onExtract), <Icon name="export" size={14} />)}
         </div>
       )}
       {colors && (

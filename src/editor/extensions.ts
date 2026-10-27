@@ -24,6 +24,7 @@ import { titleHeadingPlugin } from "./titleHeading";
 import { gitGutterPlugin } from "./gitGutter";
 import { dueDatePlugin } from "../tasks/dueDates";
 import { NULL_BRIDGE, type BridgeRef } from "./bridge";
+import { linkPreviewPlugin } from "./linkPreview";
 import { highlightPencilPlugin, toggleUnderline } from "./format";
 import { typedHtmlPlugin } from "./typedHtml";
 import { headingFoldPlugin } from "./headingFold";
@@ -89,5 +90,6 @@ export function editorExtensions(wiring: EditorWiring = defaultWiring()): AnyExt
     EmojiSuggest.configure({ store: wiring.emojiStore }),
     CodeFenceSuggest.configure({ store: wiring.languageStore }),
     Extension.create({ name: "titleHeading", addProseMirrorPlugins: () => [titleHeadingPlugin(wiring.titleHeading)] }),
+    Extension.create({ name: "linkPreview", addProseMirrorPlugins: () => [linkPreviewPlugin(wiring.bridge)] }),
   ];
 }

@@ -24,8 +24,8 @@ import { Icon, type IconName } from "../Icon";
 import { NoteEditor } from "../editor/NoteEditor";
 import type { VaultBridge } from "../editor/bridge";
 import { noteTitle } from "../vault/links";
-import { fetchPreview, openUrl, type PagePreview } from "../reading/web";
-import { CANVAS_COLORS, colorValue, newCanvasId, parseCanvas, serializeCanvas, youtubeId, type CanvasData, type CanvasEdge, type CanvasNode, type Side } from "./format";
+import { fetchPreview, openUrl, youtubeId, type PagePreview } from "../reading/web";
+import { CANVAS_COLORS, colorValue, newCanvasId, parseCanvas, serializeCanvas, type CanvasData, type CanvasEdge, type CanvasNode, type Side } from "./format";
 
 export interface CanvasBoardProps {
   /** File text the canvas was loaded from; a new value reloads it. */

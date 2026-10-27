@@ -6,7 +6,7 @@ tags: [maison-pain, design]
 
 Validé le {{J-12}} avec Hélène : chaleureux, artisanal, sans faire « rétro ».
 
-![[maison-pain-logo.svg]]
+![[maison-pain-logo.svg|320]]
 
 ## Couleurs
 
@@ -23,6 +23,10 @@ Validé le {{J-12}} avec Hélène : chaleureux, artisanal, sans faire « rétro 
 ![[maison-pain-vitrine.svg]]
 
 > La boutique est vert sauge, le site doit l'être aussi. — Hélène
+
+La vidéo qu'Hélène m'a envoyée pour le ton, simple et filmée à la main :
+
+![](https://www.youtube.com/watch?v=jNQXAC9IVRw)
 
 ## Typographies
 
