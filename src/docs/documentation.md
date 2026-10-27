@@ -245,7 +245,7 @@ Une admonition `success`, écrite `:::success` dans le fichier.
 Les propriétés YAML (le frontmatter) s'affichent sous le titre : texte, liste, nombre, case à cocher, date, date et heure. Les tags s'affichent en pastilles, même écrits sur une ligne (`tags: projet, site`) ; les modifier les réécrit en liste YAML. Les dates se choisissent dans le calendrier de l'app (tapez aussi `jj/mm/aaaa`).
 
 - **Ajouter une propriété** (ou « Ajouter des propriétés » sur une note qui n'en a pas) : tapez son nom ; la liste dessous propose les propriétés déjà utilisées dans le vault, les plus courantes d'abord, avec leur type et leur nombre de notes. `↑` `↓` puis `↵` en choisit une (elle arrive avec son type : une liste, une case à cocher…), `↵` sans choix garde le nom tapé, `esc` annule.
-- **Masquer les propriétés** : l'œil à droite, sous les propriétés (au survol), les replie en une ligne « 8 propriétés masquées » ; un clic dessus les réaffiche. Le choix vaut pour toutes les notes et est retenu.
+- **Masquer les propriétés** : l'œil à droite, sous les propriétés (au survol), les masque ; il ne reste que cet œil barré, au survol du haut de la note, pour les réafficher. Le choix vaut pour toutes les notes et est retenu.
 
 L'icône de la page est un emoji choisi au-dessus du titre. Dans le fichier :
 

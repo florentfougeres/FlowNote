@@ -270,9 +270,9 @@ export function PropertiesPanel({ raw, readOnly, onChange, hidden = [], suggestK
   const count = parsed.properties.length;
   if (!shown && count > 0) {
     return (
-      <div className="properties properties-empty">
-        <button className="property-add" onClick={() => setShown(true)} title="Afficher les propriétés">
-          <Icon name="eyeOff" size={13} /> {count} propriété{count > 1 ? "s" : ""} masquée{count > 1 ? "s" : ""}
+      <div className="properties properties-empty properties-folded">
+        <button className="property-add properties-hide" onClick={() => setShown(true)} aria-label="Afficher les propriétés" title="Afficher les propriétés">
+          <Icon name="eyeOff" size={14} />
         </button>
       </div>
     );

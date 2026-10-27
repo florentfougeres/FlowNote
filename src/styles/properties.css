@@ -245,6 +245,11 @@
   visibility: hidden;
 }
 
+/* Folded away: only that eye, under the pointer, to show them again. */
+.properties-folded {
+  display: flex;
+}
+
 .properties:hover .properties-hide,
 .properties-hide:focus-visible {
   visibility: visible;
