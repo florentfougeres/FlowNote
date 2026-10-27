@@ -1,5 +1,6 @@
 import { addDays, QueryError } from "./dataview";
-import { isoDay, type Page, type Priority, type Task } from "./pages";
+import { type Page, type Priority, type Task } from "./pages";
+import { isoDay } from "../dates";
 
 /**
  * Queries of the Tasks plugin (```tasks blocks): one instruction per line.

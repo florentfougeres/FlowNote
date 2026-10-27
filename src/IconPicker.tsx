@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadEmojis, searchEmojis, type EmojiEntry } from "./editor/emoji";
+import { useClickOutside } from "./hooks/useClickOutside";
 
 /** Emojibase groups shown in the picker, in order (2 is skin tones, never shown). */
 const GROUPS: [number, string][] = [
@@ -22,15 +23,11 @@ export function IconPicker({ anchor, current, onPick, onClose }: { anchor: DOMRe
   const [entries, setEntries] = useState<EmojiEntry[]>([]);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  useClickOutside(ref, onClose);
 
   useEffect(() => {
     void loadEmojis().then(setEntries);
   }, []);
-  useEffect(() => {
-    const down = (event: MouseEvent) => !ref.current?.contains(event.target as Node) && onClose();
-    window.addEventListener("mousedown", down);
-    return () => window.removeEventListener("mousedown", down);
-  }, [onClose]);
 
   const results = useMemo(() => (query.trim() ? searchEmojis(query, entries, 160) : null), [query, entries]);
   const groups = useMemo(() => GROUPS.map(([id, label]) => [label, entries.filter((e) => e.group === id)] as const).filter(([, list]) => list.length > 0), [entries]);

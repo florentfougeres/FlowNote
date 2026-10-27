@@ -3,11 +3,11 @@
  * stays light (no Marp): the vault tree and the graph use it.
  */
 
-const FRONTMATTER = /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
+import { splitFrontmatter } from "../markdown/frontmatter";
 
 /** True when the front matter says `marp: true`. */
 export function isPresentationMarkdown(markdown: string): boolean {
-  const yaml = FRONTMATTER.exec(markdown)?.[1];
+  const yaml = splitFrontmatter(markdown)?.yaml;
   return yaml !== undefined && /^marp[ \t]*:[ \t]*["']?true["']?[ \t]*$/m.test(yaml);
 }
 

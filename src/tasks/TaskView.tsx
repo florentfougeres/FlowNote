@@ -10,11 +10,12 @@ import { linkItems } from "../editor/wikilinks";
 import { commentDate, joinTask, serializeComments, splitTask, type TaskComment } from "./comments";
 import { dueLabel, urgency } from "./agenda";
 import { priorityOf, statusOf, type TaskConfig } from "./config";
-import { actionDay, doneStatus, isoDay, reopenStatus, setTaskField, taskInfo } from "./task";
+import { actionDay, doneStatus, reopenStatus, setTaskField, taskInfo } from "./task";
 import { setRecurrence, toggleOccurrence } from "./recurrence";
 import { RecurrenceField } from "./RecurrenceField";
 import { durationLabel, linkText } from "./TaskSummary";
 import { DatePicker } from "../DatePicker";
+import { isoDay } from "../dates";
 
 /**
  * A task page, like an issue: header (title, status, priority, dates,

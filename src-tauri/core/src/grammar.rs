@@ -88,10 +88,10 @@ pub fn grammar_check(paragraphs: Vec<String>) -> Result<Value, String> {
 
 /// Stops the companion when the app quits.
 pub fn shutdown() {
-    if let Ok(mut slot) = COMPANION.lock() {
-        if let Some(mut companion) = slot.take() {
-            let _ = companion.child.kill();
-        }
+    if let Ok(mut slot) = COMPANION.lock()
+        && let Some(mut companion) = slot.take()
+    {
+        let _ = companion.child.kill();
     }
 }
 

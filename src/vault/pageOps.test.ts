@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createMemoryVault } from "./vault";
 import { DEFAULT_CONFIG } from "./links";
-import { deletePage, followFolder, moveFolder, movePage, renameFolder, renamePage, retargetBaseFolders, retargetRowOrder, subpagesOf } from "./pageOps";
+import { deletePage, moveFolder, movePage, renameFolder, renamePage, retargetBaseFolders, retargetRowOrder, subpagesOf } from "./pageOps";
 
 function vault() {
   return createMemoryVault("Test", {
@@ -177,16 +177,6 @@ describe("moving", () => {
     expect((await v.files()).sort()).toContain("Archives/Projets/Mon Carnet/Stack.md");
     await moveFolder(v, "Archives/Projets", "");
     expect((await v.files()).sort()).toContain("Projets/Mon Carnet.md");
-  });
-});
-
-describe("followFolder", () => {
-  it("follows the folder or a parent, and falls back when it is deleted", () => {
-    expect(followFolder("Tickets", "Tickets", "Suivi", "Tickets")).toBe("Suivi");
-    expect(followFolder("Projets/Tickets", "Projets", "Archives/Projets", "Tickets")).toBe("Archives/Projets/Tickets");
-    expect(followFolder("Projets/Tickets", "Proj", "X", "Tickets")).toBe("Projets/Tickets");
-    expect(followFolder("Suivi", "Suivi", null, "Tickets")).toBe("Tickets");
-    expect(followFolder("", "Suivi", "X", "Tickets")).toBe("");
   });
 });
 

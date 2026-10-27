@@ -5,6 +5,7 @@ import type { Vault } from "../vault/vault";
 import { parseReadingList, readingTagsOf, setChecked, setTags, siteOf, tagKey, type ReadingItem } from "./readingList";
 import { TagInput } from "./TagInput";
 import { openUrl } from "./web";
+import { useClickOutside } from "../hooks/useClickOutside";
 
 /**
  * The reading list as a page: themes as collapsible sections with their
@@ -38,8 +39,10 @@ export function ReadingView({
   const [filterOpen, setFilterOpen] = useState(false);
   /** Line of the link whose tags are being edited. */
   const [editing, setEditing] = useState<number | null>(null);
-  const filterBox = useOutside(filterOpen, () => setFilterOpen(false));
-  const editBox = useOutside(editing !== null, () => setEditing(null));
+  const filterBox = useRef<HTMLDivElement>(null);
+  useClickOutside(filterBox, () => setFilterOpen(false), { active: filterOpen });
+  const editBox = useRef<HTMLDivElement>(null);
+  useClickOutside(editBox, () => setEditing(null), { active: editing !== null });
 
   const load = useCallback(() => vault.read(path).catch(() => ""), [vault, path]);
   useEffect(() => {
@@ -251,16 +254,4 @@ export function ReadingView({
       )}
     </div>
   );
-}
-
-/** A popover's box, closed by a click outside it. */
-function useOutside(open: boolean, onClose: () => void) {
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const down = (e: MouseEvent) => !box.current?.contains(e.target as Node) && onClose();
-    window.addEventListener("mousedown", down);
-    return () => window.removeEventListener("mousedown", down);
-  }, [open, onClose]);
-  return box;
 }

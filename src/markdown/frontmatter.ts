@@ -64,6 +64,33 @@ function tagsAsList(key: string, value: unknown): unknown {
   return value.split(/[,\s]+/).map((t) => t.replace(/^#/, "")).filter(Boolean);
 }
 
+/** The front matter at the top of a note, as the editor reads it: `---` lines (trailing spaces allowed) around YAML, possibly empty; BOM and CRLF accepted. */
+const FRONTMATTER = /^\uFEFF?---[ \t]*\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(?:\r?\n|$)/;
+
+export interface Frontmatter {
+  /** The whole block: fences, YAML and the line break after the closing fence. */
+  block: string;
+  /** The YAML between the fences, as written (line endings kept). */
+  yaml: string;
+  /** What follows the block. */
+  body: string;
+}
+
+/** The note's front matter, or null when it has none. */
+export function splitFrontmatter(text: string): Frontmatter | null {
+  const match = FRONTMATTER.exec(text);
+  return match ? { block: match[0], yaml: match[1] ?? "", body: text.slice(match[0].length) } : null;
+}
+
+/** `raw` for the property functions below, from the YAML between the fences. */
+export const frontmatterRaw = (yaml: string) => `---\n${yaml.replace(/\r\n/g, "\n")}\n---`;
+
+/** The properties of a note (none without front matter). */
+export function noteProperties(text: string): Property[] {
+  const front = splitFrontmatter(text);
+  return front ? readProperties(frontmatterRaw(front.yaml)).properties : [];
+}
+
 export function readProperties(raw: string | null): Properties {
   if (!raw) return { properties: [], error: null };
   const doc = parse(raw);
@@ -124,15 +151,11 @@ export interface PropertySuggestion {
   count: number;
 }
 
-const FRONTMATTER = /^﻿?(---\r?\n[\s\S]*?\r?\n---)[ \t]*(?:\r?\n|$)/;
-
 /** The property names of the vault's notes, the most used first (offered when adding a property, as Obsidian does). */
 export function vaultPropertyKeys(notes: [string, string][]): PropertySuggestion[] {
   const keys = new Map<string, { count: number; types: Map<PropertyType, number> }>();
   for (const [, text] of notes) {
-    const match = FRONTMATTER.exec(text);
-    if (!match) continue;
-    for (const { key, type, value } of readProperties(match[1].replace(/\r\n/g, "\n")).properties) {
+    for (const { key, type, value } of noteProperties(text)) {
       const entry = keys.get(key) ?? { count: 0, types: new Map() };
       entry.count++;
       // An empty value says nothing of the type.

@@ -103,7 +103,7 @@ ProseMirror ne recrée pas les nœuds qui n'ont pas changé : après une frappe,
 
 La sérialisation d'un bloc modifié essaie plusieurs **variantes**, de la moins invasive à la plus prudente : sans échappement, puis échappement des caractères porteurs de sens, puis marqueurs normalisés, puis échappement de toute la ponctuation. Chaque essai est reparsé et comparé au bloc voulu par `normalize.ts`, qui réduit un document à ce que voit le lecteur. La première variante qui redonne le même contenu est gardée : on n'échappe un `*` que s'il le faut vraiment.
 
-Les propriétés YAML (`frontmatter.ts`) passent par le modèle de document de la bibliothèque `yaml`, qui conserve commentaires, ordre des clés et style des valeurs non touchées. Un frontmatter jamais modifié n'est pas réécrit du tout.
+Les propriétés YAML (`frontmatter.ts`) passent par le modèle de document de la bibliothèque `yaml`, qui conserve commentaires, ordre des clés et style des valeurs non touchées. Un frontmatter jamais modifié n'est pas réécrit du tout. Hors de l'éditeur, tout le code lit le front matter par `splitFrontmatter` et `noteProperties` (même délimitation que remark : bloc vide accepté, espaces après les `---`, BOM et CRLF).
 
 ### Vérifier la fidélité
 

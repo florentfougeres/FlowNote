@@ -13,6 +13,7 @@ import { columnInfo, type ColumnInfo } from "./columns";
 import { BaseLinks, TYPE_ICONS } from "./cells";
 import { isTaskView, TaskBaseView, taskViewName } from "../tasks/TaskBaseView";
 import type { TaskConfig } from "../tasks/config";
+import { useClickOutside } from "../hooks/useClickOutside";
 
 const OPS: [SimpleFilter["op"], string][] = [
   ["is", "est"],
@@ -24,21 +25,11 @@ const OPS: [SimpleFilter["op"], string][] = [
   ["notEmpty", "n'est pas vide"],
 ];
 
-/** A popover closed by a click outside. */
-function usePopover(onClose: () => void) {
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const down = (e: MouseEvent) => !box.current?.contains(e.target as Node) && onClose();
-    window.addEventListener("mousedown", down);
-    return () => window.removeEventListener("mousedown", down);
-  }, [onClose]);
-  return box;
-}
-
 /** A choice of a filter or sort rule, as the app's menus (no raw `<select>`). */
 function RuleChoice<T extends string>({ value, choices, onChange }: { value: T; choices: readonly (readonly [T, string])[]; onChange: (value: T) => void }) {
   const [open, setOpen] = useState(false);
-  const box = usePopover(() => setOpen(false));
+  const box = useRef<HTMLDivElement>(null);
+  useClickOutside(box, () => setOpen(false));
   return (
     <div ref={box} className="db-choice">
       <button type="button" className="db-choice-button" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -141,7 +132,8 @@ function FilterMenu({
   onChange: (filters: SimpleFilter[]) => void;
   onClose: () => void;
 }) {
-  const box = usePopover(onClose);
+  const box = useRef<HTMLDivElement>(null);
+  useClickOutside(box, onClose);
   const set = (i: number, patch: Partial<SimpleFilter>) => onChange(view.filters.map((f, j) => (j === i ? { ...f, ...patch } : f)));
   const columns = properties.map((p) => [p, label(p)] as const);
   return (
@@ -171,7 +163,8 @@ const DIRECTIONS = [
 ] as const;
 
 function SortMenu({ view, properties, label, onChange, onClose }: { view: View; properties: string[]; label: (p: string) => string; onChange: (sort: View["sort"]) => void; onClose: () => void }) {
-  const box = usePopover(onClose);
+  const box = useRef<HTMLDivElement>(null);
+  useClickOutside(box, onClose);
   const columns = properties.map((p) => [p, label(p)] as const);
   return (
     <div ref={box} className="db-popover db-menu db-rules">
@@ -202,7 +195,8 @@ const VIEW_TYPES: [ViewType, string, IconName][] = [
 const viewIcon = (type: string): IconName => VIEW_TYPES.find(([t]) => t === type)?.[2] ?? "table";
 
 function ViewsMenu({ onAdd, onClose }: { onAdd: (type: ViewType) => void; onClose: () => void }) {
-  const box = usePopover(onClose);
+  const box = useRef<HTMLDivElement>(null);
+  useClickOutside(box, onClose);
   return (
     <div ref={box} className="db-popover db-menu">
       <small>Nouvelle vue</small>
@@ -217,7 +211,8 @@ function ViewsMenu({ onAdd, onClose }: { onAdd: (type: ViewType) => void; onClos
 
 /** A menu choosing one property (or none): group, date, cover image. */
 function ChoiceMenu({ title, choices, value, none, onChoose, onClose }: { title: string; choices: ColumnInfo[]; value: string | null; none?: string; onChoose: (property: string | null) => void; onClose: () => void }) {
-  const box = usePopover(onClose);
+  const box = useRef<HTMLDivElement>(null);
+  useClickOutside(box, onClose);
   const choose = (p: string | null) => {
     onChoose(p);
     onClose();

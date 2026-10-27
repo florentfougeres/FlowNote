@@ -3,11 +3,11 @@
  * (the property read by the common Obsidian icon plugins). Plugin icon names
  * such as "LiHome" are not emoji and are ignored.
  */
-const FRONTMATTER = /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
+import { splitFrontmatter } from "../markdown/frontmatter";
 
 /** The emoji icon of a note, or null. */
 export function noteIcon(markdown: string): string | null {
-  const yaml = FRONTMATTER.exec(markdown)?.[1];
+  const yaml = splitFrontmatter(markdown)?.yaml;
   if (!yaml) return null;
   const value = /^icon[ \t]*:[ \t]*(.*)$/m.exec(yaml)?.[1].trim().replace(/^["']|["']$/g, "");
   return value && isEmoji(value) ? value : null;
@@ -28,12 +28,12 @@ function plainText(text: string): string {
  * Null when it has none (the title is then the file name).
  */
 export function pageTitle(markdown: string, plainNote: boolean): string | null {
-  const front = FRONTMATTER.exec(markdown);
+  const front = splitFrontmatter(markdown);
   if (!plainNote) {
-    const value = front && /^title[ \t]*:[ \t]*(.*)$/m.exec(front[1])?.[1].trim().replace(/^["']|["']$/g, "");
+    const value = front && /^title[ \t]*:[ \t]*(.*)$/m.exec(front.yaml)?.[1].trim().replace(/^["']|["']$/g, "");
     return value || null;
   }
-  const body = front ? markdown.slice(front[0].length) : markdown.replace(/^\uFEFF/, "");
+  const body = front ? front.body : markdown.replace(/^\uFEFF/, "");
   const first = body.split(/\r?\n/).find((line) => line.trim() !== "");
   const heading = first && /^ {0,3}# +(.*?)(?:\s+#+)?\s*$/.exec(first);
   return (heading && plainText(heading[1])) || null;

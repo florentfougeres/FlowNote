@@ -3,8 +3,9 @@ import { Icon } from "../Icon";
 import { monthGrid } from "../base/CalendarView";
 import { priorityOf } from "./config";
 import { isOccurrenceDone, occurrences } from "./recurrence";
-import { isoDay, type TaskInfo } from "./task";
+import { type TaskInfo } from "./task";
 import { TaskConfigContext } from "./TaskSummary";
+import { isoDay } from "../dates";
 
 /** What places a task on a day: its due date, its scheduled date, an occurrence of its rule, or another date property. */
 export type EntryKind = "due" | "scheduled" | "occurrence" | "date";

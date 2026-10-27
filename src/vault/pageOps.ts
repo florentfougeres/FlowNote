@@ -240,13 +240,3 @@ export async function deletePage(vault: Vault, path: string, files: string[], at
   if (errors.length) throw new Error(`Suppression incomplète. ${errors.join(" ; ")}`);
   if (attachments.length && config) await removeIfEmpty(vault, attachmentFolder(path, config), path, await vault.files());
 }
-
-/**
- * Where a folder setting (the tickets folder) points after `from` moved to
- * `to` (null: deleted, back to `fallback`); unchanged when `from` is neither
- * the folder nor one of its parents.
- */
-export function followFolder(setting: string, from: string, to: string | null, fallback: string): string {
-  if (!setting || !(setting === from || setting.startsWith(`${from}/`))) return setting;
-  return to === null ? fallback : to + setting.slice(from.length);
-}

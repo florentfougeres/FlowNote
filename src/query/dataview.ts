@@ -1,4 +1,5 @@
-import { isoDay, Link, type Duration, type Page, type Task, type Value } from "./pages";
+import { Link, type Duration, type Page, type Task, type Value } from "./pages";
+import { isoDay } from "../dates";
 
 /**
  * Dataview queries (```dataview blocks), the common part of its language:

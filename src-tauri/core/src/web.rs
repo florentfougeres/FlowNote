@@ -82,10 +82,8 @@ fn meta(html: &str, names: &[&str]) -> Option<String> {
         let tag = &html[start..end];
         let tag_lower = &lower[start..end];
         let named = ["property", "name"].iter().filter_map(|key| attribute(tag, tag_lower, key)).any(|value| names.contains(&value.to_ascii_lowercase().as_str()));
-        if named {
-            if let Some(value) = attribute(tag, tag_lower, "content") {
-                return Some(value);
-            }
+        if named && let Some(value) = attribute(tag, tag_lower, "content") {
+            return Some(value);
         }
         from = end;
     }

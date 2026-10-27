@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Icon } from "../Icon";
 import { recurrenceText, ruleParts } from "./recurrence";
+import { useClickOutside } from "../hooks/useClickOutside";
 
 const WEEKDAYS: [string, string, string][] = [
   ["MO", "L", "lundi"],
@@ -57,6 +58,7 @@ export function RecurrenceField({
   /** The menu opens leftwards when it would leave the window on the right. */
   const [toLeft, setToLeft] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
+  useClickOutside(box, () => setOpen(false), { active: open, escape: true });
   const toggle = () => {
     setToLeft((box.current?.getBoundingClientRect().left ?? 0) + 340 > window.innerWidth - 16);
     setOpen(!open);
@@ -66,18 +68,6 @@ export function RecurrenceField({
   const [interval, setInterval] = useState(Number(parts.INTERVAL ?? 1) || 1);
   const [days, setDays] = useState<string[]>((parts.BYDAY ?? "").split(",").filter((d) => /^[A-Z]{2}$/.test(d)));
   const [follow, setFollow] = useState(anchor === "completion");
-  useEffect(() => {
-    if (!open) return;
-    const down = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
-    const key = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    window.addEventListener("mousedown", down);
-    window.addEventListener("keydown", key);
-    return () => {
-      window.removeEventListener("mousedown", down);
-      window.removeEventListener("keydown", key);
-    };
-  }, [open]);
-
   const choose = (next: string | null) => {
     onChange(next, follow ? "completion" : "scheduled");
     setOpen(false);

@@ -1,9 +1,10 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import type { PropertyValue } from "../markdown/frontmatter";
 import { Icon, type IconName } from "../Icon";
 import { openUrl } from "../reading/web";
 import { OPTION_COLORS, type ColumnMeta, type ColumnType, type OptionColor, type SelectOption } from "./baseFile";
 import { DatePicker } from "../DatePicker";
+import { useClickOutside } from "../hooks/useClickOutside";
 
 export const TYPE_ICONS: Record<ColumnType | "name", IconName> = {
   name: "doc",
@@ -204,12 +205,8 @@ function SelectEditor({
   const [query, setQuery] = useState("");
   const [colorFor, setColorFor] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
+  useClickOutside(box, onClose);
   const selected = asList(value);
-  useEffect(() => {
-    const down = (e: MouseEvent) => !box.current?.contains(e.target as Node) && onClose();
-    window.addEventListener("mousedown", down);
-    return () => window.removeEventListener("mousedown", down);
-  }, [onClose]);
 
   const set = (list: string[]) => onChange(list.length === 0 ? undefined : multi ? list : list[list.length - 1]);
   const toggle = (v: string) => {

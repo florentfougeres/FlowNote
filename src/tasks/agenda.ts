@@ -1,7 +1,6 @@
 import type { TaskConfig } from "./config";
-import { isoDay, isTaskMarkdown, taskInfo } from "./task";
-
-export { isoDay };
+import { isTaskMarkdown, taskInfo } from "./task";
+import { isoDay } from "../dates";
 
 /**
  * Dated to-dos across the vault: unchecked checkboxes carrying a due date in

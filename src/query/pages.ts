@@ -1,6 +1,7 @@
 import { noteLinkTargets, noteTags } from "../dashboard/stats";
-import { readProperties } from "../markdown/frontmatter";
+import { noteProperties, splitFrontmatter } from "../markdown/frontmatter";
 import { dirname, noteTitle } from "../vault/links";
+import { isoDay } from "../dates";
 
 /**
  * The vault as the queries see it (Dataview and Tasks blocks): one page per
@@ -62,7 +63,6 @@ export interface Page {
   links: string[];
 }
 
-const FRONTMATTER = /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 const TASK = /^(\s*)([-*+]) \[(.)\] (.*)$/;
 const INLINE_FIELD = /^\s*(?:[-*+] )?([\p{L}\p{N}_ -]+?)::\s*(.*)$/u;
 const BRACKET_FIELD = /[[(]([\p{L}\p{N}_ -]+?)::\s*([^\])]*)[\])]/gu;
@@ -83,10 +83,6 @@ const PRIORITIES: [string, Priority][] = [
 ];
 const TAG = /(?:^|\s)#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
 
-/** Local day of a time, `YYYY-MM-DD`. */
-export function isoDay(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
 
 function isoTime(time: number): string {
   const date = new Date(time);
@@ -160,12 +156,10 @@ function inlineValue(text: string): Value {
 /** Reads a note into a page. */
 export function readPage(path: string, text: string, stats?: { ctime: number; mtime: number }): Page {
   const fields = new Map<string, Value>();
-  const yaml = FRONTMATTER.exec(text);
-  if (yaml) {
-    for (const { key, value } of readProperties(`---\n${yaml[1].replace(/\r\n/g, "\n")}\n---`).properties) fields.set(key, propertyValue(value));
-  }
-  const body = yaml ? text.slice(yaml[0].length) : text;
-  const offset = yaml ? yaml[0].split("\n").length - 1 : 0;
+  for (const { key, value } of noteProperties(text)) fields.set(key, propertyValue(value));
+  const front = splitFrontmatter(text);
+  const body = front ? front.body : text;
+  const offset = front ? front.block.split("\n").length - 1 : 0;
   const tasks: Task[] = [];
   let fence: string | null = null;
   let heading: string | null = null;

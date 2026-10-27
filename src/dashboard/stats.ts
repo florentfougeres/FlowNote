@@ -1,5 +1,6 @@
 import { isDrawingPath } from "../drawing/format";
 import { resolveLink } from "../vault/links";
+import { splitFrontmatter } from "../markdown/frontmatter";
 
 /**
  * Vault statistics for the dashboard, computed from the notes' text: pages by
@@ -25,8 +26,6 @@ function withoutCode(text: string): string {
   return text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, "").replace(/`[^`\n]*`/g, "");
 }
 
-const FRONTMATTER = /^\uFEFF?---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
-
 /**
  * A list property of the frontmatter (`key` a pattern for its names), written
  * `[a, b]`, as `- a` lines, or `a, b` on one line (split on `separator`).
@@ -42,15 +41,15 @@ function listProperty(yaml: string, key: string, separator: RegExp): string[] {
 }
 
 function frontmatter(text: string): { body: string; tags: string[] } {
-  const match = FRONTMATTER.exec(text);
-  if (!match) return { body: text, tags: [] };
-  return { body: text.slice(match[0].length), tags: listProperty(match[1], "tags?", /[,\s]+/).map((t) => t.replace(/^#/, "")) };
+  const front = splitFrontmatter(text);
+  if (!front) return { body: text, tags: [] };
+  return { body: front.body, tags: listProperty(front.yaml, "tags?", /[,\s]+/).map((t) => t.replace(/^#/, "")) };
 }
 
 /** The other names of a note (`aliases` property), which links can use. */
 export function noteAliases(text: string): string[] {
-  const match = FRONTMATTER.exec(text);
-  return match ? listProperty(match[1], "alias(?:es)?", /,/) : [];
+  const front = splitFrontmatter(text);
+  return front ? listProperty(front.yaml, "alias(?:es)?", /,/) : [];
 }
 
 const TAG = /(?:^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;

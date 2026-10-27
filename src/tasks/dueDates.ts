@@ -1,7 +1,8 @@
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { Node as PMNode } from "@tiptap/pm/model";
-import { isoDay, urgency } from "./agenda";
+import { urgency } from "./agenda";
+import { isoDay } from "../dates";
 
 /**
  * Due dates of tasks (`📅 2026-10-20`, the Obsidian Tasks convention) shown as

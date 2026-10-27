@@ -10,8 +10,6 @@ export const HIGHLIGHT_COLORS = [
   { color: "purple", emoji: "🟣", label: "Violet" },
 ] as const;
 
-export type HighlightColor = (typeof HIGHLIGHT_COLORS)[number]["color"];
-
 /** The colour whose emoji starts `text`, if any. */
 export function highlightColorAt(text: string): (typeof HIGHLIGHT_COLORS)[number] | undefined {
   return HIGHLIGHT_COLORS.find((c) => text.startsWith(c.emoji));

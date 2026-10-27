@@ -1,7 +1,8 @@
 import { completeRecurringTask, generateRecurringInstances } from "@tasknotes/model/recurrence";
 import { setNoteProperty } from "../base/rows";
 import type { TaskConfig } from "./config";
-import { frontmatterValues, isoDay, taskTimestamp, type TaskInfo } from "./task";
+import { frontmatterValues, taskTimestamp, type TaskInfo } from "./task";
+import { isoDay } from "../dates";
 
 /**
  * Recurring tasks, as TaskNotes keeps them: one note with an RRULE

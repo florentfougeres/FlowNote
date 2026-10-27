@@ -1,5 +1,5 @@
 import { noteTags } from "../dashboard/stats";
-import { readProperties } from "../markdown/frontmatter";
+import { noteProperties } from "../markdown/frontmatter";
 import { dirname } from "./links";
 
 /**
@@ -27,16 +27,12 @@ export interface NoteFacts {
   mtime: number | null;
 }
 
-const FRONTMATTER = /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
 export function noteFacts(path: string, text: string, mtime: number | null = null): NoteFacts {
   const properties = new Map<string, string[]>();
-  const yaml = FRONTMATTER.exec(text)?.[1];
-  if (yaml !== undefined) {
-    for (const { key, value } of readProperties(`---\n${yaml.replace(/\r\n/g, "\n")}\n---`).properties) {
-      const values = (Array.isArray(value) ? value : value === null ? [] : [String(value)]).map((v) => v.trim()).filter(Boolean);
-      properties.set(key, values);
-    }
+  for (const { key, value } of noteProperties(text)) {
+    const values = (Array.isArray(value) ? value : value === null ? [] : [String(value)]).map((v) => v.trim()).filter(Boolean);
+    properties.set(key, values);
   }
   return { path, tags: [...new Set(noteTags(text).map((t) => t.toLowerCase()))], properties, mtime };
 }

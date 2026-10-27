@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { readProperties, renameProperty, setProperty, vaultPropertyKeys } from "./frontmatter";
+import { loadMarkdown } from "./note";
+import { noteProperties, readProperties, renameProperty, setProperty, splitFrontmatter, vaultPropertyKeys } from "./frontmatter";
 
 const FM = `---
 # Métadonnées de la note
@@ -13,6 +14,27 @@ priority: 2
 created: 2026-10-13
 updated: 2026-10-13T19:05
 ---`;
+
+describe("splitFrontmatter", () => {
+  it("finds the block the editor finds", () => {
+    for (const text of ["---\na: 1\n---\nTexte", "---\n---\nTexte", "---  \na: 1\n---  \nTexte", "\uFEFF---\r\na: 1\r\n---\r\nTexte"]) {
+      const front = splitFrontmatter(text);
+      expect(front?.body).toBe("Texte");
+      expect(front?.block.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n")).toBe(`${loadMarkdown(text).layout.frontmatter}\n`);
+    }
+  });
+
+  it("has nothing for a note without front matter", () => {
+    expect(splitFrontmatter("# Titre\n---\n")).toBeNull();
+    expect(splitFrontmatter("Texte\n---\na: 1\n---")).toBeNull();
+    expect(noteProperties("# Titre")).toEqual([]);
+  });
+
+  it("reads the properties, CRLF or not", () => {
+    expect(noteProperties("---\r\ntags: [a, b]\r\n---\r\n")).toEqual([{ key: "tags", type: "list", value: ["a", "b"] }]);
+    expect(noteProperties("---\n---\n")).toEqual([]);
+  });
+});
 
 describe("reading properties", () => {
   it("types values like Obsidian", () => {

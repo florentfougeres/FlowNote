@@ -50,12 +50,6 @@ export function boardColumns(tasks: TaskInfo[], config: TaskConfig): TaskStatus[
   return columns;
 }
 
-/** The cards of each column; a task without status goes to "none" when it exists, else to the default status. */
-export function columnCards(tasks: TaskInfo[], columns: TaskStatus[], config: TaskConfig, direction: Direction = "DESC"): TaskInfo[][] {
-  const fallback = columns.some((c) => c.value === "none") ? "none" : config.defaultStatus;
-  return columns.map((c) => sortCards(tasks.filter((t) => (t.status || fallback) === c.value), direction));
-}
-
 export interface OrderChange {
   path: string;
   order: string;

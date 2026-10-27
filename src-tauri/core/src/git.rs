@@ -119,10 +119,10 @@ pub fn parse_status(raw: &str, prefix: &str) -> GitStatus {
             if let Some(path) = parts.last().and_then(|p| strip(p)) {
                 status.files.push(GitFile { path, orig_path: orig, index: letter(xy[0]), worktree: letter(xy[1]) });
             }
-        } else if let Some(path) = entry.strip_prefix("? ") {
-            if let Some(path) = strip(path) {
-                status.files.push(GitFile { path, orig_path: None, index: "?".into(), worktree: "?".into() });
-            }
+        } else if let Some(path) = entry.strip_prefix("? ")
+            && let Some(path) = strip(path)
+        {
+            status.files.push(GitFile { path, orig_path: None, index: "?".into(), worktree: "?".into() });
         }
     }
     status
@@ -254,7 +254,7 @@ pub fn parse_log(raw: &str, prefix: &str) -> Vec<GitCommit> {
                 return None;
             }
             // The last name-status line names the file in this commit ("R100\told\tnew" -> new).
-            let path = lines.filter(|l| !l.trim().is_empty()).last()?.split('\t').last()?;
+            let path = lines.rfind(|l| !l.trim().is_empty())?.split('\t').next_back()?;
             Some(GitCommit {
                 hash: fields[0].into(),
                 short: fields[1].into(),
@@ -648,11 +648,9 @@ mod tests {
         fs::write(dir.join("note.md"), "titre\nligne commune\nfin\n").unwrap();
         fs::write(dir.join("autre.md"), "x\n").unwrap();
         commit_all(&root, "Base");
-        for args in [vec!["checkout", "-q", "-b", "eux"]] {
-            let mut cmd = test_git(&root);
-            cmd.args(args);
-            run(cmd, None, &[]).unwrap();
-        }
+        let mut cmd = test_git(&root);
+        cmd.args(["checkout", "-q", "-b", "eux"]);
+        run(cmd, None, &[]).unwrap();
         fs::write(dir.join("note.md"), "titre\nleur ligne\nfin\n").unwrap();
         commit_all(&root, "Eux");
         let mut cmd = test_git(&root);

@@ -9,6 +9,7 @@ import { ValueView } from "./columns";
 import { FILE_PROPERTIES, SUMMARIES, summarize, type BaseRow } from "./rows";
 import { Cell, OptionPill, TYPE_ICONS } from "./cells";
 import { PopoverMenu, type MenuItem } from "../Sidebar";
+import { useClickOutside } from "../hooks/useClickOutside";
 
 export type { ColumnInfo } from "./columns";
 
@@ -38,16 +39,6 @@ export interface TableActions {
   onSummary: (property: string, kind: string | null) => void;
 }
 
-function useOutside(onClose: () => void) {
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const down = (e: MouseEvent) => !box.current?.contains(e.target as Node) && onClose();
-    window.addEventListener("mousedown", down);
-    return () => window.removeEventListener("mousedown", down);
-  }, [onClose]);
-  return box;
-}
-
 const iconOf = (column: ColumnInfo): IconName => (column.kind === "name" ? "doc" : column.kind === "formula" ? "formula" : column.kind === "file" ? "info" : TYPE_ICONS[column.meta.type]);
 
 /**
@@ -75,7 +66,8 @@ function HeaderMenu({ column, actions, onClose }: { column: ColumnInfo; actions:
   const [formula, setFormula] = useState(column.formula ?? "");
   const [label, setLabel] = useState(column.label);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const box = useOutside(onClose);
+  const box = useRef<HTMLDivElement>(null);
+  useClickOutside(box, onClose);
   const run = (action: () => void) => {
     action();
     onClose();
@@ -179,7 +171,8 @@ function AddColumnMenu({ hidden, labels, actions, onClose }: { hidden: string[];
   const [name, setName] = useState("");
   const [type, setType] = useState<ColumnType | "formula">("text");
   const [formula, setFormula] = useState("");
-  const box = useOutside(onClose);
+  const box = useRef<HTMLDivElement>(null);
+  useClickOutside(box, onClose);
   const add = () => {
     if (!name.trim()) return;
     if (type === "formula") actions.onFormula(name.trim(), formula.trim() || "0");

@@ -1,7 +1,8 @@
-import { readProperties, type PropertyValue } from "../markdown/frontmatter";
+import { noteProperties, splitFrontmatter, type PropertyValue } from "../markdown/frontmatter";
 import { setNoteProperty } from "../base/rows";
 import { noteTitle } from "../vault/links";
 import { statusOf, type TaskConfig } from "./config";
+import { isoDay } from "../dates";
 
 /**
  * A task: a note in the TaskNotes format, readable and editable as is in
@@ -59,12 +60,9 @@ export interface TaskInfo {
   checklist: { done: number; total: number };
 }
 
-const FRONTMATTER = /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
-
 export function frontmatterValues(markdown: string): Record<string, PropertyValue> {
-  const match = FRONTMATTER.exec(markdown);
   const values: Record<string, PropertyValue> = {};
-  if (match) for (const p of readProperties(`---\n${match[1].replace(/\r\n/g, "\n")}\n---`).properties) values[p.key] = p.value;
+  for (const p of noteProperties(markdown)) values[p.key] = p.value;
   return values;
 }
 
@@ -92,7 +90,7 @@ export function isTaskValues(values: Record<string, PropertyValue>, config: Task
 }
 
 export function isTaskMarkdown(markdown: string, config: TaskConfig): boolean {
-  return FRONTMATTER.test(markdown) && isTaskValues(frontmatterValues(markdown), config);
+  return splitFrontmatter(markdown) !== null && isTaskValues(frontmatterValues(markdown), config);
 }
 
 export function taskInfo(path: string, markdown: string, config: TaskConfig): TaskInfo {
@@ -136,15 +134,11 @@ const pad = (n: number) => String(n).padStart(2, "0");
 export function taskTimestamp(date = new Date()): string {
   const offset = -date.getTimezoneOffset();
   const sign = offset >= 0 ? "+" : "-";
-  const day = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  const day = isoDay(date);
   const time = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${String(date.getMilliseconds()).padStart(3, "0")}`;
   return `${day}T${time}${sign}${pad(Math.floor(Math.abs(offset) / 60))}:${pad(Math.abs(offset) % 60)}`;
 }
 
-/** "2026-10-14" for a local date. */
-export function isoDay(date = new Date()): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
 
 /** TaskNotes' id file names: `zettel` is yyMMdd + the seconds since midnight in base 36. */
 function idName(config: TaskConfig, date: Date): string {

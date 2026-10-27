@@ -1,4 +1,5 @@
 import { Document, isMap, isSeq, parseDocument } from "yaml";
+import { splitFrontmatter } from "../markdown/frontmatter";
 import { rewriteLinks, rewriteMergedLinks, subpageFolder } from "./links";
 import { readAllNotes, type Vault } from "./vault";
 import type { RenameResult } from "./pageOps";
@@ -13,11 +14,8 @@ import type { RenameResult } from "./pageOps";
 /** Notes that merge: Markdown notes, not drawings, mind maps or dashboards. */
 export const isMergeable = (path: string) => /\.md$/i.test(path) && !/\.(?:excalidraw|mindmap|dashboard)\.md$/i.test(path);
 
-const FRONTMATTER = /^﻿?---\r?\n([\s\S]*?)\r?\n?---[ \t]*(?:\r?\n|$)/;
-
 function split(text: string): { yaml: string | null; body: string } {
-  const match = FRONTMATTER.exec(text);
-  return match ? { yaml: match[1], body: text.slice(match[0].length) } : { yaml: null, body: text };
+  return splitFrontmatter(text) ?? { yaml: null, body: text };
 }
 
 /** The title of a note: its first `# heading`, otherwise its name. */

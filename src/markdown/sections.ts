@@ -6,7 +6,8 @@
  * marked ` ^id` (a paragraph, or a list item with its sub-items).
  */
 
-const FRONTMATTER = /^﻿?---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/;
+import { splitFrontmatter } from "./frontmatter";
+
 const HEADING = /^(#{1,6})[ \t]+(.*?)[ \t#]*$/;
 
 /** The note's lines, each with whether it is inside a fenced code block. */
@@ -86,7 +87,7 @@ function block(lines: { text: string; code: boolean }[], id: string): string | n
 
 /** What `![[Note#subpath]]` shows of the note's text, or null when the section or block is not there. */
 export function embedSection(markdown: string, subpath: string): string | null {
-  const body = markdown.replace(FRONTMATTER, "");
+  const body = splitFrontmatter(markdown)?.body ?? markdown;
   const wanted = subpath.trim();
   if (!wanted) return body;
   const lines = linesOf(body);
@@ -116,7 +117,7 @@ export interface NoteBlock {
 
 /** The note's lines after its properties, and how many lines the properties take. */
 function bodyLines(markdown: string): { lines: { text: string; code: boolean }[]; offset: number } {
-  const front = FRONTMATTER.exec(markdown)?.[0] ?? "";
+  const front = splitFrontmatter(markdown)?.block ?? "";
   return { lines: linesOf(markdown.slice(front.length)), offset: front ? front.split("\n").length - 1 : 0 };
 }
 

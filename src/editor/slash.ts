@@ -1,5 +1,5 @@
 import { CALLOUT_TYPES, calloutPicker } from "./callouts";
-import { isoDay } from "../tasks/agenda";
+
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";
@@ -12,6 +12,7 @@ import type { BridgeRef, VaultBridge } from "./bridge";
 import { menuRenderer, MenuStore, normalizeText, type MenuItem } from "./menu";
 import { linkTextFor, noteTitle, sanitizeName, subpageFolder, uniquePath } from "../vault/links";
 import { insertMarkdownBlocks } from "./pasteMarkdown";
+import { isoDay } from "../dates";
 
 /**
  * Slash menu. The query stays in the document text (`/tit` filters on "tit")
@@ -339,7 +340,6 @@ function frecencyScore(frecency: Frecency, key: string, now: number): number {
   const entry = frecency[key];
   return entry ? entry.count * Math.pow(0.5, (now - entry.last) / HALF_LIFE_MS) : 0;
 }
-
 
 export function filterSlashItems(query: string, items: SlashItem[] = SLASH_ITEMS, frecency: Frecency = {}, now = Date.now()): SlashItem[] {
   const q = normalizeText(query.trim());

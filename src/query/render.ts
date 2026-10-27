@@ -1,8 +1,9 @@
 import type { VaultBridge } from "../editor/bridge";
 import { element } from "../editor/views/dom";
 import { display, parseQuery, QueryError, runQuery } from "./dataview";
-import { isoDay, Link, readPages, type Page, type Task, type Value } from "./pages";
+import { Link, readPages, type Page, type Task, type Value } from "./pages";
 import { parseTasksQuery, runTasksQuery } from "./tasks";
+import { isoDay } from "../dates";
 
 /**
  * Results of a ```dataview or ```tasks block, drawn under it in place of its

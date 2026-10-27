@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { Icon } from "../Icon";
 import { normalizeTag, tagKey } from "./readingList";
+import { useClickOutside } from "../hooks/useClickOutside";
 
 /**
  * Tags as chips with a field to add more: suggestions from the tags already
@@ -24,14 +25,8 @@ export function TagInput({
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  useClickOutside(box, () => setOpen(false), { active: open });
   const input = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const down = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
-    window.addEventListener("mousedown", down);
-    return () => window.removeEventListener("mousedown", down);
-  }, [open]);
 
   const has = new Set(tags.map(tagKey));
   const typed = normalizeTag(text);

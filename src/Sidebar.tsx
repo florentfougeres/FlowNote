@@ -12,6 +12,7 @@ import { keys } from "./keys";
 import type { TagNode } from "./dashboard/stats";
 import { usePersistentFlag } from "./hooks/usePersistentFlag";
 import { PAGE_SORTS, sortPages, type FileTimes, type PageSort } from "./pageSort";
+import { useClickOutside } from "./hooks/useClickOutside";
 
 /**
  * Sidebar: the vault (with its menu) and a "new page"
@@ -95,21 +96,12 @@ export interface MenuItem {
  */
 export function PopoverMenu({ anchor, items, onClose }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  useClickOutside(ref, onClose, { escape: true });
   const [top, setTop] = useState(anchor.bottom + 4);
   useLayoutEffect(() => {
     const height = ref.current?.offsetHeight ?? 0;
     setTop(anchor.bottom + 4 + height > window.innerHeight - 8 ? Math.max(8, anchor.top - 4 - height) : anchor.bottom + 4);
   }, [anchor]);
-  useEffect(() => {
-    const down = (event: MouseEvent) => !ref.current?.contains(event.target as Node) && onClose();
-    const key = (event: KeyboardEvent) => event.key === "Escape" && onClose();
-    window.addEventListener("mousedown", down);
-    window.addEventListener("keydown", key);
-    return () => {
-      window.removeEventListener("mousedown", down);
-      window.removeEventListener("keydown", key);
-    };
-  }, [onClose]);
   return (
     <div ref={ref} className="sidebar-menu" role="menu" style={{ top, left: Math.max(8, Math.min(anchor.left, window.innerWidth - 240)) }}>
       {items.map((item) => (

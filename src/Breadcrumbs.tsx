@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { dirname, noteTitle } from "./vault/links";
 import { Icon } from "./Icon";
 import type { ReactNode } from "react";
 import { PageIcon } from "./Sidebar";
+import { useClickOutside } from "./hooks/useClickOutside";
 
 /**
  * Location of the open page, navigable: a folder opens its folder note
@@ -30,20 +31,9 @@ export function Breadcrumbs({
   const [menu, setMenu] = useState<{ folder: string; left: number } | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  useClickOutside(ref, () => setMenu(null), { active: menu !== null, escape: true });
   const parts = path.split("/");
   const folders = parts.slice(0, -1);
-
-  useEffect(() => {
-    if (!menu) return;
-    const close = (event: MouseEvent) => !ref.current?.contains(event.target as Node) && setMenu(null);
-    const escape = (event: KeyboardEvent) => event.key === "Escape" && setMenu(null);
-    window.addEventListener("mousedown", close);
-    window.addEventListener("keydown", escape);
-    return () => {
-      window.removeEventListener("mousedown", close);
-      window.removeEventListener("keydown", escape);
-    };
-  }, [menu]);
 
   const openFolder = (folder: string, element: HTMLElement) => {
     const name = folder.split("/").pop()!;

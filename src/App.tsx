@@ -60,7 +60,7 @@ import { useSpellChecking } from "./editor/useSpellChecking";
 import type { Editor } from "@tiptap/core";
 import { HistoryPanel } from "./HistoryPanel";
 import { browserVaultSupported, ConflictError, createMemoryVault, openBrowserVault, readAllNotes, type Vault, type VaultEntry } from "./vault/vault";
-import { isoDay, setTaskDone } from "./query/pages";
+import { setTaskDone } from "./query/pages";
 import { DEFAULT_CONFIG, dirname, noteTitle, parseObsidianConfig, type ObsidianConfig } from "./vault/links";
 import { readTemplatesConfig, templateBody, templateFiles, templateName, type TemplatesConfig } from "./vault/templates";
 import { DEMO_FILES, DEMO_REMOTE } from "./demo";
@@ -92,6 +92,7 @@ import { countWords, readingMinutes } from "./markdown/wordCount";
 import { bookmarkedFiles, noteAliases, noteTags, tagTree, type TagNode } from "./dashboard/stats";
 import type { SearchFilter } from "./vault/searchFilters";
 import { invoke } from "@tauri-apps/api/core";
+import { isoDay } from "./dates";
 
 interface OpenNote {
   path: string;

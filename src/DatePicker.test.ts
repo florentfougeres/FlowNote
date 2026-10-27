@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { dayOf, formatDateValue, isoDay, monthGrid, parseTypedDate } from "./DatePicker";
+import { dayOf, formatDateValue, monthGrid, parseTypedDate } from "./DatePicker";
+import { isoDay } from "./dates";
 
 describe("date picker", () => {
   it("reads the values written in the files", () => {

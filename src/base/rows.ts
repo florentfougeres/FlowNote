@@ -1,4 +1,4 @@
-import { readProperties, renameProperty, setProperty, type PropertyValue } from "../markdown/frontmatter";
+import { frontmatterRaw, noteProperties, renameProperty, setProperty, splitFrontmatter, type Frontmatter, type PropertyValue } from "../markdown/frontmatter";
 import { noteTitle } from "../vault/links";
 import { evaluateFormulas, filterMatches, numeric, type FValue } from "./formula";
 import { NAME, type BaseModel, type ColumnMeta, type ColumnType, type SimpleFilter, type SortRule } from "./baseFile";
@@ -38,7 +38,8 @@ export const FILE_PROPERTIES: [string, string][] = [
 const INLINE_TAG = /(?:^|\s)#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
 const IMAGE = /!\[\[([^\]|#]+\.(?:png|jpe?g|gif|webp|svg|avif|bmp))(?:[|#][^\]]*)?\]\]|!\[[^\]]*\]\((?!https?:)([^)\s]+\.(?:png|jpe?g|gif|webp|svg|avif|bmp))\)|!\[[^\]]*\]\((https?:[^)\s]+)\)/i;
 
-const FRONTMATTER = /^(﻿?---[ \t]*\r?\n)([\s\S]*?)(\r?\n---[ \t]*(?:\r?\n|$))/;
+/** What follows the closing `---` of the front matter (spaces, line break), kept when it is rewritten. */
+const afterFence = (front: Frontmatter) => front.block.slice(front.block.lastIndexOf("---") + 3);
 
 /** Whether a row passes filters written as Obsidian expressions (those FlowNote cannot evaluate are left out). */
 export function rowMatches(row: BaseRow, where: unknown[], formulas: Record<string, string> = {}): boolean {
@@ -52,10 +53,9 @@ export function rowsOf(notes: [string, string][], model: BaseModel, stats: { pat
   return notes
     .filter(([path]) => path.endsWith(".md") && path.startsWith(prefix))
     .map(([path, text]) => {
-      const match = FRONTMATTER.exec(text);
       const values: Record<string, PropertyValue> = {};
-      if (match) for (const p of readProperties(`---\n${match[2].replace(/\r\n/g, "\n")}\n---`).properties) values[p.key] = p.value;
-      const body = (match ? text.slice(match[0].length) : text).replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, "");
+      for (const p of noteProperties(text)) values[p.key] = p.value;
+      const body = (splitFrontmatter(text)?.body ?? text).replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, "");
       const fmTags = Array.isArray(values.tags) ? values.tags.map(String) : typeof values.tags === "string" ? [values.tags] : [];
       const tags = [...new Set([...fmTags, ...[...body.matchAll(INLINE_TAG)].map((m) => m[1])].map((t) => t.replace(/^#/, "")))];
       const image = IMAGE.exec(body);
@@ -208,21 +208,21 @@ export function viewRows(rows: BaseRow[], filters: SimpleFilter[], sort: SortRul
  * rest of the file is kept byte for byte, line endings included.
  */
 export function setNoteProperty(markdown: string, key: string, value: PropertyValue | undefined): string {
-  const match = FRONTMATTER.exec(markdown);
+  const front = splitFrontmatter(markdown);
   const eol = markdown.includes("\r\n") ? "\r\n" : "\n";
-  const raw = setProperty(match ? `---\n${match[2].replace(/\r\n/g, "\n")}\n---` : null, key, value);
-  if (raw === null) return match ? markdown.slice(match[0].length) : markdown;
+  const raw = setProperty(front ? frontmatterRaw(front.yaml) : null, key, value);
+  if (raw === null) return front ? front.body : markdown;
   const block = raw.replace(/\n/g, eol);
-  return match ? `${block}${match[3].replace(/^\r?\n---/, "")}${markdown.slice(match[0].length)}` : `${block}${eol}${markdown}`;
+  return front ? `${block}${afterFence(front)}${front.body}` : `${block}${eol}${markdown}`;
 }
 
 /** The note with a property renamed (value, position and comments kept). */
 export function renameNoteProperty(markdown: string, from: string, to: string): string {
-  const match = FRONTMATTER.exec(markdown);
-  if (!match) return markdown;
+  const front = splitFrontmatter(markdown);
+  if (!front) return markdown;
   const eol = markdown.includes("\r\n") ? "\r\n" : "\n";
-  const raw = renameProperty(`---\n${match[2].replace(/\r\n/g, "\n")}\n---`, from, to);
-  return `${raw.replace(/\n/g, eol)}${match[3].replace(/^\r?\n---/, "")}${markdown.slice(match[0].length)}`;
+  const raw = renameProperty(frontmatterRaw(front.yaml), from, to);
+  return `${raw.replace(/\n/g, eol)}${afterFence(front)}${front.body}`;
 }
 
 /** Calculations offered at the bottom of a column (Obsidian's summaries names). */

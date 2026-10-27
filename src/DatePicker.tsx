@@ -1,6 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
+import { isoDay } from "./dates";
+import { useClickOutside } from "./hooks/useClickOutside";
 
 /**
  * The app's date picker, in place of the system's: a month calendar in a
@@ -13,7 +15,6 @@ const MONTH = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" 
 const LONG = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
 const pad = (n: number) => String(n).padStart(2, "0");
-export const isoDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 /** The day of a value ("2026-10-15", "2026-10-15T09:30", "2026-10-15 09:30"), or null. */
 export function dayOf(value: string | null | undefined): Date | null {
@@ -73,6 +74,7 @@ export function DatePicker({
   const [typed, setTyped] = useState(selected ? `${pad(selected.getDate())}/${pad(selected.getMonth() + 1)}/${selected.getFullYear()}` : "");
   const [time, setTime] = useState(timeOf(value) || "09:00");
   const box = useRef<HTMLDivElement>(null);
+  useClickOutside(box, onClose);
   const grid = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<{ left: number; top: number }>({ left: anchor.left, top: anchor.bottom + 4 });
 
@@ -85,12 +87,6 @@ export function DatePicker({
       top: below ? anchor.bottom + 4 : Math.max(8, anchor.top - 4 - height),
     });
   }, [anchor]);
-
-  useEffect(() => {
-    const down = (event: MouseEvent) => !box.current?.contains(event.target as Node) && onClose();
-    window.addEventListener("mousedown", down);
-    return () => window.removeEventListener("mousedown", down);
-  }, [onClose]);
 
   const pick = (day: Date) => {
     onChange(withTime ? `${isoDay(day)}T${time || "09:00"}` : isoDay(day));
