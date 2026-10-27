@@ -59,7 +59,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - **Niveau des titres** dans la marge (un clic en choisit un autre, `⌘⌥1` … `⌘⌥6`)
 - **HTML** dans les notes affiché mis en page (blocs, texte entouré de balises, images), sans ses scripts
 - Collage : le texte simple est lu comme du Markdown ; un seul bloc collé (une ligne d'une page web) garde le type de la ligne où il arrive
-- **Colonnes de blocs** (`/colonnes`) en callouts `[!multi-column]`, lisibles par le plugin Obsidian Multi-Column Markdown
+- **Colonnes de blocs** (`/colonnes`) : des blocs côte à côte, écrits en callouts `[!multi-column]` et `[!blank]` (convention des snippets CSS de colonnes d'Obsidian ; sans snippet, des callouts empilés)
 - Tableaux éditables avec poignées de lignes et de colonnes (insérer, déplacer, aligner, supprimer) ; taille choisie dans une grille à la création
 - Blocs de code avec coloration syntaxique et autocomplétion du langage, diagrammes **Mermaid**, formules mathématiques **KaTeX** (`$x^2$` en ligne, `$$…$$` en bloc, avec aperçu en direct), emoji (`:calendrier`), date du jour (`/date`)
 - **Organigrammes** [flowchart.js](https://flowchart.js.org) (blocs ```` ```flow ````, comme HedgeDoc), avec un éditeur visuel : étapes, formes et flèches sans écrire la syntaxe
@@ -127,7 +127,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 
 **Navigation**
 - Recherche de page (`⌘P`), recherche et remplacement dans la note (`⌘F` / `⌘⌥F`), recherche dans tout le vault (`⌘⇧F`) avec des filtres par tag, dossier, propriété ou date de modification (aussi en syntaxe Obsidian : `tag:#projet`, `path:Dossier`, `[statut:fait]`)
-- Fil d'Ariane cliquable, plan de la note, historique précédent/suivant, onglets retrouvés au lancement
+- Fil d'Ariane cliquable, plan de la note (glisser un titre y déplace toute sa section), historique précédent/suivant, onglets retrouvés au lancement
 - **Tags** en arbre dans la barre latérale, avec leurs compteurs
 - **Notes liées** sous chaque note (les pages qui pointent vers elle)
 - Mots et caractères de la sélection dans la pastille d'état

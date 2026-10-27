@@ -109,7 +109,7 @@ Une page a un **titre** et un **nom de fichier**, indépendants :
 
 ### Les blocs
 
-Tapez `/` en début de ligne pour insérer ou transformer un bloc : texte, titres, listes, tâches, toggle, citation, callouts, admonition HedgeDoc, sous-page, code, Mermaid, organigramme, graphique, bloc de maths, formule en ligne, tableau, séparateur, sommaire, date… Continuez à taper pour filtrer, `↵` pour choisir.
+Tapez `/` en début de ligne pour insérer ou transformer un bloc : texte, titres, listes, tâches, toggle, citation, callouts, admonition HedgeDoc, sous-page, colonnes, code, Mermaid, organigramme, graphique, bloc de maths, formule en ligne, tableau, séparateur, sommaire, date… Continuez à taper pour filtrer, `↵` pour choisir.
 
 ![[menu-slash.webp]]
 
