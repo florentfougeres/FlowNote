@@ -231,7 +231,7 @@ describe("emoji", () => {
     expect(findShortcodes(other.state.doc).map((s) => s.emoji)).toEqual(["⚠️"]);
     // One-letter shortcodes too (:x: ❌, :o: ⭕), never inside a word (a:b:c).
     const { editor: short } = openEditor("Non :x: et :o: mais a:b:c\n");
-    expect(findShortcodes(short.state.doc).map((s) => s.emoji)).toEqual(["❌\u{FE0F}", "⭕\u{FE0F}"]);
+    expect(findShortcodes(short.state.doc).map((s) => s.emoji)).toEqual(["❌", "⭕"]);
   });
 
   it("existing shortcodes are displayed as emoji, and revealed under the cursor", async () => {
@@ -254,12 +254,12 @@ describe("emoji", () => {
     type(editor, "## Fait :white_check_mark:");
     const shown = () => [...editor.view.dom.querySelectorAll(".emoji-shortcode")].map((e) => e.textContent);
     // The cursor right after the code: the emoji, at once.
-    expect(shown()).toEqual(["✅\u{FE0F}"]);
+    expect(shown()).toEqual(["✅"]);
     // ← goes inside the code: its text shows, to be changed.
     editor.commands.setTextSelection(editor.state.selection.from - 1);
     expect(shown()).toEqual([]);
     editor.commands.setTextSelection(editor.state.doc.firstChild!.nodeSize - 1);
-    expect(shown()).toEqual(["✅\u{FE0F}"]);
+    expect(shown()).toEqual(["✅"]);
     expect(save()).toBe("## Fait :white_check_mark:\n");
     // ← right after the emoji goes into its code; ⌫ right after it removes it whole.
     press(editor, "ArrowLeft");
