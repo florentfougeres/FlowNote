@@ -2,6 +2,21 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.26.0] - 2026-10-27
+
+### Ajouté
+- Documentation : le plan sur le côté, et au-dessus un champ de recherche (occurrences surlignées, `↵` pour la suivante, `⌘F` pour y aller).
+
+### Modifié
+- Les propriétés masquées ne laissent plus de ligne « x propriétés masquées » : seul un œil, au survol, les réaffiche.
+- L'onglet des tâches s'appelle « Tâches » (et « Tableau », « Agenda », « Calendrier des tâches » pour les autres vues), plus `tasks-default`.
+- Code : propriétés des notes lues en un seul endroit, navigation des onglets sortie de l'app principale, code mort retiré.
+
+### Corrigé
+- Rechercher dans les notes : un résultat ouvre la note sur le mot trouvé, plus en haut de la note.
+- Un nouvel onglet s'ouvre juste après l'onglet actif, plus en tête de la barre.
+- Une note au front matter vide (`---` puis `---`) est lue partout comme dans l'éditeur.
+
 ## [0.25.0] - 2026-10-27
 
 ### Ajouté
