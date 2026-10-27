@@ -52,7 +52,8 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Titres, listes, tâches, citations, callouts Obsidian (`> [!note]`), admonitions HedgeDoc (`:::info`), toggles (callouts repliables), séparateurs
 - Menu `/` pour insérer ou transformer un bloc, raccourcis Markdown à la frappe (`#`, `-`, `[]`, `>`, ```` ``` ````)
 - Poignée de bloc : glisser-déposer avec imbrication, dupliquer, transformer, supprimer ; `⌥↑` / `⌥↓` déplacent le bloc
-- **Extraire vers une nouvelle note** la sélection, un bloc ou la section d'un titre, remplacés par un lien `[[…]]`
+- **Extraire vers une nouvelle note** la sélection, un bloc ou la section d'un titre, remplacés par un lien `[[…]]` ; **fusionner** une note dans une autre, les liens suivent
+- Cellules d'un tableur (Excel, Numbers) ou CSV collés en tableau Markdown
 - Sommaire : `[TOC]` (comme HedgeDoc) affiche les titres de la note, `/sommaire` l'insère
 - **Barre de mise en forme** sur le texte sélectionné : gras, italique, souligné (`<u>`, lisible dans Obsidian), barré, fluo, code, lien (`⌘K`), note de bas de page, gomme
 - **Fluo en couleur** (`==🟢vert==`, rouge, bleu, jaune, violet), modifiable d'un clic sur le crayon
@@ -67,7 +68,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Blocs de code avec coloration syntaxique et autocomplétion du langage, diagrammes **Mermaid**, formules mathématiques **KaTeX** (`$x^2$` en ligne, `$$…$$` en bloc, avec aperçu en direct), emoji (`:calendrier`), date du jour (`/date`)
 - **Organigrammes** [flowchart.js](https://flowchart.js.org) (blocs ```` ```flow ````, comme HedgeDoc), avec un éditeur visuel : étapes, formes et flèches sans écrire la syntaxe
 - **Graphiques Plotly** (`/graphique`) au format du plugin Obsidian [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) : blocs ```` ```plotly ```` en YAML ou JSON, graphiques interactifs, éditeur visuel (lignes, barres, aire, points, camembert, anneau, radar ; titres, tableau des valeurs, import d'un CSV), tous les types de Plotly en texte
-- Propriétés YAML (frontmatter) éditables, tags, `[[wikilinks]]` et `![[embeds]]` avec autocomplétion, par alias aussi
+- Propriétés YAML (frontmatter) éditables, celles du vault proposées à l'ajout, repliables ; tags, `[[wikilinks]]` et `![[embeds]]` avec autocomplétion, par alias aussi
 - **Liens vers les titres et les blocs** : `[[Note#` propose les titres, `[[Note#^` les blocs (identifiant ` ^id` ajouté comme Obsidian), « Copier le lien vers ce bloc » dans le menu `⋮⋮` ; renommer un titre met à jour les liens qui le visent
 - **Titres repliables** : une flèche au survol replie la section
 - **Notes intégrées** : `![[Note]]`, `![[Note#Section]]` et `![[Note#^bloc]]` affichent le contenu de l'autre note, toujours à jour
@@ -147,7 +148,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 
 C'est le cœur du projet : **une note que FlowNote n'a pas modifiée est réécrite à l'octet près**, et une note modifiée ne change que dans les blocs touchés. Le reste du fichier (espacements, style des listes, marqueurs, fins de ligne, BOM…) est conservé tel quel.
 
-- Frontmatter YAML, `[[wikilinks]]`, `![[embeds]]`, `#tags`, pièces jointes : tout reste lisible et éditable dans Obsidian.
+- Frontmatter YAML, `[[wikilinks]]`, `![[embeds]]`, `#tags`, pièces jointes : tout reste lisible et éditable dans Obsidian. Les pièces jointes d'une note la suivent quand elle change de dossier.
 - Les blocs sans équivalent Markdown standard utilisent une syntaxe qu'Obsidian affiche nativement (callouts pour les toggles, blocs ```` ```mermaid ````…).
 - Les requêtes Dataview et Tasks, les notes intégrées et les notes de bas de page gardent leur syntaxe : Obsidian (avec ses plugins pour Dataview et Tasks) les affiche de la même façon.
 - Tâches, lectures et présentations sont des notes ordinaires : propriétés YAML (`tags: [task]`, `status`, `marp: true`…), cases à cocher et callouts, que les plugins TaskNotes et Marp Slides savent aussi lire.

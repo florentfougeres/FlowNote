@@ -2,7 +2,7 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [0.25.0] - 2026-10-27
 
 ### Ajouté
 - Coller des cellules copiées d'un tableur (Excel, Numbers, Google Sheets) ou un CSV donne un tableau Markdown, la première ligne en en-tête ; `⌘⇧V` colle le texte tel quel.
