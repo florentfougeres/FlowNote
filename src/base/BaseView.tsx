@@ -274,8 +274,8 @@ export interface BaseViewProps {
   loadImage: (path: string) => Promise<string>;
   /** Embedded in a note: no page title, a smaller frame. */
   embedded?: boolean;
-  /** The tasks' settings and their creation, for TaskNotes' views. */
-  tasks?: { config: TaskConfig; onNew: (status?: string) => void };
+  /** The tasks' settings and their creation, for TaskNotes' views; `openView` opens another of its views (created when missing). */
+  tasks?: { config: TaskConfig; onNew: (status?: string) => void; openView?: (view: keyof TaskConfig["views"]) => void };
 }
 
 /**
@@ -286,6 +286,8 @@ export interface BaseViewProps {
  */
 export function BaseView({ vault, files, path, source, editable, onSource, onOpen, onRenameRow, onDeleteRow, onChanged, loadImage, embedded = false, tasks }: BaseViewProps) {
   const parsed = useMemo(() => parseBase(source), [source]);
+  /** Which of TaskNotes' default views this base is (its list, board, agenda or calendar), if any. */
+  const taskViewKey = tasks ? (Object.entries(tasks.config.views).find(([, p]) => p === path)?.[0] as keyof TaskConfig["views"] | undefined) : undefined;
   const { model } = parsed;
   const [rows, setRows] = useState<BaseRow[] | null>(null);
   /** The notes' text, for TaskNotes' views (comments, checkboxes). */
@@ -497,9 +499,24 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
       <div className={embedded ? "db-page embedded" : "db-page"}>
         {!embedded && (
           <header className="db-header">
-            <h1>
-              <Icon name="database" size={26} /> <BaseTitle name={noteTitle(path)} editable={editable} onRename={(name) => onRenameRow(path, name)} />
-            </h1>
+            {taskViewKey && tasks?.openView ? (
+              <div className="task-views-head">
+                <h1>
+                  <Icon name="task" size={26} /> Tâches
+                </h1>
+                <div className="segmented" role="tablist" aria-label="Vues des tâches">
+                  {TASK_VIEWS.map(([key, label, icon]) => (
+                    <button key={key} role="tab" aria-selected={key === taskViewKey} className={key === taskViewKey ? "selected" : ""} onClick={() => key !== taskViewKey && tasks.openView?.(key)}>
+                      <Icon name={icon} size={13} /> {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <h1>
+                <Icon name="database" size={26} /> <BaseTitle name={noteTitle(path)} editable={editable} onRename={(name) => onRenameRow(path, name)} />
+              </h1>
+            )}
             <p className="dash-muted">{tasks && model.views.some((v) => isTaskView(v.type)) ? "Les tâches du vault, au format du plugin TaskNotes" : model.folder !== null ? `Les pages du dossier « ${model.folder || "racine"} »` : "Toutes les pages du vault"}</p>
           </header>
         )}
@@ -641,3 +658,11 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
 }
 
 const FILE_IDS = FILE_PROPERTIES.map(([p]) => p);
+
+/** TaskNotes' default views, offered side by side. */
+const TASK_VIEWS: [keyof TaskConfig["views"], string, IconName][] = [
+  ["tasks", "Liste", "list"],
+  ["kanban", "Tableau", "board"],
+  ["agenda", "Agenda", "clock"],
+  ["calendar", "Calendrier", "calendar"],
+];

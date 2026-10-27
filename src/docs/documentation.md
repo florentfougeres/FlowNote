@@ -427,12 +427,13 @@ Une tâche est une note au format du plugin Obsidian **TaskNotes** : la même no
 
 ![[tache.webp]]
 
-« Nouvelle tâche » (dans `⌘N`, l'accueil ou la palette `⌘⇧P`) la crée dans le dossier des tâches (`TaskNotes/Tasks` par défaut). En haut de la page, chaque champ se change d'un clic ; « Terminer la tâche » la passe au statut terminé et note la date.
+« Nouvelle tâche » (dans `⌘N`, l'accueil ou la palette `⌘⇧P`) la crée dans le dossier des tâches (`TaskNotes/Tasks` par défaut). En haut de la page, chaque champ se change d'un clic. Un **projet** est une note du vault, choisie dans la liste qui s'ouvre en tapant son nom (comme dans TaskNotes) ; un clic sur le projet ouvre la note. « Terminer la tâche » la passe au statut terminé et note la date.
 
-**Tâches** dans la barre latérale ouvre la liste (`TaskNotes/Views/tasks-default.base`) : groupée par statut, avec les vues de TaskNotes (aujourd'hui, en retard, cette semaine, sans date…). Le rond devant une tâche la termine.
+**Tâches** dans la barre latérale ouvre la liste (`TaskNotes/Views/tasks-default.base`). En haut, **Liste**, **Tableau**, **Agenda** et **Calendrier** passent d'une vue de TaskNotes à l'autre. La liste est groupée par statut, avec les vues de TaskNotes (aujourd'hui, en retard, cette semaine, sans date…). Le rond devant une tâche la termine.
 
 ![[taches-liste.webp]]
- « Ouvrir le tableau des tâches » dans la palette ouvre le **tableau** (`kanban-default.base`) : une colonne par statut, avec glisser-déposer entre les colonnes et dans une colonne.
+
+Le **tableau** (`kanban-default.base`, aussi « Ouvrir le tableau des tâches » dans la palette) a une colonne par statut, avec glisser-déposer entre les colonnes et dans une colonne.
 
 ![[taches-tableau.webp]]
 

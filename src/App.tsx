@@ -816,7 +816,12 @@ export function App() {
     await select(path, "push", newTabRequested);
   };
   /** TaskNotes' views in a base: its settings, and a new task in a board column's status. */
-  const baseTasks = useMemo(() => ({ config: taskConfig, onNew: (status?: string) => void newTask(status) }), [taskConfig, newTask]);
+  const taskActions = useRef({ newTask, openTasks });
+  taskActions.current = { newTask, openTasks };
+  const baseTasks = useMemo(
+    () => ({ config: taskConfig, onNew: (status?: string) => void taskActions.current.newTask(status), openView: (view: keyof TaskConfig["views"]) => void taskActions.current.openTasks(view, false) }),
+    [taskConfig],
+  );
 
   const loadImage = useCallback(
     async (path: string) => {

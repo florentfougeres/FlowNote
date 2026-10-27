@@ -5,7 +5,8 @@ import type { VaultBridge } from "../editor/bridge";
 import type { Editor } from "@tiptap/core";
 import { Icon } from "../Icon";
 import type { PropertyValue } from "../markdown/frontmatter";
-import { resolveLink } from "../vault/links";
+import { linkTextFor, resolveLink } from "../vault/links";
+import { linkItems } from "../editor/wikilinks";
 import { commentDate, joinTask, serializeComments, splitTask, type TaskComment } from "./comments";
 import { dueLabel, urgency } from "./agenda";
 import { priorityOf, statusOf, type TaskConfig } from "./config";
@@ -198,27 +199,22 @@ function CommentItem({ comment, path, editable, bridge, onChange }: { comment: T
   );
 }
 
-/** A list of chips (tags, contexts, projects) with a field to add one. */
-function ChipsField({ values, prefix = "", label, editable, kind, onChange, onOpen }: { values: string[]; prefix?: string; label: string; editable: boolean; kind?: "project" | "context"; onChange: (values: string[]) => void; onOpen?: (value: string) => void }) {
+/** A list of chips (tags, contexts) with a field to add one. */
+function ChipsField({ values, prefix = "", label, editable, kind, onChange }: { values: string[]; prefix?: string; label: string; editable: boolean; kind?: "context"; onChange: (values: string[]) => void }) {
   const [draft, setDraft] = useState<string | null>(null);
   const add = (text: string) => {
     const clean = text.trim().replace(/^[#@]/, "");
-    const value = kind === "project" && clean && !/^\[\[.*\]\]$/.test(clean) ? `[[${clean}]]` : kind === "project" ? clean : clean.replace(/\s+/g, "-");
+    const value = clean.replace(/\s+/g, "-");
     if (value && !values.includes(value)) onChange([...values, value]);
   };
   return (
     <div className="task-tags">
       {values.map((value) => (
         <span key={value} className={kind ? `task-chip ${kind}` : "task-tag"}>
-          {onOpen ? (
-            <button className="task-chip-open" onClick={() => onOpen(value)}>
-              {linkText(value)}
-            </button>
-          ) : (
-            `${prefix}${linkText(value)}`
-          )}
+          {prefix}
+          {value}
           {editable && (
-            <button aria-label={`Retirer ${linkText(value)}`} onClick={() => onChange(values.filter((v) => v !== value))}>
+            <button aria-label={`Retirer ${value}`} onClick={() => onChange(values.filter((v) => v !== value))}>
               ×
             </button>
           )}
@@ -241,7 +237,7 @@ function ChipsField({ values, prefix = "", label, editable, kind, onChange, onOp
               setDraft(null);
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || (e.key === "," && kind !== "project")) {
+              if (e.key === "Enter" || e.key === ",") {
                 e.preventDefault();
                 add(draft);
                 setDraft("");
@@ -249,6 +245,76 @@ function ChipsField({ values, prefix = "", label, editable, kind, onChange, onOp
               if (e.key === "Escape") setDraft(null);
             }}
           />
+        ))}
+    </div>
+  );
+}
+
+/**
+ * The projects of a task: notes of the vault, chosen in a list as TaskNotes
+ * does (written `"[[Note]]"`, the shortest link Obsidian would write).
+ */
+function ProjectsField({ values, files, editable, onChange, onOpen }: { values: string[]; files: string[]; editable: boolean; onChange: (values: string[]) => void; onOpen: (value: string) => void }) {
+  const [query, setQuery] = useState<string | null>(null);
+  const [active, setActive] = useState(0);
+  const found = query === null ? [] : linkItems(query, files, false).filter((item) => item.path && !values.includes(`[[${linkTextFor(item.path, files)}]]`)).slice(0, 8);
+  const pick = (path: string) => {
+    onChange([...values, `[[${linkTextFor(path, files)}]]`]);
+    setQuery(null);
+  };
+  return (
+    <div className="task-tags">
+      {values.map((value) => (
+        <span key={value} className="task-chip project">
+          <button className="task-chip-open" onClick={() => onOpen(value)} title="Ouvrir la note">
+            {linkText(value)}
+          </button>
+          {editable && (
+            <button aria-label={`Retirer ${linkText(value)}`} onClick={() => onChange(values.filter((v) => v !== value))}>
+              ×
+            </button>
+          )}
+        </span>
+      ))}
+      {editable &&
+        (query === null ? (
+          <button className="task-add" onClick={() => (setQuery(""), setActive(0))}>
+            + projet
+          </button>
+        ) : (
+          <span className="task-picker">
+            <input
+              className="task-tag-input"
+              autoFocus
+              value={query}
+              placeholder="Chercher une note"
+              role="combobox"
+              aria-expanded={found.length > 0}
+              aria-controls="task-project-list"
+              onChange={(e) => (setQuery(e.target.value), setActive(0))}
+              onBlur={() => setQuery(null)}
+              onKeyDown={(e) => {
+                const path = found[active]?.path;
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setActive((active + (e.key === "ArrowDown" ? 1 : found.length - 1)) % Math.max(1, found.length));
+                } else if (e.key === "Enter" && path) {
+                  e.preventDefault();
+                  pick(path);
+                } else if (e.key === "Escape") setQuery(null);
+              }}
+            />
+            {found.length > 0 && (
+              <span className="task-picker-list" id="task-project-list" role="listbox" onMouseDown={(e) => e.preventDefault()}>
+                {found.map((item, i) => (
+                  <button key={item.key} role="option" aria-selected={i === active} className={i === active ? "active" : undefined} onMouseEnter={() => setActive(i)} onClick={() => item.path && pick(item.path)}>
+                    <span>{item.title}</span>
+                    <small>{item.description}</small>
+                  </button>
+                ))}
+              </span>
+            )}
+          </span>
         ))}
     </div>
   );
@@ -430,7 +496,7 @@ export function TaskView({
           </div>
           <div className="task-field">
             <span className="task-field-label">Projets</span>
-            <ChipsField values={info.projects} label="projet" kind="project" editable={editable} onOpen={openProject} onChange={(values) => setField(f.projects, values.length ? values : undefined)} />
+            <ProjectsField values={info.projects} files={bridge.files} editable={editable} onOpen={openProject} onChange={(values) => setField(f.projects, values.length ? values : undefined)} />
           </div>
           <div className="task-field">
             <span className="task-field-label">Contextes</span>
