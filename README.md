@@ -13,7 +13,7 @@
 
 FlowNote est une application de bureau pour macOS (et Ubuntu) qui ouvre un dossier de notes Obsidian et permet de les éditer par blocs : menu `/`, glisser-déposer, tableaux, callouts… Il n'y a ni base de données ni format caché : chaque note reste un fichier `.md` que vous pouvez continuer à ouvrir dans Obsidian, sans plugin.
 
-Autour de l'éditeur : des bases (tableau, kanban, galerie, calendrier), des canevas, des dessins Excalidraw, des mind maps, des tickets avec un tableau kanban, une liste de lectures, une liste de tâches, des dashboards de widgets, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. FlowNote lit aussi les requêtes des plugins **Dataview** et **Tasks**, les notes intégrées (`![[Note#Section]]`) et les notes de bas de page. Tout reste du texte, lisible dans Obsidian et propre dans Git.
+Autour de l'éditeur : des bases (tableau, kanban, galerie, calendrier), des canevas, des dessins Excalidraw, des mind maps, des tâches au format du plugin TaskNotes (liste, tableau kanban, agenda, calendrier), une liste de lectures, des dashboards de widgets, des présentations Marp, un graphe des liens et un gestionnaire Git intégré. FlowNote lit aussi les requêtes des plugins **Dataview** et **Tasks**, les notes intégrées (`![[Note#Section]]`) et les notes de bas de page. Tout reste du texte, lisible dans Obsidian et propre dans Git.
 
 Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 
@@ -26,15 +26,15 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 | --- | --- |
 | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/split-view.dark.webp">  <img src="src/docs/images/split-view.light.webp" alt="Deux pages côte à côte"></picture> | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/base-kanban.dark.webp">  <img src="src/docs/images/base-kanban.light.webp" alt="Une base en kanban"></picture> |
 | **Split view** : deux pages dans un onglet | **Bases** : tableau, kanban, galerie, calendrier |
-| <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/croquis.dark.webp">  <img src="src/docs/images/croquis.light.webp" alt="Un dessin Excalidraw"></picture> | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/tickets-tableau.dark.webp">  <img src="src/docs/images/tickets-tableau.light.webp" alt="Les tickets en tableau kanban"></picture> |
-| **Dessins** Excalidraw | **Tickets** |
+| <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/croquis.dark.webp">  <img src="src/docs/images/croquis.light.webp" alt="Un dessin Excalidraw"></picture> | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/taches-tableau.dark.webp">  <img src="src/docs/images/taches-tableau.light.webp" alt="Les tâches en tableau kanban"></picture> |
+| **Dessins** Excalidraw | **Tâches** |
 
 La documentation complète, illustrée, est dans l'app (« Documentation » dans la barre latérale) et dans [`src/docs/documentation.md`](src/docs/documentation.md).
 
 ## Fonctionnalités
 
 **Interface**
-- Onglets en haut de la fenêtre, barre latérale avec le vault (et ses vaults récents), Accueil, Rechercher, Tickets, Tâches, Lectures, Graphe, Documentation et l'arbre des pages
+- Onglets en haut de la fenêtre, barre latérale avec le vault (et ses vaults récents), Accueil, Rechercher, Tâches, Lectures, Graphe, Documentation et l'arbre des pages
 - **Split view** : deux pages côte à côte (`⌥-clic` sur une page, `⌘⌥\` pour fermer le panneau)
 - Documentation intégrée de toutes les fonctionnalités
 - **Palette de commandes** (`⌘⇧P`, ou `>` dans `⌘P`) : toutes les actions de l'app par leur nom, avec leur raccourci
@@ -46,7 +46,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Pleine largeur par page et mode focus (`⌘⇧M`, Échap pour en sortir)
 - Menu « … » de la page : export en **PDF** (note, présentation, dessin, mind map) et export de la note en page **HTML** autonome, images comprises
 - Icône de page : un emoji choisi au-dessus du titre (propriété `icon`)
-- Accueil : créer, récents, à faire, tickets, à lire, graphe, Git, activité et statistiques du vault
+- Accueil : créer, récents, à faire, à lire, graphe, Git, activité et statistiques du vault
 
 **Éditeur de blocs**
 - Titres, listes, tâches, citations, callouts Obsidian (`> [!note]`), admonitions HedgeDoc (`:::info`), toggles (callouts repliables), séparateurs
@@ -59,6 +59,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - **Niveau des titres** dans la marge (un clic en choisit un autre, `⌘⌥1` … `⌘⌥6`)
 - **HTML** dans les notes affiché mis en page (blocs, texte entouré de balises, images), sans ses scripts
 - Collage : le texte simple est lu comme du Markdown ; un seul bloc collé (une ligne d'une page web) garde le type de la ligne où il arrive
+- **Colonnes de blocs** (`/colonnes`) en callouts `[!multi-column]`, lisibles par le plugin Obsidian Multi-Column Markdown
 - Tableaux éditables avec poignées de lignes et de colonnes (insérer, déplacer, aligner, supprimer) ; taille choisie dans une grille à la création
 - Blocs de code avec coloration syntaxique et autocomplétion du langage, diagrammes **Mermaid**, formules mathématiques **KaTeX** (`$x^2$` en ligne, `$$…$$` en bloc, avec aperçu en direct), emoji (`:calendrier`), date du jour (`/date`)
 - **Organigrammes** [flowchart.js](https://flowchart.js.org) (blocs ```` ```flow ````, comme HedgeDoc), avec un éditeur visuel : étapes, formes et flèches sans écrire la syntaxe
@@ -85,10 +86,6 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Les outils de dessin prennent place dans la barre d'outils de FlowNote
 - Format du plugin Obsidian « Excalidraw » (`Nom.excalidraw.md`) : avec ce plugin, les dessins s'ouvrent aussi dans Obsidian ; sans lui, on voit le JSON du dessin
 
-**Tickets**
-- Un ticket est une note de `Tickets/` (« 12 - Titre.md ») avec état, tags, échéance (`📅` du plugin Tasks) et fil de commentaires en callouts `[!comment]`
-- Vue liste (ouverts / fermés, tri, recherche, tags) ou **tableau kanban** avec glisser-déposer ; colonnes personnalisables depuis le tableau ou les réglages
-
 **Lectures**
 - Une note `Lectures.md` : une section par thème, une case à cocher par lien, cochée une fois lu
 - Tags Obsidian (`#tag`) sur chaque lien, et filtre par tags dans la vue Lectures
@@ -98,7 +95,9 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - `Nom.dashboard.md` : des widgets (texte, tableau, graphique Plotly, diagramme Mermaid, mind map, croquis, base) à placer librement et redimensionner sur une grille pleine largeur ; chaque widget est une section `## Titre` de la note
 
 **Tâches**
-- Une liste de tâches (`Todo.md`, cachée de l'explorateur) : échéance, catégorie et tags, au format du plugin Tasks
+- Une tâche est une note au format du plugin **TaskNotes** (tag `task`, statut, priorité, dates prévue et d'échéance, projets, contextes), dont les réglages sont lus dans `.obsidian`
+- Fiche de tâche : statut, priorité, dates, projets choisis parmi les notes, contextes, estimation, commentaires, **récurrence** (règles courantes ou sur mesure)
+- Vues de TaskNotes : liste groupée, **tableau kanban** avec glisser-déposer, agenda, calendrier du mois ou de la semaine
 
 **Présentations**
 - Une note avec `marp: true` devient une présentation [Marp](https://marp.app) : diapos séparées par `---`, notes de l'orateur en commentaires
@@ -148,7 +147,7 @@ C'est le cœur du projet : **une note que FlowNote n'a pas modifiée est réécr
 - Frontmatter YAML, `[[wikilinks]]`, `![[embeds]]`, `#tags`, pièces jointes : tout reste lisible et éditable dans Obsidian.
 - Les blocs sans équivalent Markdown standard utilisent une syntaxe qu'Obsidian affiche nativement (callouts pour les toggles, blocs ```` ```mermaid ````…).
 - Les requêtes Dataview et Tasks, les notes intégrées et les notes de bas de page gardent leur syntaxe : Obsidian (avec ses plugins pour Dataview et Tasks) les affiche de la même façon.
-- Tickets, lectures et présentations sont des notes ordinaires : propriétés YAML (`type: ticket`, `status`, `marp: true`…), cases à cocher et callouts, que les plugins Tasks et Marp Slides savent aussi lire.
+- Tâches, lectures et présentations sont des notes ordinaires : propriétés YAML (`tags: [task]`, `status`, `marp: true`…), cases à cocher et callouts, que les plugins TaskNotes et Marp Slides savent aussi lire.
 - Exceptions assumées : les codes emoji (`:warning:`) et les dessins (`.excalidraw.md`) demandent un plugin Obsidian pour être rendus ; sans lui, on voit leur texte.
 - Les bases utilisent le format des Bases d'Obsidian : tableau, galerie et kanban s'y ouvrent tels quels. Le calendrier, qu'Obsidian n'a pas, y apparaît en galerie ; les couleurs et types des colonnes sont rangés sous une clé `flownote:` qu'Obsidian conserve.
 - Le dossier `.obsidian` n'est jamais modifié. FlowNote lit seulement ses réglages de liens et de pièces jointes.
@@ -219,7 +218,7 @@ Le fonctionnement interne (bibliothèques, moteur de fidélité Markdown, format
 - **`src/markdown/`** : moteur de fidélité Markdown. Il parse avec remark/mdast, conserve la source de chaque bloc et ne re-sérialise que les blocs modifiés, en vérifiant l'équivalence.
 - **`src/editor/`** : éditeur basé sur Tiptap/ProseMirror. Il contient le schéma, les vues de blocs, le menu `/`, le glisser-déposer, les poignées de tableau et la recherche.
 - **`src/vault/`** : accès au vault, résolution des liens façon Obsidian, opérations sur les pages et client Git. `src/platform.ts` est le point d'appel au backend.
-- **`src/base/`**, **`src/ticket/`**, **`src/reading/`**, **`src/presentation/`**, **`src/mindmap/`**, **`src/canvas/`**, **`src/graph/`**, **`src/drawing/`** : bases, tickets et kanban, liste de lectures, présentations Marp, mind maps, canevas, graphe des liens, dessins Excalidraw.
+- **`src/base/`**, **`src/tasks/`**, **`src/reading/`**, **`src/presentation/`**, **`src/mindmap/`**, **`src/canvas/`**, **`src/graph/`**, **`src/drawing/`** : bases, tâches TaskNotes, liste de lectures, présentations Marp, mind maps, canevas, graphe des liens, dessins Excalidraw.
 - **`src/query/`** : requêtes Dataview et Tasks (index du vault, langages, rendu des résultats).
 - **`grammar/`** : petit programme compagnon qui fait tourner Grammalecte. Le backend lui envoie les paragraphes par l'entrée standard.
 

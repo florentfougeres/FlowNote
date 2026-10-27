@@ -2,7 +2,24 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [0.23.0] - 2026-10-27
+
+### Ajouté
+- Tâches au format du plugin TaskNotes : chaque tâche est une note (tag `task`, statut, priorité, dates prévue et d'échéance, projets, contextes, estimation), lisible par le plugin ; ses réglages sont lus dans `.obsidian`, jamais écrits. Fiche de tâche avec commentaires.
+- Vues de TaskNotes dans les bases : liste groupée, tableau kanban, agenda, calendrier du mois ou de la semaine, mini calendrier ; un sélecteur passe de l'une à l'autre.
+- Récurrence des tâches, calculée comme TaskNotes : champ Répéter (règles courantes ou sur mesure, compter depuis la dernière fois faite), terminer une seule occurrence, dates suivantes calculées.
+- Projets d'une tâche choisis parmi les notes du vault, écrits `[[Note]]`.
+- Plan : glisser un titre déplace toute sa section dans la note.
+- Colonnes de blocs (`/colonnes`) en callouts `[!multi-column]` et `[!blank]`, ajout et retrait de colonne au survol, colonnes gardées côte à côte dans la copie et l'export HTML.
+- Bases : les filtres écrits à la main dans le fichier sont évalués.
+
+### Modifié
+- Les tickets et la liste `Todo.md` sont remplacés par les tâches TaskNotes ; le dossier des tâches apparaît dans la barre latérale, comme dans Obsidian.
+- Bases : seuls les nœuds YAML modifiés sont réécrits.
+
+### Corrigé
+- Suppression sur macOS : la corbeille passe par NSFileManager au lieu du Finder, qui échouait après deux minutes sur iCloud Drive (aussi pour l'annulation des fichiers non suivis dans Git).
+- Citations imbriquées : `>>` est gardé tel quel, et deux citations à la suite restent séparées.
 
 ### Supprimé
 - Les cartes de révision (Révisions) : la vue, ses notes de démo et l'affichage des commentaires `<!--SR:…-->`, qui redeviennent du texte comme les autres commentaires.
