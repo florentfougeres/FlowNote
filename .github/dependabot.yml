@@ -8,6 +8,10 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    # TanStack Table stays on v8: v9 changes its API.
+    ignore:
+      - dependency-name: "@tanstack/react-table"
+        update-types: ["version-update:semver-major"]
     groups:
       tiptap:
         patterns: ["@tiptap/*", "prosemirror-*"]
