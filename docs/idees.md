@@ -26,6 +26,19 @@ En cours : réorganiser les sections depuis le Plan, les colonnes de blocs.
 - **OCR** (Evernote) : le texte des images et des PDF scannés trouvable par `⌘⇧F`, par l'API Vision de macOS côté Rust ; un index à part, rien d'écrit dans le vault.
 - **Rappels de tâches** : une notification du système à l'échéance ou à l'heure prévue d'une tâche.
 
+## Proposées en octobre 2026, pas retenues pour l'instant
+
+- **Renommer un tag dans tout le vault** (Tag Wrangler) : abandonné, trop de cas (sous-tags, fusion).
+- **Vue des propriétés** : toutes les propriétés du vault et leur nombre de notes, renommer une propriété partout (types lus dans `.obsidian/types.json`).
+- **Remplacer dans tout le vault** depuis `⌘⇧F`, avec un aperçu par note.
+- **Espaces de travail** : un jeu d'onglets et de split view enregistré sous un nom.
+- **Lire une page web dans l'app** (Web viewer) depuis les Lectures, en vue lecture.
+- **Vue Carte dans les bases** : les notes à propriété `location` sur une carte (les Voyages de la démo).
+- **Bannière de page** (`banner:`, plugins Banners et Pixel Banner).
+- **Boutons dans une note** (Buttons, Meta Bind) : créer une note depuis un modèle, cocher une propriété.
+- **Importer** depuis Notion, Evernote (`.enex`), Bear, Apple Notes.
+- **Notes proches** : sous les notes liées, des notes aux mots communs, avec « Lier » (calcul local, sans IA).
+
 ## À reconsidérer
 
 - **Note du jour et notes périodiques** (Daily Notes, Periodic Notes, Calendar), écartée jusqu'ici : l'usage le plus courant d'Obsidian et de Logseq ; le calendrier des tâches et les modèles sont déjà là.

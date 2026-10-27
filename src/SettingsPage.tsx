@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import type { TaskConfig } from "./tasks/config";
 import { Icon, type IconName } from "./Icon";
 import { keys } from "./keys";
+import { isPageSort, type PageSort } from "./pageSort";
 
 export type Theme = "system" | "light" | "dark";
 /** Grammalecte (desktop app), the system's spell checker, or none. */
@@ -23,6 +24,8 @@ export interface Settings {
   uiScale: number;
   /** The sidebar and the tabs name pages by their title (else by their file name). */
   showTitles: boolean;
+  /** Order of the page tree in the sidebar. */
+  pageSort: PageSort;
   /** Bars in the margin beside the blocks changed since the last commit. */
   gitGutter: boolean;
   font: AppFont;
@@ -36,6 +39,7 @@ const READING_KEY = "flownote:reading-list";
 const TITLES_KEY = "flownote:fetch-titles";
 const SCALE_KEY = "flownote:ui-scale";
 const SHOW_TITLES_KEY = "flownote:show-titles";
+const PAGE_SORT_KEY = "flownote:page-sort";
 const GIT_GUTTER_KEY = "flownote:git-gutter";
 const FONT_KEY = "flownote:font";
 const BLOCK_MENU_KEY = "flownote:block-menu";
@@ -85,13 +89,19 @@ export function loadSettings(): Settings {
       fetchTitles: localStorage.getItem(TITLES_KEY) !== "false",
       uiScale: readScale(),
       showTitles: localStorage.getItem(SHOW_TITLES_KEY) !== "false",
+      pageSort: readPageSort(),
       gitGutter: localStorage.getItem(GIT_GUTTER_KEY) === "true",
       font: readFont(),
       blockMenu: localStorage.getItem(BLOCK_MENU_KEY) === "grid" ? "grid" : "list",
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte", readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true, gitGutter: false, font: "system", blockMenu: "list" };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true, pageSort: "name-asc", gitGutter: false, font: "system", blockMenu: "list" };
   }
+}
+
+function readPageSort(): PageSort {
+  const saved = localStorage.getItem(PAGE_SORT_KEY);
+  return isPageSort(saved) ? saved : "name-asc";
 }
 
 /** The chosen font; Clarika was saved as "bear" before 0.21. */
@@ -109,6 +119,7 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(TITLES_KEY, String(settings.fetchTitles));
     localStorage.setItem(SCALE_KEY, String(settings.uiScale));
     localStorage.setItem(SHOW_TITLES_KEY, String(settings.showTitles));
+    localStorage.setItem(PAGE_SORT_KEY, settings.pageSort);
     localStorage.setItem(GIT_GUTTER_KEY, String(settings.gitGutter));
     localStorage.setItem(FONT_KEY, settings.font);
     localStorage.setItem(BLOCK_MENU_KEY, settings.blockMenu);

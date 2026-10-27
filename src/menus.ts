@@ -1,6 +1,7 @@
 import type { IconName } from "./Icon";
 import type { MenuItem } from "./Sidebar";
 import { isBasePath } from "./base/baseFile";
+import { isMergeable } from "./vault/merge";
 
 /**
  * The menus of the sidebar and of the tabs, written once: the sidebar and the
@@ -13,6 +14,8 @@ export interface PageMenuActions {
   onNewPage: (parent: string | null) => void;
   onCopyLink: (path: string) => void;
   onDuplicate: (path: string) => void;
+  /** Merges the note into another, chosen in a list. */
+  onMerge: (path: string) => void;
   onReveal?: (path: string) => void;
   onRename: (path: string) => void;
   onDelete: (path: string) => void;
@@ -29,6 +32,7 @@ export function pageMenu(path: string, a: PageMenuActions): MenuItem[] {
     { label: "Ajouter une sous-page", icon: "plus", run: () => a.onNewPage(path) },
     { label: "Copier le lien", icon: "link", run: () => a.onCopyLink(path) },
     ...(isBasePath(path) ? [] : [{ label: "Dupliquer", icon: "copy" as IconName, run: () => a.onDuplicate(path) }]),
+    ...(isMergeable(path) ? [{ label: "Fusionner dans…", icon: "merge" as IconName, run: () => a.onMerge(path) }] : []),
     ...reveal(path, a.onReveal),
     { label: "Renommer", icon: "pencil", run: () => a.onRename(path) },
     { label: "Supprimer", icon: "trash", danger: true, run: () => a.onDelete(path) },

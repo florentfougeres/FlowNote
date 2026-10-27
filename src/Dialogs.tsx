@@ -315,35 +315,51 @@ export interface TemplateChoice {
   name: string;
 }
 
-/** `/modèle`: the template to insert in the note, chosen in a list. */
-export function TemplateDialog({ templates, onDone }: { templates: TemplateChoice[]; onDone: (path: string | null) => void }) {
-  const options = useMemo(() => templates.map((t): PickerOption => ({ value: t.path, label: t.name, icon: "copy" })), [templates]);
+/** A file to choose in a list (`/modèle`, the note to merge into): what the dialog says, and the files offered. */
+export interface Choice {
+  title: string;
+  placeholder: string;
+  empty: string;
+  icon: IconName;
+  choices: TemplateChoice[];
+}
+
+/** A file chosen in a list with a search field; null when closed. */
+export function ChoiceDialog({ title, placeholder, empty, icon, choices, onDone }: Choice & { onDone: (path: string | null) => void }) {
+  const options = useMemo(() => choices.map((c): PickerOption => ({ value: c.path, label: c.name, icon })), [choices, icon]);
   return (
     <div className="modal-backdrop" onMouseDown={() => onDone(null)}>
       <div className="modal name-dialog template-dialog" onMouseDown={(e) => e.stopPropagation()}>
         <header className="modal-header">
-          <h2>Insérer un modèle</h2>
+          <h2>{title}</h2>
           <button type="button" className="name-dialog-close" aria-label="Fermer" onClick={() => onDone(null)}>
             <Icon name="close" size={14} />
           </button>
         </header>
-        <PickerList options={options} selected={null} placeholder="Chercher un modèle…" empty="Aucun modèle" onChoose={onDone} onEscape={() => onDone(null)} />
+        <PickerList options={options} selected={null} placeholder={placeholder} empty={empty} onChoose={onDone} onEscape={() => onDone(null)} />
       </div>
     </div>
   );
 }
 
-/** Confirmation modal (the webview has no reliable `confirm()`). */
-export function ConfirmDialog({ message, confirmLabel, onDone }: { message: string; confirmLabel: string; onDone: (confirmed: boolean) => void }) {
+/** Confirmation modal (the webview has no reliable `confirm()`), with a box to tick for an `option`, ticked at first. */
+export function ConfirmDialog({ message, confirmLabel, option, onDone }: { message: string; confirmLabel: string; option?: string; onDone: (confirmed: boolean, option: boolean) => void }) {
+  const [ticked, setTicked] = useState(true);
   return (
-    <div className="modal-backdrop" onMouseDown={() => onDone(false)}>
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === "Escape" && onDone(false)}>
+    <div className="modal-backdrop" onMouseDown={() => onDone(false, false)}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === "Escape" && onDone(false, false)}>
         <p className="modal-message">{message}</p>
+        {option && (
+          <label className="modal-option">
+            <input type="checkbox" checked={ticked} onChange={(e) => setTicked(e.target.checked)} />
+            {option}
+          </label>
+        )}
         <div className="modal-actions">
-          <button autoFocus onClick={() => onDone(false)}>
+          <button autoFocus onClick={() => onDone(false, false)}>
             Annuler
           </button>
-          <button className="danger" onClick={() => onDone(true)}>
+          <button className="danger" onClick={() => onDone(true, option !== undefined && ticked)}>
             {confirmLabel}
           </button>
         </div>

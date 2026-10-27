@@ -11,7 +11,8 @@ import { openUrl } from "./reading/web";
 import type { GitCommit, GitStatus } from "./vault/git";
 import { isConflicted, isStaged, isUnstaged, isUntracked } from "./vault/git";
 import { syncSummary } from "./vault/gitMessages";
-import { noteTitle } from "./vault/links";
+import { basename, IMAGE_EXTENSIONS, extension, noteTitle } from "./vault/links";
+import { readPages, unusedAttachments } from "./vault/attachments";
 import { recentPages } from "./dashboard/recents";
 import { bookmarkedFiles, computeStats, type VaultStats } from "./dashboard/stats";
 import { agenda, dueLabel, urgency, type AgendaItem } from "./tasks/agenda";
@@ -137,7 +138,9 @@ export function Dashboard({
       cancelled = true;
     };
   }, [vault, readingList, readingVersion, files]);
-  const [open, setOpen] = useState<"broken" | "orphans" | null>(null);
+  const [open, setOpen] = useState<"broken" | "orphans" | "unused" | null>(null);
+  /** Attachments that no page names any more. */
+  const [unused, setUnused] = useState<string[] | null>(null);
   /** Tag whose pages are listed under the tags. */
   const [openTag, setOpenTag] = useState<string | null>(null);
 
@@ -157,6 +160,8 @@ export function Dashboard({
       setStats(computeStats(notes, files));
       setTodo(agenda(notes, tasksConfig));
       setTasks(tasksOf(notes, tasksConfig));
+      const pages = await readPages(vault, files, notes);
+      if (!cancelled) setUnused(unusedAttachments(pages, files));
     })().catch(reportError);
     return () => {
       cancelled = true;
@@ -412,6 +417,21 @@ export function Dashboard({
                 <div className="dash-list">
                   {stats.orphans.slice(0, 30).map((p) => (
                     <PageLink iconOf={iconOf} key={p} path={p} onOpen={onOpen} />
+                  ))}
+                </div>
+              )}
+              <button className="dash-health-row" onClick={() => setOpen(open === "unused" ? null : "unused")} disabled={!unused?.length}>
+                <span>Pièces jointes inutilisées</span>
+                <strong>{unused?.length ?? "…"}</strong>
+              </button>
+              {open === "unused" && unused && (
+                <div className="dash-list">
+                  {unused.slice(0, 30).map((p) => (
+                    <button key={p} className="dash-page" onClick={() => void vault.reveal?.(p)} disabled={!vault.reveal} title={vault.reveal ? `Afficher dans le Finder : ${p}` : p}>
+                      <Icon name={IMAGE_EXTENSIONS.has(extension(p)) ? "image" : "doc"} size={14} />
+                      <span className="dash-page-title">{basename(p)}</span>
+                      <span className="dash-page-detail">{folderOf(p)}</span>
+                    </button>
                   ))}
                 </div>
               )}

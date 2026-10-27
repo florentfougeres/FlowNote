@@ -808,6 +808,21 @@ button.danger {
   margin: 0;
 }
 
+.modal-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.modal-option input {
+  flex: none;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;

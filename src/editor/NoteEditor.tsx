@@ -1,4 +1,5 @@
-import { pasteInline, pasteMarkdown } from "./pasteMarkdown";
+import { insertMarkdownBlocks, pasteInline, pasteMarkdown } from "./pasteMarkdown";
+import { pastedTable } from "../markdown/csv";
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { MutableRefObject, ReactNode } from "react";
@@ -239,13 +240,19 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         plainPaste.current = false;
         const pasted = pastedUrl(url);
         if (pasted && selection.empty && !plain && pasteUrlWithTitle(view, pasted, fetchTitle)) return true;
+        // Cells copied from a spreadsheet, or a CSV, give a table (⌘⇧V: kept as text). Not inside a table or code.
+        const text = event.clipboardData?.getData("text/plain") ?? "";
+        const fromNote = event.clipboardData?.getData("text/html").includes("data-pm-slice") ?? false;
+        const inCell = [...Array(selection.$from.depth).keys()].some((d) => selection.$from.node(d + 1).type.spec.tableRole);
+        const table = plain || fromNote || inCell || selection.$from.parent.type.spec.code ? null : pastedTable(text);
+        if (table && insertMarkdownBlocks(view, table)) return true;
         // Plain text (no HTML: a text file, a terminal, Obsidian's source) is read as Markdown.
         // HTML from elsewhere (a web page, Word): one block pasted gives its text only, the line keeps its kind.
         // Copied from a note (ProseMirror marks its HTML with data-pm-slice), blocks stay as they were.
         if (event.clipboardData?.types.includes("text/html")) {
           return !event.clipboardData.getData("text/html").includes("data-pm-slice") && pasteInline(view, slice.content);
         }
-        return pasteMarkdown(view, event.clipboardData?.getData("text/plain") ?? "");
+        return pasteMarkdown(view, text);
       },
     },
     onUpdate: ({ editor }) => {

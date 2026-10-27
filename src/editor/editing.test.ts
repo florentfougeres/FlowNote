@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TextSelection } from "@tiptap/pm/state";
 import { cursorAtStartOf, destroyEditors, openEditor as open, press, type } from "./testUtils";
 import { linkTarget } from "./LinkPrompt";
-import { pasteInline, pasteMarkdown } from "./pasteMarkdown";
+import { insertMarkdownBlocks, pasteInline, pasteMarkdown } from "./pasteMarkdown";
+import { pastedTable } from "../markdown/csv";
 import { DOMParser as PMDOMParser } from "@tiptap/pm/model";
 import { codeFromPreceding } from "./backticks";
 import { markdownForClipboard } from "./clipboard";
@@ -356,6 +357,13 @@ describe("Plain text pasted is read as Markdown", () => {
     const { editor, save } = open("");
     pasteMarkdown(editor.view, "## Titre\n\n- un\n- [lien](https://ex.com)\n");
     expect(save()).toBe("## Titre\n\n- un\n- [lien](https://ex.com)\n");
+  });
+
+  it("cells copied from a spreadsheet become a table", () => {
+    const { editor, save } = open("Avant\n");
+    select(editor, 6);
+    insertMarkdownBlocks(editor.view, pastedTable("Client\tMontant\nMaison Pain\t1 200\n")!);
+    expect(save()).toBe("Avant\n\n| Client | Montant |\n| --- | --- |\n| Maison Pain | 1 200 |\n");
   });
 
   it("stays text in a code block", () => {

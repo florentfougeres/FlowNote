@@ -1,11 +1,13 @@
 import { tabMenu as tabMenuOf } from "./menus";
+import type { FileTimes, PageSort } from "./pageSort";
+import { isMergeable } from "./vault/merge";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { keys } from "./keys";
 import { NoteEditor } from "./editor/NoteEditor";
 import { imageMime, NULL_BRIDGE, type VaultBridge } from "./editor/bridge";
 import DOCUMENTATION from "./docs/documentation.md?raw";
 import { docsBridge } from "./docs/docsBridge";
-import { ConfirmDialog, NameDialog, TemplateDialog, type NameResult, type PageKind, type TemplateChoice } from "./Dialogs";
+import { ChoiceDialog, ConfirmDialog, NameDialog, type Choice, type NameResult, type PageKind, type TemplateChoice } from "./Dialogs";
 import { isDrawingPath } from "./drawing/format";
 import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
 import { DRAWING_TOOLS } from "./drawing/tools";
@@ -137,7 +139,9 @@ interface Dialog {
 interface Confirm {
   message: string;
   confirmLabel: string;
-  resolve: (confirmed: boolean) => void;
+  /** A box to tick in the dialog (ticked at first). */
+  option?: string;
+  resolve: (confirmed: boolean, option: boolean) => void;
 }
 
 const AUTOSAVE_DELAY_MS = 700;
@@ -155,7 +159,9 @@ export function App() {
   /** The notes that are tasks, for their icon. */
   const [taskPaths, setTaskPaths] = useState<Set<string>>(new Set());
   /** `/modèle`: the template list shown, until one is chosen. */
-  const [templatePick, setTemplatePick] = useState<{ resolve: (path: string | null) => void } | null>(null);
+  /** A file to choose in a list (a template, the note to merge into). */
+  const [choicePick, setChoicePick] = useState<(Choice & { resolve: (path: string | null) => void }) | null>(null);
+  const askChoice = (choice: Choice) => new Promise<string | null>((resolve) => setChoicePick({ ...choice, resolve }));
   const [files, setFiles] = useState<string[]>([]);
   const [config, setConfig] = useState<ObsidianConfig>(DEFAULT_CONFIG);
   const [note, setNote] = useState<OpenNote | null>(null);
@@ -320,6 +326,8 @@ export function App() {
 
   const dirty = note !== null && note.markdown !== note.disk;
 
+  /** Creation and modification times of the pages, for sorting the sidebar's tree. */
+  const [fileTimes, setFileTimes] = useState<FileTimes>(new Map());
   /** The vault's tags, nested, for the sidebar's "Tags" section. */
   const [tags, setTags] = useState<TagNode[]>([]);
   const refreshTags = useCallback(async (v: Vault) => setTags(tagTree(await readAllNotes(v, filesRef.current))), []);
@@ -327,13 +335,15 @@ export function App() {
   const [searchFilters, setSearchFilters] = useState<SearchFilter[]>([]);
 
   const refresh = useCallback(async (v: Vault) => {
-    const [newTree, newFiles, bookmarksJson, templatesJson, tasksSettings] = await Promise.all([
+    const [newTree, newFiles, bookmarksJson, templatesJson, tasksSettings, stats] = await Promise.all([
       v.tree(),
       v.files(),
       v.bookmarks?.().catch(() => "{}") ?? "{}",
       v.templatesConfig?.().catch(() => "{}") ?? "{}",
       v.tasksConfig?.().catch(() => "{}") ?? "{}",
+      v.stats?.().catch(() => []) ?? [],
     ]);
+    setFileTimes(new Map(stats.map((s) => [s.path, s])));
     setTemplatesConfig(readTemplatesConfig(templatesJson));
     setTasksJson(tasksSettings);
     setTree(newTree);
@@ -714,6 +724,9 @@ export function App() {
   );
 
   const askConfirm = (message: string, confirmLabel: string) => new Promise<boolean>((resolve) => setConfirm({ message, confirmLabel, resolve }));
+  /** Confirmation with a box to tick: null when cancelled, else whether the box was ticked. */
+  const askConfirmOption = (message: string, confirmLabel: string, option: string) =>
+    new Promise<boolean | null>((resolve) => setConfirm({ message, confirmLabel, option, resolve: (confirmed, ticked) => resolve(confirmed ? ticked : null) }));
 
   // The tasks are told by their front matter (TaskNotes' tag), read again with the tree.
   useEffect(() => {
@@ -780,7 +793,7 @@ export function App() {
   const templateList = useMemo(() => templateFiles(templatesConfig, files), [templatesConfig, files]);
   const templates = useMemo(() => (templatesConfig && templateList.length > 0 ? { config: templatesConfig, files: templateList } : null), [templatesConfig, templateList]);
 
-  const { createFile, renamePath, renameCurrent, newFolder, renameFolderPath, moveItem, duplicatePage, copyLink, removeFolder, removePage, newPage, newTask } = usePageOps({
+  const { createFile, renamePath, renameCurrent, newFolder, renameFolderPath, moveItem, duplicatePage, copyLink, removeFolder, removePage, mergeInto, newPage, newTask } = usePageOps({
     vault,
     tree,
     filesRef,
@@ -796,6 +809,8 @@ export function App() {
     setStatus,
     askName,
     askConfirm,
+    askConfirmOption,
+    askChoice,
     askNewPage: (request) => new Promise<NameResult | null>((resolve) => setDialog({ ...request, resolve })),
     followMoves,
     forgetRemoved,
@@ -860,7 +875,8 @@ export function App() {
     ...(templates && vault
       ? {
           pickTemplate: async (title: string) => {
-            const path = await new Promise<string | null>((resolve) => setTemplatePick({ resolve }));
+            const choices = templates.files.map((file) => ({ path: file, name: templateName(templates.config, file) }));
+            const path = await askChoice({ title: "Insérer un modèle", placeholder: "Chercher un modèle…", empty: "Aucun modèle", icon: "copy", choices });
             return path ? templateBody(await vault.read(path), title, new Date(), templates.config) : null;
           },
         }
@@ -1301,6 +1317,7 @@ export function App() {
     if (page) {
       list.push(
         command("newSubpage", "Nouvelle sous-page", "Créer", () => newPage(page.path), "doc"),
+        ...(isMergeable(page.path) ? [command("merge", "Fusionner la note dans…", "Page", () => mergeInto(page.path), "merge")] : []),
         command("raw", "Mode Markdown brut", "Page", toggleRaw, "raw", "raw"),
         command("save", "Enregistrer maintenant", "Page", () => saveNow().catch(() => {}), undefined, "save"),
       );
@@ -1390,12 +1407,18 @@ export function App() {
       setSettings(next);
       saveSettings(next);
     },
+    onPageSort: (pageSort: PageSort) => {
+      const next = { ...settings, pageSort };
+      setSettings(next);
+      saveSettings(next);
+    },
     onSelect: (path: string, newTabRequested: boolean) => void select(path, "push", newTabRequested),
     onOpenRight: openRight,
     onNewPage: (parent: string | null) => void newPage(parent),
     onNewPageInFolder: (folder: string) => void newPage(null, undefined, folder),
     onDelete: (path: string) => void removePage(path),
     onDuplicate: (path: string) => void duplicatePage(path),
+    onMerge: (path: string) => void mergeInto(path),
     onCopyLink: (path: string) => void copyLink(path),
     onReveal: vault?.reveal ? (path: string) => void vault.reveal!(path).catch((error: unknown) => setStatus(String(error))) : undefined,
     onNewFolder: (parent: string) => void newFolder(parent),
@@ -1467,6 +1490,8 @@ export function App() {
       view={activePath === null ? "home" : Object.values(taskConfig.views).includes(activePath) ? "tasks" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
       liveIcon={sidebarLiveIcon}
       showTitles={settings.showTitles}
+      pageSort={settings.pageSort}
+      fileTimes={fileTimes}
       gitChanges={vault.git ? gitChanges : null}
       gitOpen={gitOpen}
       favorites={bookmarks}
@@ -1861,8 +1886,9 @@ export function App() {
         <ConfirmDialog
           message={confirm.message}
           confirmLabel={confirm.confirmLabel}
-          onDone={(ok) => {
-            confirm.resolve(ok);
+          option={confirm.option}
+          onDone={(ok, ticked) => {
+            confirm.resolve(ok, ticked);
             setConfirm(null);
           }}
         />
@@ -1888,12 +1914,12 @@ export function App() {
       {presenting !== null && slides && presentationPage && <Presenter rendered={slides} start={presenting} onClose={() => setPresenting(null)} />}
       {modal === "help" && <ShortcutsHelp onClose={() => setModal(null)} />}
       {modal === "addLink" && <AddLinkDialog themes={readingThemes} tags={readingTags} fetchTitles={settings.fetchTitles} onAdd={addReading} onClose={() => setModal(null)} />}
-      {templatePick && templates && (
-        <TemplateDialog
-          templates={templates.files.map((path) => ({ path, name: templateName(templates.config, path) }))}
+      {choicePick && (
+        <ChoiceDialog
+          {...choicePick}
           onDone={(path) => {
-            templatePick.resolve(path);
-            setTemplatePick(null);
+            choicePick.resolve(path);
+            setChoicePick(null);
           }}
         />
       )}

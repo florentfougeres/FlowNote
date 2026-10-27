@@ -1,7 +1,7 @@
 import { useCallback, type MutableRefObject } from "react";
 import { BASE_SUFFIX, isBasePath, newBaseFile } from "../base/baseFile";
 import { moveRecentPage } from "../dashboard/recents";
-import type { NameResult, PageKind, TemplateChoice } from "../Dialogs";
+import type { Choice, NameResult, PageKind, TemplateChoice } from "../Dialogs";
 import { DRAWING_SUFFIX, newDrawingFile } from "../drawing/format";
 import { MINDMAP_SUFFIX, newMindmapFile } from "../mindmap/format";
 import { CANVAS_SUFFIX, newCanvasFile } from "../canvas/format";
@@ -12,6 +12,8 @@ import type { TaskConfig } from "../tasks/config";
 import { newTaskFile, taskFileName } from "../tasks/task";
 import { linkTextFor, newNoteFolder, noteTitle, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "../vault/links";
 import { deletePage, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "../vault/pageOps";
+import { ownAttachments, readPages } from "../vault/attachments";
+import { isMergeable, mergePage } from "../vault/merge";
 import { isTauri } from "../vault/tauriVault";
 import type { Vault, VaultEntry } from "../vault/vault";
 import { noteFromTemplate, templateName, type TemplatesConfig } from "../vault/templates";
@@ -45,6 +47,10 @@ export interface PageOpsContext {
   setStatus: (text: string) => void;
   askName: (title: string, initial: string) => Promise<string | null>;
   askConfirm: (message: string, confirmLabel: string) => Promise<boolean>;
+  /** Confirmation with a box to tick: null when cancelled, else whether it was ticked. */
+  askConfirmOption: (message: string, confirmLabel: string, option: string) => Promise<boolean | null>;
+  /** A file chosen in a list; null when closed. */
+  askChoice: (choice: Choice) => Promise<string | null>;
   askNewPage: (request: NewPageRequest) => Promise<NameResult | null>;
   /** After files moved: tree, tabs, history and the open note follow (`moved` maps old paths to new ones). */
   followMoves: (moved: (path: string) => string, updatedNotes: string[]) => Promise<void>;
@@ -139,7 +145,7 @@ export function usePageOps(ctx: PageOpsContext) {
     if (!vault) return;
     try {
       await ctx.saveNow();
-      const result = item.folder ? await moveFolder(vault, item.path, target) : await movePage(vault, item.path, target);
+      const result = item.folder ? await moveFolder(vault, item.path, target) : await movePage(vault, item.path, target, ctx.config);
       if (result.path === item.path) return;
       const from = item.folder ? item.path : subpageFolder(item.path);
       const to = item.folder ? result.path : subpageFolder(result.path);
@@ -201,18 +207,26 @@ export function usePageOps(ctx: PageOpsContext) {
     moveRecentPage(vault.name, folder, null);
   };
 
-  /** Removes a page and its sub-pages, after confirmation. */
+  /** Removes a page and its sub-pages, after confirmation; its own attachments too, if the box is left ticked. */
   const removePage = async (path: string) => {
     if (!vault) return;
     const children = subpagesOf(path, filesRef.current).length;
     const where = isTauri() ? "Elle ira dans la corbeille." : "Cette suppression est définitive.";
     const withChildren = children === 0 ? "" : children === 1 ? " et sa sous-page" : ` et ses ${children} sous-pages`;
     const message = `Supprimer « ${noteTitle(path)} »${withChildren} ? ${where}`;
-    if (!(await ctx.askConfirm(message, "Supprimer"))) return;
+    if (noteRef.current?.path === path) await ctx.saveNow().catch(() => {});
+    const attachments = path.endsWith(".md") ? ownAttachments(path, await readPages(vault, filesRef.current), filesRef.current, ctx.config) : [];
+    const names = attachments.map((f) => f.slice(f.lastIndexOf("/") + 1));
+    const option = names.length === 1 ? `Supprimer aussi sa pièce jointe (${names[0]})` : `Supprimer aussi ses ${names.length} pièces jointes (${names.slice(0, 3).join(", ")}${names.length > 3 ? "…" : ""})`;
+    let withAttachments = false;
+    if (attachments.length) {
+      const ticked = await ctx.askConfirmOption(message, "Supprimer", option);
+      if (ticked === null) return;
+      withAttachments = ticked;
+    } else if (!(await ctx.askConfirm(message, "Supprimer"))) return;
     let failure: unknown = null;
     try {
-      if (noteRef.current?.path === path) await ctx.saveNow().catch(() => {});
-      await deletePage(vault, path, filesRef.current);
+      await deletePage(vault, path, filesRef.current, withAttachments ? attachments : [], ctx.config);
     } catch (error) {
       failure = error;
     }
@@ -220,6 +234,29 @@ export function usePageOps(ctx: PageOpsContext) {
     const files = await ctx.forgetRemoved((p) => p === path || p.startsWith(`${subpageFolder(path)}/`));
     if (!files.includes(path)) moveRecentPage(vault.name, path, null);
     ctx.setStatus(failure ? String(failure) : "");
+  };
+
+  /** Merges a note into another chosen in a list, after confirmation; the tabs showing it show the other. */
+  const mergeInto = async (path: string) => {
+    if (!vault) return;
+    const choices = filesRef.current.filter((f) => f !== path && isMergeable(f)).map((f) => ({ path: f, name: f.replace(/\.md$/i, "") }));
+    const target = await ctx.askChoice({ title: `Fusionner « ${noteTitle(path)} » dans…`, placeholder: "Chercher une note…", empty: "Aucune note", icon: "doc", choices });
+    if (!target) return;
+    const where = isTauri() ? "Elle ira ensuite dans la corbeille" : "Elle sera ensuite supprimée";
+    const message = `Ajouter le texte et les propriétés de « ${noteTitle(path)} » à la fin de « ${noteTitle(target)} » ? ${where}, et les liens vers elle mèneront à « ${noteTitle(target)} ».`;
+    if (!(await ctx.askConfirm(message, "Fusionner"))) return;
+    try {
+      await ctx.saveNow();
+      const result = await mergePage(vault, path, target);
+      await ctx.followMoves((p) => (p === path ? target : p), result.updatedNotes);
+      moveRecentPage(vault.name, path, target);
+      const others = linksUpdated(result.updatedNotes.filter((p) => p !== target).length);
+      ctx.notify(`« ${noteTitle(path)} » fusionnée dans « ${noteTitle(target)} »${others ? ` ; ${others}` : ""}.`);
+      await ctx.select(target);
+      void ctx.refreshGit();
+    } catch (error) {
+      ctx.setStatus(String(error));
+    }
   };
 
   /** Every folder of the vault, for the "new page" dialog ("" is the root). */
@@ -300,5 +337,5 @@ export function usePageOps(ctx: PageOpsContext) {
     if (title?.trim()) await createTask(title.trim(), status);
   };
 
-  return { createFile, renamePath, renameCurrent, newFolder, renameFolderPath, moveItem, duplicatePage, copyLink, removeFolder, removePage, newPage, newTask };
+  return { createFile, renamePath, renameCurrent, newFolder, renameFolderPath, moveItem, duplicatePage, copyLink, removeFolder, removePage, mergeInto, newPage, newTask };
 }

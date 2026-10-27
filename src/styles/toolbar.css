@@ -422,6 +422,12 @@
   background: var(--hover);
 }
 
+.sidebar-menu .menu-check {
+  display: flex;
+  margin-left: auto;
+  color: var(--accent);
+}
+
 .sidebar-menu button.danger {
   color: var(--danger);
 }

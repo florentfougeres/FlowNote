@@ -379,7 +379,7 @@ pub fn vault_stats(root: String) -> Vec<FileStat> {
     collect_files(base, "", &mut files);
     files
         .into_iter()
-        .filter(|p| p.ends_with(".md"))
+        .filter(|p| p.ends_with(".md") || p.ends_with(".base") || p.ends_with(".canvas"))
         .filter_map(|path| {
             let meta = fs::metadata(base.join(&path)).ok()?;
             let mtime = millis(meta.modified());

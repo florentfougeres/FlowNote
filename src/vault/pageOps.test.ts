@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createMemoryVault } from "./vault";
+import { DEFAULT_CONFIG } from "./links";
 import { deletePage, followFolder, moveFolder, movePage, renameFolder, renamePage, retargetBaseFolders, retargetRowOrder, subpagesOf } from "./pageOps";
 
 function vault() {
@@ -44,6 +45,13 @@ describe("deletePage", () => {
     expect(subpagesOf("Projets/Mon Carnet.md", files)).toEqual(["Projets/Mon Carnet/Stack.md"]);
     await deletePage(v, "Projets/Mon Carnet.md", files);
     expect(await v.files()).toEqual(["Index.md"]);
+  });
+
+  it("removes the attachments given, and their folder left empty", async () => {
+    const v = createMemoryVault("t", { "A/Note.md": "![[x.png]]\n", "A/attachments/x.png": new Uint8Array([1]), "A/Autre.md": "" });
+    await deletePage(v, "A/Note.md", await v.files(), ["A/attachments/x.png"], DEFAULT_CONFIG);
+    expect(await v.files()).toEqual(["A/Autre.md"]);
+    expect((await v.tree()).map((e) => e.path)).toEqual(["A"]);
   });
 
   it("removes a base and its rows, and still removes the rows when the base file fails", async () => {
@@ -109,15 +117,43 @@ describe("moving", () => {
   it("moves a page with its sub-pages into a folder; links follow", async () => {
     const v = vault();
     await v.createFolder("Archives");
-    const result = await movePage(v, "Projets/Mon Carnet.md", "Archives");
+    const result = await movePage(v, "Projets/Mon Carnet.md", "Archives", DEFAULT_CONFIG);
     expect(result.path).toBe("Archives/Mon Carnet.md");
     expect((await v.files()).sort()).toEqual(["Archives/Mon Carnet.md", "Archives/Mon Carnet/Stack.md", "Archives/Mon Carnet/schema.png", "Index.md"]);
     expect(await v.read("Archives/Mon Carnet/Stack.md")).toBe("Retour : [parent](../Mon%20Carnet.md)\n");
     expect(await v.read("Index.md")).toBe("Voir [[Mon Carnet]] et [[Stack|la stack]].\n");
-    await expect(movePage(v, "Archives/Mon Carnet.md", "Archives")).resolves.toEqual({ path: "Archives/Mon Carnet.md", updatedNotes: [] });
+    await expect(movePage(v, "Archives/Mon Carnet.md", "Archives", DEFAULT_CONFIG)).resolves.toEqual({ path: "Archives/Mon Carnet.md", updatedNotes: [] });
     await v.create("Index/x.md", "");
     await v.create("Archives/Index.md", "");
-    await expect(movePage(v, "Index.md", "Archives")).rejects.toThrow("existe déjà");
+    await expect(movePage(v, "Index.md", "Archives", DEFAULT_CONFIG)).rejects.toThrow("existe déjà");
+  });
+
+  it("takes the note's own attachments along, not those other pages use", async () => {
+    const v = createMemoryVault("Test", {
+      "Projets/Site.md": "![[Projets/attachments/logo.png|200]] ![plan](attachments/plan%20v2.pdf) ![[commun.png]]\n",
+      "Projets/Autre.md": '<img src="attachments/commun.png">\n',
+      "Projets/attachments/logo.png": new Uint8Array([1]),
+      "Projets/attachments/plan v2.pdf": new Uint8Array([2]),
+      "Projets/attachments/commun.png": new Uint8Array([3]),
+      "Clients/attachments/logo.png": new Uint8Array([4]),
+    });
+    await movePage(v, "Projets/Site.md", "Clients", DEFAULT_CONFIG);
+    expect((await v.files()).sort()).toEqual([
+      "Clients/Site.md",
+      "Clients/attachments/logo 1.png",
+      "Clients/attachments/logo.png",
+      "Clients/attachments/plan v2.pdf",
+      "Projets/Autre.md",
+      "Projets/attachments/commun.png",
+    ]);
+    expect(await v.read("Clients/Site.md")).toBe("![[logo 1.png|200]] ![plan](attachments/plan%20v2.pdf) ![[commun.png]]\n");
+  });
+
+  it("removes an attachment folder left empty", async () => {
+    const v = createMemoryVault("Test", { "A/Note.md": "![[x.png]]\n", "A/attachments/x.png": new Uint8Array([1]), "B/Autre.md": "" });
+    await movePage(v, "A/Note.md", "B", DEFAULT_CONFIG);
+    expect((await v.files()).sort()).toEqual(["B/Autre.md", "B/Note.md", "B/attachments/x.png"]);
+    expect((await v.tree()).map((e) => e.path)).not.toContain("A/attachments");
   });
 
   it("moves a base with its rows, and its folder filter", async () => {
@@ -126,7 +162,7 @@ describe("moving", () => {
       "Suivi/Ligne.md": "",
       "Classement/Note.md": "",
     });
-    await movePage(v, "Suivi.base", "Classement");
+    await movePage(v, "Suivi.base", "Classement", DEFAULT_CONFIG);
     expect((await v.files()).sort()).toEqual(["Classement/Note.md", "Classement/Suivi.base", "Classement/Suivi/Ligne.md"]);
     expect(await v.read("Classement/Suivi.base")).toContain('file.inFolder("Classement/Suivi")');
   });

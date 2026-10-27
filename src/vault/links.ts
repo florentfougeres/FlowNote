@@ -246,6 +246,55 @@ export function rewriteHeadingLinks(content: string, notePath: string, files: st
   );
 }
 
+/**
+ * The links of one note (`content`, at `notePath`) to `source`, merged into
+ * `target` under the heading `heading`: they point to that heading
+ * (`[[Site]]` → `[[Projet#Site|Site]]`, the alias keeping what was shown),
+ * or to the same heading or block when they named one. `files` is the vault
+ * before the merge. Returns null when nothing changed.
+ */
+export function rewriteMergedLinks(content: string, notePath: string, files: string[], source: string, target: string, heading: string): string | null {
+  const after = files.filter((f) => f !== source);
+  const anchor = headingLinkText(heading);
+  return rewriteOutsideCode(content, (piece) =>
+    piece
+      .replace(WIKILINK, (whole, bang: string, link: string, section = "", alias = "") => {
+        if (!link.trim() || resolveLink(link, files, notePath) !== source) return whole;
+        const shown = section || bang ? alias : alias || `|${link.trim()}`;
+        return `${bang}[[${linkTextFor(target, after)}${section || `#${anchor}`}${shown}]]`;
+      })
+      .replace(MARKDOWN_LINK, (whole, open: string, href: string, close: string) => {
+        if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith("#")) return whole;
+        const [pathPart, fragment = ""] = href.split(/(?=#)/);
+        if (resolveRelative(dirname(notePath), decode(pathPart)) !== source) return whole;
+        return `${open}${encodeURI(relativePath(notePath, target)) + (fragment || `#${encodeURI(anchor)}`)}${close}`;
+      }),
+  );
+}
+
+/**
+ * Vault files a note links to or embeds (wikilinks, Markdown links and
+ * images, in the properties too), resolved like Obsidian, outside code.
+ */
+export function linkedFiles(content: string, notePath: string, files: string[]): string[] {
+  const found = new Set<string>();
+  rewriteOutsideCode(content, (piece) => {
+    for (const [, , target] of piece.matchAll(WIKILINK)) {
+      const resolved = resolveLink(target, files, notePath);
+      if (resolved) found.add(resolved);
+    }
+    for (const [, , href] of piece.matchAll(MARKDOWN_LINK)) {
+      if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith("#")) continue;
+      const path = decode(href.split("#")[0]);
+      const relative = resolveRelative(dirname(notePath), path);
+      const resolved = files.includes(relative) ? relative : resolveLink(path, files, notePath);
+      if (resolved) found.add(resolved);
+    }
+    return piece;
+  });
+  return [...found];
+}
+
 /** Applies `rewrite` to the text of a note outside code blocks and code spans; null when nothing changed. */
 function rewriteOutsideCode(content: string, rewrite: (text: string) => string): string | null {
   let inFence: string | null = null;

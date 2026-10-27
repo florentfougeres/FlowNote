@@ -1,4 +1,5 @@
 import { isMap, isSeq, parse as parseYaml, parseDocument, type Document, type YAMLMap } from "yaml";
+import { csvRows } from "../markdown/csv";
 
 /**
  * ```plotly blocks, in the format of the Obsidian plugin "obsidian-plotly":
@@ -252,39 +253,6 @@ export const PLOT_TEMPLATE = `data:
 layout:
   title: Mon graphique
 `;
-
-/** Cells of a CSV text (RFC 4180 quotes), with its delimiter: `;`, `,` or a tab, whichever the first line uses most. */
-function csvRows(text: string): string[][] {
-  const source = text.replace(/^﻿/, "");
-  const firstLine = source.split(/\r?\n/, 1)[0].replace(/"[^"]*"/g, "");
-  const delimiter = [";", "\t", ","].reduce((best, d) => (firstLine.split(d).length > firstLine.split(best).length ? d : best), ",");
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = "";
-  let quoted = false;
-  for (let i = 0; i < source.length; i++) {
-    const char = source[i];
-    if (quoted) {
-      if (char === '"' && source[i + 1] === '"') {
-        cell += '"';
-        i++;
-      } else if (char === '"') quoted = false;
-      else cell += char;
-    } else if (char === '"' && cell === "") quoted = true;
-    else if (char === delimiter) {
-      row.push(cell);
-      cell = "";
-    } else if (char === "\n" || char === "\r") {
-      if (char === "\r" && source[i + 1] === "\n") i++;
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-    } else cell += char;
-  }
-  if (cell !== "" || row.length > 0) rows.push([...row, cell]);
-  return rows.map((r) => r.map((c) => c.trim())).filter((r) => r.some((c) => c !== ""));
-}
 
 /** A number written in a CSV: `1 234,5`, `1.234,5`, `1,234.5`, `12 %`; null when it is not one. */
 function csvNumber(cell: string): number | null {

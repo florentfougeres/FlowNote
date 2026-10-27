@@ -11,6 +11,7 @@ import { dirname, noteTitle } from "./vault/links";
 import { keys } from "./keys";
 import type { TagNode } from "./dashboard/stats";
 import { usePersistentFlag } from "./hooks/usePersistentFlag";
+import { PAGE_SORTS, sortPages, type FileTimes, type PageSort } from "./pageSort";
 
 /**
  * Sidebar: the vault (with its menu) and a "new page"
@@ -82,6 +83,8 @@ export interface MenuItem {
   label: string;
   icon: IconName;
   danger?: boolean;
+  /** The current choice among the items, marked on the right. */
+  checked?: boolean;
   run: () => void;
 }
 
@@ -121,6 +124,11 @@ export function PopoverMenu({ anchor, items, onClose }: { anchor: DOMRect; items
         >
           <Icon name={item.icon} size={14} />
           {item.label}
+          {item.checked && (
+            <span className="menu-check">
+              <Icon name="check" size={14} />
+            </span>
+          )}
         </button>
       ))}
     </div>
@@ -180,6 +188,10 @@ interface Props {
   /** Pages named by their title (else by their file name), and the button switching it. */
   showTitles: boolean;
   onToggleTitles: () => void;
+  /** Order of the tree, the times of the files it sorts by, and the menu changing it. */
+  pageSort: PageSort;
+  fileTimes: FileTimes;
+  onPageSort: (sort: PageSort) => void;
   /** Number of changed files, or null when the vault has no Git repository. */
   gitChanges: number | null;
   gitOpen: boolean;
@@ -202,6 +214,8 @@ interface Props {
   onTag: (tag: string) => void;
   /** A copy of the page next to it. */
   onDuplicate: (notePath: string) => void;
+  /** Merges the note into another. */
+  onMerge: (notePath: string) => void;
   /** Copies a `[[link]]` to the page. */
   onCopyLink: (notePath: string) => void;
   /** Shows a page or folder in the Finder; absent outside the desktop app. */
@@ -235,7 +249,10 @@ export const Sidebar = memo(function Sidebar(props: Props) {
   const { vaultName, tree, selected, view, liveIcon, gitChanges, gitOpen } = props;
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ anchor: DOMRect; items: MenuItem[] } | null>(null);
-  const pages = toPages(withoutPaths(tree, new Set(props.hidden)), props.taskPaths);
+  const label = (page: Page) => (page.notePath ? (props.showTitles && page.title ? page.title : noteTitle(page.notePath)) : page.name);
+  const sorted = (list: Page[]): Page[] =>
+    sortPages(list.map((page) => ({ page, path: page.notePath, label: label(page) })), props.pageSort, props.fileTimes).map(({ page }) => ({ ...page, children: sorted(page.children) }));
+  const pages = sorted(toPages(withoutPaths(tree, new Set(props.hidden)), props.taskPaths));
   /** What the tree knows of each note (icon, presentation), for the favorites. */
   const entries = new Map<string, VaultEntry>();
   const index = (list: VaultEntry[]) => list.forEach((e) => (e.kind === "file" ? entries.set(e.path, e) : index(e.children ?? [])));
@@ -510,6 +527,14 @@ export const Sidebar = memo(function Sidebar(props: Props) {
           title={props.showTitles ? "Afficher les noms de fichier" : "Afficher les titres des pages"}
         >
           <Icon name="text" size={14} />
+        </button>
+        <button
+          className="sidebar-section-add"
+          onClick={(event) => openMenu(event, PAGE_SORTS.map(([sort, text]) => ({ label: text, icon: sort.startsWith("name") ? "text" : "clock", checked: sort === props.pageSort, run: () => props.onPageSort(sort) })))}
+          aria-label="Trier les pages"
+          title="Trier les pages"
+        >
+          <Icon name="sort" size={14} />
         </button>
         <button className="sidebar-section-add" onClick={() => props.onNewFolder("")} aria-label="Nouveau dossier" title="Nouveau dossier">
           <Icon name="folderAdd" size={14} />

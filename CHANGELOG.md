@@ -2,6 +2,16 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Ajouté
+- Coller des cellules copiées d'un tableur (Excel, Numbers, Google Sheets) ou un CSV donne un tableau Markdown, la première ligne en en-tête ; `⌘⇧V` colle le texte tel quel.
+- Trier l'arbre des pages : par nom, date de modification ou date de création, dans un sens ou dans l'autre (bouton de la section « Pages », retenu) ; les dossiers restent en tête.
+- Les pièces jointes suivent leur note : déplacée dans un autre dossier, une note emporte les images et fichiers qu'elle seule utilise, rangés à côté d'elle ; supprimée, elle propose de les mettre à la corbeille avec elle. Rien ne bouge avec un dossier de pièces jointes commun à tout le vault.
+- Pièces jointes inutilisées, listées sur l'accueil (carte « Santé »).
+- Fusionner une note dans une autre (menu de la page, palette) : son texte va à la fin de l'autre sous un titre à son nom, ses propriétés s'ajoutent, les liens vers elle mènent à ce titre, puis elle part à la corbeille.
+- Vault de démo : une note à fusionner, un ancien logo inutilisé, de nouveaux essais dans « Bienvenue ».
+
 ## [0.24.0] - 2026-10-27
 
 ### Ajouté

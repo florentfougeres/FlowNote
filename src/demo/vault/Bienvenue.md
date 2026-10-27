@@ -54,3 +54,7 @@ Et dans la barre latérale : **Tâches** (les demandes des clients et les tâche
 - [ ] Sélectionner une ligne de cette liste, puis « Extraire vers une nouvelle note » au bout de la barre de mise en forme
 - [ ] Coller une adresse web seule dans une note : elle devient un lien au titre de la page (dans l'app de bureau)
 - [ ] Ouvrir le **Plan** (barre de page) et glisser « À essayer » au-dessus de « Ce qu'il y a dans ce vault » : la section entière se déplace
+- [ ] Copier quelques cellules d'un tableur (Excel, Numbers) et les coller dans une note : elles deviennent un tableau
+- [ ] Trier les pages de la barre latérale par date de modification (le bouton à flèches de « Pages »)
+- [ ] Fusionner [[Notes du fournil]] dans [[Lancement]] : clic droit sur la note dans la barre latérale, « Fusionner dans… »
+- [ ] Retrouver sur l'accueil, carte « Santé », l'ancien logo que plus aucune note n'utilise

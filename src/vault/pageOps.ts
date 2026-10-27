@@ -1,5 +1,6 @@
 import { isMap, isScalar, isSeq, parseDocument } from "yaml";
-import { dirname, renamePlan, rewriteHeadingLinks, rewriteLinks, sanitizeName, subpageFolder } from "./links";
+import { ownAttachments, readPages } from "./attachments";
+import { attachmentFolder, dirname, renamePlan, rewriteHeadingLinks, rewriteLinks, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "./links";
 import { readAllNotes, type Vault } from "./vault";
 
 /** Page operations spanning several files: rename (with link updates) and delete. */
@@ -104,9 +105,10 @@ async function relocateFolder(vault: Vault, folder: string, newFolder: string): 
 
 /**
  * Moves a page and its sub-pages folder into `target` ("" is the vault
- * root); links follow, and so does the folder of a base's rows.
+ * root); links follow, and so do the folder of a base's rows and the
+ * attachments that belong to the note (in its new attachment folder).
  */
-export async function movePage(vault: Vault, path: string, target: string): Promise<RenameResult> {
+export async function movePage(vault: Vault, path: string, target: string, config: ObsidianConfig): Promise<RenameResult> {
   const newPath = target ? `${target}/${basename(path)}` : basename(path);
   if (newPath === path) return { path, updatedNotes: [] };
   const filesBefore = await vault.files();
@@ -116,10 +118,23 @@ export async function movePage(vault: Vault, path: string, target: string): Prom
   if (filesBefore.some((f) => lower(f) === lower(newPath) || (hasSubpages && lower(f).startsWith(`${lower(subpageFolder(newPath))}/`))))
     throw new Error(`Une page « ${basename(subpageFolder(path))} » existe déjà ici.`);
   const renames = renamePlan(path, newPath, filesBefore);
+  const attachments = path.endsWith(".md") ? ownAttachments(path, await readPages(vault, filesBefore), filesBefore, config) : [];
+  const folder = attachmentFolder(newPath, config);
+  if (folder !== attachmentFolder(path, config)) {
+    const taken = filesBefore.filter((f) => !attachments.includes(f));
+    for (const file of attachments) {
+      const moved = uniquePath(folder, file.slice(file.lastIndexOf("/") + 1), taken);
+      renames.set(file, moved);
+      taken.push(moved);
+    }
+  }
   const filesAfter = filesBefore.map((f) => renames.get(f) ?? f);
 
   await vault.rename(path, newPath);
   if (hasSubpages) await vault.rename(oldFolder, subpageFolder(newPath));
+  const moved = attachments.filter((file) => renames.has(file));
+  for (const file of moved) await vault.rename(file, renames.get(file) ?? file);
+  if (moved.length) await removeIfEmpty(vault, attachmentFolder(path, config), path, filesAfter);
   const updatedNotes = await updateLinks(vault, filesBefore, filesAfter, renames);
   updatedNotes.push(...(await retargetBases(vault, filesAfter, oldFolder, subpageFolder(newPath))));
   updatedNotes.push(...(await retargetRowOrders(vault, filesAfter, renames)));
@@ -189,6 +204,16 @@ async function retargetRowOrders(vault: Vault, files: string[], renames: Map<str
   return changed;
 }
 
+/**
+ * A note's own attachment folder (`attachments` next to it) left with
+ * nothing after its files went elsewhere is removed; the note's folder itself
+ * never is.
+ */
+export async function removeIfEmpty(vault: Vault, folder: string, notePath: string, files: string[]): Promise<void> {
+  if (!folder || folder === dirname(notePath) || files.some((f) => f.startsWith(`${folder}/`))) return;
+  await vault.remove(folder).catch(() => {});
+}
+
 /** Sub-pages that would be deleted with a page. */
 export function subpagesOf(path: string, files: string[]): string[] {
   const folder = `${subpageFolder(path)}/`;
@@ -197,11 +222,12 @@ export function subpagesOf(path: string, files: string[]): string[] {
 
 /**
  * Removes a page and its sub-pages folder (to the system trash in the desktop
- * app). Both are attempted even if one fails, and what is already gone is not
- * an error: deleting again finishes a deletion left halfway.
+ * app), with the `attachments` given (its own, ownAttachments). All are
+ * attempted even if one fails, and what is already gone is not an error:
+ * deleting again finishes a deletion left halfway.
  */
-export async function deletePage(vault: Vault, path: string, files: string[]): Promise<void> {
-  const targets = [path];
+export async function deletePage(vault: Vault, path: string, files: string[], attachments: string[] = [], config?: ObsidianConfig): Promise<void> {
+  const targets = [path, ...attachments];
   if (files.some((f) => f.startsWith(`${subpageFolder(path)}/`))) targets.push(subpageFolder(path));
   const errors: string[] = [];
   for (const target of targets) {
@@ -212,6 +238,7 @@ export async function deletePage(vault: Vault, path: string, files: string[]): P
     }
   }
   if (errors.length) throw new Error(`Suppression incomplète. ${errors.join(" ; ")}`);
+  if (attachments.length && config) await removeIfEmpty(vault, attachmentFolder(path, config), path, await vault.files());
 }
 
 /**

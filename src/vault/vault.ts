@@ -45,7 +45,7 @@ export interface Vault {
   remove(path: string): Promise<void>;
   /** Every note with its content in one call (dashboard statistics); otherwise read one by one. */
   readNotes?(): Promise<[string, string][]>;
-  /** Creation and modification times of the notes (ms), when the vault knows them. */
+  /** Creation and modification times of the pages (notes, bases, canvases; ms), when the vault knows them. */
   stats?(): Promise<{ path: string; ctime: number; mtime: number }[]>;
   /** Obsidian's bookmarks (.obsidian/bookmarks.json, read only), "{}" when absent. */
   bookmarks?(): Promise<string>;
@@ -242,7 +242,7 @@ export function createMemoryVault(name: string, files: Record<string, string | U
       contents.set(path, content);
       times.set(path, Date.now());
     },
-    stats: async () => [...contents.keys()].filter((p) => !hidden(p) && p.endsWith(".md")).map((path) => ({ path, ctime: opened, mtime: times.get(path) ?? opened })),
+    stats: async () => [...contents.keys()].filter((p) => !hidden(p) && /\.(?:md|base|canvas)$/.test(p)).map((path) => ({ path, ctime: opened, mtime: times.get(path) ?? opened })),
     files: async () => [...contents.keys()].filter((p) => !hidden(p)).sort(),
     readBinary: async (path) => {
       const value = contents.get(path);
