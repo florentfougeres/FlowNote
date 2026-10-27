@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TASK_CONFIG as C, readTaskConfig } from "./config";
+import { DEFAULT_TASK_CONFIG as C, readTaskConfig, taskViewTitle } from "./config";
 import { isTaskMarkdown, newTaskFile, setTaskField, taskFileName, taskInfo, tasksOf } from "./task";
 import { agenda } from "./agenda";
 import { decodeRank, encodeRank, planMove, sortCards } from "./board";
@@ -92,6 +92,12 @@ describe("TaskNotes settings", () => {
     ]);
     expect(readTaskConfig("{}")).toBe(C);
     expect(readTaskConfig("pas du json")).toBe(C);
+  });
+
+  it("names the TaskNotes views in the tabs", () => {
+    expect(taskViewTitle(C, "TaskNotes/Views/tasks-default.base")).toBe("Tâches");
+    expect(taskViewTitle(C, "TaskNotes/Views/kanban-default.base")).toBe("Tableau des tâches");
+    expect(taskViewTitle(C, "Notes/tasks-default.base")).toBeNull();
   });
 });
 

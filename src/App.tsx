@@ -79,7 +79,7 @@ import { TabBar, type Tab } from "./TabBar";
 import { joinTab as joinTabs, nextPageTab, readSavedTabs, restoredTabs, saveTabs, separateTab as separateTabs, splitOf as splitIn, swapReading, tabsToSave, withReading, withSplit } from "./tabs";
 import { Dashboard } from "./Dashboard";
 import { TaskView } from "./tasks/TaskView";
-import { readTaskConfig, type TaskConfig } from "./tasks/config";
+import { readTaskConfig, taskViewTitle, type TaskConfig } from "./tasks/config";
 import { isTaskMarkdown, tasksOf } from "./tasks/task";
 import { defaultViewFile } from "./tasks/views";
 import { isPresentationMarkdown } from "./presentation/format";
@@ -1189,7 +1189,8 @@ export function App() {
     return found;
   }, [tree]);
   /** How a page is named in the tabs: its title, or its file name (setting of the sidebar). */
-  const shownName = (path: string) => (settings.showTitles ? ((note?.path === path ? liveTitle : treeTitles.get(path)) ?? noteTitle(path)) : noteTitle(path));
+  const shownName = (path: string) =>
+    taskViewTitle(taskConfig, path) ?? (settings.showTitles ? ((note?.path === path ? liveTitle : treeTitles.get(path)) ?? noteTitle(path)) : noteTitle(path));
   /** Presentations, from the tree (from the text for the open page: a conversion shows at once). */
   const presentationPaths = useMemo(() => {
     const found = new Set<string>();
@@ -1468,7 +1469,7 @@ export function App() {
       path: tab?.path ?? null,
       split: tab?.split,
       isActive: id === activeTab,
-      activeTitle: activePath === null ? "Accueil" : (VIEWS[activePath]?.title ?? noteTitle(activePath)),
+      activeTitle: activePath === null ? "Accueil" : (VIEWS[activePath]?.title ?? taskViewTitle(taskConfig, activePath) ?? noteTitle(activePath)),
       otherPage: tabs.some((t) => t.id !== activeTab && t.path !== null && !isView(t.path)),
       isView,
       swapSplit: () => void swapSplit(),

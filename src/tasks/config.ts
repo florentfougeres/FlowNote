@@ -101,6 +101,19 @@ export const DEFAULT_TASK_CONFIG: TaskConfig = {
   fromPlugin: false,
 };
 
+const VIEW_TITLES: Record<keyof TaskConfig["views"], string> = {
+  tasks: "Tâches",
+  kanban: "Tableau des tâches",
+  agenda: "Agenda des tâches",
+  calendar: "Calendrier des tâches",
+};
+
+/** The name of a TaskNotes view in the tabs (its file is `tasks-default.base`…), null for any other page. */
+export function taskViewTitle(config: TaskConfig, path: string): string | null {
+  const view = (Object.keys(config.views) as (keyof TaskConfig["views"])[]).find((v) => config.views[v] === path);
+  return view ? VIEW_TITLES[view] : null;
+}
+
 const text = (v: unknown, fallback: string) => (typeof v === "string" && v.trim() !== "" ? v.trim() : fallback);
 
 /** The configuration from the plugin's `data.json` ("{}" or unreadable: the defaults). */
