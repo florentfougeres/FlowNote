@@ -2,6 +2,7 @@ import type { Editor, Range } from "@tiptap/core";
 import { Fragment, type Node as PMNode } from "@tiptap/pm/model";
 import { Selection, TextSelection, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { canJoin } from "@tiptap/pm/transform";
+import { columnsNode } from "./columns";
 
 /**
  * Block operations shared by the block handle, the block menu, the slash menu
@@ -179,6 +180,7 @@ export type BlockKind =
   | "quote"
   | "callout"
   | "code"
+  | "columns"
   | "divider";
 
 /**
@@ -223,6 +225,19 @@ export function turnInto(editor: Editor, kind: BlockKind, range?: Range, callout
           tr.replaceWith(start, $from.after(), node);
           const caret = kind === "toggle" ? start + 2 + text.size : start + 2 + 2 + text.size;
           tr.setSelection(TextSelection.create(tr.doc, caret));
+          return true;
+        })
+        .run();
+    case "columns":
+      return chain
+        .clearNodes()
+        .command(({ tr, state }) => {
+          const $from = tr.selection.$from;
+          const text = $from.parent.content;
+          const start = $from.before();
+          tr.replaceWith(start, $from.after(), columnsNode(state.schema, text));
+          // In the first column: past the columns' opening and empty title, the column's, and its paragraph's opening.
+          tr.setSelection(TextSelection.create(tr.doc, start + 7 + text.size));
           return true;
         })
         .run();

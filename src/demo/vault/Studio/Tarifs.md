@@ -24,6 +24,19 @@ Avec $m = 0{,}15$ pour un client nouveau, $m = 0$ pour un client fidèle.
 | Identité visuelle | 5 | 2 600 € | 3 120 € |
 | Application sur mesure | 15+ | sur devis | sur devis |
 
+> [!multi-column]
+>
+>> [!blank]
+>> **Site vitrine**
+>> Cinq pages, un formulaire de contact, le référencement de base. Mise en ligne comprise.
+>
+>> [!blank]
+>> **Identité visuelle**
+>> Logo, palette, typographies et une charte d'une dizaine de pages.
+>
+>> [!tip] Bon à savoir
+>> Site et identité commandés ensemble : un jour offert.
+
 ## Ce qui est compris
 
 :::info

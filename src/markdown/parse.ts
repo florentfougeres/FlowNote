@@ -257,21 +257,24 @@ function convertTable(table: Table, src: string, raw: string): PMJSON {
 
 const QUOTE_PREFIX = /^[ \t]{0,3}>[ \t]?/;
 const EMPTY_QUOTE_LINE = /^[ \t]{0,3}>[ \t]*$/;
+const TIGHT_NEST = /^[ \t]{0,3}>>/;
 const CALLOUT_HEADER = /^\[!([^\]\s]+)\]([+-]?)[ \t]*(.*)$/;
 
 function convertQuote(raw: string, ctx: ParseContext): PMJSON {
   const sourceLines = raw.split("\n");
   // "Compact" quotes separate their blocks without empty `>` lines when Markdown allows it.
   const compact = !sourceLines.slice(1).some((line) => EMPTY_QUOTE_LINE.test(line));
+  // Nested quotes written `>>` rather than `> >` (Obsidian's habit for nested callouts).
+  const tightNest = sourceLines.some((line) => TIGHT_NEST.test(line));
   const lines = sourceLines.map((line) => line.replace(QUOTE_PREFIX, ""));
   const header = CALLOUT_HEADER.exec(lines[0]);
   if (header) {
     const [, calloutType, fold, title] = header;
     const body = parseFragment(lines.slice(1).join("\n"), ctx);
-    return node("callout", { calloutType, fold, compact }, [node("calloutTitle", undefined, parseInlineText(title, ctx)), ...body]);
+    return node("callout", { calloutType, fold, compact, tightNest }, [node("calloutTitle", undefined, parseInlineText(title, ctx)), ...body]);
   }
   const children = parseFragment(lines.join("\n"), ctx);
-  return node("blockquote", { compact }, children.length > 0 ? children : [node("paragraph")]);
+  return node("blockquote", { compact, tightNest }, children.length > 0 ? children : [node("paragraph")]);
 }
 
 /** Inline content of a single line that is not a paragraph of its own (callout titles). */

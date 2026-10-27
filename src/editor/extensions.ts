@@ -28,11 +28,12 @@ import { highlightPencilPlugin, toggleUnderline } from "./format";
 import { typedHtmlPlugin } from "./typedHtml";
 import { headingFoldPlugin } from "./headingFold";
 import { blockIdPlugin } from "./blockLinks";
+import { hiddenTitlePlugin } from "./columns";
 
 const Editing = Extension.create({
   priority: 150,
   name: "editing",
-  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin(), codeHighlightPlugin(), findPlugin(), grammarPlugin(), dueDatePlugin(), tocPlugin(), backtickPlugin(), syntaxMarksPlugin(), autolinkPlugin(), gitGutterPlugin(), highlightPencilPlugin(), typedHtmlPlugin(), headingFoldPlugin(), blockIdPlugin()],
+  addProseMirrorPlugins: () => [history(), gapCursor(), dropCursor({ color: "#2383e2", width: 2 }), placeholderPlugin(), tagPlugin(), codeHighlightPlugin(), findPlugin(), grammarPlugin(), dueDatePlugin(), tocPlugin(), backtickPlugin(), syntaxMarksPlugin(), autolinkPlugin(), gitGutterPlugin(), highlightPencilPlugin(), typedHtmlPlugin(), headingFoldPlugin(), blockIdPlugin(), hiddenTitlePlugin()],
   addKeyboardShortcuts() {
     return {
       "Mod-z": () => undo(this.editor.state, this.editor.view.dispatch),

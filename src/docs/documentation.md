@@ -53,7 +53,7 @@ Au-dessus de chaque page : le fil d'Ariane (cliquable, avec le menu des dossiers
 
 | Bouton | Action |
 | --- | --- |
-| Plan | les titres de la note, cliquables, dans une colonne à droite |
+| Plan | les titres de la note, cliquables, dans une colonne à droite ; glisser un titre déplace sa section |
 | Mode lecture `⌘⇧R` | la page se lit sans pouvoir être modifiée : ni curseur, ni correcteur, ni poignées ; les liens et les cases à cocher restent cliquables (retenu pour chaque onglet et chaque côté du split view) |
 | Correction | active ou coupe le correcteur |
 | Présentation | transforme la note en présentation (sur une présentation : miniatures, Présenter, export HTML) |
@@ -64,6 +64,7 @@ Au-dessus de chaque page : le fil d'Ariane (cliquable, avec le menu des dossiers
 | Markdown brut `⌘⇧E` | le fichier tel quel, avec ses numéros de ligne |
 
 - **Plan** et **Historique** s'affichent dans une même colonne à droite, le plan au-dessus.
+- **Réorganiser la note depuis le plan** : glissez un titre au-dessus d'un autre (ou tout en bas) ; sa section entière suit, sous-titres compris, et garde son niveau. Une ligne bleue montre où elle arrivera. Le titre de la page ne se déplace pas.
 - La **pastille d'état** en bas à droite indique l'enregistrement, le nombre de mots (temps de lecture au survol) et les mots de la sélection.
 
 ### Les onglets
@@ -254,6 +255,7 @@ statut: en cours
 - **Organigrammes flowchart.js** : un bloc ```` ```flow ```` (comme HedgeDoc, ```` ```flowchart ```` aussi) est dessiné par [flowchart.js](https://flowchart.js.org) (`/organigramme`). On déclare les éléments (`st=>start: Début`, `op=>operation: …`, `cond=>condition: …`, `e=>end: Fin`), puis on les relie (`st->op->cond`, `cond(yes)->e`, `cond(no)->op`). Sans écrire de texte : **Éditeur visuel**, en haut du bloc, liste les étapes (forme et texte) et les flèches (départ, sortie oui/non d'une condition, arrivée, côté de départ). `↵` dans le texte d'une étape en ajoute une à la suite, insérée dans sa flèche. flowchart.js place les formes lui-même.
 - **Graphiques Plotly** (`/graphique`) : au format du plugin obsidian-plotly, avec un éditeur visuel (type, titres, valeurs, import d'un CSV). L'éditeur visuel propose lignes, barres (verticales, horizontales, empilées), aire, points, camembert, anneau et radar ; tous les autres types de Plotly (heatmap, 3D, sankey…) s'affichent aussi et s'écrivent en texte.
 - **Maths** : des formules LaTeX dessinées par [KaTeX](https://katex.org). En ligne, `$x^2$` tapé devient une formule au `$` fermant (pas d'espace juste à l'intérieur des `$`, ni de chiffre ou de lettre juste avant le premier : « 5$ et 10$ » reste du texte) ; un clic dessus ouvre une petite fenêtre avec sa source et l'aperçu en direct (`↵` valide, `esc` annule, vide la retire). En bloc, `$$` puis espace (ou `/maths`) ; un double-clic ouvre sa source, l'aperçu suit la frappe sous le champ, `⌘↵` ou un clic à côté valide. Une formule fautive s'affiche en rouge avec l'erreur. Le fichier garde `$…$` et `$$…$$` tels quels ; l'export HTML les écrit en MathML.
+- **Colonnes** (`/colonnes`) : des blocs côte à côte. Le menu crée deux colonnes ; au survol, `+` à droite en ajoute une, `×` en haut d'une colonne la retire (la dernière rend ses blocs à la note). Une colonne peut aussi être un callout, avec son titre et sa couleur. Dans le fichier, c'est un callout `[!multi-column]` qui contient un callout par colonne, `[!blank]` pour une colonne simple, la convention des snippets CSS d'Obsidian pour les colonnes (« Modular CSS Layout ») : avec le snippet, Obsidian les affiche côte à côte ; sans, en callouts empilés, toujours lisibles. Une fenêtre étroite les empile aussi.
 - **Sommaire** : un paragraphe `[TOC]` affiche les titres de la note, cliquables (comme en haut de cette page).
 - **Date** : `/date` insère la date du jour (`/date et heure` avec l'heure).
 - **Requêtes Dataview et Tasks** : voir le chapitre « Requêtes » plus bas.
@@ -261,6 +263,14 @@ statut: en cours
 Dans le fichier :
 
 ````markdown
+> [!multi-column]
+>
+>> [!blank]
+>> Une colonne simple.
+>
+>> [!tip] Bon à savoir
+>> Une colonne en callout.
+
 ```mermaid
 graph LR
   Idée --> Brouillon --> Publié

@@ -98,6 +98,7 @@ const SLASH_ITEMS: SlashItem[] = [
       }
     },
   },
+  { key: "columns", title: "Colonnes", description: "Blocs côte à côte (callout multi-column)", icon: "▥", keywords: ["colonnes", "columns", "côte à côte", "multi-column", "mise en page"], run: kind("columns") },
   { key: "subpage", title: "Sous-page", description: "Nouvelle note liée, rangée sous celle-ci", icon: "📄", keywords: ["page", "sous-page", "note", "subpage"], run: (e, r, b) => void createSubpage(e, r, b) },
   { key: "code", title: "Code", description: "Bloc de code", icon: "</>", keywords: ["code", "snippet"], run: kind("code") },
   {

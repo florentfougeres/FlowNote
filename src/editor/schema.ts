@@ -65,7 +65,7 @@ const Blockquote = Node.create({
   group: "block",
   content: "block+",
   defining: true,
-  addAttributes: attrs({ compact: false }),
+  addAttributes: attrs({ compact: false, tightNest: false }),
   parseHTML: () => [{ tag: "blockquote" }],
   renderHTML: () => ["blockquote", 0],
 });
@@ -76,7 +76,7 @@ const Callout = Node.create({
   content: "calloutTitle block*",
   defining: true,
   // syntax "hedgedoc": a `:::type` container (marker: its colons, extra: its `{attributes}`).
-  addAttributes: attrs({ calloutType: "note", fold: "", compact: false, syntax: "obsidian", marker: ":::", extra: "" }),
+  addAttributes: attrs({ calloutType: "note", fold: "", compact: false, tightNest: false, syntax: "obsidian", marker: ":::", extra: "" }),
   parseHTML: () => [{ tag: "div.callout" }],
   renderHTML: ({ node }) => [
     "div",

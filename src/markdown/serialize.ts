@@ -47,7 +47,7 @@ export function serializeBlock(n: PMJSON, v: Variant): string {
     case "codeBlock":
       return serializeCode(n);
     case "blockquote":
-      return prefixLines(joinBlocks(n.content ?? [], v, attr(n, "compact", false)));
+      return prefixLines(joinBlocks(n.content ?? [], v, attr(n, "compact", false)), attr(n, "tightNest", false));
     case "callout": {
       const [title, ...body] = n.content ?? [];
       const titleText = serializeInline(title?.content ?? [], v).replace(/\n/g, " ");
@@ -59,7 +59,7 @@ export function serializeBlock(n: PMJSON, v: Variant): string {
       }
       const header = `[!${attr(n, "calloutType", "note")}]${attr(n, "fold", "")}${titleText ? ` ${titleText}` : ""}`;
       const inner = joinBlocks(body, v, attr(n, "compact", false));
-      return prefixLines(inner ? `${header}\n${inner}` : header);
+      return prefixLines(inner ? `${header}\n${inner}` : header, attr(n, "tightNest", false));
     }
     case "list":
       return serializeList(n, v);
@@ -72,15 +72,18 @@ export function serializeBlock(n: PMJSON, v: Variant): string {
   }
 }
 
-function prefixLines(text: string): string {
+/** `tightNest`: a nested quote's lines get `>>`, not `> >`. */
+function prefixLines(text: string, tightNest: boolean): string {
   return text
     .split("\n")
-    .map((line) => (line === "" ? ">" : `> ${line}`))
+    .map((line) => (line === "" ? ">" : tightNest && line.startsWith(">") ? `>${line}` : `> ${line}`))
     .join("\n");
 }
 
 /** Blocks that can directly follow a paragraph line inside a tight list item. */
 const INTERRUPTS_PARAGRAPH = new Set(["list", "blockquote", "callout", "heading"]);
+
+const QUOTES = new Set(["blockquote", "callout"]);
 
 function joinBlocks(children: PMJSON[], v: Variant, tight: boolean): string {
   const nonEmpty = children.length > 1 ? children.filter((c) => !isEmptyParagraph(c)) : children;
@@ -88,7 +91,9 @@ function joinBlocks(children: PMJSON[], v: Variant, tight: boolean): string {
   nonEmpty.forEach((child, i) => {
     if (i > 0) {
       const fenced = child.type === "codeBlock" && attr(child, "fence", "") !== "";
-      out += tight && (INTERRUPTS_PARAGRAPH.has(child.type) || fenced) ? "\n" : "\n\n";
+      // Two quotes in a row need an empty line between them, or they merge into one.
+      const quotes = QUOTES.has(child.type) && QUOTES.has(nonEmpty[i - 1].type);
+      out += tight && !quotes && (INTERRUPTS_PARAGRAPH.has(child.type) || fenced) ? "\n" : "\n\n";
     }
     out += serializeBlock(child, v);
   });

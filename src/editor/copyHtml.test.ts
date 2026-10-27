@@ -24,6 +24,17 @@ describe("noteToHtml", () => {
     expect(page.querySelector("img")).toBeNull();
     expect(page.querySelector("td")?.getAttribute("style")).toContain("border");
   });
+
+  it("puts columns side by side, a plain column as its blocks", () => {
+    const { editor } = open("> [!multi-column]\n>> [!blank]\n>> Gauche\n>\n>> [!tip] Astuce\n>> Droite\n");
+    const page = document.createElement("div");
+    page.innerHTML = noteToHtml(editor.state.doc, "Ma note");
+    const cells = [...page.querySelectorAll<HTMLElement>("div[style*='inline-block']")];
+    expect(cells.map((cell) => cell.textContent?.trim())).toEqual(["Gauche", "AstuceDroite"]);
+    expect(page.textContent).not.toContain("multi-column");
+    expect(page.textContent).not.toContain("blank");
+    expect(cells[1].querySelector("blockquote strong")?.textContent).toBe("Astuce");
+  });
 });
 
 describe("noteHtmlDocument", () => {

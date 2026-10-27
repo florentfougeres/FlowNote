@@ -1,6 +1,7 @@
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { sectionOf, type Section } from "./sections";
 
 /**
  * Foldable headings, like Obsidian's: an arrow left of a heading (shown on
@@ -17,33 +18,10 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 const key = new PluginKey<FoldState>("headingFold");
 
-interface Section {
-  /** Position right before the heading. */
-  pos: number;
-  /** End of its section (position after its last block). */
-  end: number;
-}
-
-const isTitle = (node: PMNode, index: number) => index === 0 && Number(node.attrs.level) === 1;
-
-/** The section of the top-level heading at `pos` (null: not a heading, the title, or nothing under it). */
+/** The section of the top-level heading at `pos`, if there is something under it to fold. */
 function sectionAt(doc: PMNode, pos: number): Section | null {
-  if (pos < 0 || pos >= doc.content.size) return null;
-  const $pos = doc.resolve(pos);
-  const heading = doc.nodeAt(pos);
-  if ($pos.depth !== 0 || heading?.type.name !== "heading" || isTitle(heading, $pos.index())) return null;
-  const level = Number(heading.attrs.level);
-  let end = doc.content.size;
-  let after = pos + heading.nodeSize;
-  for (let i = $pos.index() + 1; i < doc.childCount; i++) {
-    const next = doc.child(i);
-    if (next.type.name === "heading" && Number(next.attrs.level) <= level) {
-      end = after;
-      break;
-    }
-    after += next.nodeSize;
-  }
-  return end > pos + heading.nodeSize ? { pos, end } : null;
+  const section = sectionOf(doc, pos);
+  return section && section.end > pos + doc.nodeAt(pos)!.nodeSize ? section : null;
 }
 
 function decorations(doc: PMNode, folded: number[]): DecorationSet {

@@ -15,7 +15,7 @@ Voici le carnet de Camille Roux, qui conçoit des sites et des identités visuel
 
 - [[Tableau de bord.dashboard|Tableau de bord]] : un dashboard (objectifs, chiffre d'affaires, clients, mind map, croquis)
 - [[Clients.base|Clients]] : une base en quatre vues, tableau avec formule et calculs, kanban, galerie, calendrier
-- [[Tarifs]] : des formules de maths, un tableau aligné, des admonitions HedgeDoc
+- [[Tarifs]] : des formules de maths, un tableau aligné, des colonnes, des admonitions HedgeDoc
 - [[Comptabilité 2026]] : des graphiques Plotly, des requêtes Dataview et Tasks
 - [[Processus projet]] : un organigramme flowchart.js, un diagramme de Gantt
 - [[Snippets]] : du code dans plusieurs langages, du HTML
@@ -50,3 +50,4 @@ Et dans la barre latérale : **Tâches** (les demandes des clients et les tâche
 - [ ] Rechercher `tag:#client` dans tout le vault (`⌘⇧F`)
 - [ ] Taper `[[Tarifs#` pour lier un titre de [[Tarifs]], ou `[[Tarifs#^` pour un de ses paragraphes
 - [ ] Replier une section par la flèche à gauche d'un titre, ici « Ce qu'il y a dans ce vault »
+- [ ] Ouvrir le **Plan** (barre de page) et glisser « À essayer » au-dessus de « Ce qu'il y a dans ce vault » : la section entière se déplace

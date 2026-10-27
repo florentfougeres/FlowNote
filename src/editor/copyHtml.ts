@@ -67,6 +67,19 @@ export function noteToHtml(doc: PMNode, title: string): string {
     item.removeAttribute("data-checked");
     item.parentElement?.setAttribute("style", "list-style: none; padding-left: 0;");
   }
+  // Columns side by side; a plain column (`[!blank]`) is just its blocks.
+  for (const columns of body.querySelectorAll('div.callout[data-callout="multi-column"]')) {
+    const row = document.createElement("div");
+    const cells = [...columns.children].filter((child) => !child.classList.contains("callout-title"));
+    for (const cell of cells) {
+      const box = document.createElement("div");
+      box.setAttribute("style", `display: inline-block; vertical-align: top; box-sizing: border-box; width: ${Math.floor(100 / cells.length)}%; padding-right: 16px;`);
+      if (cell.getAttribute("data-callout") === "blank") box.append(...[...cell.childNodes].filter((n) => !(n instanceof Element && n.classList.contains("callout-title") && !n.textContent?.trim())));
+      else box.append(cell);
+      row.append(box);
+    }
+    columns.replaceWith(row);
+  }
   for (const callout of body.querySelectorAll("div.callout")) {
     const quote = document.createElement("blockquote");
     const title = callout.querySelector(":scope > .callout-title");

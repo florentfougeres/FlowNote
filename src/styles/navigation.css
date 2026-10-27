@@ -232,3 +232,38 @@ button.crumb:hover {
   border-left-color: var(--accent);
   font-weight: 500;
 }
+
+/* Moving a section: the dragged headings fade, a line shows where they go. */
+.outline-item[data-top] {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.outline-panel nav.dragging {
+  cursor: grabbing;
+}
+
+.outline-panel nav.dragging .outline-item {
+  cursor: grabbing;
+}
+
+.outline-panel nav.dragging .outline-item:hover {
+  background: transparent;
+}
+
+.outline-item.dragged {
+  opacity: 0.4;
+}
+
+.outline-item.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.outline-panel nav.drop-end::after {
+  content: "";
+  height: 2px;
+  margin-left: 6px;
+  border-radius: 1px;
+  background: var(--accent);
+}
