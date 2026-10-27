@@ -117,12 +117,30 @@ export function renameProperty(raw: string, oldKey: string, newKey: string): str
   return wrap(stringify(doc));
 }
 
-/** Adds a new empty property with a unique name. */
-export function addProperty(raw: string | null, base = "propriété"): { raw: string; key: string } {
-  const taken = new Set(readProperties(raw).properties.map((p) => p.key));
-  let key = base;
-  for (let i = 2; taken.has(key); i++) key = `${base} ${i}`;
-  const doc = parse(raw);
-  doc.set(key, null);
-  return { raw: wrap(stringify(doc)), key };
+/** A property used in the vault: its name, the type its values have most often, and the number of notes carrying it. */
+export interface PropertySuggestion {
+  key: string;
+  type: PropertyType;
+  count: number;
+}
+
+const FRONTMATTER = /^﻿?(---\r?\n[\s\S]*?\r?\n---)[ \t]*(?:\r?\n|$)/;
+
+/** The property names of the vault's notes, the most used first (offered when adding a property, as Obsidian does). */
+export function vaultPropertyKeys(notes: [string, string][]): PropertySuggestion[] {
+  const keys = new Map<string, { count: number; types: Map<PropertyType, number> }>();
+  for (const [, text] of notes) {
+    const match = FRONTMATTER.exec(text);
+    if (!match) continue;
+    for (const { key, type, value } of readProperties(match[1].replace(/\r\n/g, "\n")).properties) {
+      const entry = keys.get(key) ?? { count: 0, types: new Map() };
+      entry.count++;
+      // An empty value says nothing of the type.
+      if (value !== null) entry.types.set(type, (entry.types.get(type) ?? 0) + 1);
+      keys.set(key, entry);
+    }
+  }
+  return [...keys]
+    .map(([key, { count, types }]) => ({ key, count, type: [...types].sort((a, b) => b[1] - a[1])[0]?.[0] ?? ("text" as PropertyType) }))
+    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key, "fr"));
 }

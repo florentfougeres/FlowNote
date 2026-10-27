@@ -7,6 +7,7 @@ import { insertMarkdownBlocks, pasteInline, pasteMarkdown } from "./pasteMarkdow
 import { pastedTable } from "../markdown/csv";
 import { DOMParser as PMDOMParser } from "@tiptap/pm/model";
 import { codeFromPreceding } from "./backticks";
+import { wordAt } from "./syntaxMarks";
 import { markdownForClipboard } from "./clipboard";
 
 afterEach(destroyEditors);
@@ -173,6 +174,18 @@ describe("Backtick from a dead key (composition)", () => {
 });
 
 describe("Heading marks", () => {
+  it("a double click in a heading selects the word, even just after its last letter", () => {
+    expect(wordAt("Plan du site", 6)).toEqual([5, 7]);
+    expect(wordAt("Plan du site", 7)).toEqual([5, 7]);
+    expect(wordAt("Plan du site", 4)).toEqual([0, 4]);
+    expect(wordAt("Plan  site", 5)).toBeNull();
+    const { editor } = open("## Plan du site\n");
+    const start = editor.state.doc.firstChild ? 1 : 0;
+    editor.view.someProp("handleDoubleClick", (f) => f(editor.view, start + 7, new MouseEvent("dblclick")));
+    const { from, to } = editor.state.selection;
+    expect(editor.state.doc.textBetween(from, to)).toBe("du");
+  });
+
   it("Backspace at the start of a heading removes one #", () => {
     const { editor, save } = open("### Titre\n");
     cursorAtStartOf(editor, "Titre");

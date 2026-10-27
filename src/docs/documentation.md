@@ -139,6 +139,7 @@ Les raccourcis Markdown marchent aussi à la frappe :
 - **Fusionner dans une autre note** : menu de la page dans la barre latérale (« Fusionner dans… ») ou la palette de commandes. Choisissez la note qui la reçoit : son texte s'ajoute à la fin, sous un titre `## Titre de la note` (ses propres titres descendent d'un niveau), ses propriétés s'ajoutent à celles qui manquent (les tags sont réunis), et les liens vers elle mènent à ce titre (`[[Site]]` devient `[[Projet#Site|Site]]`). La note fusionnée part ensuite à la corbeille. Une note qui a des sous-pages ne se fusionne pas.
 - `↵` en fin de liste vide en sort ; `⇧↵` passe à la ligne dans le même bloc.
 - `⇥` indente : dans une liste, l'élément passe sous celui du dessus ; dans un paragraphe, la ligne devient un élément de liste, rangé sous la liste du dessus s'il y en a une (Markdown n'a pas de texte indenté : quatre espaces en feraient du code). `⇧⇥` désindente.
+- **Double-clic dans un titre** : sélectionne le mot, même en cliquant juste après sa dernière lettre, comme dans le texte.
 - **Niveau d'un titre** : curseur dans un titre, ses `#` s'affichent en gris au début de la ligne. Au début du titre, `⌫` en retire un (un titre 1 redevient du texte) et `#` en ajoute un. Son niveau s'affiche aussi dans la marge à gauche : un clic ouvre la liste des niveaux (titre 1 à 6, ou texte), aussi `⌘⌥1` … `⌘⌥6` et `⌘⌥0`.
 - **Replier une section** : au survol d'un titre, une flèche apparaît à sa gauche ; un clic replie tout ce qui suit jusqu'au titre suivant de même niveau (« … » après le titre), un second le déplie. Seul l'affichage change, rien n'est écrit dans le fichier, et tout est déplié à la prochaine ouverture de la note. Un curseur qui arrive dans une section repliée (recherche, annulation) la déplie.
 - `⌫` au début d'une ligne la remonte au bout de la ligne du dessus, même sous une liste, une citation ou un callout. Sous un tableau, le curseur va dans la dernière cellule ; sous un séparateur, celui-ci est sélectionné (un second `⌫` le supprime).
@@ -241,7 +242,10 @@ Une admonition `success`, écrite `:::success` dans le fichier.
 
 ### Les propriétés
 
-Les propriétés YAML (le frontmatter) s'affichent sous le titre : texte, liste, nombre, case à cocher, date, date et heure. Les tags s'affichent en pastilles, même écrits sur une ligne (`tags: projet, site`) ; les modifier les réécrit en liste YAML. Sur une note sans propriétés, « Ajouter des propriétés » en crée une. Les dates se choisissent dans le calendrier de l'app (tapez aussi `jj/mm/aaaa`).
+Les propriétés YAML (le frontmatter) s'affichent sous le titre : texte, liste, nombre, case à cocher, date, date et heure. Les tags s'affichent en pastilles, même écrits sur une ligne (`tags: projet, site`) ; les modifier les réécrit en liste YAML. Les dates se choisissent dans le calendrier de l'app (tapez aussi `jj/mm/aaaa`).
+
+- **Ajouter une propriété** (ou « Ajouter des propriétés » sur une note qui n'en a pas) : tapez son nom ; la liste dessous propose les propriétés déjà utilisées dans le vault, les plus courantes d'abord, avec leur type et leur nombre de notes. `↑` `↓` puis `↵` en choisit une (elle arrive avec son type : une liste, une case à cocher…), `↵` sans choix garde le nom tapé, `esc` annule.
+- **Masquer les propriétés** : l'œil à droite, sous les propriétés (au survol), les replie en une ligne « 8 propriétés masquées » ; un clic dessus les réaffiche. Le choix vaut pour toutes les notes et est retenu.
 
 L'icône de la page est un emoji choisi au-dessus du titre. Dans le fichier :
 

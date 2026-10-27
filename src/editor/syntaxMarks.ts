@@ -1,5 +1,5 @@
 import { getMarkRange } from "@tiptap/core";
-import { Plugin, type EditorState, type Transaction } from "@tiptap/pm/state";
+import { Plugin, TextSelection, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 /**
@@ -79,6 +79,18 @@ export function removeCodeAround(state: EditorState): Transaction | null {
   return code ? state.tr.removeMark(code.from, code.to, state.schema.marks.code) : null;
 }
 
+const WORD = /[\p{L}\p{N}_'’-]/u;
+
+/** The word at `offset` of `text`, or the one ending there (a click just after its last letter); null between words. */
+export function wordAt(text: string, offset: number): [number, number] | null {
+  let at = WORD.test(text[offset] ?? "") ? offset : WORD.test(text[offset - 1] ?? "") ? offset - 1 : -1;
+  if (at < 0) return null;
+  let from = at;
+  while (from > 0 && WORD.test(text[from - 1])) from--;
+  while (at < text.length && WORD.test(text[at])) at++;
+  return [from, at];
+}
+
 /** Placeholders of the empty headings (placeholder.ts), drawn after the `#` while they show. */
 export const HEADING_PLACEHOLDERS = ["Titre 1", "Titre 2", "Titre 3", "Titre 4", "Titre 5", "Titre 6"];
 
@@ -113,6 +125,16 @@ export function syntaxMarksPlugin(): Plugin {
           decorations.push(Decoration.widget(code.to, () => mark(ticks, "syntax-mark code-mark"), { side: past ? -1 : 1, key: past ? "past" : "close", ignoreSelection: true }));
         }
         return decorations.length ? DecorationSet.create(state.doc, decorations) : null;
+      },
+      // The first click shows the heading's # and shifts its text: the browser's double click would miss the word, so it is chosen here.
+      handleDoubleClick(view, pos) {
+        const $pos = view.state.doc.resolve(pos);
+        const heading = $pos.parent;
+        if (heading.type.name !== "heading") return false;
+        const word = wordAt(heading.textBetween(0, heading.content.size, undefined, "\ufffc"), $pos.parentOffset);
+        if (!word) return false;
+        view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, $pos.start() + word[0], $pos.start() + word[1])));
+        return true;
       },
       handleTextInput(view, from, to, text) {
         if (text !== "#" || from !== to) return false;

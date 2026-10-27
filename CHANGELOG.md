@@ -10,7 +10,11 @@ Les changements notables de FlowNote, version par version. Le format suit [Keep 
 - Les pièces jointes suivent leur note : déplacée dans un autre dossier, une note emporte les images et fichiers qu'elle seule utilise, rangés à côté d'elle ; supprimée, elle propose de les mettre à la corbeille avec elle. Rien ne bouge avec un dossier de pièces jointes commun à tout le vault.
 - Pièces jointes inutilisées, listées sur l'accueil (carte « Santé »).
 - Fusionner une note dans une autre (menu de la page, palette) : son texte va à la fin de l'autre sous un titre à son nom, ses propriétés s'ajoutent, les liens vers elle mènent à ce titre, puis elle part à la corbeille.
+- Propriétés : en ajoutant une propriété, une liste propose celles du vault (les plus courantes d'abord, avec leur type), comme Obsidian ; un œil replie les propriétés de toutes les notes en une ligne.
 - Vault de démo : une note à fusionner, un ancien logo inutilisé, de nouveaux essais dans « Bienvenue ».
+
+### Corrigé
+- Un double-clic dans un titre sélectionne le mot, même juste après sa dernière lettre (le `#` qui apparaît au premier clic décalait le texte).
 
 ## [0.24.0] - 2026-10-27
 

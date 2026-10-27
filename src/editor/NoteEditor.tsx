@@ -1,5 +1,6 @@
 import { insertMarkdownBlocks, pasteInline, pasteMarkdown } from "./pasteMarkdown";
 import { pastedTable } from "../markdown/csv";
+import { vaultPropertyKeys } from "../markdown/frontmatter";
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { MutableRefObject, ReactNode } from "react";
@@ -303,10 +304,13 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
     return () => editorCallback.current?.(null);
   }, [editor, source]);
 
+  /** The vault's properties, offered when adding one to this note. */
+  const [suggestKeys] = useState(() => async () => vaultPropertyKeys((await wiring.bridge.current.queryVault?.())?.notes ?? []));
+
   return (
     <div className="note-editor" ref={shell}>
       {header?.(frontmatter, changeFrontmatter)}
-      {properties && <PropertiesPanel raw={frontmatter} readOnly={!editable} onChange={changeFrontmatter} hidden={hiddenProperties} />}
+      {properties && <PropertiesPanel raw={frontmatter} readOnly={!editable} onChange={changeFrontmatter} hidden={hiddenProperties} suggestKeys={suggestKeys} />}
       <EditorContent editor={editor} />
       <BlockHandle editor={editor} shell={shell} bridge={wiring.bridge} />
       <HeadingLevel editor={editor} shell={shell} />

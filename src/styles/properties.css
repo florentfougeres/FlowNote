@@ -164,6 +164,92 @@
   visibility: hidden;
 }
 
+/* The name of a new property, with the vault's properties under it. */
+.property-new-field {
+  position: relative;
+  grid-column: 2 / 4;
+}
+
+.property-new-field .property-key {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.property-suggest {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 260px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-menu);
+  display: flex;
+  flex-direction: column;
+}
+
+.property-suggest button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.property-suggest button > :first-child {
+  flex: none;
+  color: var(--muted);
+}
+
+.property-suggest button span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-suggest small {
+  color: var(--faint);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.property-suggest button.active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.property-suggest button.active > :first-child {
+  color: var(--accent);
+}
+
+.properties-footer {
+  display: flex;
+  align-items: center;
+}
+
+/* The eye folding the properties away, at the right end, shown under the pointer. */
+.properties-hide {
+  margin-left: auto;
+  visibility: hidden;
+}
+
+.properties:hover .properties-hide,
+.properties-hide:focus-visible {
+  visibility: visible;
+}
+
 .property:hover .property-remove {
   visibility: visible;
 }

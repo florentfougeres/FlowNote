@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addProperty, readProperties, renameProperty, setProperty } from "./frontmatter";
+import { readProperties, renameProperty, setProperty, vaultPropertyKeys } from "./frontmatter";
 
 const FM = `---
 # Métadonnées de la note
@@ -66,6 +66,21 @@ describe("editing properties", () => {
     const created = setProperty(null, "tags", ["idée"])!;
     expect(created).toBe("---\ntags:\n  - idée\n---");
     expect(setProperty(created, "tags", undefined)).toBeNull();
-    expect(addProperty(created).key).toBe("propriété");
+    expect(setProperty(created, "statut", null)).toBe("---\ntags:\n  - idée\nstatut: null\n---");
+  });
+});
+
+describe("vaultPropertyKeys", () => {
+  it("lists the vault's properties, the most used first, with their usual type", () => {
+    const notes: [string, string][] = [
+      ["a.md", "---\ntags: [x]\nstatut: fait\nbudget: 3\n---\nTexte"],
+      ["b.md", "---\ntags: [y]\nstatut:\n---\n"],
+      ["c.md", "Sans propriétés"],
+    ];
+    expect(vaultPropertyKeys(notes)).toEqual([
+      { key: "statut", count: 2, type: "text" },
+      { key: "tags", count: 2, type: "list" },
+      { key: "budget", count: 1, type: "number" },
+    ]);
   });
 });
