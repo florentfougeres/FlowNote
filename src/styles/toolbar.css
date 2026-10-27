@@ -738,6 +738,7 @@ body.tree-dragging * {
   width: 100%;
   border: none;
   background: none;
+  box-shadow: none;
   text-align: left;
   cursor: pointer;
 }

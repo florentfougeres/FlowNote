@@ -56,7 +56,7 @@ function toPages(entries: VaultEntry[], tasks: Set<string>, rows = false): Page[
   return [...folders, ...pages];
 }
 
-/** The tree without the entries the app shows elsewhere (tasks folder, reading list). */
+/** The tree without the entries the app shows elsewhere (the reading list). */
 function withoutPaths(entries: VaultEntry[], hidden: Set<string>): VaultEntry[] {
   return entries.filter((e) => !hidden.has(e.path)).map((e) => (e.kind === "dir" && e.children ? { ...e, children: withoutPaths(e.children, hidden) } : e));
 }
@@ -173,7 +173,7 @@ interface Props {
   view: "home" | "tasks" | "graph" | "reading" | "settings" | "docs" | null;
   /** The notes that are tasks (TaskNotes), shown with their icon. */
   taskPaths: Set<string>;
-  /** Paths left out of the tree: the tasks folder and the reading list have their own views. */
+  /** Paths left out of the tree: the reading list has its own view. */
   hidden: string[];
   /** Live icon of the open page (its front matter may not be saved yet). */
   liveIcon?: { path: string; icon: string | null; title: string | null };

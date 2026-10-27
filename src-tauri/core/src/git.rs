@@ -210,7 +210,7 @@ pub fn git_discard(root: String, paths: Vec<String>) -> Result<(), String> {
     for path in untracked {
         let target = Path::new(&root).join(path);
         if target.exists() {
-            trash::delete(&target).map_err(|e| e.to_string())?;
+            crate::vault::trash_context().delete(&target).map_err(|e| e.to_string())?;
         }
     }
     Ok(())

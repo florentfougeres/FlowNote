@@ -431,7 +431,21 @@ pub fn vault_trash(root: String, path: String) -> Result<(), String> {
     if !target.exists() {
         return Ok(());
     }
-    trash::delete(&target).map_err(|e| e.to_string())
+    trash_context().delete(&target).map_err(|e| e.to_string())
+}
+
+/// The system trash. On macOS, through `NSFileManager` like Obsidian (Electron's
+/// `trashItem`), not the Finder: the Finder's AppleScript needs a permission and
+/// times out on iCloud Drive folders, leaving the file in place.
+pub(crate) fn trash_context() -> trash::TrashContext {
+    #[allow(unused_mut)]
+    let mut context = trash::TrashContext::default();
+    #[cfg(target_os = "macos")]
+    {
+        use trash::macos::{DeleteMethod, TrashContextExtMacos};
+        context.set_delete_method(DeleteMethod::NsFileManager);
+    }
+    context
 }
 
 #[cfg(test)]

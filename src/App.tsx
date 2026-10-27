@@ -1358,7 +1358,7 @@ export function App() {
   const saveState = dirty && !settings.autosave ? <span className="save-state dirty">{keys("Non enregistré · ⌘S")}</span> : null;
 
   // The sidebar is memoized: typing in a note does not draw it again (see useHandlers).
-  const sidebarHidden = useMemo(() => [taskConfig.folder, readingPath].filter(Boolean), [taskConfig.folder, readingPath]);
+  const sidebarHidden = useMemo(() => [readingPath].filter(Boolean), [readingPath]);
   const notePath = note?.path;
   const sidebarLiveIcon = useMemo(() => (notePath ? { path: notePath, icon: liveIcon, title: liveTitle } : undefined), [notePath, liveIcon, liveTitle]);
   const otherVaults = useMemo(
