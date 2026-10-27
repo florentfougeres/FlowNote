@@ -170,6 +170,31 @@ export function newCanvasId(): string {
   return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** The cards `ids` and the arrows between them: what is copied (as a canvas file's text). */
+export function pickCards(data: CanvasData, ids: Iterable<string>): CanvasData {
+  const picked = new Set(ids);
+  return { nodes: data.nodes.filter((n) => picked.has(n.id)), edges: data.edges.filter((e) => picked.has(e.fromNode) && picked.has(e.toNode)) };
+}
+
+/** Copies of `cards` with new ids, their box centered on `center`; their arrows follow them. */
+export function cloneCards(cards: CanvasData, center: { x: number; y: number }): CanvasData {
+  const from = cardsCenter(cards.nodes);
+  const dx = Math.round(center.x - from.x);
+  const dy = Math.round(center.y - from.y);
+  const ids = new Map(cards.nodes.map((n) => [n.id, newCanvasId()]));
+  return {
+    nodes: cards.nodes.map((n) => ({ ...n, id: ids.get(n.id)!, x: n.x + dx, y: n.y + dy })),
+    edges: cards.edges.map((e) => ({ ...e, id: newCanvasId(), fromNode: ids.get(e.fromNode)!, toNode: ids.get(e.toNode)! })),
+  };
+}
+
+/** The center of the cards' box. */
+export function cardsCenter(cards: CanvasNode[]): { x: number; y: number } {
+  const left = Math.min(...cards.map((n) => n.x));
+  const top = Math.min(...cards.map((n) => n.y));
+  return { x: (left + Math.max(...cards.map((n) => n.x + n.width))) / 2, y: (top + Math.max(...cards.map((n) => n.y + n.height))) / 2 };
+}
+
 /** A new canvas: empty, as Obsidian creates it. */
 export function newCanvasFile(): string {
   return serializeCanvas({ nodes: [], edges: [] });

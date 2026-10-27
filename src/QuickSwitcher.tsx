@@ -3,9 +3,10 @@ import { linkItems, type LinkItem } from "./editor/wikilinks";
 import { Icon } from "./Icon";
 import { keys } from "./keys";
 
-/** Cmd+P / Cmd+K: open a note by name, or create it; « > » goes to the command palette. */
+/** Cmd+P / Cmd+K: open a note by name or by title, or create it; « > » goes to the command palette. */
 export function QuickSwitcher({
   files,
+  titles,
   iconOf,
   onOpen,
   onCreate,
@@ -13,6 +14,8 @@ export function QuickSwitcher({
   onClose,
 }: {
   files: string[];
+  /** Pages' titles other than their file name (a `# heading`, a `title`), found as well. */
+  titles: Map<string, string[]>;
   /** Icon of a page: its emoji, or the icon of its kind. */
   iconOf: (path: string) => ReactNode;
   onOpen: (path: string) => void;
@@ -24,7 +27,7 @@ export function QuickSwitcher({
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
   const list = useRef<HTMLUListElement>(null);
-  const items: LinkItem[] = linkItems(query, files, false).slice(0, 50);
+  const items: LinkItem[] = linkItems(query, files, false, titles).slice(0, 50);
 
   useEffect(() => setIndex(0), [query]);
   useEffect(() => {

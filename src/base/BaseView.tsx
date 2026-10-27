@@ -599,7 +599,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
         {rows === null ? (
           <p className="dash-muted">Lecture des pages…</p>
         ) : tasks && isTaskView(view.type) ? (
-          <TaskBaseView view={view} rows={shown} texts={texts} config={tasks.config} vault={vault} editable={editable} onOpen={onOpen} onChanged={() => void load()} onNew={tasks.onNew} />
+          <TaskBaseView view={view} rows={shown} texts={texts} config={tasks.config} vault={vault} editable={editable} onOpen={onOpen} onChanged={() => void load()} onNew={tasks.onNew} onDelete={(row) => void onDeleteRow(row).then(() => void load())} />
         ) : view.type === "board" ? (
           <BoardView
             rows={shown}

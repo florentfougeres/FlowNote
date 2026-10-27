@@ -16,3 +16,25 @@ export function backend<T = void>(command: string, args: Record<string, unknown>
   if (isTauri()) return invoke<T>("backend", { command, args });
   return Promise.reject(new Error(`${command} : pas de backend dans le navigateur`));
 }
+
+/**
+ * The clipboard's text, read on demand (a menu item, a key handled by the
+ * app): through Tauri's clipboard plugin in the app, where WebKit would ask
+ * before each read; through the browser's API elsewhere.
+ */
+export async function readClipboardText(): Promise<string> {
+  if (isTauri()) {
+    const { readText } = await import("@tauri-apps/plugin-clipboard-manager");
+    return readText();
+  }
+  return navigator.clipboard.readText();
+}
+
+/** Text put on the clipboard outside a copy event (cards of a canvas), the same way. */
+export async function writeClipboardText(text: string): Promise<void> {
+  if (isTauri()) {
+    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+    return writeText(text);
+  }
+  return navigator.clipboard.writeText(text);
+}

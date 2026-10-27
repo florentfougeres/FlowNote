@@ -2,7 +2,7 @@
   "name": "flownote",
   "private": true,
   "license": "MIT",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -23,6 +23,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@tasknotes/model": "0.3.0-rc.18",
     "@tauri-apps/api": "^2.12.3",
+    "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
     "@tauri-apps/plugin-dialog": "^2.8.2",
     "@tiptap/core": "^3.32.0",
     "@tiptap/extension-table": "^3.32.0",

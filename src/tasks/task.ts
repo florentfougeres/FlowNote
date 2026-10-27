@@ -148,6 +148,9 @@ function idName(config: TaskConfig, date: Date): string {
   return `${String(date.getFullYear()).slice(2)}${pad(date.getMonth() + 1)}${pad(date.getDate())}${Math.floor((date.getTime() - midnight.getTime()) / 1000).toString(36)}`;
 }
 
+/** Title of a task just created, typed over in its page. */
+export const NEW_TASK_TITLE = "Sans titre";
+
 /** File name (without `.md`) of a new task: its title, or an id when the title is a property. */
 export function taskFileName(title: string, config: TaskConfig, date = new Date()): string {
   return config.titleInFilename ? title.replace(/[\\/:*?"<>|#^[\]]/g, "").replace(/\s+/g, " ").trim() || "Tâche" : idName(config, date);

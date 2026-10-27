@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { PopoverMenu, type MenuItem } from "../Sidebar";
 import type { BaseView as View } from "../base/baseFile";
 import { cellValue, setNoteProperty, type BaseRow } from "../base/rows";
 import type { Vault } from "../vault/vault";
@@ -46,6 +48,7 @@ export function TaskBaseView({
   onOpen,
   onChanged,
   onNew,
+  onDelete,
 }: {
   view: View;
   /** The view's rows, filtered and sorted. */
@@ -59,6 +62,8 @@ export function TaskBaseView({
   /** Tasks were written: the base reads them again. */
   onChanged: () => void;
   onNew: (status?: string) => void;
+  /** Deletes the task's note (after confirmation). */
+  onDelete: (path: string) => void;
 }) {
   const f = config.fields;
   /** Changes shown at once, until the rows are read again. */
@@ -96,6 +101,18 @@ export function TaskBaseView({
     void write([{ path: task.path, change: (text) => setTaskField(text, f.status, status, config), local: { status, done: !task.done } }]);
   };
 
+  /** Right-click on a task, in any view: open it, or delete it. */
+  const [menu, setMenu] = useState<{ path: string; anchor: DOMRect } | null>(null);
+  const onMenu = (path: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    setMenu({ path, anchor: new DOMRect(event.clientX, event.clientY - 4, 0, 0) });
+  };
+  const menuItems = (path: string): MenuItem[] => [
+    { label: "Ouvrir dans un nouvel onglet", icon: "open", run: () => onOpen(path, true) },
+    { label: "Ouvrir ici", icon: "doc", run: () => onOpen(path, false) },
+    ...(editable ? [{ label: "Supprimer", icon: "trash", danger: true, run: () => onDelete(path) } satisfies MenuItem] : []),
+  ];
+
   const manual = view.sort[0]?.property === f.sortOrder;
   const direction: Direction = view.sort[0]?.direction === "ASC" ? "ASC" : "DESC";
 
@@ -123,7 +140,7 @@ export function TaskBaseView({
         })),
       );
     };
-    body = <TaskBoard columns={columns} cards={cards} editable={editable} onOpen={onOpen} onMove={move} onCreate={onNew} />;
+    body = <TaskBoard columns={columns} cards={cards} editable={editable} onOpen={onOpen} onMove={move} onCreate={onNew} onMenu={onMenu} />;
   } else if (view.type === "tasknotesCalendar" || view.type === "tasknotesMiniCalendar") {
     const options = calendarOptions(view.type, view.options);
     const dateOf = (task: TaskInfo) => {
@@ -137,9 +154,9 @@ export function TaskBaseView({
       const value = day + (current ?? "").slice(10);
       void write([{ path: entry.task.path, change: (text) => setTaskField(text, key, value, config), local: entry.kind === "due" ? { due: value } : { scheduled: value } }]);
     };
-    body = <TaskCalendar tasks={tasks} options={options} editable={editable} dateOf={dateOf} onOpen={onOpen} onToggle={(entry) => toggle(entry.task, entry.kind === "occurrence" ? entry.day : undefined)} onMove={move} />;
+    body = <TaskCalendar tasks={tasks} options={options} editable={editable} dateOf={dateOf} onOpen={onOpen} onToggle={(entry) => toggle(entry.task, entry.kind === "occurrence" ? entry.day : undefined)} onMove={move} onMenu={onMenu} />;
   } else {
-    body = <TaskList groups={groupsOf(tasks, view.groupBy, config)} editable={editable} onOpen={onOpen} onToggle={(task) => toggle(task)} />;
+    body = <TaskList groups={groupsOf(tasks, view.groupBy, config)} editable={editable} onOpen={onOpen} onToggle={(task) => toggle(task)} onMenu={onMenu} />;
   }
 
   return (
@@ -150,6 +167,7 @@ export function TaskBaseView({
         </p>
       )}
       {body}
+      {menu && createPortal(<PopoverMenu anchor={menu.anchor} items={menuItems(menu.path)} onClose={() => setMenu(null)} />, document.body)}
     </TaskConfigContext.Provider>
   );
 }

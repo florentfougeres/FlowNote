@@ -27,6 +27,7 @@ import { pastedUrl, pasteUrlWithTitle } from "./linkTitle";
 import { extractToNote, selectionRange } from "./extract";
 import { reportError } from "../errors";
 import { markdownForClipboard } from "./clipboard";
+import { openNoteContextMenu, pastePlainText } from "./contextMenu";
 import { inlineVaultImages } from "./imageCopies";
 import { schema } from "./schema";
 import { DOMSerializer } from "@tiptap/pm/model";
@@ -97,8 +98,6 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
   markdownCallback.current = onMarkdown;
   const [frontmatter, setFrontmatter] = useState<string | null>(null);
   const [linkRequest, setLinkRequest] = useState<LinkRequest | null>(null);
-  /** ⌘⇧V: the next paste keeps a web address bare. */
-  const plainPaste = useRef(false);
   /** Where a footnote asked from the format bar goes, while its text is typed. */
   const [footnoteRequest, setFootnoteRequest] = useState<LinkRequest | null>(null);
   const [gitPopover, setGitPopover] = useState<{ change: GitChange; x: number; y: number } | null>(null);
@@ -139,7 +138,11 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
       clipboardTextSerializer: (slice) => markdownForClipboard(slice),
       clipboardSerializer: CLIPBOARD_SERIALIZER,
       handleKeyDown: (view, event) => {
-        plainPaste.current = (event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "v";
+        // ⌘⇧V: the clipboard's text without formatting.
+        if ((event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === "v" && view.editable) {
+          pastePlainText(view);
+          return true;
+        }
         // ⌘K on selected text (or in a link): its address.
         if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "k" || !view.editable) return false;
         const target = linkTarget(view.state);
@@ -149,6 +152,7 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         return true;
       },
       handleDOMEvents: {
+        contextmenu: (view, event) => openNoteContextMenu(view, event),
         // A middle click on a link (or a [[link]]) opens its page in a new tab; a web address in the browser.
         auxclick: (view, event) => {
           if (event.button !== 1) return false;
@@ -223,6 +227,8 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         return true;
       },
       handlePaste: (view, event, slice) => {
+        // Without clipboard data, a paste of plain text (pastePlainText): ProseMirror's own, a paragraph per line.
+        if (!event.clipboardData) return false;
         if (event.clipboardData?.files.length) {
           const pos = view.state.selection.from;
           void readFiles(event.clipboardData.files).then((files) => editorRef.current && insertAttachments(editorRef.current, wiring.bridge.current, files, pos));
@@ -237,15 +243,13 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
           return true;
         }
         // A web address pasted alone takes the page's title (⌘⇧V: kept bare).
-        const plain = plainPaste.current;
-        plainPaste.current = false;
         const pasted = pastedUrl(url);
-        if (pasted && selection.empty && !plain && pasteUrlWithTitle(view, pasted, fetchTitle)) return true;
+        if (pasted && selection.empty && pasteUrlWithTitle(view, pasted, fetchTitle)) return true;
         // Cells copied from a spreadsheet, or a CSV, give a table (⌘⇧V: kept as text). Not inside a table or code.
         const text = event.clipboardData?.getData("text/plain") ?? "";
         const fromNote = event.clipboardData?.getData("text/html").includes("data-pm-slice") ?? false;
         const inCell = [...Array(selection.$from.depth).keys()].some((d) => selection.$from.node(d + 1).type.spec.tableRole);
-        const table = plain || fromNote || inCell || selection.$from.parent.type.spec.code ? null : pastedTable(text);
+        const table = fromNote || inCell || selection.$from.parent.type.spec.code ? null : pastedTable(text);
         if (table && insertMarkdownBlocks(view, table)) return true;
         // Plain text (no HTML: a text file, a terminal, Obsidian's source) is read as Markdown.
         // HTML from elsewhere (a web page, Word): one block pasted gives its text only, the line keeps its kind.

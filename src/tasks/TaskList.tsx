@@ -15,7 +15,20 @@ export interface TaskGroup {
  * them (by status, priority…). The round box completes the task or opens it
  * again.
  */
-export function TaskList({ groups, editable, onOpen, onToggle }: { groups: TaskGroup[]; editable: boolean; onOpen: (path: string, newTab: boolean) => void; onToggle: (task: TaskInfo) => void }) {
+export function TaskList({
+  groups,
+  editable,
+  onOpen,
+  onToggle,
+  onMenu,
+}: {
+  groups: TaskGroup[];
+  editable: boolean;
+  onOpen: (path: string, newTab: boolean) => void;
+  onToggle: (task: TaskInfo) => void;
+  /** Right-click on a task: its menu (open, delete). */
+  onMenu: (path: string, event: React.MouseEvent) => void;
+}) {
   const config = useContext(TaskConfigContext);
   const total = groups.reduce((n, g) => n + g.tasks.length, 0);
   if (total === 0) {
@@ -41,7 +54,7 @@ export function TaskList({ groups, editable, onOpen, onToggle }: { groups: TaskG
             {group.tasks.map((task) => {
               const status = config.statuses.find((s) => s.value === task.status);
               return (
-                <div key={task.path} className={task.done ? "task-row done" : "task-row"}>
+                <div key={task.path} className={task.done ? "task-row done" : "task-row"} onContextMenu={(e) => onMenu(task.path, e)}>
                   <button
                     className="task-check"
                     role="checkbox"

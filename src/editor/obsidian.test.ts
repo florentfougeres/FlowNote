@@ -29,6 +29,12 @@ describe("link suggestions", () => {
     expect(linkItems("cli", FILES, true).map((i) => i.path)).toEqual(["Écrits/img/cli.png"]);
   });
 
+  it("finds canvases and bases too, by their name without extension", () => {
+    const files = [...FILES, "Jeux/Real EA FC27.canvas", "Jeux/Matchs.base"];
+    expect(linkItems("ea fc", files, false).map((i) => [i.path, i.title])[0]).toEqual(["Jeux/Real EA FC27.canvas", "Real EA FC27"]);
+    expect(linkItems("match", files, false)[0].path).toBe("Jeux/Matchs.base");
+  });
+
   it("finds notes by their aliases, written as the link's text", () => {
     const aliases = new Map([["Projets.md", ["Chantiers"]]]);
     const [found] = linkItems("chant", FILES, false, aliases);

@@ -69,7 +69,6 @@
   height: 10px;
   border: 2px solid var(--bg);
   opacity: 0;
-  transition: opacity 120ms;
 }
 
 .react-flow__node:hover .canvas-handle,
@@ -463,4 +462,22 @@ iframe.canvas-link-image {
 
 .canvas-video:hover .canvas-play {
   background: #ff0033;
+}
+
+/*
+ * No animation on the board. In WebKit an element fading (a card's handles on
+ * hover, a block handle in a text card) gets a layer of its own, and so does
+ * the text painted over it: a picture taken at the zoom of that moment, then
+ * stretched by the next zoom, blurry until WebKit repaints it.
+ */
+.canvas-board .react-flow__viewport *,
+.canvas-board .react-flow__viewport *::before,
+.canvas-board .react-flow__viewport *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* The board's move and zoom on whole pixels, sharp at any zoom (see useSharpBoard). */
+.canvas-board .react-flow__viewport {
+  transform: var(--board-transform, none) !important;
 }

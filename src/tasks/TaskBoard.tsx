@@ -27,6 +27,7 @@ export function TaskBoard({
   onOpen,
   onMove,
   onCreate,
+  onMenu,
 }: {
   columns: TaskStatus[];
   /** The cards of each column, in display order. */
@@ -37,6 +38,8 @@ export function TaskBoard({
   onMove: (task: TaskInfo, status: string, index: number) => void;
   /** A new task in the column `status`. */
   onCreate?: (status: string) => void;
+  /** Right-click on a task: its menu (open, delete). */
+  onMenu: (path: string, event: React.MouseEvent) => void;
 }) {
   const [drag, setDrag] = useState<Drag | null>(null);
   const [target, setTarget] = useState<{ column: number; index: number } | null>(null);
@@ -125,6 +128,7 @@ export function TaskBoard({
                       onPointerCancel={cancel}
                       onClick={() => !editable && onOpen(t.path, false)}
                       onAuxClick={(event) => event.button === 1 && onOpen(t.path, true)}
+                      onContextMenu={(event) => onMenu(t.path, event)}
                       onKeyDown={(event) => event.key === "Enter" && onOpen(t.path, event.metaKey || event.ctrlKey)}
                     >
                       <TaskSummary task={t} />

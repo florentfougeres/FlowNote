@@ -83,6 +83,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 
 **Canevas**
 - Les canevas d'Obsidian (`Nom.canvas`) : cartes de note, de texte, d'image et de lien (titre et image d'aperçu, miniature des vidéos YouTube), groupes, flèches avec libellés, couleurs
+- Copier, coller et dupliquer des cartes (clavier ou clic droit), d'un canevas à l'autre
 - Écrits exactement comme Obsidian les écrit, pour des diffs Git propres
 
 **Dessins**
@@ -130,7 +131,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Un bouton de la barre de page coupe ou réactive la correction sans changer le correcteur choisi
 
 **Navigation**
-- Recherche de page (`⌘P`), recherche et remplacement dans la note (`⌘F` / `⌘⌥F`), recherche dans tout le vault (`⌘⇧F`) avec des filtres par tag, dossier, propriété ou date de modification (aussi en syntaxe Obsidian : `tag:#projet`, `path:Dossier`, `[statut:fait]`)
+- Recherche de page (`⌘P`, par nom ou par titre), recherche et remplacement dans la note (`⌘F` / `⌘⌥F`), recherche dans tout le vault (`⌘⇧F`) avec des filtres par tag, dossier, propriété ou date de modification (aussi en syntaxe Obsidian : `tag:#projet`, `path:Dossier`, `[statut:fait]`)
 - Fil d'Ariane cliquable, plan de la note (glisser un titre y déplace toute sa section), historique précédent/suivant, onglets retrouvés au lancement
 - **Tags** en arbre dans la barre latérale, avec leurs compteurs
 - **Notes liées** sous chaque note (les pages qui pointent vers elle)

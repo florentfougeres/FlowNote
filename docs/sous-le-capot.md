@@ -62,7 +62,7 @@ Le principe qui guide tout le reste : **le vault Obsidian reste la seule source 
 | Graphe | [d3-force](https://d3js.org/d3-force) | `src/graph/GraphView.tsx` | Disposition du graphe des liens |
 | Animations | [Motion](https://motion.dev) | `src/editor/dragMotion.ts` | Animation du glisser-déposer des blocs |
 | Correcteur | [Grammalecte](https://grammalecte.net) 2.3.0 | `grammar/`, `src-tauri/core/src/grammar.rs` | Grammaire et orthographe françaises |
-| Côté Rust | `serde`, `trash`, `ureq`, `tauri-plugin-dialog` | `src-tauri/` | Échanges JSON, corbeille du système, titre et aperçu d'une page web, sélecteur de dossier |
+| Côté Rust | `serde`, `trash`, `ureq`, `tauri-plugin-dialog`, `tauri-plugin-clipboard-manager` | `src-tauri/` | Échanges JSON, corbeille du système, titre et aperçu d'une page web, sélecteur de dossier, texte du presse-papiers (« Coller sans mise en forme », cartes du canevas) sans la demande de WebKit |
 | Outils | Vite, Vitest + jsdom, oxlint, TypeScript 7 | | Build, tests, lint, types |
 
 Les bibliothèques lourdes (Excalidraw, Mind Elixir, React Flow, Mermaid, flowchart.js, Plotly, Marp, l'impression, les données d'emoji) sont chargées par `import()` dynamique, à la première utilisation : ouvrir une note simple ne les charge pas.

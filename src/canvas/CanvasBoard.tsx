@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   Background,
   ConnectionMode,
@@ -18,14 +18,17 @@ import {
   type Node,
   type NodeChange,
   type NodeProps,
+  type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Icon, type IconName } from "../Icon";
+import { PopoverMenu, type MenuItem } from "../Sidebar";
+import { readClipboardText, writeClipboardText } from "../platform";
 import { NoteEditor } from "../editor/NoteEditor";
 import type { VaultBridge } from "../editor/bridge";
 import { noteTitle } from "../vault/links";
 import { fetchPreview, openUrl, youtubeId, type PagePreview } from "../reading/web";
-import { CANVAS_COLORS, colorValue, newCanvasId, parseCanvas, serializeCanvas, type CanvasData, type CanvasEdge, type CanvasNode, type Side } from "./format";
+import { CANVAS_COLORS, cardsCenter, cloneCards, colorValue, newCanvasId, parseCanvas, pickCards, serializeCanvas, type CanvasData, type CanvasEdge, type CanvasNode, type Side } from "./format";
 
 export interface CanvasBoardProps {
   /** File text the canvas was loaded from; a new value reloads it. */
@@ -284,6 +287,57 @@ const inside = (outer: CanvasNode, inner: CanvasNode) => inner.x >= outer.x && i
 
 const FIT = { padding: 0.2, maxZoom: 1 };
 
+/** Where each canvas was looked at, by path: back to its tab, a canvas shows the same place (for the session). */
+const viewports = new Map<string, Viewport>();
+
+/**
+ * React Flow moves and zooms the board with `translate(…) scale(…)`. A move
+ * by a fraction of a pixel leaves the cards' text blurry until a move lands
+ * on whole pixels; the board is shown on whole pixels (see the mind map's
+ * `keepSharp`), React Flow keeps writing its own transform, overridden in the
+ * style sheet by `--board-transform`.
+ *
+ * In the app (WebKit), the text could stay blurry after a zoom all the same,
+ * painted once and stretched, until the next zoom. So while the board moves,
+ * it is a layer of its own (`will-change`), fast to move and allowed to blur;
+ * once it stops, the layer goes and the zoom changes by a ten-thousandth,
+ * which no one sees: WebKit paints the cards again, at their final size.
+ */
+function useSharpBoard(wrapper: React.RefObject<HTMLDivElement | null>) {
+  useLayoutEffect(() => {
+    const board = wrapper.current?.querySelector<HTMLElement>(".react-flow__viewport");
+    if (!board) return;
+    let settle = 0;
+    /** React Flow's last transform: our own writes to the style are not moves. */
+    let last = "";
+    const show = (flat: string) => board.style.getPropertyValue("--board-transform") !== flat && board.style.setProperty("--board-transform", flat);
+    const update = () => {
+      if (board.style.transform === last) return;
+      const first = last === "";
+      last = board.style.transform;
+      const move = /translate\(([-\d.e]+)px,\s*([-\d.e]+)px\)\s*scale\(([-\d.e]+)\)/.exec(last);
+      if (!move) return show(last || "none");
+      const at = `translate(${Math.round(parseFloat(move[1]))}px, ${Math.round(parseFloat(move[2]))}px)`;
+      const zoom = parseFloat(move[3]);
+      show(`${at} scale(${zoom})`);
+      if (first) return;
+      board.style.willChange = "transform";
+      clearTimeout(settle);
+      settle = window.setTimeout(() => {
+        board.style.willChange = "auto";
+        show(`${at} scale(${zoom * 1.0001})`);
+      }, 150);
+    };
+    const observer = new MutationObserver(update);
+    observer.observe(board, { attributes: true, attributeFilter: ["style"] });
+    update();
+    return () => {
+      observer.disconnect();
+      clearTimeout(settle);
+    };
+  }, [wrapper]);
+}
+
 /** The app's bridge and reader change at every render: the cards get stable ones, so their content is not read again. */
 function useStable(bridge: VaultBridge, readFile: (path: string) => Promise<string>) {
   const latest = useRef({ bridge, readFile });
@@ -327,12 +381,22 @@ function BoardView({ initial, onChange, editable, theme, ...live }: Omit<CanvasB
   nodesRef.current = nodes;
   const [picker, setPicker] = useState<"file" | "link" | null>(null);
   const [labelEdit, setLabelEdit] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [menu, setMenu] = useState<{ anchor: DOMRect; items: MenuItem[] } | null>(null);
   const wrapper = useRef<HTMLDivElement>(null);
+  useSharpBoard(wrapper);
+  const path = useRef(bridge.notePath).current;
+  const [viewport] = useState(() => viewports.get(path));
+  /** The pointer over the board (screen coordinates): where ⌘V puts the cards. */
+  const pointer = useRef<{ x: number; y: number } | null>(null);
+  /** Cards just pasted or duplicated: selected once the board shows them. */
+  const selectNext = useRef<Set<string> | null>(null);
 
   // The board follows the data (after a change, an undo), keeping the selection.
   useEffect(() => {
-    setNodes((current) => toFlowNodes(data, new Set(current.filter((n) => n.selected).map((n) => n.id))));
-    setEdges((current) => toFlowEdges(data, new Set(current.filter((e) => e.selected).map((e) => e.id))));
+    const next = selectNext.current;
+    selectNext.current = null;
+    setNodes((current) => toFlowNodes(data, next ?? new Set(current.filter((n) => n.selected).map((n) => n.id))));
+    setEdges((current) => toFlowEdges(data, next ?? new Set(current.filter((e) => e.selected).map((e) => e.id))));
   }, [data]);
 
   const show = useCallback(
@@ -358,17 +422,14 @@ function BoardView({ initial, onChange, editable, theme, ...live }: Omit<CanvasB
     show(previous);
   };
 
-  // ⌘Z / ⌘⇧Z undo and redo the board's changes, unless typing in a card or a field.
-  const travelRef = useRef(travel);
-  travelRef.current = travel;
+  // ⌘Z / ⌘⇧Z undo and redo the board's changes, ⌘C ⌘X ⌘V ⌘D copy, cut, paste and duplicate cards, unless typing in a card or a field.
+  const keys = useRef<(key: string, shift: boolean) => boolean>(() => false);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "z" || event.altKey) return;
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
       const target = event.target as Element;
       if (target.closest?.("input, textarea, [contenteditable=true]") || (target !== document.body && !wrapper.current?.contains(target))) return;
-      event.preventDefault();
-      if (event.shiftKey) travelRef.current(future, past);
-      else travelRef.current(past, future);
+      if (keys.current(event.key.toLowerCase(), event.shiftKey)) event.preventDefault();
     };
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
@@ -412,6 +473,84 @@ function BoardView({ initial, onChange, editable, theme, ...live }: Omit<CanvasB
     const gone = new Set(nodeIds);
     commit({ ...current, nodes: current.nodes.filter((n) => !gone.has(n.id)), edges: current.edges.filter((e) => !edgeIds.includes(e.id) && !gone.has(e.fromNode) && !gone.has(e.toNode)) });
   };
+  /** The cards on the clipboard, as a canvas file's text (pasted as cards in a canvas, readable elsewhere). */
+  const copy = (ids: string[]) => {
+    if (ids.length === 0) return false;
+    // A clipboard refused (a browser without the permission) copies nothing.
+    writeClipboardText(serializeCanvas(pickCards(dataRef.current, ids))).catch(() => {});
+    return true;
+  };
+  /** Copies of `cards` around `center`, selected. */
+  const place = (cards: CanvasData, center: { x: number; y: number }) => {
+    const copies = cloneCards(cards, center);
+    const current = dataRef.current;
+    selectNext.current = new Set([...copies.nodes, ...copies.edges].map((x) => x.id));
+    // Groups behind the cards, as when added.
+    const groups = copies.nodes.filter((n) => n.type === "group");
+    commit({ ...current, nodes: [...groups, ...current.nodes, ...copies.nodes.filter((n) => n.type !== "group")], edges: [...current.edges, ...copies.edges] });
+  };
+  /** The clipboard pasted at `at` (screen coordinates; the pointer, else the middle of the view): cards copied from a canvas, or text as a text card. */
+  const paste = async (at?: { x: number; y: number }) => {
+    const text = await readClipboardText().catch(() => "");
+    if (!text.trim()) return;
+    const rect = wrapper.current!.getBoundingClientRect();
+    const screen = at ?? pointer.current ?? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    const center = flow.screenToFlowPosition(screen);
+    const cards = text.trimStart().startsWith("{") ? parseCanvas(text) : null;
+    if (cards && cards.nodes.length > 0) place(cards, center);
+    else selectNext.current = new Set([add({ type: "text", width: 250, height: 60, text: text.replace(/\s+$/, "") }, center).id]);
+  };
+  /** Copies of the cards next to them (with their arrows). */
+  const duplicate = (ids: string[]) => {
+    const cards = pickCards(dataRef.current, ids);
+    if (cards.nodes.length === 0) return false;
+    const center = cardsCenter(cards.nodes);
+    place(cards, { x: center.x + 40, y: center.y + 40 });
+    return true;
+  };
+  const cut = (ids: string[]) => {
+    if (!copy(ids)) return false;
+    remove(ids, []);
+    return true;
+  };
+  keys.current = (key, shift) => {
+    const ids = nodesRef.current.filter((n) => n.selected).map((n) => n.id);
+    if (key === "c" && !shift) return copy(ids);
+    if (!editable) return false;
+    if (key === "z") travel(shift ? future : past, shift ? past : future);
+    else if (key === "v" && !shift) void paste();
+    else if (key === "x" && !shift) return cut(ids);
+    else if (key === "d" && !shift) return duplicate(ids);
+    else return false;
+    return true;
+  };
+
+  /** Right-click on a card (or the selection): copy, cut, duplicate, delete. */
+  const cardMenu = (event: React.MouseEvent, ids: string[]) => {
+    event.preventDefault();
+    const items: MenuItem[] = [{ label: "Copier", icon: "copy", run: () => copy(ids) }];
+    if (editable)
+      items.push(
+        { label: "Couper", icon: "copy", run: () => cut(ids) },
+        { label: "Dupliquer", icon: "plus", run: () => duplicate(ids) },
+        { label: "Supprimer", icon: "trash", danger: true, run: () => remove(ids, edges.filter((e) => e.selected).map((e) => e.id)) },
+      );
+    setMenu({ anchor: new DOMRect(event.clientX, event.clientY - 4, 0, 0), items });
+  };
+  /** Right-click on the empty board: paste or add a card there. */
+  const boardMenu = (event: React.MouseEvent | MouseEvent) => {
+    event.preventDefault();
+    if (!editable) return;
+    const at = { x: event.clientX, y: event.clientY };
+    setMenu({
+      anchor: new DOMRect(event.clientX, event.clientY - 4, 0, 0),
+      items: [
+        { label: "Coller", icon: "copy", run: () => void paste(at) },
+        { label: "Ajouter une carte de texte", icon: "text", run: () => setEditing(add({ type: "text", width: 250, height: 60, text: "" }, flow.screenToFlowPosition(at)).id) },
+      ],
+    });
+  };
+
   const group = () => {
     const cards = dataRef.current.nodes.filter((n) => selectedNodes.includes(n.id));
     if (cards.length === 0) return;
@@ -454,6 +593,8 @@ function BoardView({ initial, onChange, editable, theme, ...live }: Omit<CanvasB
           setEditing(add({ type: "text", width: 250, height: 60, text: "" }, at).id);
         }}
         onKeyDown={(event) => event.key === "Escape" && setEditing(null)}
+        onPointerMove={(event) => (pointer.current = { x: event.clientX, y: event.clientY })}
+        onPointerLeave={() => (pointer.current = null)}
       >
         <ReactFlow
           nodes={nodes}
@@ -491,6 +632,18 @@ function BoardView({ initial, onChange, editable, theme, ...live }: Omit<CanvasB
             setEditing(null);
             setPicker(null);
           }}
+          onPaneContextMenu={boardMenu}
+          onNodeContextMenu={(event, node) => {
+            if (editing === node.id) return;
+            // A card outside the selection becomes the selection.
+            const selected = nodesRef.current.filter((n) => n.selected).map((n) => n.id);
+            if (selected.includes(node.id)) return cardMenu(event, selected);
+            setNodes((current) => current.map((n) => ({ ...n, selected: n.id === node.id })));
+            setEdges((current) => current.map((e) => ({ ...e, selected: false })));
+            cardMenu(event, [node.id]);
+          }}
+          onSelectionContextMenu={(event, picked) => cardMenu(event, picked.map((n) => n.id))}
+          onMoveEnd={(_, view) => viewports.set(path, view)}
           onNodeClick={(_, node) => editing && editing !== node.id && setEditing(null)}
           onEdgeDoubleClick={(event, edge) => editable && setLabelEdit({ id: edge.id, x: event.clientX, y: event.clientY })}
           connectionMode={ConnectionMode.Loose}
@@ -501,7 +654,8 @@ function BoardView({ initial, onChange, editable, theme, ...live }: Omit<CanvasB
           zoomOnDoubleClick={false}
           minZoom={0.1}
           maxZoom={2}
-          fitView
+          fitView={!viewport}
+          defaultViewport={viewport}
           fitViewOptions={FIT}
           attributionPosition="top-right"
         >
@@ -569,6 +723,8 @@ function BoardView({ initial, onChange, editable, theme, ...live }: Omit<CanvasB
             )}
           </div>
         )}
+
+        {menu && <PopoverMenu anchor={menu.anchor} items={menu.items} onClose={() => setMenu(null)} />}
 
         {labelEdit && (
           <input

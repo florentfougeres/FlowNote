@@ -106,6 +106,7 @@ export function TaskCalendar({
   onOpen,
   onToggle,
   onMove,
+  onMenu,
 }: {
   tasks: TaskInfo[];
   options: CalendarOptions;
@@ -117,6 +118,8 @@ export function TaskCalendar({
   onToggle: (entry: CalendarEntry) => void;
   /** Moves the date the entry stands for to `day`. */
   onMove: (entry: CalendarEntry, day: string) => void;
+  /** Right-click on a task: its menu (open, delete). */
+  onMenu: (path: string, event: React.MouseEvent) => void;
 }) {
   const config = useContext(TaskConfigContext);
   const today = isoDay();
@@ -175,6 +178,7 @@ export function TaskCalendar({
           setDrag(null);
         }}
         onKeyDown={(e) => e.key === "Enter" && onOpen(entry.task.path, e.metaKey || e.ctrlKey)}
+        onContextMenu={(e) => onMenu(entry.task.path, e)}
       >
         {entry.kind !== "date" && (
           <button className="task-check small" role="checkbox" aria-checked={entry.done} aria-label={entry.done ? "Rouvrir" : "Terminer"} disabled={!editable} onClick={() => onToggle(entry)}>

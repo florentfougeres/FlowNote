@@ -10,7 +10,7 @@ import { linkItems } from "../editor/wikilinks";
 import { commentDate, joinTask, serializeComments, splitTask, type TaskComment } from "./comments";
 import { dueLabel, urgency } from "./agenda";
 import { priorityOf, statusOf, type TaskConfig } from "./config";
-import { actionDay, doneStatus, reopenStatus, setTaskField, taskInfo } from "./task";
+import { actionDay, doneStatus, NEW_TASK_TITLE, reopenStatus, setTaskField, taskInfo } from "./task";
 import { setRecurrence, toggleOccurrence } from "./recurrence";
 import { RecurrenceField } from "./RecurrenceField";
 import { durationLabel, linkText } from "./TaskSummary";
@@ -387,6 +387,45 @@ function ChoiceMenu({ choices, value, editable, className, children, onChange }:
   );
 }
 
+/**
+ * The task's title, typed in place (Enter or leaving the field): the file
+ * name, or the title property when TaskNotes names files by id. A new task
+ * opens with it selected.
+ */
+function TaskTitle({ title, editable, onChange }: { title: string; editable: boolean; onChange: (title: string) => Promise<boolean> }) {
+  const [value, setValue] = useState(title);
+  useEffect(() => setValue(title), [title]);
+  const field = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (editable && title === NEW_TASK_TITLE) field.current?.select();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const commit = async () => {
+    const next = value.trim();
+    if (!next || next === title) return setValue(title);
+    if (!(await onChange(next))) setValue(title);
+  };
+  return (
+    <input
+      ref={field}
+      className="task-title"
+      value={value}
+      readOnly={!editable}
+      spellCheck={false}
+      aria-label="Titre de la tâche"
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => void commit()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          setValue(title);
+          requestAnimationFrame(() => (e.target as HTMLInputElement).blur());
+        }
+      }}
+    />
+  );
+}
+
 export function TaskView({
   path,
   source,
@@ -395,6 +434,7 @@ export function TaskView({
   bridge,
   editable,
   onEditor,
+  onRename,
   config,
 }: {
   path: string;
@@ -406,6 +446,8 @@ export function TaskView({
   bridge: VaultBridge;
   editable: boolean;
   onEditor: (editor: Editor | null) => void;
+  /** Renames the task's file (its title, unless TaskNotes names files by id). */
+  onRename: (title: string) => Promise<boolean>;
   config: TaskConfig;
 }) {
   const initial = useMemo(() => splitTask(source), [source]);
@@ -454,7 +496,15 @@ export function TaskView({
   return (
     <div className="task">
       <header className="task-header">
-        <h1 className="task-title">{info.title}</h1>
+        <TaskTitle
+          title={info.title}
+          editable={editable}
+          onChange={async (title) => {
+            if (config.titleInFilename) return onRename(title);
+            setField(f.title, title);
+            return true;
+          }}
+        />
         <div className="task-meta">
           <ChoiceMenu choices={config.statuses} value={info.status} editable={editable} className={`task-state${info.done ? " done" : ""}`} onChange={(value) => setField(f.status, value)}>
             <span className="board-dot" style={{ background: status.color }} /> {status.label}

@@ -30,9 +30,12 @@ export interface LinkItem extends MenuItem {
 const dismissedKey = new PluginKey<number | null>("wikilinkDismissed");
 const MAX_ITEMS = 30;
 
+const PAGE = /\.(md|canvas|base)$/i;
+
 export function linkItems(query: string, files: string[], embed: boolean, aliases: Map<string, string[]> = new Map()): LinkItem[] {
   const q = normalizeText(query.split("|")[0].trim());
-  const candidates = embed ? files : files.filter((f) => f.endsWith(".md"));
+  // Pages: notes (drawings, mind maps… included), canvases and bases.
+  const candidates = embed ? files : files.filter((f) => PAGE.test(f));
   const rank = (name: string, full = "") => {
     const n = normalizeText(name);
     return q === "" ? 1 : n.startsWith(q) ? 4 : n.includes(q) ? 3 : full && normalizeText(full).includes(q) ? 2 : 0;
@@ -51,7 +54,7 @@ export function linkItems(query: string, files: string[], embed: boolean, aliase
     key: alias ? `${path}|${alias}` : path,
     path,
     alias,
-    title: alias ?? (path.endsWith(".md") ? noteTitle(path) : basename(path)),
+    title: alias ?? (PAGE.test(path) ? noteTitle(path) : basename(path)),
     description: alias ? `${noteTitle(path)} · ${dirname(path) || "Racine du vault"}` : dirname(path) || "Racine du vault",
     icon: alias ? "↪" : path.endsWith(".md") ? "📄" : isImage(path) ? "🖼" : "📎",
   }));

@@ -9,7 +9,7 @@ import { DASHBOARD_SUFFIX, newDashboardFile } from "../dashboardPage/format";
 import { newPresentationFile } from "../presentation/format";
 import { NEW_KANBAN } from "../kanban/format";
 import type { TaskConfig } from "../tasks/config";
-import { newTaskFile, taskFileName } from "../tasks/task";
+import { NEW_TASK_TITLE, newTaskFile, taskFileName } from "../tasks/task";
 import { linkTextFor, newNoteFolder, noteTitle, sanitizeName, subpageFolder, uniquePath, type ObsidianConfig } from "../vault/links";
 import { deletePage, moveFolder, movePage, renameFolder, renamePage, subpagesOf } from "../vault/pageOps";
 import { ownAttachments, readPages } from "../vault/attachments";
@@ -278,6 +278,8 @@ export function usePageOps(ctx: PageOpsContext) {
    */
   const newPage = async (parent: string | null, presetName?: string, inFolder?: string, initialKind?: PageKind) => {
     if (!vault) return;
+    // "Nouvelle tâche" (home, palette): the task opens right away, named in its page.
+    if (initialKind === "task" && !presetName && !parent) return newTask();
     let name = presetName ?? null;
     let kind: PageKind = "note";
     let template: string | undefined;
@@ -332,10 +334,8 @@ export function usePageOps(ctx: PageOpsContext) {
       ctx.setStatus(String(error));
     }
   };
-  const newTask = async (status?: string) => {
-    const title = await ctx.askName("Nouvelle tâche", "");
-    if (title?.trim()) await createTask(title.trim(), status);
-  };
+  /** A task opened right away, its title selected to be typed over in the page. */
+  const newTask = (status?: string) => createTask(NEW_TASK_TITLE, status);
 
   return { createFile, renamePath, renameCurrent, newFolder, renameFolderPath, moveItem, duplicatePage, copyLink, removeFolder, removePage, mergeInto, newPage, newTask };
 }

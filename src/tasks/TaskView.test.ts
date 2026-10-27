@@ -33,6 +33,7 @@ function mount() {
           act(render);
         },
         bridge: { ...NULL_BRIDGE, notePath: "TaskNotes/Tasks/Bouton.md" },
+        onRename: () => Promise.resolve(true),
         editable: true,
         onEditor: () => {},
         config: DEFAULT_TASK_CONFIG,
@@ -56,7 +57,7 @@ const button = (scope: ParentNode, label: string) => [...scope.querySelectorAll(
 describe("task page", () => {
   it("shows the header and the thread", () => {
     const { container } = mount();
-    expect(container.querySelector(".task-title")?.textContent).toBe("Bouton");
+    expect(container.querySelector<HTMLInputElement>(".task-title")?.value).toBe("Bouton");
     expect(container.querySelector(".task-state")?.textContent?.trim()).toBe("À faire");
     expect(container.querySelector(".task-tags .task-tag")?.textContent).toContain("#bug");
     expect(container.querySelectorAll(".comment")).toHaveLength(1);

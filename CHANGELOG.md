@@ -2,6 +2,21 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.27.0] - 2026-10-27
+
+### Ajouté
+- Canevas : copier, couper, coller et dupliquer des cartes (`⌘C`, `⌘X`, `⌘V`, `⌘D`), avec leurs flèches ; clic droit sur une carte (copier, couper, dupliquer, supprimer) et sur le fond (coller, ajouter une carte). Un texte copié ailleurs se colle en carte de texte.
+- « Coller sans mise en forme » : `⌘⇧V` ou clic droit dans une note (menu natif dans l'app de bureau : couper, copier, coller, coller sans mise en forme, tout sélectionner).
+- Tâches : clic droit sur une tâche (liste, tableau, calendrier) pour l'ouvrir ou la supprimer.
+
+### Modifié
+- « Nouvelle tâche » ouvre directement la tâche, sans fenêtre pour son nom : le titre, sélectionné, se tape dans la page et se change à tout moment.
+- Un canevas retrouve sa position et son zoom quand on revient à son onglet.
+- La recherche de page (`⌘P`) trouve les notes par leur titre, et aussi les canevas et les bases.
+
+### Corrigé
+- Canevas : texte des cartes plus net après un zoom (tableau sur des pixels entiers, repeint au repos). Il peut encore rester flou par moments dans l'app de bureau.
+
 ## [0.26.0] - 2026-10-27
 
 ### Ajouté

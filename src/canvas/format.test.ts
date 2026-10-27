@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { colorValue, facingSide, newCanvasId, parseCanvas, serializeCanvas } from "./format";
+import { cardsCenter, cloneCards, colorValue, facingSide, newCanvasId, parseCanvas, pickCards, serializeCanvas } from "./format";
 
 /** A canvas as Obsidian 1.14 writes it. */
 const OBSIDIAN = `{
@@ -48,5 +48,25 @@ describe("canvas files", () => {
     expect(facingSide(at(0, 0), at(0, 300))).toBe("bottom");
     expect(facingSide(at(0, 0), at(-300, 0))).toBe("left");
     expect(newCanvasId()).toMatch(/^[0-9a-f]{16}$/);
+  });
+});
+
+describe("copied cards", () => {
+  const data = parseCanvas(OBSIDIAN)!;
+
+  it("copies the cards with the arrows between them only", () => {
+    const picked = pickCards(data, ["a1", "b2"]);
+    expect(picked.nodes.map((n) => n.id)).toEqual(["a1", "b2"]);
+    expect(picked.edges.map((e) => e.id)).toEqual(["e1"]);
+  });
+
+  it("pastes copies with new ids around a point, arrows following", () => {
+    const picked = pickCards(data, ["a1", "b2"]);
+    const copies = cloneCards(picked, { x: 1000, y: 1000 });
+    expect(copies.nodes.every((n) => !["a1", "b2"].includes(n.id))).toBe(true);
+    expect(cardsCenter(copies.nodes)).toEqual({ x: 1000, y: 1000 });
+    expect(copies.nodes[0]).toMatchObject({ type: "text", text: "# Idée\n\nUne **carte**", width: 250 });
+    expect(copies.edges[0]).toMatchObject({ fromNode: copies.nodes[0].id, toNode: copies.nodes[1].id, label: "détaille" });
+    expect(copies.edges[0].id).not.toBe("e1");
   });
 });

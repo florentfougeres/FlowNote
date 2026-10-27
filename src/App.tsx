@@ -1015,6 +1015,13 @@ export function App() {
     walk(tree);
     return found;
   }, [tree]);
+  /** The titles found by ⌘P besides the file names (the open page's from its text). */
+  const openPath = note?.path;
+  const switcherTitles = useMemo(() => {
+    const found = new Map([...treeTitles].map(([path, title]) => [path, [title]]));
+    if (openPath && liveTitle) found.set(openPath, [liveTitle]);
+    return found;
+  }, [treeTitles, openPath, liveTitle]);
   /** How a page is named in the tabs: its title, or its file name (setting of the sidebar). */
   const shownName = (path: string) =>
     taskViewTitle(taskConfig, path) ?? (settings.showTitles ? ((note?.path === path ? liveTitle : treeTitles.get(path)) ?? noteTitle(path)) : noteTitle(path));
@@ -1545,6 +1552,7 @@ export function App() {
                       bridge={bridge}
                       editable={!hasConflictMarkers(note.disk) && !reading}
                       onEditor={setEditor}
+                      onRename={renameCurrent}
                       config={taskConfig}
                     />
                   ) : rawMode ? (
@@ -1720,7 +1728,7 @@ export function App() {
         />
       )}
       {modal === "switcher" && (
-        <QuickSwitcher files={files} iconOf={pageIconFor} onOpen={(path) => void select(path)} onCreate={(name) => void newPage(null, name)} onCommands={() => setModal("palette")} onClose={() => setModal(null)} />
+        <QuickSwitcher files={files} titles={switcherTitles} iconOf={pageIconFor} onOpen={(path) => void select(path)} onCreate={(name) => void newPage(null, name)} onCommands={() => setModal("palette")} onClose={() => setModal(null)} />
       )}
       {modal === "palette" && <CommandPalette commands={paletteCommands()} onClose={() => setModal(null)} />}
       {modal === "search" && (

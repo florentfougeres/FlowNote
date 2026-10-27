@@ -350,7 +350,7 @@ export const SplitPane = memo(function SplitPane({
           </div>
         )}
         {task ? (
-          <TaskView key={key} path={path} source={page.loaded} markdown={page.markdown} onMarkdown={onMarkdown} bridge={bridge} editable={editable} onEditor={setEditor} config={tasks} />
+          <TaskView key={key} path={path} source={page.loaded} markdown={page.markdown} onMarkdown={onMarkdown} bridge={bridge} editable={editable} onEditor={setEditor} onRename={(title) => onRenameRow(path, title)} config={tasks} />
         ) : (
           <NoteEditor key={key} source={page.loaded} onMarkdown={onMarkdown} bridge={bridge} editable={editable} hiddenProperties={["icon"]} onEditor={setEditor} frontmatterControl={frontmatter} titleHeading={!presentation} gitBase={gitBase} />
         )}
