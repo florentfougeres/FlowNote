@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { keys } from "./keys";
 import type { Editor } from "@tiptap/core";
-import { clearFind, findKey, findState, findStep, replaceAll, replaceCurrent, selectCurrent, setFindQuery } from "./editor/find";
+import { clearFind, findKey, findState, findStep, replaceAll, replaceCurrent, reveal, selectCurrent, setFindQuery } from "./editor/find";
 import { Icon } from "./Icon";
 
 export interface FindRequest {
@@ -38,9 +38,11 @@ export function FindBar({ editor, request, onClose }: { editor: Editor | null; r
       const { matches } = findState(live.state);
       const target = Math.min(request.occurrence, matches.length - 1);
       if (target >= 0) live.view.dispatch(live.state.tr.setMeta(findKey, { current: target }).setMeta("addToHistory", false));
-      findStep(live.view, 1);
-      findStep(live.view, -1);
+      // Opening the note sets its scroll position on the next frames (top, or where its tab was): go to the match after
+      // that, at once (a smooth scroll is cut short while the page is still being laid out).
+      requestAnimationFrame(() => requestAnimationFrame(() => !live.isDestroyed && reveal(live.view, true)));
     }
+    rerender();
   }, [live, query, caseSensitive, request.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Counter follows edits made while the bar is open.

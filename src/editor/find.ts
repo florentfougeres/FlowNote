@@ -94,14 +94,14 @@ export function setFindQuery(view: EditorView, query: string, caseSensitive: boo
   reveal(view);
 }
 
-/** Scrolls the current match into view without moving the focus out of the find field. */
-function reveal(view: EditorView) {
+/** Scrolls the current match into view without moving the focus out of the find field (at once with `instant`). */
+export function reveal(view: EditorView, instant = false) {
   const { matches, current } = findState(view.state);
   const match = matches[current];
   if (!match) return;
   const dom = view.domAtPos(match.from).node;
   const element = dom instanceof Element ? dom : dom.parentElement;
-  element?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  element?.scrollIntoView?.({ block: "center", behavior: instant ? "instant" : "smooth" });
 }
 
 export function findStep(view: EditorView, direction: 1 | -1) {
