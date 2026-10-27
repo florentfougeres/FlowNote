@@ -52,14 +52,17 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Titres, listes, tâches, citations, callouts Obsidian (`> [!note]`), admonitions HedgeDoc (`:::info`), toggles (callouts repliables), séparateurs
 - Menu `/` pour insérer ou transformer un bloc, raccourcis Markdown à la frappe (`#`, `-`, `[]`, `>`, ```` ``` ````)
 - Poignée de bloc : glisser-déposer avec imbrication, dupliquer, transformer, supprimer ; `⌥↑` / `⌥↓` déplacent le bloc
+- **Extraire vers une nouvelle note** la sélection, un bloc ou la section d'un titre, remplacés par un lien `[[…]]`
 - Sommaire : `[TOC]` (comme HedgeDoc) affiche les titres de la note, `/sommaire` l'insère
 - **Barre de mise en forme** sur le texte sélectionné : gras, italique, souligné (`<u>`, lisible dans Obsidian), barré, fluo, code, lien (`⌘K`), note de bas de page, gomme
 - **Fluo en couleur** (`==🟢vert==`, rouge, bleu, jaune, violet), modifiable d'un clic sur le crayon
-- Liens : `⌘K` sur une sélection, une URL collée sur du texte sélectionné, une adresse tapée devient cliquable
+- Liens : `⌘K` sur une sélection, une URL collée sur du texte sélectionné, une adresse tapée devient cliquable ; une adresse collée seule prend le titre de sa page (`[Titre](url)`, `⌘⇧V` pour l'adresse brute)
+- **Aperçu au survol** d'un lien vers une note : la note, le titre ou le bloc visé, dans une petite fenêtre
 - **Niveau des titres** dans la marge (un clic en choisit un autre, `⌘⌥1` … `⌘⌥6`)
 - **HTML** dans les notes affiché mis en page (blocs, texte entouré de balises, images), sans ses scripts
 - Collage : le texte simple est lu comme du Markdown ; un seul bloc collé (une ligne d'une page web) garde le type de la ligne où il arrive
 - **Colonnes de blocs** (`/colonnes`) : des blocs côte à côte, écrits en callouts `[!multi-column]` et `[!blank]` (convention des snippets CSS de colonnes d'Obsidian ; sans snippet, des callouts empilés)
+- Images redimensionnées en tirant leur coin (largeur écrite comme Obsidian, `![[image.png|320]]`), agrandies d'un double-clic ; vidéos **YouTube** et **Vimeo** (`![](https://youtu.be/…)`)
 - Tableaux éditables avec poignées de lignes et de colonnes (insérer, déplacer, aligner, supprimer) ; taille choisie dans une grille à la création
 - Blocs de code avec coloration syntaxique et autocomplétion du langage, diagrammes **Mermaid**, formules mathématiques **KaTeX** (`$x^2$` en ligne, `$$…$$` en bloc, avec aperçu en direct), emoji (`:calendrier`), date du jour (`/date`)
 - **Organigrammes** [flowchart.js](https://flowchart.js.org) (blocs ```` ```flow ````, comme HedgeDoc), avec un éditeur visuel : étapes, formes et flèches sans écrire la syntaxe

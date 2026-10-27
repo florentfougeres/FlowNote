@@ -2,7 +2,7 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [0.24.0] - 2026-10-27
 
 ### Ajouté
 - Aperçu au survol : une demi-seconde sur un lien vers une note montre la note (ou le titre, le bloc visé ; un dessin, une mind map, une image) dans une petite fenêtre qui défile, son titre l'ouvre.
