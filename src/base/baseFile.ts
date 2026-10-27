@@ -95,6 +95,8 @@ export interface BaseView {
   dateProperty: string | null;
   /** Gallery view: the property holding the cover image (else the note's first image). */
   image: string | null;
+  /** The view as written, for the options of other views (TaskNotes' calendar…). Read only. */
+  options: Record<string, unknown>;
 }
 
 export interface BaseModel {
@@ -214,6 +216,7 @@ export function parseBase(text: string): BaseFile {
       rowOrder: (Array.isArray(v?.rowOrder) ? v.rowOrder : []).filter((p): p is string => typeof p === "string"),
       dateProperty: typeof v?.dateProperty === "string" ? propertyOf(v.dateProperty) : null,
       image: typeof v?.image === "string" ? propertyOf(v.image) : null,
+      options: v && typeof v === "object" ? v : {},
     };
   });
   const flownote = (root.flownote as { properties?: Record<string, { type?: string; options?: { value?: unknown; color?: string }[] }> }) ?? {};
@@ -242,7 +245,7 @@ export function parseBase(text: string): BaseFile {
 }
 
 export function defaultView(type: string, name: string, order: string[]): BaseView {
-  return { type, name, order, sort: [], columnSize: {}, filters: [], otherFilters: 0, where: [], groupBy: null, summaries: {}, rowOrder: [], dateProperty: null, image: null };
+  return { type, name, order, sort: [], columnSize: {}, filters: [], otherFilters: 0, where: [], groupBy: null, summaries: {}, rowOrder: [], dateProperty: null, image: null, options: {} };
 }
 
 /** A new base: its rows are the notes of `folder`. */

@@ -166,6 +166,11 @@ const SHOTS = {
     await nav(page, "Tâches");
     await wait(page, 1500);
   },
+  "taches-agenda": async (page) => {
+    await expand(page, "TaskNotes");
+    await expand(page, "Views");
+    await openPage(page, "agenda-default", 1500);
+  },
   "taches-tableau": async (page) => {
     await expand(page, "TaskNotes");
     await expand(page, "Views");

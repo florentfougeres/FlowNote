@@ -3,7 +3,7 @@
  * freelance designer's vault that shows every feature. Dates are written
  * relative to today, so due dates and calendars stay current: `{{J+3}}` is
  * in three days (yyyy-mm-dd, in names too), `{{D-2}}` two days ago
- * (dd/mm/yyyy, for ticket comments). Obsidian's own `{{date}}` is left alone.
+ * (dd/mm/yyyy, for task comments). Obsidian's own `{{date}}` is left alone.
  */
 const RAW = import.meta.glob<string>(["./demo/vault/**/*", "./demo/vault/.obsidian/*"], { query: "?raw", import: "default", eager: true });
 

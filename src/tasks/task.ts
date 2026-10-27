@@ -44,7 +44,13 @@ export interface TaskInfo {
   timeEstimate: number | null;
   created: string | null;
   completed: string | null;
+  /** RRULE (`DTSTART:20261020;FREQ=WEEKLY;BYDAY=MO`), null for a one-off task. */
   recurrence: string | null;
+  /** The next occurrence follows the scheduled dates, or the last completion. */
+  recurrenceAnchor: "scheduled" | "completion";
+  /** Days (`YYYY-MM-DD`) of the occurrences done, and skipped. */
+  completeInstances: string[];
+  skippedInstances: string[];
   /** Manual position (TaskNotes' rank, compared as text), null when never placed. */
   order: string | null;
   /** Number of comments (replies included). */
@@ -110,6 +116,9 @@ export function taskInfo(path: string, markdown: string, config: TaskConfig): Ta
     created: textOf(values[f.dateCreated]),
     completed: textOf(values[f.completedDate]),
     recurrence: textOf(values[f.recurrence]),
+    recurrenceAnchor: textOf(values[f.recurrenceAnchor]) === "completion" ? "completion" : "scheduled",
+    completeInstances: list(values[f.completeInstances]).map((d) => d.slice(0, 10)),
+    skippedInstances: list(values[f.skippedInstances]).map((d) => d.slice(0, 10)),
     order: textOf(values[f.sortOrder]),
     comments: (markdown.match(/^(?:>[ \t]?)+\[!comment\]/gim) ?? []).length,
     checklist: { done: checks.filter((c) => c[1] !== " ").length, total: checks.length },
@@ -191,4 +200,14 @@ export function setTaskField(markdown: string, key: string, value: PropertyValue
 /** The first status marked as completed. */
 export function doneStatus(config: TaskConfig): string {
   return config.statuses.find((s) => s.done)?.value ?? "done";
+}
+
+/** The status of a task opened again: the default one, unless it means done. */
+export function reopenStatus(config: TaskConfig): string {
+  return statusOf(config, config.defaultStatus).done ? (config.statuses.find((s) => !s.done && s.value !== "none")?.value ?? "open") : config.defaultStatus;
+}
+
+/** The day a recurring task's round box completes: its scheduled occurrence, or today when the rule follows completions (as TaskNotes). */
+export function actionDay(task: TaskInfo, today = isoDay()): string {
+  return task.recurrenceAnchor !== "completion" && task.scheduled ? task.scheduled.slice(0, 10) : today;
 }

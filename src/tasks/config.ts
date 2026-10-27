@@ -22,7 +22,7 @@ export interface TaskPriority {
 }
 
 /** The task fields FlowNote reads and writes, by their TaskNotes name. */
-export const TASK_FIELDS = ["title", "status", "priority", "due", "scheduled", "contexts", "projects", "timeEstimate", "completedDate", "dateCreated", "dateModified", "recurrence", "completeInstances", "blockedBy", "sortOrder"] as const;
+export const TASK_FIELDS = ["title", "status", "priority", "due", "scheduled", "contexts", "projects", "timeEstimate", "completedDate", "dateCreated", "dateModified", "recurrence", "recurrenceAnchor", "completeInstances", "skippedInstances", "blockedBy", "sortOrder"] as const;
 export type TaskField = (typeof TASK_FIELDS)[number];
 
 export interface TaskConfig {
@@ -70,7 +70,9 @@ export const DEFAULT_TASK_CONFIG: TaskConfig = {
     dateCreated: "dateCreated",
     dateModified: "dateModified",
     recurrence: "recurrence",
+    recurrenceAnchor: "recurrence_anchor",
     completeInstances: "complete_instances",
+    skippedInstances: "skipped_instances",
     blockedBy: "blockedBy",
     sortOrder: "tasknotes_manual_order",
   },

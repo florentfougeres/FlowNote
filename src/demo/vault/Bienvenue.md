@@ -37,7 +37,7 @@ Voici le carnet de Camille Roux, qui conçoit des sites et des identités visuel
 - [[Réunions]] : des comptes rendus, créés depuis le modèle [[Réunion]]
 - [[Voyages.base|Voyages]] : une seconde base, côté perso
 
-Et dans la barre latérale : **Tâches** (les demandes des clients et les tâches du studio, au format du plugin TaskNotes : en liste groupée par statut, ou en tableau dans [[TaskNotes/Views/kanban-default.base|le tableau des tâches]]), **Lectures** (la veille à lire), **Graphe** (les liens entre toutes ces notes) et, sous les pages, les **Tags** en arbre.
+Et dans la barre latérale : **Tâches** (les demandes des clients et les tâches du studio, au format du plugin TaskNotes : en liste groupée par statut, ou en tableau dans [[TaskNotes/Views/kanban-default.base|le tableau des tâches]] ; [[TaskNotes/Views/agenda-default.base|l'agenda]] et [[TaskNotes/Views/calendar-default.base|le calendrier]] montrent les tâches récurrentes, comme « Arroser les plantes du studio »), **Lectures** (la veille à lire), **Graphe** (les liens entre toutes ces notes) et, sous les pages, les **Tags** en arbre.
 
 ## À essayer
 

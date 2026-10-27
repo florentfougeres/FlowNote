@@ -77,7 +77,7 @@ import { TabBar, type Tab } from "./TabBar";
 import { joinTab as joinTabs, nextPageTab, readSavedTabs, restoredTabs, saveTabs, separateTab as separateTabs, splitOf as splitIn, swapReading, tabsToSave, withReading, withSplit } from "./tabs";
 import { Dashboard } from "./Dashboard";
 import { TaskView } from "./tasks/TaskView";
-import { readTaskConfig } from "./tasks/config";
+import { readTaskConfig, type TaskConfig } from "./tasks/config";
 import { isTaskMarkdown, tasksOf } from "./tasks/task";
 import { defaultViewFile } from "./tasks/views";
 import { isPresentationMarkdown } from "./presentation/format";
@@ -802,7 +802,7 @@ export function App() {
   });
 
   /** Opens a TaskNotes view (`TaskNotes/Views/*.base`), created as the plugin writes it when missing. */
-  const openTasks = async (view: "tasks" | "kanban", newTabRequested: boolean) => {
+  const openTasks = async (view: keyof TaskConfig["views"], newTabRequested: boolean) => {
     const path = taskConfig.views[view];
     if (!vault) return;
     if (!filesRef.current.includes(path)) {
@@ -1271,6 +1271,8 @@ export function App() {
       command("home", "Ouvrir l'accueil", "Vues", () => openView(null, false), "home"),
       command("tasks", "Ouvrir les tâches", "Vues", () => void openTasks("tasks", false), "task"),
       command("taskBoard", "Ouvrir le tableau des tâches", "Vues", () => void openTasks("kanban", false), "board"),
+      command("taskAgenda", "Ouvrir l'agenda des tâches", "Vues", () => void openTasks("agenda", false), "list"),
+      command("taskCalendar", "Ouvrir le calendrier des tâches", "Vues", () => void openTasks("calendar", false), "calendar"),
       command("readingList", "Ouvrir les lectures", "Vues", () => openView(READING_VIEW, false), "bookmark"),
       command("graph", "Ouvrir le graphe", "Vues", () => openView(GRAPH_VIEW, false), "graph"),
       command("docs", "Ouvrir la documentation", "Vues", () => openView(DOCS_VIEW, false), "book"),
@@ -1457,7 +1459,7 @@ export function App() {
       taskPaths={taskPaths}
       hidden={sidebarHidden}
       selected={note?.path}
-      view={activePath === null ? "home" : activePath === taskConfig.views.tasks || activePath === taskConfig.views.kanban ? "tasks" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
+      view={activePath === null ? "home" : Object.values(taskConfig.views).includes(activePath) ? "tasks" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
       liveIcon={sidebarLiveIcon}
       showTitles={settings.showTitles}
       gitChanges={vault.git ? gitChanges : null}

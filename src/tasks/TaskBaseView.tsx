@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import type { BaseView as View } from "../base/baseFile";
-import { setNoteProperty, type BaseRow } from "../base/rows";
+import { cellValue, setNoteProperty, type BaseRow } from "../base/rows";
 import type { Vault } from "../vault/vault";
 import { boardColumns, planMove, sortCards, type Direction } from "./board";
 import { priorityOf, statusOf, type TaskConfig } from "./config";
-import { doneStatus, setTaskField, taskInfo, type TaskInfo } from "./task";
+import { actionDay, doneStatus, reopenStatus, setTaskField, taskInfo, type TaskInfo } from "./task";
+import { toggleOccurrence } from "./recurrence";
+import { calendarOptions, TaskCalendar, type CalendarEntry } from "./TaskCalendar";
 import { TaskBoard } from "./TaskBoard";
 import { TaskList, type TaskGroup } from "./TaskList";
 import { TaskConfigContext } from "./TaskSummary";
@@ -28,8 +30,9 @@ const VIEW_NAMES: Record<string, string> = {
 export const taskViewName = (name: string) => VIEW_NAMES[name] ?? name;
 
 /**
- * A view of a TaskNotes `.base` file: the task list (`tasknotesTaskList`) or
- * the kanban (`tasknotesKanban`). The rows are those of the base, filtered
+ * A view of a TaskNotes `.base` file: the task list (`tasknotesTaskList`),
+ * the kanban (`tasknotesKanban`), the calendar and agenda
+ * (`tasknotesCalendar`) or the mini calendar (`tasknotesMiniCalendar`). The rows are those of the base, filtered
  * and sorted as its view says; changes are written to the tasks the way
  * TaskNotes writes them (status, completion date, rank).
  */
@@ -82,9 +85,14 @@ export function TaskBaseView({
     onChanged();
   };
 
-  const toggle = (task: TaskInfo) => {
-    const reopen = statusOf(config, config.defaultStatus).done ? (config.statuses.find((s) => !s.done && s.value !== "none")?.value ?? "open") : config.defaultStatus;
-    const status = task.done ? reopen : doneStatus(config);
+  /** Completes a task, or opens it again; for a recurring task, its occurrence of `day` (its next one by default). */
+  const toggle = (task: TaskInfo, day?: string) => {
+    if (task.recurrence && !task.done) {
+      const at = day ?? actionDay(task);
+      void write([{ path: task.path, change: (text) => toggleOccurrence(text, taskInfo(task.path, text, config), at, config), local: {} }]);
+      return;
+    }
+    const status = task.done ? reopenStatus(config) : doneStatus(config);
     void write([{ path: task.path, change: (text) => setTaskField(text, f.status, status, config), local: { status, done: !task.done } }]);
   };
 
@@ -116,8 +124,22 @@ export function TaskBaseView({
       );
     };
     body = <TaskBoard columns={columns} cards={cards} editable={editable} onOpen={onOpen} onMove={move} onCreate={onNew} />;
+  } else if (view.type === "tasknotesCalendar" || view.type === "tasknotesMiniCalendar") {
+    const options = calendarOptions(view.type, view.options);
+    const dateOf = (task: TaskInfo) => {
+      const row = rows.find((r) => r.path === task.path);
+      const value = row && options.dateProperty ? cellValue(row, options.dateProperty) : null;
+      return typeof value === "string" ? value : null;
+    };
+    const move = (entry: CalendarEntry, day: string) => {
+      const key = entry.kind === "due" ? f.due : f.scheduled;
+      const current = entry.kind === "due" ? entry.task.due : entry.task.scheduled;
+      const value = day + (current ?? "").slice(10);
+      void write([{ path: entry.task.path, change: (text) => setTaskField(text, key, value, config), local: entry.kind === "due" ? { due: value } : { scheduled: value } }]);
+    };
+    body = <TaskCalendar tasks={tasks} options={options} editable={editable} dateOf={dateOf} onOpen={onOpen} onToggle={(entry) => toggle(entry.task, entry.kind === "occurrence" ? entry.day : undefined)} onMove={move} />;
   } else {
-    body = <TaskList groups={groupsOf(tasks, view.groupBy, config)} editable={editable} onOpen={onOpen} onToggle={toggle} />;
+    body = <TaskList groups={groupsOf(tasks, view.groupBy, config)} editable={editable} onOpen={onOpen} onToggle={(task) => toggle(task)} />;
   }
 
   return (
@@ -127,7 +149,6 @@ export function TaskBaseView({
           {error}
         </p>
       )}
-      {view.type === "tasknotesCalendar" || view.type === "tasknotesMiniCalendar" ? <p className="dash-muted task-view-note">Le calendrier de TaskNotes n'est pas encore affiché par FlowNote : voici ses tâches en liste.</p> : null}
       {body}
     </TaskConfigContext.Provider>
   );

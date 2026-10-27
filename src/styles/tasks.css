@@ -880,3 +880,271 @@ body:has(.board.dragging) {
   background: var(--hover);
   color: var(--text);
 }
+
+/* ---- Task calendar, week and agenda (TaskNotes' calendar views) ---- */
+
+.task-calendar .db-calendar-bar {
+  flex-wrap: wrap;
+}
+
+.task-cal-modes {
+  margin-left: auto;
+}
+
+.task-cal-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  box-shadow:
+    0 0 0 1px var(--db-line, var(--border)),
+    0 1px 2px rgba(0, 0, 0, 0.04);
+  font-size: 12.5px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.task-cal-item:hover {
+  background: var(--hover);
+}
+
+.task-cal-item.dragging {
+  opacity: 0.4;
+}
+
+.task-cal-item.board-ghost {
+  position: fixed;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: var(--shadow-menu);
+}
+
+.task-cal-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-cal-item.done .task-cal-title {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.task-cal-item.late .task-cal-title {
+  color: var(--danger);
+}
+
+.task-cal-kind {
+  flex: none;
+  font-size: 10px;
+}
+
+.task-check.small {
+  width: 13px;
+  height: 13px;
+  margin-top: 0;
+  border-width: 1.2px;
+}
+
+.task-cal-item.done .task-check {
+  border-color: #1a7f37;
+  background: #1a7f37;
+}
+
+/* A week: seven tall days. */
+.task-week .db-calendar-day {
+  min-height: 320px;
+}
+
+.db-calendar-weekday.today {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* The agenda: a day per section. */
+.task-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 32px;
+}
+
+.task-agenda-day {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-agenda-day > header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 2px 4px;
+  border-bottom: 0.5px solid var(--border);
+  font-size: 13px;
+}
+
+.task-agenda-day > header strong::first-letter {
+  text-transform: uppercase;
+}
+
+.task-agenda-day > header span {
+  color: var(--muted);
+}
+
+.task-agenda-day.today > header strong {
+  color: var(--accent);
+}
+
+.task-agenda .task-cal-item {
+  padding: 6px 10px;
+  font-size: 13.5px;
+}
+
+.task-agenda-empty {
+  margin: 2px 2px 0;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+/* ---- Recurrence of a task ---- */
+
+.task-recurrence {
+  position: relative;
+  display: inline-flex;
+}
+
+.task-recurrence-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--menu-material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  box-shadow: var(--shadow-menu);
+  font-size: 13px;
+}
+
+.task-recurrence-menu.to-left {
+  left: auto;
+  right: 0;
+}
+
+.task-recurrence .task-chip-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-align: left;
+}
+
+.task-recurrence-presets {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 6px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.task-recurrence-presets button {
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.task-recurrence-presets button:hover {
+  background: var(--hover);
+}
+
+.task-recurrence-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 8px 4px;
+}
+
+.task-recurrence-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.task-recurrence-row input {
+  width: 44px;
+  padding: 3px 6px;
+  text-align: center;
+}
+
+.task-recurrence-row .segmented button {
+  padding: 3px 7px;
+  font-size: 12px;
+}
+
+.task-recurrence-days {
+  display: flex;
+  gap: 4px;
+}
+
+.task-recurrence-days button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 12px;
+}
+
+.task-recurrence-days button.selected {
+  color: white;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.task-recurrence-follow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.task-recurrence-custom .primary {
+  align-self: stretch;
+}
+
+/* In a week or a month the title goes under the box and icons, on the whole width (three lines at most). */
+.task-calendar .db-calendar-grid .task-cal-item {
+  flex-wrap: wrap;
+  row-gap: 3px;
+}
+
+.task-calendar .db-calendar-grid .task-cal-kind {
+  margin-left: auto;
+}
+
+.task-calendar .db-calendar-grid .task-cal-title {
+  flex-basis: 100%;
+  order: 1;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.3;
+}

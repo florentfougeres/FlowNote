@@ -9,7 +9,9 @@ import { resolveLink } from "../vault/links";
 import { commentDate, joinTask, serializeComments, splitTask, type TaskComment } from "./comments";
 import { dueLabel, urgency } from "./agenda";
 import { priorityOf, statusOf, type TaskConfig } from "./config";
-import { doneStatus, setTaskField, taskInfo } from "./task";
+import { actionDay, doneStatus, isoDay, reopenStatus, setTaskField, taskInfo } from "./task";
+import { setRecurrence, toggleOccurrence } from "./recurrence";
+import { RecurrenceField } from "./RecurrenceField";
 import { durationLabel, linkText } from "./TaskSummary";
 import { DatePicker } from "../DatePicker";
 
@@ -361,15 +363,17 @@ export function TaskView({
     onMarkdown(joinTask(head.current, section.current));
   };
   /** Sets a field the way TaskNotes does (modification date, completion date). */
-  const setField = (key: string, value: PropertyValue | undefined) => {
+  const setField = (key: string, value: PropertyValue | undefined) => changeFrontmatter((text) => setTaskField(text, key, value, config));
+  /** Changes the front matter as a whole note's text (the helpers work on notes). */
+  const changeFrontmatter = (change: (text: string) => string) => {
     const c = control.current;
     if (!c) return;
     const raw = c.get();
-    const next = setTaskField(raw ? `${raw}\n` : "", key, value, config).replace(/\n$/, "");
-    c.set(next);
+    c.set(change(raw ? `${raw}\n` : "").replace(/\n$/, ""));
   };
-  const reopen = statusOf(config, config.defaultStatus).done ? (config.statuses.find((s) => !s.done && s.value !== "none")?.value ?? "open") : config.defaultStatus;
-  const setDone = (done: boolean) => setField(f.status, done ? doneStatus(config) : reopen);
+  /** A recurring task's next occurrence to complete. */
+  const occurrence = info.recurrence ? actionDay(info) : null;
+  const setDone = (done: boolean) => setField(f.status, done ? doneStatus(config) : reopenStatus(config));
   const status = statusOf(config, info.status || null);
   const priority = priorityOf(config, info.priority);
   const count = (list: TaskComment[]): number => list.reduce((n, c) => n + 1 + count(c.replies), 0);
@@ -394,11 +398,16 @@ export function TaskView({
             {info.checklist.total > 0 ? ` · ${info.checklist.done}/${info.checklist.total} cases cochées` : ""}
           </span>
           <span className="cell-spacer" />
-          {editable && (
-            <button className={info.done ? "" : "task-close"} onClick={() => setDone(!info.done)}>
-              {info.done ? "Rouvrir" : "Terminer la tâche"}
-            </button>
-          )}
+          {editable &&
+            (occurrence && !info.done ? (
+              <button className="task-close" onClick={() => changeFrontmatter((text) => toggleOccurrence(text, info, occurrence, config))}>
+                Fait pour {occurrence === isoDay() ? "aujourd'hui" : `le ${displayDate(occurrence)}`}
+              </button>
+            ) : (
+              <button className={info.done ? "" : "task-close"} onClick={() => setDone(!info.done)}>
+                {info.done ? "Rouvrir" : "Terminer la tâche"}
+              </button>
+            ))}
         </div>
         <div className="task-fields">
           <div className="task-field">
@@ -441,14 +450,18 @@ export function TaskView({
               }}
             />
           </div>
-          {info.recurrence && (
-            <div className="task-field">
-              <span className="task-field-label">Récurrence</span>
-              <span className="task-tag">
-                <Icon name="repeat" size={11} /> {info.recurrence.replace(/^DTSTART:[^;]*;?/, "")}
-              </span>
-            </div>
-          )}
+          <div className="task-field">
+            <span className="task-field-label">Répéter</span>
+            <RecurrenceField
+              key={info.recurrence ?? ""}
+              rule={info.recurrence}
+              anchor={info.recurrenceAnchor}
+              start={new Date(`${(info.scheduled ?? isoDay()).slice(0, 10)}T12:00:00`)}
+              done={info.completeInstances.length}
+              editable={editable}
+              onChange={(rule, anchor) => changeFrontmatter((text) => setRecurrence(text, rule, anchor, config))}
+            />
+          </div>
         </div>
       </header>
 

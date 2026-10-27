@@ -465,7 +465,26 @@ Les photos du fournil pour la page « La maison ».
 > Marc veut bien être pris en photo, mais pas de face !
 ```
 
-Les commentaires sont un ajout de FlowNote, que TaskNotes laisse tels quels. Le calendrier, l'agenda et la récurrence de TaskNotes arrivent bientôt ; en attendant, leurs vues s'affichent en liste.
+Les commentaires sont un ajout de FlowNote, que TaskNotes laisse tels quels.
+
+#### Agenda et calendrier
+
+« Ouvrir l'agenda des tâches » et « Ouvrir le calendrier des tâches » (palette `⌘⇧P`) ouvrent les vues de TaskNotes (`agenda-default.base`, `calendar-default.base`). Le calendrier s'affiche par **mois**, par **semaine** ou en **agenda** (les jours qui viennent, en liste ; les tâches en retard s'y affichent aussi aujourd'hui). Une tâche y paraît à son échéance (📅) et à sa date prévue (⏳), une tâche récurrente à chacune de ses occurrences (🔁). Le rond la termine ; glisser une tâche sur un autre jour déplace cette date.
+
+![[taches-agenda.webp]]
+
+#### Tâches récurrentes
+
+Le champ **Répéter** de la tâche choisit une règle : tous les jours, toutes les semaines (certains jours), du lundi au vendredi, tous les mois, tous les ans, ou tous les n jours, semaines, mois ou ans. « Compter à partir de la dernière fois faite » fait partir la suivante du jour où la tâche a été faite plutôt que de la date prévue.
+
+« Fait pour aujourd'hui » (ou le rond, dans les listes) termine l'occurrence : son jour est noté, et la date prévue passe à la suivante (l'échéance suit, avec le même écart). La tâche reste à faire pour les fois suivantes. Dans le fichier, comme dans TaskNotes :
+
+```yaml
+scheduled: 2026-11-03
+recurrence: DTSTART:20261020;FREQ=WEEKLY
+complete_instances:
+  - 2026-10-27
+```
 
 ### Dessins
 
