@@ -5,8 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { keys } from "./keys";
 import { NoteEditor } from "./editor/NoteEditor";
 import { imageMime, NULL_BRIDGE, type VaultBridge } from "./editor/bridge";
-import DOCUMENTATION from "./docs/documentation.md?raw";
-import { docsBridge } from "./docs/docsBridge";
+import { DocsPage } from "./docs/DocsPage";
 import { ChoiceDialog, ConfirmDialog, NameDialog, type Choice, type NameResult, type PageKind, type TemplateChoice } from "./Dialogs";
 import { isDrawingPath } from "./drawing/format";
 import { DrawingEditor, type DrawingControls } from "./drawing/DrawingEditor";
@@ -1598,9 +1597,7 @@ export function App() {
             </>
           ) : (
             activePath === DOCS_VIEW ? (
-              <div className="page docs-page">
-                <NoteEditor key={`docs-${dark}`} source={DOCUMENTATION} onMarkdown={() => {}} bridge={docsBridge(dark)} editable={false} properties={false} />
-              </div>
+              <DocsPage dark={dark} />
             ) : activePath === SETTINGS_VIEW ? (
               <SettingsPage
                 key={activeTab}

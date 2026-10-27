@@ -267,3 +267,39 @@ button.crumb:hover {
   border-radius: 1px;
   background: var(--accent);
 }
+
+/* ---- Documentation: search above the outline, on the side ---- */
+
+.docs-side {
+  padding-top: 14px;
+}
+
+.docs-search {
+  margin: 0 12px 0 4px;
+  padding: 0 4px 0 8px;
+  border-radius: 7px;
+  background: var(--hover);
+  color: var(--muted);
+}
+
+.docs-search:focus-within {
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 2px var(--accent-line);
+}
+
+.docs-search.find-row input,
+.docs-search.find-row input:focus {
+  background: transparent;
+  box-shadow: none;
+}
+
+.docs-search .find-count {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.docs-side .outline-panel {
+  overflow: auto;
+  padding-top: 14px;
+}

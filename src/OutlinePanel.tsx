@@ -34,7 +34,7 @@ interface Drag {
  * scrolls to it. Dragging a heading moves its whole section (sub-headings
  * included) before another heading, or to the end of the note.
  */
-export function OutlinePanel({ editor, onClose }: { editor: Editor | null; onClose: () => void }) {
+export function OutlinePanel({ editor, onClose }: { editor: Editor | null; onClose?: () => void }) {
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [active, setActive] = useState<number | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -128,9 +128,11 @@ export function OutlinePanel({ editor, onClose }: { editor: Editor | null; onClo
     <aside className="outline-panel" aria-label="Plan de la note">
       <header>
         <span>Plan</span>
-        <button onClick={onClose} aria-label="Masquer le plan">
-          ×
-        </button>
+        {onClose && (
+          <button onClick={onClose} aria-label="Masquer le plan">
+            ×
+          </button>
+        )}
       </header>
       {headings.length === 0 ? (
         <p className="git-none">Aucun titre dans cette note.</p>
