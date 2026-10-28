@@ -242,7 +242,8 @@ export function createMemoryVault(name: string, files: Record<string, string | U
       contents.set(path, content);
       times.set(path, Date.now());
     },
-    stats: async () => [...contents.keys()].filter((p) => !hidden(p) && /\.(?:md|base|canvas)$/.test(p)).map((path) => ({ path, ctime: opened, mtime: times.get(path) ?? opened })),
+    // A file not written since the vault was opened has no modification time (0): nothing to show as "modified".
+    stats: async () => [...contents.keys()].filter((p) => !hidden(p) && /\.(?:md|base|canvas)$/.test(p)).map((path) => ({ path, ctime: opened, mtime: times.get(path) ?? 0 })),
     files: async () => [...contents.keys()].filter((p) => !hidden(p)).sort(),
     readBinary: async (path) => {
       const value = contents.get(path);

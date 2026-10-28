@@ -22,4 +22,4 @@ Notes de lecture, à garder sous la main pour les maquettes.
 - Les majuscules accentuées : *À*, *É*, *Ç*
 - Les nombres : 1 000 €, pas 1,000 €
 
-Utile pour le [[Cahier des charges]] et pour [[Identité Vélo Rouge]]. Plus de lectures dans la liste « Lectures ».
+Utile pour le [[Cahier des charges]] et pour [[Identité Vélo Rouge]]. D'autres liens dans la vue « Liens ».

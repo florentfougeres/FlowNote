@@ -551,6 +551,7 @@ button.task-tag.selected {
 /* ---- Task list (TaskNotes' task list view) ---- */
 
 .task-list {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -637,6 +638,92 @@ button.task-tag.selected {
 .task-row.done .board-card-title {
   color: var(--muted);
   text-decoration: line-through;
+}
+
+/* A task on one line in the list (TaskLine): title on the left, muted columns on the right. */
+.task-row:has(> .task-line) {
+  align-items: center;
+  padding: 7px 14px;
+}
+
+.task-row:has(> .task-line) .task-check {
+  margin-top: 0;
+}
+
+.task-row-main.task-line {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  min-height: 20px;
+}
+
+.task-line-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-line-title .task-priority-dot {
+  margin-right: 0;
+}
+
+.task-line-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-row.done .task-line-name {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.task-line-tags {
+  flex: none;
+  max-width: 30%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--accent);
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.task-line-meta {
+  flex: none;
+  max-width: 36%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.task-line-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* The dates line up in a column. */
+.task-line-date {
+  flex: none;
+  width: 112px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Narrow: the meta goes first, the date stays. */
+@container (max-width: 560px) {
+  .task-line-meta,
+  .task-line-tags {
+    display: none;
+  }
 }
 
 .task-view-note {
@@ -1249,4 +1336,57 @@ body:has(.board.dragging) {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+}
+
+/* ---- The tasks' page (BaseView .task-page): one header, the views as quick filters ---- */
+
+.task-page .db-header {
+  margin-bottom: 14px;
+}
+
+.task-page .db-toolbar {
+  padding-bottom: 10px;
+}
+
+.task-page .db-tabs {
+  gap: 4px;
+}
+
+/* The base's views as pills: a filter of the same tasks, not a page of their own. */
+.task-page .db-tab {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.task-page .db-tab > .icon {
+  display: none;
+}
+
+.task-page .db-tab:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.task-page .db-tab.active {
+  background: var(--selected);
+  font-weight: 500;
+}
+
+.task-page .db-tab.active::after {
+  display: none;
+}
+
+.task-page .db-tab-remove {
+  margin-right: -4px;
+}
+
+/* A single view (agenda, calendar): no tab, its "add a view" button goes to the end of the tools. */
+.task-page .db-toolbar:has(.db-tabs:not(:has(.db-tab))) {
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.task-page .db-tabs:not(:has(.db-tab)) {
+  order: 1;
 }

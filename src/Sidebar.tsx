@@ -483,7 +483,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
       <nav className="sidebar-views" aria-label="Vues">
         <IconTab icon="home" label="Accueil" active={view === "home"} onClick={(event) => props.onHome(event.metaKey || event.ctrlKey)} />
         <IconTab icon="task" label="Tâches" active={view === "tasks"} onClick={(event) => props.onTasks(event.metaKey || event.ctrlKey)} />
-        <IconTab icon="bookmark" label="Lectures" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
+        <IconTab icon="bookmark" label="Liens" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
         <IconTab icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />
       </nav>
       {props.favorites.length > 0 && (

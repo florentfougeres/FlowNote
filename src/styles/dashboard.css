@@ -337,3 +337,262 @@
     0 0 0 0.5px rgba(255, 255, 255, 0.1),
     0 2px 8px rgba(0, 0, 0, 0.35);
 }
+
+/* ---- Home "Reprendre" (Dashboard.tsx): a main column to pick up again, a quiet one aside ---- */
+
+.dashboard.home {
+  max-width: 1080px;
+  padding-top: 16px;
+}
+
+.home-header {
+  margin-bottom: 28px;
+}
+
+.home-header h1 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: -0.026em;
+  line-height: 1.1;
+}
+
+.home-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .home-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+}
+
+.home-section + .home-section {
+  margin-top: 32px;
+}
+
+.home-section > h2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+}
+
+/* The pages to pick up again: the three last ones large, with the start of their text. */
+.home-resume {
+  display: flex;
+  flex-direction: column;
+  margin: 0 -12px;
+}
+
+.home-resume-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-resume-item:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.home-resume-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--hover);
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.home-resume-icon .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.home-resume-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.home-resume-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.home-resume-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.home-resume-excerpt {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.home-resume-more {
+  margin-top: 4px;
+}
+
+/* What is due, by day. */
+.home-day + .home-day {
+  margin-top: 12px;
+}
+
+.home-day-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.home-day-title span {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.home-day-title.late {
+  color: var(--danger);
+}
+
+.home-day-title.today {
+  color: var(--accent);
+}
+
+/* The vault's statistics and activity, folded at the bottom (remembered). */
+.home-vault {
+  padding-top: 16px;
+  border-top: 0.5px solid var(--border);
+}
+
+.home-fold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.home-fold:hover:not(:disabled) {
+  background: none;
+  color: var(--text);
+}
+
+.home-vault-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+/* Aside: creation, bookmarks, reading, Git, what needs tidying; no cards, hairlines between. */
+.home-side .dash-create {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+
+.home-side-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 0.5px solid var(--border);
+}
+
+.home-side-section > h2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.home-side-section .dash-muted {
+  margin: 2px 0 0;
+}
+
+.home-side-section .dash-page-title {
+  max-width: 100%;
+  flex: 1;
+}
+
+.home-git {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.home-git .icon {
+  color: var(--muted);
+}
+
+.home-git span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.home-git span.pending {
+  color: var(--warning);
+}
+
+/* The year of activity fits the column: 53 weeks of square cells sharing its width. */
+.home-vault-body > .heatmap-wrap {
+  align-self: stretch;
+  min-width: 0;
+}
+
+.home-vault .heatmap {
+  width: 100%;
+  grid-template-rows: repeat(7, auto);
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+
+.home-vault .heat {
+  width: auto;
+  height: auto;
+  aspect-ratio: 1;
+}

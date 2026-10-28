@@ -18,7 +18,8 @@ export interface Backlink {
 const MAX_EXCERPT = 180;
 
 /** A Markdown line as it reads: no block markers, links shown by their text. */
-function plainLine(line: string): string {
+/** A line of Markdown as plain text: no list marker, quote, heading sign, link syntax or emphasis. */
+export function plainLine(line: string, max = MAX_EXCERPT): string {
   const text = line
     .trim()
     .replace(/^(?:>\s*)+/, "")
@@ -27,7 +28,7 @@ function plainLine(line: string): string {
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/(\*\*|__|~~|==)(.+?)\1/g, "$2")
     .trim();
-  return text.length > MAX_EXCERPT ? `${text.slice(0, MAX_EXCERPT - 1).trimEnd()}…` : text;
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
 
 /** Notes linking to `target` (a vault path), in title order. */

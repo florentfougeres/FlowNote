@@ -2,7 +2,7 @@
  * The reading list: one Markdown note where each theme is a heading and each
  * link a task, checked once read or watched:
  *
- *   # Lectures
+ *   # Liens
  *
  *   ## IA
  *   - [ ] [Comprendre les transformers](https://example.com/transformers) #llm #video
@@ -207,7 +207,7 @@ export function addLink(markdown: string, theme: string | null, title: string, u
 
 /** A new reading list with its first link. */
 export function newReadingList(theme: string | null, title: string, url: string, tags: string[] = []): string {
-  return addLink("# Lectures\n", theme, title, url, tags);
+  return addLink("# Liens\n", theme, title, url, tags);
 }
 
 /** Host name of a link, without "www.". */

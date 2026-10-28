@@ -1,26 +1,28 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { reportError } from "./errors";
 import { Icon } from "./Icon";
 import { PAGE_KINDS, kindIconClass, type PageKind } from "./pageKinds";
 import { readAllNotes, type Vault } from "./vault/vault";
-import { buildGraph, type VaultGraph } from "./graph/graph";
-import { GraphView } from "./graph/GraphView";
-import { parseReadingList, siteOf, type ReadingItem } from "./reading/readingList";
+import { parseReadingList, type ReadingItem } from "./reading/readingList";
 import { openUrl } from "./reading/web";
 import type { GitCommit, GitStatus } from "./vault/git";
 import { isConflicted, isStaged, isUnstaged, isUntracked } from "./vault/git";
 import { syncSummary } from "./vault/gitMessages";
 import { basename, IMAGE_EXTENSIONS, extension, noteTitle } from "./vault/links";
 import { readPages, unusedAttachments } from "./vault/attachments";
-import { recentPages } from "./dashboard/recents";
+import { noteExcerpt, recentPages } from "./dashboard/recents";
+import { usePersistentFlag } from "./hooks/usePersistentFlag";
+import { isoDay } from "./dates";
 import { bookmarkedFiles, computeStats, type VaultStats } from "./dashboard/stats";
-import { agenda, dueLabel, urgency, type AgendaItem, type TasksPriority } from "./tasks/agenda";
-import { statusOf, type TaskConfig } from "./tasks/config";
-import { tasksOf, type TaskInfo } from "./tasks/task";
+import { agenda, dueLabel, type AgendaItem, type TasksPriority } from "./tasks/agenda";
+import type { TaskConfig } from "./tasks/config";
+import { isTaskMarkdown } from "./tasks/task";
 
 /**
- * Home of an empty tab: recent pages, quick creation, Git state, a year of
- * commit activity, vault statistics and health, Obsidian bookmarks.
+ * Home of an empty tab, made to pick up again: the last pages opened (with
+ * the start of their text) and what is due, by day; aside, creation,
+ * bookmarks, the reading list, Git and what needs tidying; the vault's
+ * statistics and activity folded at the bottom.
  */
 
 export type CreateKind = PageKind;
@@ -85,6 +87,44 @@ function Heatmap({ activity }: { activity: [string, number][] }) {
   );
 }
 
+interface AgendaGroup {
+  label: string;
+  /** "28 octobre" next to the day's name. */
+  date?: string;
+  tone?: "late" | "today";
+  /** Each item says when it was due (late, later). */
+  showDue?: boolean;
+  items: AgendaItem[];
+}
+
+/** What is due, by day: late, today, each of the next six days, then later (the next two weeks). */
+function agendaGroups(items: AgendaItem[], today = isoDay()): AgendaGroup[] {
+  const groups: AgendaGroup[] = [];
+  const at = (offset: number) => {
+    const d = new Date(`${today}T12:00:00`);
+    d.setDate(d.getDate() + offset);
+    return isoDay(d);
+  };
+  const late = items.filter((i) => i.due < today);
+  if (late.length) groups.push({ label: "En retard", tone: "late", showDue: true, items: late });
+  for (let offset = 0; offset < 7; offset++) {
+    const day = at(offset);
+    const due = items.filter((i) => i.due === day);
+    if (!due.length) continue;
+    const date = new Date(`${day}T12:00:00`);
+    const name = offset === 0 ? "Aujourd'hui" : offset === 1 ? "Demain" : date.toLocaleDateString("fr-FR", { weekday: "long" });
+    groups.push({
+      label: name.charAt(0).toUpperCase() + name.slice(1),
+      date: date.toLocaleDateString("fr-FR", { day: "numeric", month: "long" }),
+      tone: offset === 0 ? "today" : undefined,
+      items: due,
+    });
+  }
+  const later = items.filter((i) => i.due > at(6) && i.due <= at(20));
+  if (later.length) groups.push({ label: "Plus tard", showDue: true, items: later });
+  return groups;
+}
+
 export function Dashboard({
   vault,
   files,
@@ -123,10 +163,13 @@ export function Dashboard({
   const [activity, setActivity] = useState<[string, number][] | null>(null);
   const [stats, setStats] = useState<VaultStats | null>(null);
   const [todo, setTodo] = useState<AgendaItem[] | null>(null);
-  const [tasks, setTasks] = useState<TaskInfo[]>([]);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
-  const [graph, setGraph] = useState<VaultGraph | null>(null);
   const [toRead, setToRead] = useState<ReadingItem[] | null>(null);
+  /** Pages changed in the vault (by FlowNote, Obsidian, a pull…), newest first, from the files' times. */
+  const [modified, setModified] = useState<{ path: string; at: number }[]>([]);
+  /** The notes' text, for the excerpts of the pages to pick up again. */
+  const [texts, setTexts] = useState<Map<string, string>>(() => new Map());
+  const [vaultShown, setVaultShown] = usePersistentFlag("flownote:home-vault", false, ["shown", "hidden"]);
   useEffect(() => {
     let cancelled = false;
     void vault
@@ -147,18 +190,33 @@ export function Dashboard({
     let cancelled = false;
     const git = vault.git;
     if (git) {
-      git.status().then((s) => !cancelled && setStatus(s), () => {});
-      git.lastCommit().then((c) => !cancelled && setLastCommit(c), () => {});
-      git.activity(371).then((a) => !cancelled && setActivity(a), () => !cancelled && setActivity([]));
+      git.status().then(
+        (s) => !cancelled && setStatus(s),
+        () => {},
+      );
+      git.lastCommit().then(
+        (c) => !cancelled && setLastCommit(c),
+        () => {},
+      );
+      git.activity(371).then(
+        (a) => !cancelled && setActivity(a),
+        () => !cancelled && setActivity([]),
+      );
     }
-    vault.bookmarks?.().then((json) => !cancelled && setBookmarks(bookmarkedFiles(json)), () => {});
+    vault.bookmarks?.().then(
+      (json) => !cancelled && setBookmarks(bookmarkedFiles(json)),
+      () => {},
+    );
+    vault.stats?.().then(
+      (times) => !cancelled && setModified(times.filter((t) => t.mtime > 0).sort((a, b) => b.mtime - a.mtime).slice(0, 12).map((t) => ({ path: t.path, at: t.mtime }))),
+      () => {},
+    );
     (async () => {
       const notes = await readAllNotes(vault, files);
       if (cancelled) return;
-      setGraph(buildGraph(notes, files, tasksConfig));
+      setTexts(new Map(notes));
       setStats(computeStats(notes, files));
       setTodo(agenda(notes, tasksConfig));
-      setTasks(tasksOf(notes, tasksConfig));
       const pages = await readPages(vault, files, notes);
       if (!cancelled) setUnused(unusedAttachments(pages, files));
     })().catch(reportError);
@@ -169,279 +227,294 @@ export function Dashboard({
   }, [vault, files, tasksConfig]);
 
   const existing = useMemo(() => new Set(files), [files]);
-  const recents = recentPages(vault.name).filter((p) => existing.has(p.path)).slice(0, 8);
+  /** TaskNotes' files (tasks, their folder, its views) are not pages to pick up: they have their own view. */
+  const taskViews = new Set(Object.values(tasksConfig.views));
+  const isTaskFile = (path: string) => {
+    const text = texts.get(path);
+    return taskViews.has(path) || (tasksConfig.folder !== "" && path.startsWith(`${tasksConfig.folder}/`)) || (text !== undefined && isTaskMarkdown(text, tasksConfig));
+  };
+  const recents = recentPages(vault.name)
+    .filter((p) => existing.has(p.path) && !isTaskFile(p.path))
+    .slice(0, 8);
   const favorites = bookmarks.filter((p) => existing.has(p));
   const hour = new Date().getHours();
   const greeting = hour < 5 ? "Bonne nuit" : hour < 18 ? "Bonjour" : "Bonsoir";
   const changes = status ? status.files.filter((f) => isStaged(f) || isUnstaged(f) || isUntracked(f) || isConflicted(f)).length : 0;
 
+  const resume = (recents.length > 0 ? recents.map((p) => ({ path: p.path, detail: timeAgo(p.at) })) : favorites.map((path) => ({ path, detail: "Favori" }))).filter((r) => !isTaskFile(r.path));
+  const groups = todo ? agendaGroups(todo) : [];
+  /** Changed lately, other than the three pages to pick up, that are already in sight. */
+  const shownLarge = new Set(resume.slice(0, 3).map((r) => r.path));
+  const changed = modified.filter((m) => existing.has(m.path) && !shownLarge.has(m.path) && !isTaskFile(m.path)).slice(0, 5);
+  const health = stats
+    ? [
+        { key: "broken" as const, label: "Liens cassés", count: stats.brokenLinks.length },
+        { key: "orphans" as const, label: "Pages orphelines", count: stats.orphans.length },
+        { key: "unused" as const, label: "Pièces jointes inutilisées", count: unused?.length ?? 0 },
+      ].filter((h) => h.count > 0)
+    : [];
+
   return (
-    <div className="dashboard">
-      <header className="dash-header">
-        <div>
-          <h1>{greeting}</h1>
-          <p className="dash-muted">
-            {vault.name} · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-          </p>
-        </div>
+    <div className="dashboard home">
+      <header className="home-header">
+        <h1>{greeting}</h1>
+        <p className="dash-muted">
+          {vault.name} · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+        </p>
       </header>
 
-      <section className="dash-create" aria-label="Créer">
-        {PAGE_KINDS.map((k) => (
-          <button key={k.kind} onClick={() => onCreate(k.kind)} title={`${k.create} : ${k.description}`}>
-            <span className={kindIconClass(k.kind)}>
-              <Icon name={k.icon} size={16} />
-            </span>
-            {k.label}
-          </button>
-        ))}
-        {/* « Nouveau notebook » arrivera avec la fusion de la branche feature/notebooks. */}
-      </section>
-
-      <div className="dash-grid">
-        {/* Nothing opened yet: no empty frame, the next cards move up. */}
-        {recents.length > 0 && (
-          <section className="dash-card">
-            <h2>Récents</h2>
-            <div className="dash-list">
-              {recents.map((p) => (
-                <PageLink iconOf={iconOf} key={p.path} path={p.path} onOpen={onOpen} detail={timeAgo(p.at)} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="dash-card">
-          <h2>À faire</h2>
-          {todo === null ? (
-            <p className="dash-muted">Recherche des échéances…</p>
-          ) : todo.length === 0 ? (
-            <p className="dash-muted">Aucune échéance. Ajoutez une échéance à une tâche, ou « 📅 date » à une case à cocher.</p>
-          ) : (
-            <div className="dash-list">
-              {todo.slice(0, 8).map((item, i) => (
-                <button key={`${item.path}-${item.line ?? "t"}-${i}`} className="dash-page dash-todo" onClick={(e) => onOpen(item.path, e.metaKey || e.ctrlKey)} title={item.path}>
-                  <Icon name={item.kind === "task" ? "task" : "checkbox"} size={14} />
-                  <span className="dash-page-title">{item.text || noteTitle(item.path)}</span>
-                  {item.priority && <span className={`task-priority-dot tasks-${item.priority}`} title={`Priorité ${PRIORITY_LABELS[item.priority]}`} />}
-                  <span className={`due-chip ${urgency(item.due)}`}>{dueLabel(item.due)}</span>
-                </button>
-              ))}
-              {todo.length > 8 && <p className="dash-muted">… et {todo.length - 8} autres</p>}
-            </div>
-          )}
-        </section>
-
-        <section className="dash-card">
-          <h2>
-            Tâches
-            <button className="dash-card-action" onClick={(e) => onOpenTasks(e.metaKey || e.ctrlKey)}>
-              Tout voir
-            </button>
-          </h2>
-          {(() => {
-            const open = tasks.filter((t) => !t.done);
-            if (tasks.length === 0) return <p className="dash-muted">Aucune tâche. Créez-en une avec « Nouvelle tâche ».</p>;
-            return (
+      <div className="home-layout">
+        <main className="home-main">
+          <section className="home-section" aria-labelledby="home-resume">
+            <h2 id="home-resume">Reprendre</h2>
+            {resume.length === 0 ? (
+              <p className="dash-muted">Les pages que vous ouvrez apparaîtront ici.</p>
+            ) : (
               <>
-                <p className="dash-muted">
-                  {open.length} à faire · {tasks.length - open.length} terminée{tasks.length - open.length > 1 ? "s" : ""}
-                </p>
-                <div className="dash-list">
-                  {open
-                    .sort((a, b) => (b.created ?? "").localeCompare(a.created ?? ""))
-                    .slice(0, 5)
-                    .map((t) => (
-                      <PageLink iconOf={iconOf} key={t.path} path={t.path} onOpen={onOpen} detail={statusOf(tasksConfig, t.status || null).label} />
-                    ))}
+                <div className="home-resume">
+                  {resume.slice(0, 3).map(({ path, detail }) => (
+                    <button key={path} className="home-resume-item" onClick={(e) => onOpen(path, e.metaKey || e.ctrlKey)} onAuxClick={(e) => e.button === 1 && onOpen(path, true)} title={path}>
+                      <span className="home-resume-icon">{iconOf(path)}</span>
+                      <span className="home-resume-text">
+                        <span className="home-resume-title">
+                          <strong>{noteTitle(path)}</strong>
+                          <span className="dash-page-detail">{[folderOf(path), detail].filter(Boolean).join(" · ")}</span>
+                        </span>
+                        {texts.has(path) && <span className="home-resume-excerpt">{noteExcerpt(texts.get(path)!) || "Page vide"}</span>}
+                      </span>
+                    </button>
+                  ))}
                 </div>
+                {resume.length > 3 && (
+                  <div className="dash-list home-resume-more">
+                    {resume.slice(3, 8).map(({ path, detail }) => (
+                      <PageLink iconOf={iconOf} key={path} path={path} onOpen={onOpen} detail={detail} />
+                    ))}
+                  </div>
+                )}
               </>
-            );
-          })()}
-        </section>
+            )}
+          </section>
 
-        <section className="dash-card">
-          <h2>
-            À lire
-            <button className="dash-card-action" onClick={(e) => onOpenReading(e.metaKey || e.ctrlKey)}>
-              Tout voir
-            </button>
-          </h2>
-          {toRead === null ? (
-            <p className="dash-muted">Lecture de la liste…</p>
-          ) : toRead.length === 0 ? (
-            <p className="dash-muted">
-              Rien en attente. <button className="dash-inline" onClick={onAddLink}>Ajouter un lien</button> (⌘⇧L)
-            </p>
-          ) : (
-            <>
-              <p className="dash-muted dash-reading-count">
-                {toRead.length} lien{toRead.length > 1 ? "s" : ""} à lire
-                <button className="dash-inline" onClick={() => openUrl(toRead[Math.floor(Math.random() * toRead.length)].url)}>
-                  Au hasard
-                </button>
-              </p>
-              <div className="dash-list">
-                {toRead.slice(0, 5).map((item) => (
-                  <button key={item.line} className="dash-page" onClick={() => openUrl(item.url)} title={item.url}>
-                    <Icon name="bookmark" size={14} />
-                    <span className="dash-page-title">{item.title}</span>
-                    <span className="dash-page-detail">{siteOf(item.url)}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </section>
-
-        {vault.git && (
-          <section className="dash-card">
-            <h2>
-              Git
-              <button className="dash-card-action" onClick={onOpenGit}>
-                Ouvrir
+          <section className="home-section" aria-labelledby="home-todo">
+            <h2 id="home-todo">
+              À faire
+              <button className="dash-card-action" onClick={(e) => onOpenTasks(e.metaKey || e.ctrlKey)}>
+                Toutes les tâches
               </button>
             </h2>
-            {!status ? (
-              <p className="dash-muted">Lecture du dépôt…</p>
-            ) : !status.isRepo ? (
-              <p className="dash-muted">Ce vault n'est pas un dépôt Git.</p>
+            {todo === null ? (
+              <p className="dash-muted">Recherche des échéances…</p>
+            ) : groups.length === 0 ? (
+              <p className="dash-muted">Rien de prévu cette semaine. Ajoutez une échéance à une tâche, ou « 📅 date » à une case à cocher.</p>
             ) : (
-              <div className="dash-git">
-                <p className="dash-git-branch">
-                  <Icon name="branch" size={14} /> {status.branch ?? "HEAD détachée"}
-                </p>
-                <p className={status.ahead || status.behind ? "dash-git-sync pending" : "dash-git-sync"}>{syncSummary(status.upstream, status.ahead, status.behind)}</p>
-                <p className={changes ? "dash-git-changes pending" : "dash-git-changes"}>
-                  {changes === 0 ? "Aucune modification en attente" : `${changes} fichier${changes > 1 ? "s" : ""} modifié${changes > 1 ? "s" : ""}, à commiter`}
-                </p>
-                {lastCommit && (
-                  <p className="dash-muted dash-git-last">
-                    Dernier commit : « {lastCommit.subject} » · {timeAgo(Date.parse(lastCommit.date))}
-                  </p>
+              groups.map((group) => (
+                <div key={group.label} className="home-day">
+                  <h3 className={group.tone ? `home-day-title ${group.tone}` : "home-day-title"}>
+                    {group.label}
+                    {group.date && <span>{group.date}</span>}
+                  </h3>
+                  <div className="dash-list">
+                    {group.items.slice(0, 6).map((item, i) => (
+                      <button key={`${item.path}-${item.line ?? "t"}-${i}`} className="dash-page dash-todo" onClick={(e) => onOpen(item.path, e.metaKey || e.ctrlKey)} title={item.path}>
+                        <Icon name={item.kind === "task" ? "task" : "checkbox"} size={14} />
+                        <span className="dash-page-title">{item.text || noteTitle(item.path)}</span>
+                        {item.priority && <span className={`task-priority-dot tasks-${item.priority}`} title={`Priorité ${PRIORITY_LABELS[item.priority]}`} />}
+                        <span className="dash-page-detail">{group.showDue ? dueLabel(item.due) : noteTitle(item.path) !== item.text ? noteTitle(item.path) : ""}</span>
+                      </button>
+                    ))}
+                    {group.items.length > 6 && <p className="dash-muted">… et {group.items.length - 6} autres</p>}
+                  </div>
+                </div>
+              ))
+            )}
+          </section>
+
+          <section className="home-section home-vault">
+            <button className="home-fold" onClick={() => setVaultShown(!vaultShown)} aria-expanded={vaultShown}>
+              <Icon name={vaultShown ? "chevronDown" : "chevronRight"} size={12} />
+              Le vault
+              {stats && (
+                <span className="dash-page-detail">
+                  {stats.notes} note{stats.notes > 1 ? "s" : ""} · {stats.tagCount} tag{stats.tagCount > 1 ? "s" : ""}
+                </span>
+              )}
+            </button>
+            {vaultShown && (
+              <div className="home-vault-body">
+                {vault.git && status?.isRepo && (activity === null ? <p className="dash-muted">Calcul…</p> : <Heatmap activity={activity} />)}
+                {stats && (
+                  <>
+                    <div className="dash-counts">
+                      <span>
+                        <strong>{stats.notes}</strong> note{stats.notes > 1 ? "s" : ""}
+                      </span>
+                      <span>
+                        <strong>{stats.drawings}</strong> dessin{stats.drawings > 1 ? "s" : ""}
+                      </span>
+                      <span>
+                        <strong>{stats.tagCount}</strong> tag{stats.tagCount > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    {stats.tags.length > 0 && (
+                      <div className="dash-tags">
+                        {stats.tags.map(([tag, count]) => (
+                          <button
+                            key={tag}
+                            className={openTag === tag ? "dash-tag selected" : "dash-tag"}
+                            aria-pressed={openTag === tag}
+                            title={`${count} usage${count > 1 ? "s" : ""} : afficher les pages`}
+                            onClick={() => setOpenTag(openTag === tag ? null : tag)}
+                          >
+                            #{tag} <small>{count}</small>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {openTag && (
+                      <div className="dash-list">
+                        {(stats.tagPages[openTag] ?? []).map((p) => (
+                          <PageLink iconOf={iconOf} key={p} path={p} onOpen={onOpen} />
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
+                <button className="dash-inline" onClick={(e) => onOpenGraph(e.metaKey || e.ctrlKey)}>
+                  Ouvrir le graphe des liens
+                </button>
               </div>
             )}
           </section>
-        )}
+        </main>
 
-        <section className="dash-card dash-wide">
-          <h2>
-            Graphe
-            <button className="dash-card-action" onClick={(e) => onOpenGraph(e.metaKey || e.ctrlKey)}>
-              Agrandir
-            </button>
-          </h2>
-          {!graph ? <p className="dash-muted">Analyse des liens…</p> : <GraphView graph={graph} onOpen={onOpen} compact />}
-        </section>
-
-        {vault.git && status?.isRepo && (
-          <section className="dash-card dash-wide">
-            <h2>Activité</h2>
-            {activity === null ? <p className="dash-muted">Calcul…</p> : <Heatmap activity={activity} />}
+        <aside className="home-side" aria-label="Raccourcis">
+          <section className="dash-create" aria-label="Créer">
+            {PAGE_KINDS.map((k) => (
+              <button key={k.kind} onClick={() => onCreate(k.kind)} title={`${k.create} : ${k.description}`}>
+                <span className={kindIconClass(k.kind)}>
+                  <Icon name={k.icon} size={16} />
+                </span>
+                {k.label}
+              </button>
+            ))}
           </section>
-        )}
 
-        <section className="dash-card">
-          <h2>Vault</h2>
-          {!stats ? (
-            <p className="dash-muted">Analyse des notes…</p>
-          ) : (
-            <>
-              <div className="dash-counts">
-                <span>
-                  <strong>{stats.notes}</strong> note{stats.notes > 1 ? "s" : ""}
-                </span>
-                <span>
-                  <strong>{stats.drawings}</strong> dessin{stats.drawings > 1 ? "s" : ""}
-                </span>
-                <span>
-                  <strong>{stats.tagCount}</strong> tag{stats.tagCount > 1 ? "s" : ""}
-                </span>
+          {changed.length > 0 && (
+            <section className="home-side-section">
+              <h2>Modifiées récemment</h2>
+              <div className="dash-list">
+                {changed.map((p) => (
+                  <PageLink iconOf={iconOf} key={p.path} path={p.path} onOpen={onOpen} detail={timeAgo(p.at)} />
+                ))}
               </div>
-              {stats.tags.length > 0 && (
-                <div className="dash-tags">
-                  {stats.tags.map(([tag, count]) => (
-                    <button
-                      key={tag}
-                      className={openTag === tag ? "dash-tag selected" : "dash-tag"}
-                      aria-pressed={openTag === tag}
-                      title={`${count} usage${count > 1 ? "s" : ""} : afficher les pages`}
-                      onClick={() => setOpenTag(openTag === tag ? null : tag)}
-                    >
-                      #{tag} <small>{count}</small>
+            </section>
+          )}
+
+          {favorites.length > 0 && recents.length > 0 && (
+            <section className="home-side-section">
+              <h2>Favoris</h2>
+              <div className="dash-list">
+                {favorites.map((p) => (
+                  <PageLink iconOf={iconOf} key={p} path={p} onOpen={onOpen} detail="" />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="home-side-section">
+            <h2>
+              Liens
+              <button className="dash-card-action" onClick={(e) => onOpenReading(e.metaKey || e.ctrlKey)}>
+                Tout voir
+              </button>
+            </h2>
+            {toRead === null ? (
+              <p className="dash-muted">Lecture de la liste…</p>
+            ) : toRead.length === 0 ? (
+              <p className="dash-muted">
+                Rien en attente.{" "}
+                <button className="dash-inline" onClick={onAddLink}>
+                  Ajouter un lien
+                </button>
+              </p>
+            ) : (
+              <>
+                <div className="dash-list">
+                  {toRead.slice(0, 3).map((item) => (
+                    <button key={item.line} className="dash-page" onClick={() => openUrl(item.url)} title={item.url}>
+                      <Icon name="bookmark" size={14} />
+                      <span className="dash-page-title">{item.title}</span>
                     </button>
                   ))}
                 </div>
-              )}
-              {openTag && (
-                <div className="dash-list">
-                  {(stats.tagPages[openTag] ?? []).map((p) => (
-                    <PageLink iconOf={iconOf} key={p} path={p} onOpen={onOpen} />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </section>
-
-        <section className="dash-card">
-          <h2>Santé</h2>
-          {!stats ? (
-            <p className="dash-muted">Analyse des liens…</p>
-          ) : (
-            <div className="dash-health">
-              <button className={stats.brokenLinks.length ? "dash-health-row warn" : "dash-health-row"} onClick={() => setOpen(open === "broken" ? null : "broken")} disabled={!stats.brokenLinks.length}>
-                <span>Liens cassés</span>
-                <strong>{stats.brokenLinks.length}</strong>
-              </button>
-              {open === "broken" && (
-                <div className="dash-list">
-                  {stats.brokenLinks.slice(0, 30).map((l, i) => (
-                    <PageLink iconOf={iconOf} key={`${l.from}-${i}`} path={l.from} onOpen={onOpen} detail={`→ ${l.target}`} />
-                  ))}
-                </div>
-              )}
-              <button className="dash-health-row" onClick={() => setOpen(open === "orphans" ? null : "orphans")} disabled={!stats.orphans.length}>
-                <span>Pages orphelines (aucun lien vers elles)</span>
-                <strong>{stats.orphans.length}</strong>
-              </button>
-              {open === "orphans" && (
-                <div className="dash-list">
-                  {stats.orphans.slice(0, 30).map((p) => (
-                    <PageLink iconOf={iconOf} key={p} path={p} onOpen={onOpen} />
-                  ))}
-                </div>
-              )}
-              <button className="dash-health-row" onClick={() => setOpen(open === "unused" ? null : "unused")} disabled={!unused?.length}>
-                <span>Pièces jointes inutilisées</span>
-                <strong>{unused?.length ?? "…"}</strong>
-              </button>
-              {open === "unused" && unused && (
-                <div className="dash-list">
-                  {unused.slice(0, 30).map((p) => (
-                    <button key={p} className="dash-page" onClick={() => void vault.reveal?.(p)} disabled={!vault.reveal} title={vault.reveal ? `Afficher dans le Finder : ${p}` : p}>
-                      <Icon name={IMAGE_EXTENSIONS.has(extension(p)) ? "image" : "doc"} size={14} />
-                      <span className="dash-page-title">{basename(p)}</span>
-                      <span className="dash-page-detail">{folderOf(p)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {favorites.length > 0 && (
-          <section className="dash-card">
-            <h2>Favoris</h2>
-            <div className="dash-list">
-              {favorites.map((p) => (
-                <PageLink iconOf={iconOf} key={p} path={p} onOpen={onOpen} />
-              ))}
-            </div>
+                {toRead.length > 3 && <p className="dash-muted">{toRead.length} liens à voir</p>}
+              </>
+            )}
           </section>
-        )}
+
+          {vault.git && status?.isRepo && (
+            <section className="home-side-section">
+              <h2>
+                Git
+                <button className="dash-card-action" onClick={onOpenGit}>
+                  Ouvrir
+                </button>
+              </h2>
+              <p className="home-git">
+                <Icon name="branch" size={14} /> {status.branch ?? "HEAD détachée"}
+                <span className={changes ? "pending" : undefined}>{changes === 0 ? "à jour" : `${changes} modifié${changes > 1 ? "s" : ""}`}</span>
+              </p>
+              {(status.ahead > 0 || status.behind > 0) && <p className="dash-muted">{syncSummary(status.upstream, status.ahead, status.behind)}</p>}
+              {lastCommit && (
+                <p className="dash-muted">
+                  « {lastCommit.subject} » · {timeAgo(Date.parse(lastCommit.date))}
+                </p>
+              )}
+            </section>
+          )}
+
+          {health.length > 0 && (
+            <section className="home-side-section">
+              <h2>À ranger</h2>
+              <div className="dash-health">
+                {health.map((h) => (
+                  <Fragment key={h.key}>
+                    <button className={h.key === "broken" ? "dash-health-row warn" : "dash-health-row"} onClick={() => setOpen(open === h.key ? null : h.key)} aria-expanded={open === h.key}>
+                      <span>{h.label}</span>
+                      <strong>{h.count}</strong>
+                    </button>
+                    {open === "broken" && h.key === "broken" && stats && (
+                      <div className="dash-list">
+                        {stats.brokenLinks.slice(0, 30).map((l, i) => (
+                          <PageLink iconOf={iconOf} key={`${l.from}-${i}`} path={l.from} onOpen={onOpen} detail={`→ ${l.target}`} />
+                        ))}
+                      </div>
+                    )}
+                    {open === "orphans" && h.key === "orphans" && stats && (
+                      <div className="dash-list">
+                        {stats.orphans.slice(0, 30).map((p) => (
+                          <PageLink iconOf={iconOf} key={p} path={p} onOpen={onOpen} />
+                        ))}
+                      </div>
+                    )}
+                    {open === "unused" && h.key === "unused" && unused && (
+                      <div className="dash-list">
+                        {unused.slice(0, 30).map((p) => (
+                          <button key={p} className="dash-page" onClick={() => void vault.reveal?.(p)} disabled={!vault.reveal} title={vault.reveal ? `Afficher dans le Finder : ${p}` : p}>
+                            <Icon name={IMAGE_EXTENSIONS.has(extension(p)) ? "image" : "doc"} size={14} />
+                            <span className="dash-page-title">{basename(p)}</span>
+                            <span className="dash-page-detail">{folderOf(p)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </Fragment>
+                ))}
+              </div>
+            </section>
+          )}
+        </aside>
       </div>
     </div>
   );

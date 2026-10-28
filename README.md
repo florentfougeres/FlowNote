@@ -34,7 +34,7 @@ La documentation complète, illustrée, est dans l'app (menu « Aide » en bas d
 ## Fonctionnalités
 
 **Interface**
-- Onglets en haut de la fenêtre, barre latérale faite pour les pages : le vault (et ses vaults récents), un seul champ de recherche (titres ou contenu), les vues en une rangée d'icônes (Accueil, Tâches, Lectures, Graphe), puis l'arbre des pages sur toute la hauteur
+- Onglets en haut de la fenêtre, barre latérale faite pour les pages : le vault (et ses vaults récents), un seul champ de recherche (titres ou contenu), les vues en une rangée d'icônes (Accueil, Tâches, Liens, Graphe), puis l'arbre des pages sur toute la hauteur
 - **Split view** : deux pages côte à côte (`⌥-clic` sur une page, `⌘⌥\` pour fermer le panneau)
 - Documentation intégrée de toutes les fonctionnalités
 - **Palette de commandes** (`⌘⇧P`, ou `>` dans `⌘P`) : toutes les actions de l'app par leur nom, avec leur raccourci
@@ -91,9 +91,9 @@ La documentation complète, illustrée, est dans l'app (menu « Aide » en bas d
 - Les outils de dessin prennent place dans la barre d'outils de FlowNote
 - Format du plugin Obsidian « Excalidraw » (`Nom.excalidraw.md`) : avec ce plugin, les dessins s'ouvrent aussi dans Obsidian ; sans lui, on voit le JSON du dessin
 
-**Lectures**
-- Une note `Lectures.md` : une section par thème, une case à cocher par lien, cochée une fois lu
-- Tags Obsidian (`#tag`) sur chaque lien, et filtre par tags dans la vue Lectures
+**Liens**
+- Une note `Liens.md` pour les liens à garder (articles, vidéos, outils…) : une section par thème, une case à cocher par lien, cochée une fois vu
+- Tags Obsidian (`#tag`) sur chaque lien, et filtre par tags dans la vue Liens
 - Ajout rapide (`⌘⇧L`) avec le titre de la page lu automatiquement, vue dédiée et carte « À lire » sur l'accueil
 
 **Dashboards**

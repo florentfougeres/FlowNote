@@ -117,7 +117,7 @@ const DOCS_VIEW = "flownote:docs";
 /** Views shown in a tab instead of a page. */
 const VIEWS: Record<string, { title: string; icon: IconName }> = {
   [GRAPH_VIEW]: { title: "Graphe", icon: "graph" },
-  [READING_VIEW]: { title: "Lectures", icon: "bookmark" },
+  [READING_VIEW]: { title: "Liens", icon: "bookmark" },
   [SETTINGS_VIEW]: { title: "Réglages", icon: "sliders" },
   [DOCS_VIEW]: { title: "Documentation", icon: "book" },
 };
@@ -692,10 +692,14 @@ export function App() {
     await select(path, "push", newTabRequested);
   };
   /** TaskNotes' views in a base: its settings, and a new task in a board column's status. */
-  const taskActions = useRef({ newTask, openTasks });
-  taskActions.current = { newTask, openTasks };
+  const taskActions = useRef({ newTask, openTasks, openRight: (_path: string) => {} });
   const baseTasks = useMemo(
-    () => ({ config: taskConfig, onNew: (status?: string) => void taskActions.current.newTask(status), openView: (view: keyof TaskConfig["views"]) => void taskActions.current.openTasks(view, false) }),
+    () => ({
+      config: taskConfig,
+      onNew: (status?: string) => void taskActions.current.newTask(status),
+      openView: (view: keyof TaskConfig["views"]) => void taskActions.current.openTasks(view, false),
+      openBeside: (path: string) => taskActions.current.openRight(path),
+    }),
     [taskConfig],
   );
 
@@ -920,7 +924,8 @@ export function App() {
   /** A view of the tasks (TaskNotes/Views/…): shown as "Tâches", not as a file of the tree. */
   const tasksView = activePath !== null && Object.values(taskConfig.views).includes(activePath);
 
-  const readingPath = settings.readingList || "Lectures.md";
+  /** The links' note: the one set, else "Liens.md" ("Lectures.md" in a vault that already has one, from before the rename). */
+  const readingPath = settings.readingList || (files.includes("Lectures.md") && !files.includes("Liens.md") ? "Lectures.md" : "Liens.md");
   /** "Ajouter un lien": the dialog lists the themes and tags of the reading list. */
   const openAddLink = async () => {
     if (!vault) return;
@@ -962,6 +967,7 @@ export function App() {
   const openRight = (path: string) => {
     if (!isView(path)) setTabSplit(activeRef.current, path);
   };
+  taskActions.current = { newTask, openTasks, openRight };
 
   /**
    * Puts the page of another tab on the right of the active one: the two make
@@ -1138,7 +1144,7 @@ export function App() {
       command("taskBoard", "Ouvrir le tableau des tâches", "Vues", () => void openTasks("kanban", false), "board"),
       command("taskAgenda", "Ouvrir l'agenda des tâches", "Vues", () => void openTasks("agenda", false), "list"),
       command("taskCalendar", "Ouvrir le calendrier des tâches", "Vues", () => void openTasks("calendar", false), "calendar"),
-      command("readingList", "Ouvrir les lectures", "Vues", () => openView(READING_VIEW, false), "bookmark"),
+      command("readingList", "Ouvrir les liens", "Vues", () => openView(READING_VIEW, false), "bookmark"),
       command("graph", "Ouvrir le graphe", "Vues", () => openView(GRAPH_VIEW, false), "graph"),
       command("docs", "Ouvrir la documentation", "Vues", () => openView(DOCS_VIEW, false), "book"),
       command("settings", "Ouvrir les réglages", "Vues", () => select(SETTINGS_VIEW, "push"), "sliders", "settings"),
@@ -1155,7 +1161,7 @@ export function App() {
       command("theme-dark", "Thème sombre", "Apparence", () => changeSettings({ ...settings, theme: "dark" })),
       command("theme-system", "Thème du système", "Apparence", () => changeSettings({ ...settings, theme: "system" })),
       command("gitGutter", settings.gitGutter ? "Masquer les modifications dans la marge" : "Afficher les modifications dans la marge", "Apparence", () => changeSettings({ ...settings, gitGutter: !settings.gitGutter }), "branch"),
-      command("addLink", "Ajouter un lien à lire", "Lectures", openAddLink, "bookmark", "addLink"),
+      command("addLink", "Ajouter un lien", "Liens", openAddLink, "bookmark", "addLink"),
     ];
     if (vault?.git) list.push(command("git", "Panneau Git", "Git", () => toggleGit(), "branch", "git"));
     if (page) {
