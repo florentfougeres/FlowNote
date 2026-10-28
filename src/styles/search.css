@@ -392,6 +392,14 @@
   width: 260px;
 }
 
+/* A menu opened inside a glass window (the filters of the search, their values, a date): its own blur has
+   nothing to blur there (the window is the backdrop), so it is opaque, or the results show through it. */
+.modal :is(.db-popover, .sidebar-menu, .date-picker) {
+  background: var(--bg-elevated);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 .search-menu-list {
   display: flex;
   flex-direction: column;

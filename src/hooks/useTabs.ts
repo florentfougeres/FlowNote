@@ -126,12 +126,14 @@ export function useTabs(context: TabsContext) {
     [activate],
   );
 
-  const closeTab = useCallback(
-    async (id: string) => {
+  /** Closes some tabs (one, the others, those on the right); the active one saves first, and the next one takes its place. */
+  const closeTabs = useCallback(
+    async (ids: string[]) => {
       const list = tabsRef.current;
-      const index = list.findIndex((t) => t.id === id);
-      if (index < 0) return;
-      const closingActive = id === activeRef.current;
+      const closing = new Set(ids.filter((id) => list.some((t) => t.id === id)));
+      if (closing.size === 0) return;
+      const active = activeRef.current;
+      const closingActive = closing.has(active);
       if (closingActive) {
         try {
           await latest.current.saveNow();
@@ -140,19 +142,22 @@ export function useTabs(context: TabsContext) {
           return;
         }
       }
-      tabState.current.delete(id);
-      let remaining = list.filter((t) => t.id !== id);
+      for (const id of closing) tabState.current.delete(id);
+      const index = list.findIndex((t) => t.id === active);
+      let remaining = list.filter((t) => !closing.has(t.id));
       if (remaining.length === 0) remaining = [{ id: newTabId(), path: null }];
       tabsRef.current = remaining;
       setTabs(remaining);
       if (closingActive) {
         // The tab being closed keeps no state: the next one starts from its own.
-        activeRef.current = id;
-        await activate(remaining[Math.min(index, remaining.length - 1)].id);
+        const next = list.slice(index).find((t) => !closing.has(t.id)) ?? remaining[remaining.length - 1];
+        await activate(next.id);
       }
     },
     [activate],
   );
+
+  const closeTab = useCallback((id: string) => closeTabs([id]), [closeTabs]);
 
   /** A tab joined to another (split view) leaves no history behind. */
   const forgetTab = (id: string) => tabState.current.delete(id);
@@ -270,6 +275,7 @@ export function useTabs(context: TabsContext) {
     switchTab,
     newTab,
     closeTab,
+    closeTabs,
     forgetTab,
     reorderTab,
     goBack,

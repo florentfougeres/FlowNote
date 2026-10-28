@@ -247,3 +247,17 @@
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
+
+/* A category's introduction, between its title and its first card. */
+.settings-caption {
+  margin: -4px 0 12px;
+  max-width: 64ch;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+code.settings-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}

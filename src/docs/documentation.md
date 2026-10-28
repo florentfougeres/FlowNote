@@ -81,6 +81,7 @@ Chaque page s'ouvre dans un onglet : `⌘T` nouvel onglet, `⌘W` fermer, `⌘1`
 
 - Clic droit sur un autre onglet : « Afficher à droite de… » ; sur l'onglet actif : « Diviser avec l'onglet suivant ».
 - Clic droit sur l'onglet double : échanger les côtés, séparer en deux onglets, fermer la page de droite. Fermer l'onglet ferme les deux.
+- Clic droit sur un onglet : **Fermer l'onglet** (`⌘W`), **Fermer les autres onglets** et **Fermer les onglets à droite** (la note ouverte est enregistrée avant).
 - La page de droite a la même barre d'outils que celle de gauche, plus trois boutons : ouvrir dans son propre onglet, échanger les côtés, fermer.
 - Comme à gauche, « Ajouter une icône » s'affiche au survol au-dessus de son titre.
 - Le séparateur se déplace à la souris (la largeur est retenue). `⌘⌥\` ouvre ou ferme le panneau de droite.

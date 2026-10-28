@@ -371,17 +371,17 @@ export function SettingsPage({
         )}
         {category === "tasks" && (
           <>
+            <p className="settings-caption">
+              {tasks.fromPlugin
+                ? "Les tâches suivent les réglages du plugin TaskNotes de ce vault (lus dans .obsidian, jamais modifiés). Changez-les dans Obsidian."
+                : "Les tâches suivent le format du plugin TaskNotes, avec ses réglages par défaut : installez-le dans Obsidian pour les changer."}
+            </p>
             <section className="settings-card">
-              <p className="settings-note">
-                {tasks.fromPlugin
-                  ? "Les tâches suivent les réglages du plugin TaskNotes de ce vault (lus dans .obsidian, jamais modifiés). Changez-les dans Obsidian."
-                  : "Les tâches suivent le format du plugin TaskNotes, avec ses réglages par défaut : installez-le dans Obsidian pour les changer."}
-              </p>
               <Row label="Dossier des nouvelles tâches">
-                <code>{tasks.folder || "Racine du vault"}</code>
+                <code className="settings-value">{tasks.folder || "Racine du vault"}</code>
               </Row>
               <Row label="Une tâche porte" help={tasks.identification === "tag" ? "Les notes avec ce tag dans leurs propriétés, où qu'elles soient." : "Les notes avec cette propriété."}>
-                <code>{tasks.identification === "tag" ? `#${tasks.tag}` : `${tasks.property.name}: ${tasks.property.value}`}</code>
+                <code className="settings-value">{tasks.identification === "tag" ? `#${tasks.tag}` : `${tasks.property.name}: ${tasks.property.value}`}</code>
               </Row>
             </section>
             <section className="settings-card">
@@ -390,7 +390,7 @@ export function SettingsPage({
                   {tasks.statuses.map((s) => (
                     <span key={s.value} className="task-tag neutral">
                       <span className="board-dot" style={{ background: s.color }} /> {s.label}
-                      {s.done ? " ✓" : ""}
+                      {s.done && <Icon name="check" size={12} label="statut terminé" />}
                     </span>
                   ))}
                 </div>
