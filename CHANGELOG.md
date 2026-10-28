@@ -2,6 +2,27 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.28.0] - 2026-10-28
+
+### Ajouté
+- Réglages : la police des notes se choisit à part de celle de l'app (comme l'app, système, serif, Clarika, Open Sans ou Inter), chaque police montrée dans sa propre police.
+- Réglages : section « À propos » (version, journal des versions, code source).
+- Recherche : un contrôle « Titres | Contenu » passe de la recherche des pages à la recherche dans le texte des notes, en gardant ce qui est tapé.
+
+### Modifié
+- Barre latérale faite pour les pages : un seul champ Rechercher, les vues (Accueil, Tâches, Lectures, Graphe) en une rangée d'icônes, Git, Réglages et Aide en bas, Favoris repliables. L'arbre des pages prend toute la hauteur ; la Documentation passe dans le menu Aide.
+- Barre de page : Plan, Mode lecture, Pleine largeur, Mode focus et Markdown brut restent visibles ; le menu « … », rangé en sections avec coches et raccourcis, réunit la correction, l'historique, « Transformer en présentation » et les exports.
+- Onglets de même forme, les inactifs sur un fond discret ; sur Accueil, Tâches, Réglages ou Documentation, la barre de page ne répète plus le nom de l'onglet.
+- Accueil : création en une rangée compacte de tuiles, carte Récents seulement quand des pages ont été ouvertes, priorités du plugin Tasks (⏫…) en points colorés, plus de recherche en double.
+- Finitions de l'interface : icônes à la place des emoji dans les tâches et le kanban, arrondis et tailles de texte sur une même échelle, callouts sans barre à gauche, texte secondaire plus lisible, graphiques Plotly dans les couleurs de l'app, écran d'ouverture plus sobre.
+
+### Corrigé
+- La fenêtre des raccourcis clavier ne déborde plus de l'écran.
+- La vue Tâches n'ouvre plus le dossier TaskNotes dans l'arbre.
+- Agenda des tâches : « 28 oct. – 3 nov. » en minuscules.
+- Dashboard : un graphique tient dans la hauteur de son widget ; une base intégrée ne répète plus son titre et n'a plus de ligne vide au-dessus.
+- Les liens d'une base intégrée dans une note ont le même style que dans la base.
+
 ## [0.27.0] - 2026-10-27
 
 ### Ajouté
