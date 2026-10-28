@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { PropertyValue } from "../markdown/frontmatter";
 import { Icon } from "../Icon";
+import { cardInPlace, landGhost, VelocityTracker } from "../motion";
 import type { SelectOption } from "./baseFile";
 import type { BaseRow } from "./rows";
 import { OptionPill } from "./cells";
@@ -42,6 +43,8 @@ export function BoardView({
   const [over, setOver] = useState<{ column: number; index: number } | null>(null);
   const pressed = useRef<{ row: BaseRow; x: number; y: number; rect: DOMRect } | null>(null);
   const board = useRef<HTMLDivElement>(null);
+  const ghost = useRef<HTMLDivElement>(null);
+  const tracker = useRef(new VelocityTracker());
 
   if (!group) {
     return (
@@ -110,11 +113,13 @@ export function BoardView({
                   if (e.button !== 0 || !editable) return;
                   e.preventDefault();
                   pressed.current = { row, x: e.clientX, y: e.clientY, rect: e.currentTarget.getBoundingClientRect() };
+                  tracker.current.reset();
                   e.currentTarget.setPointerCapture(e.pointerId);
                 }}
                 onPointerMove={(e) => {
                   const p = pressed.current;
                   if (!p || (!drag && Math.hypot(e.clientX - p.x, e.clientY - p.y) < 5)) return;
+                  tracker.current.push(e.clientX, e.clientY);
                   setDrag({ row: p.row, x: e.clientX, y: e.clientY, dx: p.x - p.rect.left, dy: p.y - p.rect.top, width: p.rect.width });
                   setOver(dropAt(e.clientX, e.clientY, p.row.path));
                 }}
@@ -124,11 +129,19 @@ export function BoardView({
                   if (!p) return onOpen(row.path, e.metaKey || e.ctrlKey);
                   if (!drag) return onOpen(row.path, e.metaKey || e.ctrlKey);
                   const drop = dropAt(e.clientX, e.clientY, row.path);
+                  const paths = drop ? orderAfter(row.path, drop.column, drop.index) : [];
+                  const changed = paths.some((p, j) => p !== rows[j]?.path);
+                  // The card flies into its new place once the board shows it there, or back to where it was.
+                  const moves = drop !== null && (drop.column !== c || changed);
+                  const sections = () => board.current?.querySelectorAll(".db-board-column");
+                  landGhost(ghost.current, tracker.current.velocity(), () =>
+                    moves
+                      ? cardInPlace(sections()?.[drop.column], ".db-card[data-path]", drop.index, row.path)
+                      : (sections()?.[c]?.querySelector<HTMLElement>(`.db-card[data-path="${CSS.escape(row.path)}"]`) ?? null),
+                  );
                   setDrag(null);
                   setOver(null);
                   if (!drop) return;
-                  const paths = orderAfter(row.path, drop.column, drop.index);
-                  const changed = paths.some((p, j) => p !== rows[j]?.path);
                   if (drop.column === c) return changed && onMove(row, null, paths);
                   const option = columns[drop.column].option;
                   if (group.meta.type === "multi") {
@@ -155,7 +168,7 @@ export function BoardView({
         </section>
       ))}
       {drag && (
-        <div className="db-card board-ghost" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: drag.width }} aria-hidden>
+        <div ref={ghost} className="db-card board-ghost" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: drag.width }} aria-hidden>
           <Card row={drag.row} shown={shown} formulas={formulas} />
         </div>
       )}

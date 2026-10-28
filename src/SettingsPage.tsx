@@ -147,6 +147,9 @@ export function saveSettings(settings: Settings) {
   }
 }
 
+/** Whether a theme was already applied (the first one, at launch, is not cross-faded). */
+let themeApplied = false;
+
 /**
  * "system" follows macOS; otherwise the chosen palette is forced. In the
  * desktop app the window follows too: its native material (under the
@@ -154,8 +157,15 @@ export function saveSettings(settings: Settings) {
  */
 export function applyTheme(theme: Theme, desktop = false) {
   const root = document.documentElement;
-  if (theme === "system") delete root.dataset.theme;
-  else root.dataset.theme = theme;
+  const apply = () => {
+    if (theme === "system") delete root.dataset.theme;
+    else root.dataset.theme = theme;
+  };
+  // A change of theme cross-fades instead of flashing from light to dark (not the first one, at launch).
+  const change = themeApplied && (root.dataset.theme ?? "system") !== theme;
+  themeApplied = true;
+  if (change && document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) document.startViewTransition(apply);
+  else apply();
   if (desktop) {
     void import("@tauri-apps/api/window")
       .then(({ getCurrentWindow }) => getCurrentWindow().setTheme(theme === "system" ? null : theme))

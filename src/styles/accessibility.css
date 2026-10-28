@@ -14,6 +14,13 @@
   button:active:not(:disabled) {
     transform: none;
   }
+
+  /* Every menu, popover and bar that materializes only fades in (no scale, no blur). */
+  @keyframes materialize {
+    from {
+      opacity: 0;
+    }
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -28,21 +35,67 @@
 @media (prefers-reduced-transparency: reduce) and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --sidebar-material: #262628;
+    --toolbar-material: var(--bg);
+    --menu-material: var(--bg-elevated);
   }
 }
 
 @media (prefers-reduced-transparency: reduce) {
   :root[data-theme="dark"] {
     --sidebar-material: #262628;
+    --toolbar-material: var(--bg);
+    --menu-material: var(--bg-elevated);
   }
 }
 
+/* More contrast: solid surfaces instead of glass, defined edges, darker secondary text. */
 @media (prefers-contrast: more) {
   :root {
     --border: rgba(0, 0, 0, 0.35);
     --muted: rgba(0, 0, 0, 0.7);
+    --faint: rgba(0, 0, 0, 0.5);
+    --chrome-edge: rgba(0, 0, 0, 0.3);
+    --sidebar-material: #f4f4f6;
     --toolbar-material: var(--bg);
     --menu-material: var(--bg-elevated);
+    --material-blur: none;
+    --shadow-menu: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.16);
+  }
+}
+
+/* The same in dark, written twice like the theme (system dark, chosen dark): keep both identical. */
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --border: rgba(255, 255, 255, 0.38);
+    --muted: rgba(255, 255, 255, 0.75);
+    --faint: rgba(255, 255, 255, 0.52);
+    --chrome-edge: rgba(255, 255, 255, 0.3);
+    --sidebar-material: #262628;
+    --toolbar-material: var(--bg);
+    --menu-material: var(--bg-elevated);
+    --shadow-menu: 0 0 0 1px rgba(255, 255, 255, 0.45), 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root[data-theme="dark"] {
+    --border: rgba(255, 255, 255, 0.38);
+    --muted: rgba(255, 255, 255, 0.75);
+    --faint: rgba(255, 255, 255, 0.52);
+    --chrome-edge: rgba(255, 255, 255, 0.3);
+    --sidebar-material: #262628;
+    --toolbar-material: var(--bg);
+    --menu-material: var(--bg-elevated);
+    --shadow-menu: 0 0 0 1px rgba(255, 255, 255, 0.45), 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* A focused control shows a solid ring, not the soft accent glow. */
+@media (prefers-contrast: more) {
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--accent);
   }
 }
 
@@ -117,6 +170,40 @@
 .git-drawer-header button:hover,
 .modal-header button:hover {
   background: var(--hover);
+}
+
+/* Pressed (macOS): flat controls, rows and menu items darken at once instead
+   of shrinking; shrinking stays for bezel buttons. */
+.sidebar-header button:active:not(:disabled),
+.toolbar .nav:active:not(:disabled),
+.block-handle button:active,
+.block-menu button:active,
+.slash-item:active,
+.sidebar-menu button:active:not(:disabled),
+.db-menu > button:active:not(:disabled),
+.history-panel > header button:active,
+.git-drawer-header button:active,
+.modal-header button:active,
+.segmented button:active:not(.selected) {
+  background: var(--selected);
+  transform: none;
+  transition: none;
+}
+
+.page-row:active:not(.selected) {
+  background: var(--selected);
+}
+
+.tab:active:not(.active) {
+  background: color-mix(in srgb, var(--text) 11%, transparent);
+  transition: none;
+}
+
+/* Cards (boards, tasks) acknowledge the press before a drag or a click. */
+.board-card:active:not(.board-ghost),
+.db-card:active:not(.board-ghost),
+.task-row:active {
+  filter: brightness(0.97);
 }
 
 .page-row:hover .page-name:hover,

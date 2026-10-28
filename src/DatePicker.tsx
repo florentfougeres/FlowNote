@@ -76,7 +76,7 @@ export function DatePicker({
   const box = useRef<HTMLDivElement>(null);
   useClickOutside(box, onClose);
   const grid = useRef<HTMLDivElement>(null);
-  const [place, setPlace] = useState<{ left: number; top: number }>({ left: anchor.left, top: anchor.bottom + 4 });
+  const [place, setPlace] = useState<{ left: number; top: number; transformOrigin: string }>({ left: anchor.left, top: anchor.bottom + 4, transformOrigin: "top left" });
 
   useLayoutEffect(() => {
     const height = box.current?.offsetHeight ?? 340;
@@ -85,6 +85,7 @@ export function DatePicker({
     setPlace({
       left: Math.max(8, Math.min(anchor.left, window.innerWidth - width - 8)),
       top: below ? anchor.bottom + 4 : Math.max(8, anchor.top - 4 - height),
+      transformOrigin: below ? "top left" : "bottom left",
     });
   }, [anchor]);
 

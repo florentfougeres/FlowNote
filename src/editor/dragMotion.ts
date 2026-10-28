@@ -1,4 +1,5 @@
 import { animate } from "motion";
+import { prefersReducedMotion, SETTLE, THROW, VelocityTracker, type Point } from "../motion";
 
 /**
  * Visuals of a block drag, following Apple's fluid-interface principles:
@@ -15,22 +16,6 @@ export interface Line {
   width: number;
 }
 
-interface Point {
-  x: number;
-  y: number;
-}
-
-/** Critically damped: settles without overshoot (default UI motion). */
-const SETTLE = { type: "spring", bounce: 0, duration: 0.3 } as const;
-/** Slight bounce, used only after a gesture that carried momentum (the release). */
-const THROW = { type: "spring", bounce: 0.12, duration: 0.38 } as const;
-
-const VELOCITY_WINDOW_MS = 100;
-
-function prefersReducedMotion(): boolean {
-  return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
 export class DragVisual {
   private readonly wrap = document.createElement("div");
   private readonly ghost: HTMLElement;
@@ -38,7 +23,7 @@ export class DragVisual {
   private readonly origin: DOMRect;
   private readonly offset: Point;
   private position: Point;
-  private history: { x: number; y: number; t: number }[] = [];
+  private readonly tracker = new VelocityTracker();
   private indicatorVisible = false;
   private readonly reduced = prefersReducedMotion();
 
@@ -70,9 +55,7 @@ export class DragVisual {
   /** Follows the pointer exactly (direct manipulation). */
   move(pointer: Point) {
     this.position = { x: pointer.x - this.offset.x, y: pointer.y - this.offset.y };
-    const now = performance.now();
-    this.history.push({ ...pointer, t: now });
-    this.history = this.history.filter((h) => now - h.t <= VELOCITY_WINDOW_MS);
+    this.tracker.push(pointer.x, pointer.y);
     this.render();
   }
 
@@ -117,11 +100,7 @@ export class DragVisual {
   }
 
   private velocity(): Point {
-    if (this.history.length < 2) return { x: 0, y: 0 };
-    const first = this.history[0];
-    const last = this.history[this.history.length - 1];
-    const seconds = Math.max((last.t - first.t) / 1000, 0.001);
-    return { x: (last.x - first.x) / seconds, y: (last.y - first.y) / seconds };
+    return this.tracker.velocity();
   }
 
   /** Independent springs for X and Y, each starting with its own velocity. */

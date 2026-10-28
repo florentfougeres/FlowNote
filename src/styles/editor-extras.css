@@ -1018,6 +1018,8 @@
   box-shadow: var(--shadow-menu);
   user-select: none;
   -webkit-user-select: none;
+  /* It sits above the selection: it grows up out of it. */
+  transform-origin: bottom center;
   animation: materialize 140ms cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 

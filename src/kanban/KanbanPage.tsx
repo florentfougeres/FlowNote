@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { Icon } from "../Icon";
+import { landGhost, VelocityTracker } from "../motion";
 import type { VaultBridge } from "../editor/bridge";
 import { resolveLink } from "../vault/links";
 import { addCard, addLane, cardDone, cardText, makeCard, moveCard, parseKanban, removeLane, renameLane, serializeKanban, setCard, type KanbanBoard, type KanbanCard } from "./format";
@@ -92,6 +93,11 @@ export function KanbanPage({ source, onChange, bridge, editable }: { source: str
   const [renaming, setRenaming] = useState<number | null>(null);
   const pressed = useRef<{ lane: number; card: number; x: number; y: number; rect: DOMRect } | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
+  const tracker = useRef(new VelocityTracker());
+  /** The card at `index` of a list, as shown on the board. */
+  const cardAt = (lane: number, index: number) =>
+    boardRef.current?.querySelectorAll(".board-column")[lane]?.querySelectorAll<HTMLElement>(".board-card")[index] ?? null;
 
   const change = (next: KanbanBoard) => {
     setBoard(next);
@@ -115,12 +121,14 @@ export function KanbanPage({ source, onChange, bridge, editable }: { source: str
     event.preventDefault();
     window.getSelection()?.removeAllRanges();
     pressed.current = { lane, card, x: event.clientX, y: event.clientY, rect: event.currentTarget.getBoundingClientRect() };
+    tracker.current.reset();
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const onPointerMove = (event: React.PointerEvent) => {
     const press = pressed.current;
     if (!press) return;
     if (!drag && Math.hypot(event.clientX - press.x, event.clientY - press.y) < 5) return;
+    tracker.current.push(event.clientX, event.clientY);
     setDrag({ lane: press.lane, card: press.card, x: event.clientX, y: event.clientY, dx: press.x - press.rect.left, dy: press.y - press.rect.top, width: press.rect.width });
     setTarget(targetAt(event.clientX, event.clientY));
   };
@@ -129,10 +137,12 @@ export function KanbanPage({ source, onChange, bridge, editable }: { source: str
     pressed.current = null;
     if (!press || !drag) return;
     const to = targetAt(event.clientX, event.clientY);
+    const moves = to !== null && !(to.lane === press.lane && to.index === press.card);
+    // The card flies into its new place, or back to where it was.
+    landGhost(ghostRef.current, tracker.current.velocity(), () => (moves ? cardAt(to.lane, to.index) : cardAt(press.lane, press.card)));
     setDrag(null);
     setTarget(null);
-    if (!to || (to.lane === press.lane && to.index === press.card)) return;
-    change(moveCard(board, { lane: press.lane, card: press.card }, to));
+    if (moves) change(moveCard(board, { lane: press.lane, card: press.card }, to));
   };
   const cancel = () => {
     pressed.current = null;
@@ -245,7 +255,7 @@ export function KanbanPage({ source, onChange, bridge, editable }: { source: str
           </button>
         )}
         {drag && (
-          <div className="board-card kanban-card board-ghost" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: drag.width }} aria-hidden>
+          <div ref={ghostRef} className="board-card kanban-card board-ghost" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: drag.width }} aria-hidden>
             {cardBody(board.lanes[drag.lane].cards[drag.card], drag.lane, drag.card)}
           </div>
         )}

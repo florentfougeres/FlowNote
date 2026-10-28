@@ -13,6 +13,8 @@ import type { TagNode } from "./dashboard/stats";
 import { usePersistentFlag } from "./hooks/usePersistentFlag";
 import { PAGE_SORTS, sortPages, type FileTimes, type PageSort } from "./pageSort";
 import { useClickOutside } from "./hooks/useClickOutside";
+import { isTauri } from "./platform";
+import { popupNativeMenu } from "./nativeMenu";
 
 /**
  * Sidebar, made for the pages: the vault (with its menu) and a "new page"
@@ -98,18 +100,34 @@ export interface MenuItem {
  * A small menu under the button that opened it (or the pointer, for a right
  * click), above it when there is no room below, and ending at the button's
  * right edge when there is no room on the right; closes on Escape or a click
- * outside.
+ * outside. A right-click menu (anchored at the pointer, no width) is the
+ * system's own menu in the desktop app, this one if it cannot be built.
  */
 export function PopoverMenu({ anchor, items, onClose }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void }) {
+  const [native, setNative] = useState(() => isTauri() && anchor.width === 0 && anchor.height === 0);
+  useEffect(() => {
+    if (!native) return;
+    void popupNativeMenu(items).then(onClose, () => setNative(false));
+    // The menu is shown once, as it was when opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return native ? null : <MenuList anchor={anchor} items={items} onClose={onClose} />;
+}
+
+function MenuList({ anchor, items, onClose }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, onClose, { escape: true });
-  const [place, setPlace] = useState({ top: anchor.bottom + 4, left: anchor.left });
+  const [place, setPlace] = useState({ top: anchor.bottom + 4, left: anchor.left, transformOrigin: "top left" });
   useLayoutEffect(() => {
     const height = ref.current?.offsetHeight ?? 0;
     const width = ref.current?.offsetWidth ?? 0;
+    const above = anchor.bottom + 4 + height > window.innerHeight - 8;
+    const leftward = anchor.left + width > window.innerWidth - 8;
     setPlace({
-      top: anchor.bottom + 4 + height > window.innerHeight - 8 ? Math.max(8, anchor.top - 4 - height) : anchor.bottom + 4,
-      left: Math.max(8, anchor.left + width > window.innerWidth - 8 ? Math.min(anchor.right, window.innerWidth - 8) - width : anchor.left),
+      top: above ? Math.max(8, anchor.top - 4 - height) : anchor.bottom + 4,
+      left: Math.max(8, leftward ? Math.min(anchor.right, window.innerWidth - 8) - width : anchor.left),
+      // It grows out of the corner nearest the button that opened it.
+      transformOrigin: `${above ? "bottom" : "top"} ${leftward ? "right" : "left"}`,
     });
   }, [anchor]);
   return (

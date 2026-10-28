@@ -51,7 +51,7 @@ export function IconPicker({ anchor, current, onPick, onClose }: { anchor: DOMRe
       className="icon-picker"
       role="dialog"
       aria-label="Icône de la page"
-      style={{ top: anchor.bottom + 6, left: Math.max(8, Math.min(anchor.left, window.innerWidth - 360)) }}
+      style={{ top: anchor.bottom + 6, left: Math.max(8, Math.min(anchor.left, window.innerWidth - 360)), transformOrigin: "top left" }}
       onKeyDown={(event) => event.key === "Escape" && onClose()}
     >
       <div className="icon-picker-header">
