@@ -1,5 +1,5 @@
 import { folderMenu as folderMenuItems, pageMenu as pageMenuItems, rootMenu } from "./menus";
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { VaultEntry } from "./vault/vault";
 import { Icon, type IconName } from "./Icon";
 import { isDrawingPath } from "./drawing/format";
@@ -15,9 +15,10 @@ import { PAGE_SORTS, sortPages, type FileTimes, type PageSort } from "./pageSort
 import { useClickOutside } from "./hooks/useClickOutside";
 
 /**
- * Sidebar: the vault (with its menu) and a "new page"
- * button at the top, navigation rows, the page tree, then Git, settings and
- * help at the bottom.
+ * Sidebar, made for the pages: the vault (with its menu) and a "new page"
+ * button at the top, one search field, the views in a row of icons, the
+ * favorites and the page tree (all the height left), then Git, settings and
+ * help as a row of icons at the bottom.
  *
  * Page tree: a note and the folder of the same name next to it ("Projet.md" +
  * "Projet/") are shown as one page whose children are the folder's content,
@@ -84,70 +85,75 @@ export interface MenuItem {
   label: string;
   icon: IconName;
   danger?: boolean;
-  /** The current choice among the items, marked on the right. */
+  /** The current choice among the items, or an option that is on, marked on the right. */
   checked?: boolean;
+  /** Its keyboard shortcut, shown on the right ("⌘⇧M"). */
+  shortcut?: string;
+  /** A group title ("Affichage"), shown above the first item of each group. */
+  section?: string;
   run: () => void;
 }
 
 /**
  * A small menu under the button that opened it (or the pointer, for a right
- * click), above it when there is no room below; closes on Escape or a click
+ * click), above it when there is no room below, and ending at the button's
+ * right edge when there is no room on the right; closes on Escape or a click
  * outside.
  */
 export function PopoverMenu({ anchor, items, onClose }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, onClose, { escape: true });
-  const [top, setTop] = useState(anchor.bottom + 4);
+  const [place, setPlace] = useState({ top: anchor.bottom + 4, left: anchor.left });
   useLayoutEffect(() => {
     const height = ref.current?.offsetHeight ?? 0;
-    setTop(anchor.bottom + 4 + height > window.innerHeight - 8 ? Math.max(8, anchor.top - 4 - height) : anchor.bottom + 4);
+    const width = ref.current?.offsetWidth ?? 0;
+    setPlace({
+      top: anchor.bottom + 4 + height > window.innerHeight - 8 ? Math.max(8, anchor.top - 4 - height) : anchor.bottom + 4,
+      left: Math.max(8, anchor.left + width > window.innerWidth - 8 ? Math.min(anchor.right, window.innerWidth - 8) - width : anchor.left),
+    });
   }, [anchor]);
   return (
-    <div ref={ref} className="sidebar-menu" role="menu" style={{ top, left: Math.max(8, Math.min(anchor.left, window.innerWidth - 240)) }}>
-      {items.map((item) => (
-        <button
-          key={item.label}
-          role="menuitem"
-          className={item.danger ? "danger" : undefined}
-          onClick={() => {
-            onClose();
-            item.run();
-          }}
-        >
-          <Icon name={item.icon} size={14} />
-          {item.label}
-          {item.checked && (
-            <span className="menu-check">
-              <Icon name="check" size={14} />
-            </span>
+    <div ref={ref} className="sidebar-menu" role="menu" style={place}>
+      {items.map((item, i) => (
+        <Fragment key={item.label}>
+          {item.section && item.section !== items[i - 1]?.section && (
+            <div className={i === 0 ? "menu-section first" : "menu-section"} role="presentation">
+              {item.section}
+            </div>
           )}
-        </button>
+          <button
+            role={item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
+            aria-checked={item.checked}
+            className={item.danger ? "danger" : undefined}
+            onClick={() => {
+              onClose();
+              item.run();
+            }}
+          >
+            <Icon name={item.icon} size={14} />
+            <span className="menu-label">{item.label}</span>
+            {item.shortcut && <kbd>{keys(item.shortcut)}</kbd>}
+            <span className="menu-check">{item.checked && <Icon name="check" size={14} />}</span>
+          </button>
+        </Fragment>
       ))}
     </div>
   );
 }
 
-function NavRow({
-  icon,
-  label,
-  shortcut,
-  active,
-  badge,
-  onClick,
-}: {
-  icon: IconName;
-  label: string;
-  shortcut?: string;
-  active?: boolean;
-  badge?: number | null;
-  onClick: (event: React.MouseEvent) => void;
-}) {
+/** A view of the app as an icon in a row (views under the search, Git, settings and help at the bottom); its name in the tooltip. */
+function IconTab({ icon, label, shortcut, active, badge, onClick, menu }: { icon: IconName; label: string; shortcut?: string; active?: boolean; badge?: number | null; onClick: (event: React.MouseEvent) => void; menu?: boolean }) {
   return (
-    <button className={active ? "sidebar-row active" : "sidebar-row"} onClick={onClick} aria-current={active ? "page" : undefined}>
-      <Icon name={icon} size={15} />
-      <span className="sidebar-row-label">{label}</span>
+    <button
+      className={active ? "sidebar-icon active" : "sidebar-icon"}
+      onClick={onClick}
+      aria-label={label}
+      aria-current={active ? "page" : undefined}
+      aria-haspopup={menu ? "menu" : undefined}
+      title={shortcut ? `${label} (${keys(shortcut)})` : label}
+    >
+      <Icon name={icon} size={16} />
       {badge ? <span className="sidebar-badge">{badge > 99 ? "99+" : badge}</span> : null}
-      {shortcut && <kbd>{keys(shortcut)}</kbd>}
     </button>
   );
 }
@@ -216,7 +222,6 @@ interface Props {
   onMove: (item: { path: string; folder: boolean }, target: string) => void;
   onRename: (notePath: string) => void;
   onSearch: () => void;
-  onVaultSearch: () => void;
   onHome: (newTab: boolean) => void;
   onTasks: (newTab: boolean) => void;
   onGraph: (newTab: boolean) => void;
@@ -255,9 +260,9 @@ export const Sidebar = memo(function Sidebar(props: Props) {
   const dragged = useRef(false);
   const treeRef = useRef<HTMLDivElement>(null);
 
-  // Reveal the selected page.
+  // Reveal the selected page; not for a view of the app kept in a file (the tasks' views in TaskNotes/Views).
   useEffect(() => {
-    if (!selected) return;
+    if (!selected || view !== null) return;
     const open = new Set(expanded);
     const walk = (list: Page[]) =>
       list.forEach((page) => {
@@ -269,7 +274,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
     walk(pages);
     if (open.size !== expanded.size) setExpanded(open);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, tree]);
+  }, [selected, tree, view]);
 
   const toggle = (key: string) => {
     const next = new Set(expanded);
@@ -470,18 +475,19 @@ export const Sidebar = memo(function Sidebar(props: Props) {
           <Icon name="compose" size={16} />
         </button>
       </div>
-      <nav className="sidebar-nav" aria-label="Navigation">
-        <NavRow icon="home" label="Accueil" active={view === "home"} onClick={(event) => props.onHome(event.metaKey || event.ctrlKey)} />
-        <NavRow icon="search" label="Rechercher" shortcut="⌘P" onClick={props.onSearch} />
-        <NavRow icon="searchText" label="Rechercher dans les notes" shortcut="⌘⇧F" onClick={props.onVaultSearch} />
-        <NavRow icon="task" label="Tâches" active={view === "tasks"} onClick={(event) => props.onTasks(event.metaKey || event.ctrlKey)} />
-        <NavRow icon="bookmark" label="Lectures" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
-        <NavRow icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />
-        <NavRow icon="book" label="Documentation" active={view === "docs"} onClick={(event) => props.onDocs(event.metaKey || event.ctrlKey)} />
+      <button className="sidebar-search" onClick={props.onSearch}>
+        <Icon name="search" size={14} />
+        <span>Rechercher</span>
+        <kbd>{keys("⌘P")}</kbd>
+      </button>
+      <nav className="sidebar-views" aria-label="Vues">
+        <IconTab icon="home" label="Accueil" active={view === "home"} onClick={(event) => props.onHome(event.metaKey || event.ctrlKey)} />
+        <IconTab icon="task" label="Tâches" active={view === "tasks"} onClick={(event) => props.onTasks(event.metaKey || event.ctrlKey)} />
+        <IconTab icon="bookmark" label="Lectures" active={view === "reading"} onClick={(event) => props.onReading(event.metaKey || event.ctrlKey)} />
+        <IconTab icon="graph" label="Graphe" active={view === "graph"} onClick={(event) => props.onGraph(event.metaKey || event.ctrlKey)} />
       </nav>
       {props.favorites.length > 0 && (
-        <>
-          <div className="sidebar-section">Favoris</div>
+        <FavoritesSection>
           <ul className="tree sidebar-favorites">
             {props.favorites.map((path) => (
               <li key={path}>
@@ -508,7 +514,7 @@ export const Sidebar = memo(function Sidebar(props: Props) {
               </li>
             ))}
           </ul>
-        </>
+        </FavoritesSection>
       )}
       <div className="sidebar-section">
         Pages
@@ -549,9 +555,20 @@ export const Sidebar = memo(function Sidebar(props: Props) {
       </div>
       {props.tags.length > 0 && <TagsSection tags={props.tags} onTag={props.onTag} />}
       <div className="sidebar-footer">
-        {gitChanges !== null && <NavRow icon="branch" label="Git" shortcut="⌘⇧G" active={gitOpen} badge={gitChanges} onClick={props.onGit} />}
-        <NavRow icon="sliders" label="Réglages" shortcut="⌘," active={view === "settings"} onClick={(event) => props.onSettings(event.metaKey || event.ctrlKey)} />
-        <NavRow icon="question" label="Aide et raccourcis" shortcut="⌘/" onClick={props.onHelp} />
+        {gitChanges !== null && <IconTab icon="branch" label="Git" shortcut="⌘⇧G" active={gitOpen} badge={gitChanges} onClick={props.onGit} />}
+        <IconTab icon="sliders" label="Réglages" shortcut="⌘," active={view === "settings"} onClick={(event) => props.onSettings(event.metaKey || event.ctrlKey)} />
+        <IconTab
+          icon="question"
+          label="Aide"
+          menu
+          active={view === "docs"}
+          onClick={(event) =>
+            openMenu(event, [
+              { label: "Documentation", icon: "book", run: () => props.onDocs(event.metaKey || event.ctrlKey) },
+              { label: "Raccourcis clavier", icon: "question", shortcut: "⌘/", run: props.onHelp },
+            ])
+          }
+        />
       </div>
       {drag && (
         <div className={drag.target === null ? "tree-drag-ghost refused" : "tree-drag-ghost"} style={{ left: drag.x + 12, top: drag.y + 8 }} aria-hidden="true">
@@ -593,6 +610,20 @@ function startSidebarResize(event: React.PointerEvent) {
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
+}
+
+/** "Favoris", folded on its title (open at first, remembered). */
+function FavoritesSection({ children }: { children: React.ReactNode }) {
+  const [shown, setShown] = usePersistentFlag("flownote:favorites-section", true, ["shown", "hidden"]);
+  return (
+    <>
+      <button className="sidebar-section sidebar-section-toggle" onClick={() => setShown(!shown)} aria-expanded={shown}>
+        Favoris
+        <Icon name={shown ? "chevronDown" : "chevronRight"} size={12} />
+      </button>
+      {shown && children}
+    </>
+  );
 }
 
 /**

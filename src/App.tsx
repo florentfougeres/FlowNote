@@ -1,4 +1,4 @@
-import { tabMenu as tabMenuOf } from "./menus";
+import { pageBarMenu, rawLabel, tabMenu as tabMenuOf } from "./menus";
 import type { FileTimes, PageSort } from "./pageSort";
 import { isMergeable } from "./vault/merge";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -34,7 +34,7 @@ import { globalAction, shortcutOf, type GlobalAction } from "./shortcuts";
 import { CommandPalette, type Command } from "./CommandPalette";
 import { NEW_PAGE_KINDS } from "./pageKinds";
 import { applyLook, applyTheme, applyScale, loadSettings, saveSettings, SettingsPage, type Settings } from "./SettingsPage";
-import { PageIcon, PopoverMenu, Sidebar, type MenuItem } from "./Sidebar";
+import { PageIcon, PopoverMenu, Sidebar } from "./Sidebar";
 import { Icon, type IconName } from "./Icon";
 import { GraphPage } from "./graph/GraphPage";
 import { ReadingView } from "./reading/ReadingView";
@@ -189,7 +189,13 @@ export function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [gitChanges, setGitChanges] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
-  const [modal, setModal] = useState<"switcher" | "palette" | "help" | "search" | "addLink" | null>(null);
+  const [modal, setModalState] = useState<"switcher" | "palette" | "help" | "search" | "addLink" | null>(null);
+  /** The text carried from one search to the other ("Titres | Contenu"); dropped when a dialog opens on its own. */
+  const [scopeQuery, setScopeQuery] = useState<string | undefined>(undefined);
+  const setModal = useCallback((next: "switcher" | "palette" | "help" | "search" | "addLink" | null) => {
+    setScopeQuery(undefined);
+    setModalState(next);
+  }, []);
   /** Bumped when a link is added, so the reading list views read it again. */
   const [readingVersion, setReadingVersion] = useState(0);
   const [readingThemes, setReadingThemes] = useState<string[]>([]);
@@ -279,7 +285,7 @@ export function App() {
   const frontmatter = useRef<FrontmatterControl | null>(null);
   useEffect(() => applyTheme(settings.theme, isTauri()), [settings.theme]);
   useEffect(() => applyScale(settings.uiScale, isTauri()), [settings.uiScale]);
-  useEffect(() => applyLook(settings.font, settings.blockMenu), [settings.font, settings.blockMenu]);
+  useEffect(() => applyLook(settings.font, settings.noteFont, settings.blockMenu), [settings.font, settings.noteFont, settings.blockMenu]);
   // The macOS window is transparent so the sidebar can show the native material
   // (on Linux the window is opaque, with the system title bar).
   useEffect(() => {
@@ -910,6 +916,8 @@ export function App() {
     }
   };
   const activePath = tabs.find((t) => t.id === activeTab)?.path ?? null;
+  /** A view of the tasks (TaskNotes/Views/…): shown as "Tâches", not as a file of the tree. */
+  const tasksView = activePath !== null && Object.values(taskConfig.views).includes(activePath);
 
   const readingPath = settings.readingList || "Lectures.md";
   /** "Ajouter un lien": the dialog lists the themes and tags of the reading list. */
@@ -1262,10 +1270,6 @@ export function App() {
     onMove: (item: { path: string; folder: boolean }, target: string) => void moveItem(item, target),
     onRename: (path: string) => void askName("Renommer la page", noteTitle(path)).then((name) => (name ? renamePath(path, name) : false)),
     onSearch: () => setModal("switcher"),
-    onVaultSearch: () => {
-      setSearchFilters([]);
-      setModal("search");
-    },
     onTag: (tag: string) => {
       setSearchFilters([{ kind: "tag", tag }]);
       setModal("search");
@@ -1296,6 +1300,22 @@ export function App() {
     );
   }
 
+  /** The page bar's "…" menu (menus.ts); no button when the page offers none of its items. */
+  const pageBarItems = note
+    ? pageBarMenu({
+        spelling: readable && !reading && settings.spellChecker !== "off" ? { on: spellingOn, toggle: toggleSpelling } : undefined,
+        history: vault.git && gitChanges !== null ? { on: showHistory, toggle: () => setShowHistory(!showHistory) } : undefined,
+        toPresentation: readable && !taskPage && !presentationPage && !reading ? convertToPresentation : undefined,
+        exports:
+          rawMode || basePage || taskPage || canvasPage || dashboardPage || kanbanPage
+            ? []
+            : [
+                { label: "Exporter en PDF…", run: () => void exportCurrentPdf() },
+                ...(!drawing && !mindmap && !presentationPage ? [{ label: "Exporter en HTML…", run: () => void exportAsHtml() }] : []),
+              ],
+      })
+    : [];
+
   /** A tab's menu (menus.ts): the split view's actions, then closing it. */
   const tabMenuItems = (id: string) => {
     const tab = tabs.find((t) => t.id === id);
@@ -1322,7 +1342,7 @@ export function App() {
       taskPaths={taskPaths}
       hidden={sidebarHidden}
       selected={note?.path}
-      view={activePath === null ? "home" : Object.values(taskConfig.views).includes(activePath) ? "tasks" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
+      view={activePath === null ? "home" : tasksView ? "tasks" : activePath === GRAPH_VIEW ? "graph" : activePath === READING_VIEW ? "reading" : activePath === SETTINGS_VIEW ? "settings" : activePath === DOCS_VIEW ? "docs" : null}
       liveIcon={sidebarLiveIcon}
       showTitles={settings.showTitles}
       pageSort={settings.pageSort}
@@ -1395,15 +1415,14 @@ export function App() {
           {statusPill}
           <Toolbar
             left={
+              // A view of the app (Accueil, Tâches, Réglages…) is already named by its tab: no breadcrumbs, only the save state and the messages.
               note ? (
                 <>
-                  <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} iconOf={pageIconFor} />
+                  {!tasksView && <Breadcrumbs vaultName={vault.name} path={note.path} files={files} onOpen={(path) => void select(path)} onRename={renameCurrent} iconOf={pageIconFor} />}
                   {saveState}
                   {status && <span className="status warning">{status}</span>}
                 </>
-              ) : (
-                <span className="toolbar-location">{activePath === null ? "Accueil" : (VIEWS[activePath]?.title ?? "")}</span>
-              )
+              ) : null
             }
             center={
               drawing && !rawMode ? (
@@ -1423,28 +1442,20 @@ export function App() {
                       <ToolButton icon="export" label="Exporter en image (PNG)" onClick={() => void exportMindmap()} disabled={!mindmapControls} />
                     </>
                   )}
-                  {!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
+                  {readable && <ToolButton icon="outline" label="Plan de la note" onClick={toggleOutline} active={showOutline && !outlineHidden} />}
                   {readable && <ToolButton icon="eye" label={reading ? "Quitter le mode lecture (⌘⇧R)" : "Mode lecture (⌘⇧R)"} onClick={toggleReading} active={reading} disabled={rawMode} />}
-                  {readable && !reading && settings.spellChecker !== "off" && (
-                    <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={toggleSpelling} active={spellingOn} />
-                  )}
                   {presentationPage && (
-                  <>
-                    <ToolButton icon="slides" label="Miniatures des diapos" onClick={() => setShowSlides(!showSlides)} active={showSlides} />
-                    <ToolButton icon="play" label="Présenter (⌘⌥P)" onClick={() => present()} disabled={!slides} />
-                    <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportCurrent()} />
-                  </>
-                )}
-                {!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !taskPage && !presentationPage && !reading && <ToolButton icon="slides" label="Transformer en présentation" onClick={convertToPresentation} />}
-                {vault.git && gitChanges !== null && <ToolButton icon="clock" label="Historique de la note" onClick={() => setShowHistory(!showHistory)} active={showHistory} />}
-                  {!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && !presentationPage && (
-                    <ToolButton icon="width" label={widePages.has(note.path) ? "Largeur normale" : "Pleine largeur"} onClick={() => toggleWide(note.path)} active={widePages.has(note.path)} />
+                    <>
+                      <ToolButton icon="slides" label="Miniatures des diapos" onClick={() => setShowSlides(!showSlides)} active={showSlides} />
+                      <ToolButton icon="play" label="Présenter (⌘⌥P)" onClick={() => present()} disabled={!slides} />
+                      <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportCurrent()} />
+                    </>
                   )}
+                  {showHistory && vault.git && gitChanges !== null && <ToolButton icon="clock" label="Fermer l'historique de la note" onClick={() => setShowHistory(false)} active />}
+                  {readable && !presentationPage && <ToolButton icon="width" label={widePages.has(note.path) ? "Largeur normale" : "Pleine largeur"} onClick={() => toggleWide(note.path)} active={widePages.has(note.path)} />}
                   <ToolButton icon="focus" label={focusMode ? "Quitter le mode focus (⌘⇧M)" : "Mode focus (⌘⇧M)"} onClick={toggleFocus} active={focusMode} />
-                  {!basePage && !taskPage && !canvasPage && !dashboardPage && !kanbanPage && (
-                    <ToolButton icon="more" label="Exporter, copier…" onClick={(event) => setPageMenu(event.currentTarget.getBoundingClientRect())} active={pageMenu !== null} disabled={rawMode} />
-                  )}
-                  <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin (⌘⇧E)" : mindmap ? "Voir le fichier brut de la mind map (⌘⇧E)" : basePage ? "Voir le fichier .base (⌘⇧E)" : canvasPage ? "Voir le fichier .canvas (⌘⇧E)" : "Mode Markdown brut (⌘⇧E)"} onClick={toggleRaw} active={rawMode} />
+                  <ToolButton icon="raw" label={`${rawLabel({ drawing, mindmap, base: basePage, canvas: canvasPage })} (⌘⇧E)`} onClick={toggleRaw} active={rawMode} />
+                  {pageBarItems.length > 0 && <ToolButton icon="more" label="Correction, historique, export…" onClick={(event) => setPageMenu(event.currentTarget.getBoundingClientRect())} active={pageMenu !== null} />}
                 </div>
               )
             }
@@ -1453,10 +1464,7 @@ export function App() {
             <PopoverMenu
               anchor={pageMenu}
               onClose={() => setPageMenu(null)}
-              items={[
-                { label: "Exporter en PDF…", icon: "export", run: () => void exportCurrentPdf() },
-                ...(!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !presentationPage ? [{ label: "Exporter en HTML…", icon: "export", run: () => void exportAsHtml() } satisfies MenuItem] : []),
-              ]}
+              items={pageBarItems}
             />
           )}
           {note ? (
@@ -1640,7 +1648,6 @@ export function App() {
               onOpen={(path, newTabRequested) => void select(path, "push", newTabRequested)}
               onCreate={(kind) => void newPage(null, undefined, undefined, kind)}
               onOpenGit={() => toggleGit(true)}
-              onSearch={() => setModal("switcher")}
               onOpenTasks={(newTabRequested) => void openTasks("tasks", newTabRequested)}
               tasksConfig={taskConfig}
               onOpenGraph={(newTabRequested) => void select(GRAPH_VIEW, "push", newTabRequested)}
@@ -1728,13 +1735,27 @@ export function App() {
         />
       )}
       {modal === "switcher" && (
-        <QuickSwitcher files={files} titles={switcherTitles} iconOf={pageIconFor} onOpen={(path) => void select(path)} onCreate={(name) => void newPage(null, name)} onCommands={() => setModal("palette")} onClose={() => setModal(null)} />
+        <QuickSwitcher
+          files={files}
+          titles={switcherTitles}
+          iconOf={pageIconFor}
+          initialQuery={scopeQuery}
+          onOpen={(path) => void select(path)}
+          onCreate={(name) => void newPage(null, name)}
+          onCommands={() => setModal("palette")}
+          onContent={(query) => {
+            setSearchFilters([]);
+            setModal("search");
+            setScopeQuery(query);
+          }}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal === "palette" && <CommandPalette commands={paletteCommands()} onClose={() => setModal(null)} />}
       {modal === "search" && (
         <VaultSearch
           vault={vault}
-          initialQuery={searchFilters.length ? "" : (findRequest?.query ?? selectedText())}
+          initialQuery={scopeQuery ?? (searchFilters.length ? "" : (findRequest?.query ?? selectedText()))}
           initialFilters={searchFilters}
           iconOf={pageIconFor}
           onOpen={(hit, occurrence, query) => {
@@ -1742,6 +1763,10 @@ export function App() {
             void select(hit.path).then(() => setFindRequest({ query, occurrence, nonce: Date.now() }));
           }}
           onOpenPage={(path) => void select(path)}
+          onTitles={(query) => {
+            setModal("switcher");
+            setScopeQuery(query);
+          }}
           onClose={() => setModal(null)}
         />
       )}

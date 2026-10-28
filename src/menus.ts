@@ -4,8 +4,9 @@ import { isBasePath } from "./base/baseFile";
 import { isMergeable } from "./vault/merge";
 
 /**
- * The menus of the sidebar and of the tabs, written once: the sidebar and the
- * tab bar show them. Each takes the actions it runs.
+ * The menus of the sidebar, of the tabs and of the page bar, written once: the
+ * sidebar, the tab bar and both sides of the split view show them. Each takes
+ * the actions it runs.
  */
 
 export interface PageMenuActions {
@@ -100,3 +101,34 @@ export function tabMenu(c: TabMenuContext): MenuItem[] {
   items.push({ label: "Fermer l'onglet", icon: "close", run: c.close });
   return items;
 }
+
+/** An option of the page that is on or off, and the way to switch it. */
+interface Toggle {
+  on: boolean;
+  toggle: () => void;
+}
+
+/**
+ * The page bar's "…" menu, for both sides of the split view: the spelling
+ * checker, the page's own actions, then the exports (full width, focus and the
+ * raw file stay as buttons in the bar). An option the page does not offer is
+ * left out.
+ */
+export function pageBarMenu(o: {
+  spelling?: Toggle;
+  history?: Toggle;
+  toPresentation?: () => void;
+  exports: { label: string; run: () => void }[];
+}): MenuItem[] {
+  const page = "Page";
+  return [
+    ...(o.spelling ? [{ section: "Affichage", label: "Correction orthographique", icon: "spelling", checked: o.spelling.on, run: o.spelling.toggle } satisfies MenuItem] : []),
+    ...(o.history ? [{ section: page, label: "Historique de la note", icon: "clock", checked: o.history.on, run: o.history.toggle } satisfies MenuItem] : []),
+    ...(o.toPresentation ? [{ section: page, label: "Transformer en présentation", icon: "slides", run: o.toPresentation } satisfies MenuItem] : []),
+    ...o.exports.map((item): MenuItem => ({ section: "Exporter", icon: "export", ...item })),
+  ];
+}
+
+/** What the raw view of a page is called in its menu. */
+export const rawLabel = (kind: { drawing?: boolean; mindmap?: boolean; base?: boolean; canvas?: boolean }) =>
+  kind.drawing ? "Fichier brut du dessin" : kind.mindmap ? "Fichier brut de la mind map" : kind.base ? "Fichier .base" : kind.canvas ? "Fichier .canvas" : "Markdown brut";

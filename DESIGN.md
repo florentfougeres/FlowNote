@@ -114,17 +114,36 @@ components:
     textColor: "{colors.ink}"
     rounded: "{rounded.sm}"
     padding: "3px 12px"
-  sidebar-row:
+  sidebar-search:
+    backgroundColor: "{colors.hover-fill}"
+    textColor: "{colors.ink-secondary}"
+    rounded: "{rounded.md}"
+    height: "28px"
+    padding: "0 8px"
+  sidebar-icon:
     backgroundColor: "transparent"
     textColor: "{colors.ink-secondary}"
     rounded: "{rounded.sm}"
-    height: "28px"
-    padding: "0 8px"
-  sidebar-row-active:
+    height: "30px"
+  sidebar-icon-active:
     backgroundColor: "{colors.selected-fill}"
     textColor: "{colors.ink}"
     rounded: "{rounded.sm}"
+    height: "30px"
+  page-row:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.sm}"
     height: "28px"
+  tile:
+    backgroundColor: "{colors.paper-elevated}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: "10px 6px 8px"
+  tile-selected:
+    backgroundColor: "{colors.paper-elevated}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
   chip-tag:
     backgroundColor: "{colors.system-blue-soft}"
     textColor: "{colors.system-blue}"
@@ -202,7 +221,8 @@ Une palette de labels et de remplissages en transparence sur le noir (ou le blan
 
 ## Typography
 
-**Police d'interface et de texte :** la police du système (SF Pro sur macOS), avec Segoe UI et Roboto en repli. Les réglages proposent aussi Clarika, Open Sans et Inter.
+**Police de l'interface :** la police du système (SF Pro sur macOS), avec Segoe UI et Roboto en repli (`--font-ui`). Les réglages proposent aussi Clarika, Open Sans et Inter.
+**Police des notes :** celle de l'interface par défaut (`--font-note` pour le texte, `--font-note-heading` pour le titre de page et les titres). Elle se règle à part : système, serif (New York, Iowan Old Style, Georgia), Clarika, Open Sans ou Inter.
 **Police de code :** ui-monospace (SF Mono, Menlo).
 
 **Character :** une seule famille, réglée comme le fait Apple : un interlettrage de plus en plus serré à mesure que la taille augmente (de -0,003 em à 13 px jusqu'à -0,022 em pour le titre de page), et des graisses franches pour la hiérarchie.
@@ -216,6 +236,8 @@ Une palette de labels et de remplissages en transparence sur le noir (ou le blan
 - **Code** (mono) : code en ligne et blocs de code, diffs Git.
 
 ### Named Rules
+**La règle des deux voix.** L'interface parle avec `--font-ui`, les notes avec `--font-note`. Un élément qui fait partie du texte d'une note (titre de page, titres, corps) prend la police des notes ; tout le reste (menus, barres, propriétés, vues) garde celle de l'interface.
+
 **La règle des pixels entiers.** Les tailles de texte sont entières (11, 12, 13, 14, 15, 16 px…), jamais 12,5 px.
 
 **La règle des chiffres alignés.** Compteurs, dates de calendrier, numéros et colonnes de chiffres utilisent `font-variant-numeric: tabular-nums`.
@@ -279,12 +301,18 @@ Le choix exclusif entre quelques options (thème, taille, vues des tâches, mode
 - Jamais de `<select>` ni d'`<input type="date">` bruts : menus de l'app et sélecteur de date maison.
 
 ### Navigation
-- **Barre latérale :** lignes de 28 px, icône et libellé en encre secondaire ; au survol et active, l'encre pleine sur le remplissage de sélection. Titres de section en encre tertiaire.
-- **Onglets :** l'onglet actif est une carte surélevée dans la barre plate de la fenêtre ; les autres sont du texte.
-- **Fil d'Ariane :** encre secondaire, le dernier élément en encre pleine et en gras.
+Faite pour les pages : tout ce qui n'est pas l'arbre se range en rangées compactes.
+- **Barre latérale, de haut en bas :** le vault et Nouvelle page ; un **champ Rechercher** (remplissage de survol, 8 px, raccourci ⌘P à droite) ; les **vues en rangée d'icônes** (Accueil, Tâches, Lectures, Graphe), réparties sur toute la largeur, leur nom dans l'infobulle et l'état actif sur le remplissage de sélection ; Favoris et Pages en sections repliables (titres en encre tertiaire, 12 px) ; l'arbre prend toute la hauteur restante ; en bas, une **rangée d'icônes compacte** (36 px) : Git avec sa pastille, Réglages, Aide (menu : Documentation, Raccourcis clavier).
+- **Lignes de l'arbre :** 28 px, icône du type ou emoji de la page, libellé en encre pleine ; sélection sur le remplissage de survol.
+- **Onglets :** des pilules de même largeur, les inactives sur un remplissage à 3,5 % de l'encre, l'active en carte surélevée ; la croix au survol et sur l'onglet actif.
+- **Barre de page :** le fil d'Ariane (encre secondaire, le dernier élément en encre pleine et en gras), puis les boutons fantômes de la page, toujours visibles (Plan, Mode lecture, Pleine largeur, Mode focus, Markdown brut), puis **⋯** pour le reste. Sur une vue de l'app (Accueil, Tâches, Réglages…), pas de fil d'Ariane : l'onglet la nomme déjà.
+- **Recherche :** une fenêtre, deux portées, choisies par un contrôle segmenté « Titres | Contenu » qui garde le texte tapé.
 
 ### Menus et fenêtres
-Verre des menus, flou, 10 px d'arrondi (12 px pour une fenêtre), ombre de menu, apparition en 140 à 200 ms sur une courbe qui se pose (`cubic-bezier(0.2, 0.9, 0.3, 1)`). Les lignes de menu ont une icône au trait, un libellé, et le raccourci à droite en encre secondaire. Une fenêtre ne dépasse jamais l'écran : son contenu défile à l'intérieur.
+Verre des menus, flou, 10 px d'arrondi (12 px pour une fenêtre), ombre de menu, apparition en 140 à 200 ms sur une courbe qui se pose (`cubic-bezier(0.2, 0.9, 0.3, 1)`). Les lignes de menu font 28 px : une icône au trait, un libellé, le raccourci à droite en encre secondaire, puis une coche bleue pour une option active (la colonne de la coche est réservée dans tout le menu dès qu'une ligne peut être cochée, pour garder les raccourcis alignés). Les groupes ont un titre en encre secondaire (11 px, 600) au-dessus d'un filet. Un menu ouvert près du bord droit s'aligne sur le bord droit de son bouton. Une fenêtre ne dépasse jamais l'écran : son contenu défile à l'intérieur.
+
+### Tuiles
+Un choix visuel parmi quelques options (types de page à créer sur l'Accueil, polices dans les Réglages) : des tuiles en grille, papier surélevé, filet de 0,5 px, 10 px d'arrondi, le contenu centré (une icône de type dans sa pastille teintée, ou « Ag » écrit dans la police proposée), le nom en 12 px dessous. Au survol, le remplissage de survol ; sélectionnée, un bord bleu de 1 px. Sans ombre.
 
 ### Callouts
 Le bloc signature des notes : un fond teinté à 7 % de la couleur du type, un filet teinté à 24 % tout autour, 8 px d'arrondi, l'icône et le titre dans la couleur du type.
@@ -296,6 +324,8 @@ Le bloc signature des notes : un fond teinté à 7 % de la couleur du type, un f
 - **Do** utiliser les icônes de `src/Icon.tsx` (grille de 16, trait de 1,4, couleur du texte) ; dessiner celle qui manque dans le même style.
 - **Do** garder les arrondis sur l'échelle 4, 6, 8, 10, 12 px et les tailles de texte entières.
 - **Do** caler le titre, les propriétés et la note sur la même colonne de 720 px.
+- **Do** donner au texte des notes `--font-note` (et `--font-note-heading` aux titres), jamais `--font-ui`.
+- **Do** ranger une nouvelle vue de l'app dans la rangée d'icônes, et une action secondaire de page dans le menu ⋯ (`pageBarMenu`) ; une option que l'on bascule souvent reste un bouton visible.
 - **Do** donner à chaque contrôle ses états : survol, pression, focus visible, désactivé.
 - **Do** respecter `prefers-reduced-motion` pour toute animation d'entrée.
 
@@ -305,4 +335,5 @@ Le bloc signature des notes : un fond teinté à 7 % de la couleur du type, un f
 - **Don't** mettre du flou ou du verre sur une surface posée, ni un halo coloré sous un bouton.
 - **Don't** introduire une deuxième couleur d'action à côté du bleu système.
 - **Don't** laisser un `<select>`, un `<input type="date">` ou une fenêtre qui déborde de l'écran.
+- **Don't** répéter dans la barre de page le nom qu'affiche déjà l'onglet, ni afficher un menu ⋯ vide.
 - **Don't** écrire une couleur en dur dans un composant sans son équivalent sombre.

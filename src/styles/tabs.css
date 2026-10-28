@@ -1,4 +1,4 @@
-/* ---- Tabs: rounded pills, the active one raised (Safari / Arc style) ---- */
+/* ---- Tabs: rounded pills of equal width, the active one raised (Safari style) ---- */
 
 :root {
   /* Tab strip at the top of the window, and the page bar under it (sticky in the page). */
@@ -42,8 +42,13 @@
     box-shadow 140ms ease-out;
 }
 
-.tab:hover {
-  background: color-mix(in srgb, var(--text) 6%, transparent);
+/* Every tab is a shape of the same width (a faint fill), so switching never seems to move them. */
+.tab:not(.active) {
+  background: color-mix(in srgb, var(--text) 3.5%, transparent);
+}
+
+.tab:hover:not(.active) {
+  background: color-mix(in srgb, var(--text) 7%, transparent);
   color: var(--text);
 }
 

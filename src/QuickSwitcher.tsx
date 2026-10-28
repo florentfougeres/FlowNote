@@ -3,6 +3,20 @@ import { linkItems, type LinkItem } from "./editor/wikilinks";
 import { Icon } from "./Icon";
 import { keys } from "./keys";
 
+/** "Titres | Contenu" in both search dialogs: one search, two scopes; the text typed goes along. */
+export function SearchScope({ scope, onSwitch }: { scope: "titles" | "content"; onSwitch: () => void }) {
+  return (
+    <div className="segmented search-scope" role="radiogroup" aria-label="Rechercher dans">
+      <button role="radio" aria-checked={scope === "titles"} className={scope === "titles" ? "selected" : undefined} onMouseDown={(e) => e.preventDefault()} onClick={() => scope !== "titles" && onSwitch()} title={keys("Titres des pages (⌘P)")}>
+        Titres
+      </button>
+      <button role="radio" aria-checked={scope === "content"} className={scope === "content" ? "selected" : undefined} onMouseDown={(e) => e.preventDefault()} onClick={() => scope !== "content" && onSwitch()} title={keys("Texte des notes (⌘⇧F)")}>
+        Contenu
+      </button>
+    </div>
+  );
+}
+
 /** Cmd+P / Cmd+K: open a note by name or by title, or create it; « > » goes to the command palette. */
 export function QuickSwitcher({
   files,
@@ -11,6 +25,8 @@ export function QuickSwitcher({
   onOpen,
   onCreate,
   onCommands,
+  onContent,
+  initialQuery = "",
   onClose,
 }: {
   files: string[];
@@ -22,9 +38,12 @@ export function QuickSwitcher({
   onCreate: (name: string) => void;
   /** « > » typed first: the command palette instead, like in VS Code. */
   onCommands?: () => void;
+  /** "Contenu": the same text searched in the notes instead. */
+  onContent?: (query: string) => void;
+  initialQuery?: string;
   onClose: () => void;
 }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [index, setIndex] = useState(0);
   const list = useRef<HTMLUListElement>(null);
   const items: LinkItem[] = linkItems(query, files, false, titles).slice(0, 50);
@@ -60,6 +79,7 @@ export function QuickSwitcher({
               e.preventDefault();
             }}
           />
+          {onContent && <SearchScope scope="titles" onSwitch={() => onContent(query)} />}
         </div>
         <ul ref={list} className="switcher-list">
           {items.map((item, i) => (
@@ -75,7 +95,6 @@ export function QuickSwitcher({
           <span className="name-dialog-hint">
             <kbd>↑↓</kbd> naviguer <kbd>↵</kbd> ouvrir <kbd>esc</kbd> fermer
           </span>
-          <span>{keys("⌘⇧F")} : chercher dans le texte</span>
         </footer>
       </div>
     </div>

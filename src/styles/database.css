@@ -470,8 +470,9 @@ button.db-cell-check {
   font-variant-numeric: tabular-nums;
 }
 
-/* A web address in a cell: one line, its start only (the whole address on hover). */
-.db-url {
+/* A web address in a cell: one line, its start only (the whole address on hover); the same in a base embedded in a note. */
+.db-url,
+.note a.db-url {
   display: inline-block;
   max-width: 100%;
   overflow: hidden;
@@ -1403,6 +1404,12 @@ body:has(.db-calendar.dragging) {
 }
 
 /* ---- A base embedded in a note ---- */
+
+/* A paragraph holding only an embed: no empty lines from ProseMirror's caret helpers above and below it
+   (prosemirror.css shows its separator with !important). */
+.note p:has(> :is(.embed-base, .embed-note)) > :is(img.ProseMirror-separator, .ProseMirror-trailingBreak) {
+  display: none !important;
+}
 
 .embed-base {
   display: block;

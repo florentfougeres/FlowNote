@@ -203,3 +203,47 @@
     gap: 12px;
   }
 }
+
+/* Fonts as tiles, each written in itself. */
+.font-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.font-picker button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.font-picker button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.font-picker button.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  color: var(--text);
+}
+
+.font-picker-sample {
+  font-size: 24px;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.settings-value {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}

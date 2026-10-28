@@ -77,6 +77,11 @@ describe("tasks in the TaskNotes format", () => {
       ["task", "Site", "2026-10-20"],
     ]);
   });
+
+  it("takes a checkbox's priority sign out of its text", () => {
+    const [item] = agenda([["A.md", "- [ ] Mot de passe ⏫ #compta 📅 2026-10-18\n"]], C);
+    expect([item.text, item.priority]).toEqual(["Mot de passe #compta", "high"]);
+  });
 });
 
 describe("TaskNotes settings", () => {

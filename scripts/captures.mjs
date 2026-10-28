@@ -19,10 +19,11 @@ const wait = (page, ms) => page.waitForTimeout(ms);
 async function openDemo(page) {
   await page.goto(base);
   await page.getByRole("button", { name: /Essayer avec un exemple/ }).click();
-  await page.locator(".sidebar-row", { hasText: "Accueil" }).waitFor();
+  await page.locator(".sidebar-icon[aria-label=\"Accueil\"]").waitFor();
   await wait(page, 1200);
 }
-const nav = (page, label) => page.locator(".sidebar-row", { hasText: label }).first().click();
+/** A view of the sidebar's rows of icons (Accueil, Tâches, Lectures, Graphe, Réglages…), by its name. */
+const nav = (page, label) => page.locator(`.sidebar-icon[aria-label="${label}"]`).first().click();
 const pageRow = (page, label) => page.locator(".page-name", { has: page.locator(".page-label", { hasText: new RegExp(`^${label}$`) }) }).first();
 async function expand(page, label) {
   const toggle = pageRow(page, label).locator("xpath=..").locator(".page-toggle");

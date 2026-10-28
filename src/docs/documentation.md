@@ -25,7 +25,7 @@ FlowNote édite votre vault Obsidian par blocs, avec un menu `/`, des bases, des
 
 Le vault de démonstration est le carnet de Camille, qui crée des sites et des identités visuelles à son compte : des clients, des projets, des réunions, un journal, des voyages. Il montre tout ce que FlowNote sait faire, en situation. Sa note **« Bienvenue »** (dans les favoris) dit où voir chaque fonctionnalité : le projet « Site Maison Pain » et ses sous-pages (cahier des charges, moodboard, croquis, présentation), la base « Clients » et ses quatre vues, le dashboard, le canevas, les tarifs (maths, admonitions), la comptabilité (graphiques, Dataview, Tasks), les tâches et les lectures.
 
-L'**Accueil** rassemble les raccourcis de création, les pages récentes, les échéances à venir (des tâches et des cases à cocher datées des notes), les tâches à faire, les liens à lire et l'état de Git. La carte **Santé** compte les liens cassés, les pages orphelines et les pièces jointes que plus aucune page n'utilise (un clic les liste ; dans l'app de bureau, un clic sur une pièce jointe la montre dans le Finder). Un clic sur un tag de la carte Vault liste les pages qui le portent (dans le texte ou dans la propriété `tags`).
+L'**Accueil** rassemble une rangée compacte pour créer une page de chaque type (le nom et la description au survol), les pages récentes (la carte n'apparaît qu'une fois une page ouverte), les échéances à venir (des tâches et des cases à cocher datées des notes ; la priorité du plugin Tasks, 🔺 ⏫ 🔼 🔽 ⏬, devient un point coloré), les tâches à faire, les liens à lire et l'état de Git. La carte **Santé** compte les liens cassés, les pages orphelines et les pièces jointes que plus aucune page n'utilise (un clic les liste ; dans l'app de bureau, un clic sur une pièce jointe la montre dans le Finder). Un clic sur un tag de la carte Vault liste les pages qui le portent (dans le texte ou dans la propriété `tags`).
 
 ![[accueil.webp]]
 
@@ -34,14 +34,16 @@ L'**Accueil** rassemble les raccourcis de création, les pages récentes, les é
 ### La barre latérale
 
 - **Le vault** en haut : son menu permet de passer en un clic à un vault ouvert récemment, d'en ouvrir un autre ou d'ouvrir les réglages. Le bouton à droite crée une page (`⌘N`).
-- **Accueil**, **Rechercher** (`⌘P`), **Rechercher dans les notes** (`⌘⇧F`), **Tâches**, **Lectures**, **Graphe** et **Documentation** (cette page, avec son plan sur le côté et un champ de recherche au-dessus : `⌘F` y va, `↵` passe à l'occurrence suivante). Quand une page est ouverte, Accueil, Tâches, Lectures et Graphe s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
-- **Favoris** : les fichiers mis en favoris dans Obsidian.
+- **Rechercher** (`⌘P`) : un seul champ pour retrouver une page par son nom ou son titre. Le contrôle **Titres | Contenu** de la fenêtre passe à la recherche dans le texte des notes (et revient), en gardant ce qui est tapé ; `⌘⇧F` l'ouvre directement sur Contenu.
+- **Les vues**, en une rangée d'icônes sous la recherche (leur nom au survol) : **Accueil**, **Tâches**, **Lectures** et **Graphe**. Quand une page est ouverte, elles s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
+- **Favoris** : les fichiers mis en favoris dans Obsidian. Un clic sur le titre « Favoris » replie la section (retenu).
 - **Pages** : l'arbre du vault. Une note et le dossier du même nom (`Projets.md` + `Projets/`) forment une page avec ses sous-pages. La note des lectures n'y figure pas : elle a sa propre vue. Les tâches y sont, dans leur dossier (`TaskNotes/Tasks` par défaut), comme dans Obsidian.
   - Menu « … » ou clic droit : ouvrir dans un nouvel onglet, ouvrir à droite, sous-page, copier le lien, dupliquer, fusionner dans une autre note, afficher dans le Finder, renommer, supprimer.
   - Glisser-déposer des pages et des dossiers : les liens qui pointent vers eux sont mis à jour à chaque déplacement. Une note déplacée emporte ses pièces jointes (voir « Les liens »).
   - **Trier** : le bouton à flèches du titre « Pages » range les pages par nom (A à Z, Z à A), par date de modification ou par date de création (récentes ou anciennes d'abord). Les dossiers restent en tête, par nom. Le tri choisi est retenu.
 - **Tags** : sous les pages, les tags du vault en arbre (`#projet/site` sous `#projet`), avec le nombre de notes qui portent chacun (tags imbriqués compris). Un clic ouvre la recherche dans les notes, filtrée sur ce tag. Un clic sur le titre « Tags » ouvre ou replie la section.
-- En bas : **Git** (`⌘⇧G`), **Réglages** (`⌘,`) et **Aide et raccourcis** (`⌘/`).
+- En bas, une rangée d'icônes : **Git** (`⌘⇧G`, avec le nombre de fichiers modifiés), **Réglages** (`⌘,`) et **Aide**, dont le menu ouvre la **Documentation** (cette page, avec son plan sur le côté et un champ de recherche au-dessus : `⌘F` y va, `↵` passe à l'occurrence suivante) et les **Raccourcis clavier** (`⌘/`).
+- L'arbre des pages prend toute la hauteur laissée libre : il défile, la rangée du bas reste en place.
 - `⌘\` masque la barre latérale ; elle réapparaît au survol du bord gauche.
 
 ### La palette de commandes
@@ -50,19 +52,18 @@ L'**Accueil** rassemble les raccourcis de création, les pages récentes, les é
 
 ### La barre de page
 
-Au-dessus de chaque page : le fil d'Ariane (cliquable, avec le menu des dossiers), puis les actions de la page :
+Au-dessus de chaque page : le fil d'Ariane (cliquable, avec le menu des dossiers), puis les actions de la page, plus les outils propres à son type (miniatures et Présenter d'une présentation, outils d'un dessin, recentrage d'une mind map) :
 
 | Bouton | Action |
 | --- | --- |
 | Plan | les titres de la note, cliquables, dans une colonne à droite ; glisser un titre déplace sa section |
 | Mode lecture `⌘⇧R` | la page se lit sans pouvoir être modifiée : ni curseur, ni correcteur, ni poignées ; les liens et les cases à cocher restent cliquables (retenu pour chaque onglet et chaque côté du split view) |
-| Correction | active ou coupe le correcteur |
-| Présentation | transforme la note en présentation (sur une présentation : miniatures, Présenter, export HTML) |
-| Historique | les versions Git de la note, à comparer ou restaurer |
 | Pleine largeur | la page occupe toute la fenêtre (retenu pour chaque page) |
 | Mode focus `⌘⇧M` | masque tout sauf la page |
-| « … » | export PDF, export HTML |
-| Markdown brut `⌘⇧E` | le fichier tel quel, avec ses numéros de ligne |
+| Markdown brut `⌘⇧E` | le fichier tel quel, avec ses numéros de ligne (« Fichier .base », « Fichier .canvas »… selon le type de page) |
+| « … » | Correction orthographique (cochée quand elle est active), Historique de la note (les versions Git, à comparer ou restaurer), Transformer en présentation, export PDF et HTML |
+
+Quand l'historique est ouvert, son icône reste allumée dans la barre : un clic le referme.
 
 - **Plan** et **Historique** s'affichent dans une même colonne à droite, le plan au-dessus.
 - **Réorganiser la note depuis le plan** : glissez un titre au-dessus d'un autre (ou tout en bas) ; sa section entière suit, sous-titres compris, et garde son niveau. Une ligne bleue montre où elle arrivera. Le titre de la page ne se déplace pas.
@@ -89,11 +90,12 @@ Chaque page s'ouvre dans un onglet : `⌘T` nouvel onglet, `⌘W` fermer, `⌘1`
 
 Ouverts dans un onglet (`⌘,`) et rangés par catégorie :
 
-- **Général** : apparence (système, clair, sombre), taille de l'interface (petite, normale, grande, très grande), police (celle du système, **Clarika**, douce et arrondie, **Open Sans** ou **Inter**), enregistrement automatique.
+- **Général** : apparence (système, clair, sombre), taille de l'interface (petite, normale, grande, très grande), **police de l'app** (menus, barre latérale, onglets, vues : celle du système, **Clarika**, douce et arrondie, **Open Sans** ou **Inter**) et **police des notes** (titre et texte des notes : comme l'app, ou l'une des mêmes, ou un **serif** pour les longs textes), chacune montrée dans sa propre police ; enregistrement automatique.
 - **Éditeur** : correcteur (Grammalecte, celui de macOS, ou aucun) ; menu des blocs en **liste** (avec les descriptions) ou en **grille** d'icônes, plus compacte (le nom de chaque bloc au survol, les flèches dans les deux sens) ; modifications depuis le dernier commit dans la marge (désactivé par défaut, voir Git).
 - **Tâches** : les réglages du plugin TaskNotes lus dans le vault (dossier, tag, statuts, priorités), en lecture seule.
 - **Lectures** : note des lectures et lecture automatique du titre des liens.
 - **Vault** : changer de vault.
+- **À propos** : la version de FlowNote, le journal des versions et le code source.
 
 ![[reglages.webp]]
 
@@ -561,7 +563,7 @@ Le fichier est écrit exactement comme Obsidian l'écrit : un canevas modifié d
 
 ### Présentations
 
-Une note avec `marp: true` devient une présentation Marp : diapos séparées par `---`, notes de l'orateur en commentaires, miniatures à jour à côté du texte, mode Présenter (`⌘⌥P`) et export HTML ou PDF. « Transformer en présentation » dans la barre de page convertit une note existante.
+Une note avec `marp: true` devient une présentation Marp : diapos séparées par `---`, notes de l'orateur en commentaires, miniatures à jour à côté du texte, mode Présenter (`⌘⌥P`) et export HTML ou PDF. « Transformer en présentation » (menu « … » de la barre de page) convertit une note existante.
 
 ```markdown
 ---
@@ -671,7 +673,7 @@ Si le vault est un dépôt Git, le panneau Git (`⌘⇧G`) montre les fichiers m
 
 ![[git.webp]]
 
-- L'**historique** d'une note (barre de page) permet de comparer une version à la note actuelle et de la restaurer.
+- L'**historique** d'une note (menu « … » de la barre de page) permet de comparer une version à la note actuelle et de la restaurer.
 - Les **conflits de fusion** se résolvent dans l'app ; une note en conflit reste en lecture seule jusqu'à sa résolution.
 - **Modifications dans la marge** (Réglages → Éditeur, ou la palette de commandes ; désactivé par défaut) : une barre verte à gauche des blocs ajoutés depuis le dernier commit, bleue pour les blocs modifiés, un petit triangle rouge là où des blocs ont été supprimés. Un clic sur une marque montre la version du dernier commit, différences surlignées mot à mot, avec **Rétablir** (le bloc reprend exactement son texte d'avant, `⌘Z` pour annuler), **Retirer** un bloc ajouté ou **Restaurer** un bloc supprimé. Les marques disparaissent au commit. Les blocs sont comparés entiers : modifier un mot marque tout le paragraphe.
 

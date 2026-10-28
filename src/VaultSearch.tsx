@@ -5,6 +5,7 @@ import type { Vault } from "./vault/vault";
 import { matchesIn, searchNotes, searchVault, SEARCH_LIMIT, type SearchHit } from "./vault/search";
 import { extractFilters, filterChoices, filterLabel, matchesFilters, modifiedPresets, noteFacts, sameFilter, type NoteFacts, type SearchFilter } from "./vault/searchFilters";
 import { noteTitle } from "./vault/links";
+import { SearchScope } from "./QuickSwitcher";
 
 /** Every note with what the filters look at, read once per opening of the search. */
 interface NoteIndex {
@@ -34,6 +35,7 @@ export function VaultSearch({
   iconOf,
   onOpen,
   onOpenPage,
+  onTitles,
   onClose,
 }: {
   vault: Vault;
@@ -45,6 +47,8 @@ export function VaultSearch({
   onOpen: (hit: SearchHit, occurrence: number, query: string) => void;
   /** Opens a note found by the filters alone (no text searched). */
   onOpenPage: (path: string) => void;
+  /** "Titres": the same text searched in the page names instead. */
+  onTitles?: (query: string) => void;
   onClose: () => void;
 }) {
   const [query, setQuery] = useState(initialQuery);
@@ -167,6 +171,7 @@ export function VaultSearch({
           <button className={caseSensitive ? "switcher-option active" : "switcher-option"} onClick={() => setCaseSensitive(!caseSensitive)} title="Respecter la casse" aria-pressed={caseSensitive}>
             Aa
           </button>
+          {onTitles && <SearchScope scope="content" onSwitch={() => onTitles(query)} />}
         </div>
         <div className="search-filters">
           {filters.map((f, i) => (
