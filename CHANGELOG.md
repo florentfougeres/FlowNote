@@ -2,6 +2,31 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.29.0] - 2026-10-28
+
+### Ajouté
+- Accueil « Reprendre » : les trois dernières pages ouvertes en grand avec le début de leur texte, les échéances rangées par jour (en retard, aujourd'hui, la semaine, plus tard) ; sur le côté, la création, **Modifiées récemment** (pages changées dans le vault, par Obsidian ou un `git pull`), les favoris, les liens, Git et « À ranger » ; l'activité et les statistiques du vault repliées en bas.
+- Tâches : un clic ouvre la tâche à droite, la liste restant visible (`⌘`-clic : dans un onglet).
+- Clic droit sur un onglet : fermer les autres onglets, fermer les onglets à droite.
+- App de bureau : les menus du clic droit sont les menus du système, raccourcis et coches compris.
+
+### Modifié
+- **Lectures devient Liens** : pour garder articles, vidéos, outils… (« 6 à voir · 2 vus ») ; note `Liens.md` par défaut, `Lectures.md` gardée dans un vault qui l'a déjà.
+- Tâches : un seul en-tête, les vues de la base en pastilles de filtre, une tâche par ligne (titre à gauche, projet, contexte et date alignés à droite) : deux fois plus de tâches à l'écran.
+- Les tâches et les vues de TaskNotes ne figurent plus parmi les pages à reprendre de l'Accueil.
+- Mouvements : glisser-déposer sur des ressorts qui partent de la position et gardent la vitesse du geste, cartes qui volent à leur place ; menus et fenêtres qui naissent de leur bouton ; barre latérale au survol qui repart par où elle est venue ; changement de thème en fondu.
+- Typographie : interlettrage réglé par taille ; retour immédiat à la pression sur les contrôles et les cartes ; bord des listes en fondu au défilement.
+- Graphe : les titres des notes les plus liées d'abord, les autres en zoomant.
+- Dessins : les contrôles d'Excalidraw aux couleurs neutres de l'app.
+- Réglages › Tâches : l'introduction passe au-dessus des réglages.
+
+### Corrigé
+- Menus ouverts dans une fenêtre (filtres de la recherche, propriétés, dates) opaques, plus transparents.
+- Rechercher / remplacer : les deux champs ont la même longueur.
+- Accueil : la carte d'activité ne déborde plus sur la colonne de côté.
+- Échéances de l'Accueil sans les signes du plugin Tasks (⏳, 🛫, 🔁…) dans leur texte.
+- Mouvements réduits et contraste élevé du système respectés.
+
 ## [0.28.0] - 2026-10-28
 
 ### Ajouté
