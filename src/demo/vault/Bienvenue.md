@@ -48,6 +48,9 @@ Et dans la barre latérale : **Tâches** (les demandes des clients et les tâche
 - [ ] Cocher une tâche dans les résultats de [[Comptabilité 2026#Tâches de la semaine]]
 - [ ] Modifier une note, commiter dans le panneau Git (`⌘⇧G`), puis récupérer : un conflit attend sur [[Projets]]
 - [ ] Rechercher `tag:#client` dans tout le vault (`⌘⇧F`)
+- [ ] Taper « fournil » dans **Rechercher** (`⌘P`), puis passer sur **Contenu** : le même mot cherché dans le texte des notes
+- [ ] Ouvrir le menu **« … »** de la barre de page : correction, historique et exports y sont rangés
+- [ ] Dans les **Réglages** (`⌘,`), choisir une police des notes à part de celle de l'app, par exemple **Serif**
 - [ ] Taper `[[Tarifs#` pour lier un titre de [[Tarifs]], ou `[[Tarifs#^` pour un de ses paragraphes
 - [ ] Replier une section par la flèche à gauche d'un titre, ici « Ce qu'il y a dans ce vault »
 - [ ] Survoler un lien, comme [[Site Maison Pain]] : un aperçu de la note s'ouvre

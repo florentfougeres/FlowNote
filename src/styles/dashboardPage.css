@@ -99,6 +99,28 @@
   -webkit-user-select: text;
 }
 .dashboard-body .ProseMirror { padding: 0; margin: 0; max-width: none; min-height: 0; }
+
+/* A chart takes the widget's height (Plotly sizes itself to its box), instead of scrolling past its bottom. */
+.dashboard-body {
+  container-type: size;
+}
+
+.dashboard-body .code-block.is-plotly,
+.dashboard-body .code-block.is-plotly .mermaid-preview {
+  margin: 0;
+  padding: 0;
+}
+
+/* The chart's header row (28px + 2px) stays above it. */
+.dashboard-body .plotly-chart {
+  min-height: 160px;
+  height: calc(100cqh - 38px);
+}
+
+/* A base in a widget: the widget's title names it, the base keeps only its icon to open it. */
+.dashboard-body .db-embed-name {
+  display: none;
+}
 /* The corner sets the size, in grid cells. */
 .dashboard-resize {
   position: absolute;

@@ -519,7 +519,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
           <div className="db-tabs" role="tablist">
             {embedded && (
               <button className="db-embed-title" onClick={(e) => onOpen(path, e.metaKey || e.ctrlKey)} title="Ouvrir la base">
-                <Icon name="database" size={15} /> {noteTitle(path)}
+                <Icon name="database" size={15} /> <span className="db-embed-name">{noteTitle(path)}</span>
               </button>
             )}
             {model.views.map((v, i) => (

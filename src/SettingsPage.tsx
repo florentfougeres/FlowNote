@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from "react";
+import { version } from "../package.json";
+import { openUrl } from "./reading/web";
 import type { TaskConfig } from "./tasks/config";
 import { Icon, type IconName } from "./Icon";
 import { keys } from "./keys";
@@ -9,6 +11,8 @@ export type Theme = "system" | "light" | "dark";
 export type SpellChecker = "grammalecte" | "system" | "off";
 /** Font of the whole app: the system's, Clarika, Open Sans or Inter. */
 export type AppFont = "system" | "clarika" | "open-sans" | "inter";
+/** The notes' font: the app's, or one of its own (a serif for reading and writing). */
+export type NoteFont = "app" | "serif" | AppFont;
 /** The menu of the + button and of `/`: a list with descriptions, or a grid of icons. */
 export type BlockMenuStyle = "list" | "grid";
 
@@ -29,6 +33,7 @@ export interface Settings {
   /** Bars in the margin beside the blocks changed since the last commit. */
   gitGutter: boolean;
   font: AppFont;
+  noteFont: NoteFont;
   blockMenu: BlockMenuStyle;
 }
 
@@ -42,6 +47,7 @@ const SHOW_TITLES_KEY = "flownote:show-titles";
 const PAGE_SORT_KEY = "flownote:page-sort";
 const GIT_GUTTER_KEY = "flownote:git-gutter";
 const FONT_KEY = "flownote:font";
+const NOTE_FONT_KEY = "flownote:note-font";
 const BLOCK_MENU_KEY = "flownote:block-menu";
 
 const FONTS: [AppFont, string][] = [
@@ -50,6 +56,17 @@ const FONTS: [AppFont, string][] = [
   ["open-sans", "Open Sans"],
   ["inter", "Inter"],
 ];
+
+const NOTE_FONTS: [NoteFont, string][] = [["app", "Comme l'app"], ...FONTS.slice(0, 1), ["serif", "Serif"], ...FONTS.slice(1)];
+
+/** Each font shown in itself in the settings (fonts.css loads the bundled ones). */
+const FONT_FAMILIES: Record<Exclude<NoteFont, "app">, string> = {
+  system: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+  serif: 'ui-serif, "New York", "Iowan Old Style", Georgia, serif',
+  clarika: '"Clarika", -apple-system, system-ui, sans-serif',
+  "open-sans": '"Open Sans", -apple-system, system-ui, sans-serif',
+  inter: '"Inter", -apple-system, system-ui, sans-serif',
+};
 
 const BLOCK_MENUS: [BlockMenuStyle, string][] = [
   ["list", "Liste"],
@@ -92,10 +109,11 @@ export function loadSettings(): Settings {
       pageSort: readPageSort(),
       gitGutter: localStorage.getItem(GIT_GUTTER_KEY) === "true",
       font: readFont(),
+      noteFont: NOTE_FONTS.find(([value]) => value === localStorage.getItem(NOTE_FONT_KEY))?.[0] ?? "app",
       blockMenu: localStorage.getItem(BLOCK_MENU_KEY) === "grid" ? "grid" : "list",
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte", readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true, pageSort: "name-asc", gitGutter: false, font: "system", blockMenu: "list" };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true, pageSort: "name-asc", gitGutter: false, font: "system", noteFont: "app", blockMenu: "list" };
   }
 }
 
@@ -122,6 +140,7 @@ export function saveSettings(settings: Settings) {
     localStorage.setItem(PAGE_SORT_KEY, settings.pageSort);
     localStorage.setItem(GIT_GUTTER_KEY, String(settings.gitGutter));
     localStorage.setItem(FONT_KEY, settings.font);
+    localStorage.setItem(NOTE_FONT_KEY, settings.noteFont);
     localStorage.setItem(BLOCK_MENU_KEY, settings.blockMenu);
   } catch {
     // Settings simply won't persist.
@@ -159,12 +178,30 @@ export function applyScale(scale: number, desktop = false) {
   document.documentElement.style.zoom = scale === 1 ? "" : String(scale);
 }
 
-/** Font and block menu style, as attributes of the root read by the styles (fonts.css, editor-extras.css). */
-export function applyLook(font: AppFont, blockMenu: BlockMenuStyle) {
+/** Fonts (the app's, the notes') and block menu style, as attributes of the root read by the styles (fonts.css, editor-extras.css). */
+export function applyLook(font: AppFont, noteFont: NoteFont, blockMenu: BlockMenuStyle) {
   const root = document.documentElement;
   if (font === "system") delete root.dataset.font;
   else root.dataset.font = font;
+  if (noteFont === "app") delete root.dataset.noteFont;
+  else root.dataset.noteFont = noteFont;
   root.dataset.blockMenu = blockMenu;
+}
+
+/** A choice of font as tiles, each written in its own font. */
+function FontPicker<T extends NoteFont>({ label, fonts, value, appFont, onChange }: { label: string; fonts: [T, string][]; value: T; appFont: AppFont; onChange: (font: T) => void }) {
+  return (
+    <div className="font-picker" role="radiogroup" aria-label={label}>
+      {fonts.map(([font, name]) => (
+        <button key={font} role="radio" aria-checked={value === font} className={value === font ? "selected" : ""} onClick={() => onChange(font)}>
+          <span className="font-picker-sample" style={{ fontFamily: FONT_FAMILIES[font === "app" ? appFont : (font as Exclude<NoteFont, "app">)] }} aria-hidden="true">
+            Ag
+          </span>
+          {name}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 const SPELL_HELP: Record<SpellChecker, string> = {
@@ -179,7 +216,7 @@ const THEMES: [Theme, string][] = [
   ["dark", "Sombre"],
 ];
 
-type Category = "general" | "editor" | "tasks" | "reading" | "vault";
+type Category = "general" | "editor" | "tasks" | "reading" | "vault" | "about";
 
 const CATEGORIES: { id: Category; label: string; icon: IconName }[] = [
   { id: "general", label: "Général", icon: "sliders" },
@@ -187,7 +224,10 @@ const CATEGORIES: { id: Category; label: string; icon: IconName }[] = [
   { id: "tasks", label: "Tâches", icon: "task" },
   { id: "reading", label: "Lectures", icon: "bookmark" },
   { id: "vault", label: "Vault", icon: "folder" },
+  { id: "about", label: "À propos", icon: "info" },
 ];
+
+const REPOSITORY = "https://github.com/florentfougeres/FlowNote";
 
 const CATEGORY_KEY = "flownote:settings-category";
 
@@ -293,14 +333,11 @@ export function SettingsPage({
                 ))}
               </div>
             </Row>
-            <Row label="Police" help="La police de toute l'app : celle du système, Clarika (douce et arrondie), Open Sans ou Inter.">
-              <div className="segmented" role="radiogroup" aria-label="Police">
-                {FONTS.map(([value, label]) => (
-                  <button key={value} role="radio" aria-checked={settings.font === value} className={settings.font === value ? "selected" : ""} onClick={() => onChange({ ...settings, font: value })}>
-                    {label}
-                  </button>
-                ))}
-              </div>
+            <Row column label="Police de l'app" help="Les menus, la barre latérale, les onglets, les vues. Clarika est douce et arrondie.">
+              <FontPicker label="Police de l'app" fonts={FONTS} value={settings.font} appFont={settings.font} onChange={(font) => onChange({ ...settings, font })} />
+            </Row>
+            <Row column label="Police des notes" help="Le titre et le texte des notes. Un serif se lit bien sur les longs textes.">
+              <FontPicker label="Police des notes" fonts={NOTE_FONTS} value={settings.noteFont} appFont={settings.font} onChange={(noteFont) => onChange({ ...settings, noteFont })} />
             </Row>
             <Row label="Enregistrement automatique" help={keys("Sinon, enregistrez avec ⌘S. Les modifications en attente sont enregistrées avant de changer de page.")}>
               <Switch checked={settings.autosave} label="Enregistrement automatique" onChange={(autosave) => onChange({ ...settings, autosave })} />
@@ -391,6 +428,19 @@ export function SettingsPage({
           <section className="settings-card">
             <Row label="Vault ouvert" help={vaultName}>
               <button onClick={onChangeVault}>Changer de vault…</button>
+            </Row>
+          </section>
+        )}
+        {category === "about" && (
+          <section className="settings-card">
+            <Row label="Version" help="L'édition par blocs, directement sur votre vault Obsidian.">
+              <span className="settings-value">FlowNote {version}</span>
+            </Row>
+            <Row label="Nouveautés" help="Ce qui a changé à chaque version.">
+              <button onClick={() => openUrl(`${REPOSITORY}/blob/main/CHANGELOG.md`)}>Voir le journal des versions</button>
+            </Row>
+            <Row label="Code source" help="Sous licence MIT.">
+              <button onClick={() => openUrl(REPOSITORY)}>Ouvrir sur GitHub</button>
             </Row>
           </section>
         )}

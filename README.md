@@ -29,12 +29,12 @@ Les nouveautés de chaque version sont dans le [CHANGELOG](CHANGELOG.md).
 | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/croquis.dark.webp">  <img src="src/docs/images/croquis.light.webp" alt="Un dessin Excalidraw"></picture> | <picture>  <source media="(prefers-color-scheme: dark)" srcset="src/docs/images/taches-tableau.dark.webp">  <img src="src/docs/images/taches-tableau.light.webp" alt="Les tâches en tableau kanban"></picture> |
 | **Dessins** Excalidraw | **Tâches** |
 
-La documentation complète, illustrée, est dans l'app (« Documentation » dans la barre latérale) et dans [`src/docs/documentation.md`](src/docs/documentation.md).
+La documentation complète, illustrée, est dans l'app (menu « Aide » en bas de la barre latérale) et dans [`src/docs/documentation.md`](src/docs/documentation.md).
 
 ## Fonctionnalités
 
 **Interface**
-- Onglets en haut de la fenêtre, barre latérale avec le vault (et ses vaults récents), Accueil, Rechercher, Tâches, Lectures, Graphe, Documentation et l'arbre des pages
+- Onglets en haut de la fenêtre, barre latérale faite pour les pages : le vault (et ses vaults récents), un seul champ de recherche (titres ou contenu), les vues en une rangée d'icônes (Accueil, Tâches, Lectures, Graphe), puis l'arbre des pages sur toute la hauteur
 - **Split view** : deux pages côte à côte (`⌥-clic` sur une page, `⌘⌥\` pour fermer le panneau)
 - Documentation intégrée de toutes les fonctionnalités
 - **Palette de commandes** (`⌘⇧P`, ou `>` dans `⌘P`) : toutes les actions de l'app par leur nom, avec leur raccourci
@@ -44,7 +44,7 @@ La documentation complète, illustrée, est dans l'app (« Documentation » dans
 - Réglages dans un onglet (`⌘,`), rangés par catégorie : thème, taille de l'interface, police (Système, Clarika, Open Sans, Inter), menu des blocs en liste ou en grille d'icônes
 - Barre latérale masquable (`⌘\`), qui réapparaît au survol du bord gauche
 - Pleine largeur par page et mode focus (`⌘⇧M`, Échap pour en sortir)
-- Menu « … » de la page : export en **PDF** (note, présentation, dessin, mind map) et export de la note en page **HTML** autonome, images comprises
+- Barre de page : Plan, Mode lecture, Pleine largeur, Mode focus, Markdown brut, et « … » qui range la correction, l'historique et les exports : **PDF** (note, présentation, dessin, mind map) et export de la note en page **HTML** autonome, images comprises
 - Icône de page : un emoji choisi au-dessus du titre (propriété `icon`)
 - Accueil : créer, récents, à faire, à lire, graphe, Git, activité et statistiques du vault
 

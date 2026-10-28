@@ -18,7 +18,19 @@ export interface AgendaItem {
   due: string;
   /** 1-based line of the checkbox in the file. */
   line?: number;
+  /** A checkbox's priority sign (Obsidian Tasks: 🔺 ⏫ 🔼 🔽 ⏬), taken out of its text. */
+  priority?: TasksPriority;
 }
+
+export type TasksPriority = "highest" | "high" | "medium" | "low" | "lowest";
+
+const PRIORITY_SIGNS: [string, TasksPriority][] = [
+  ["🔺", "highest"],
+  ["⏫", "high"],
+  ["🔼", "medium"],
+  ["🔽", "low"],
+  ["⏬", "lowest"],
+];
 
 /** Dated, not done, soonest first. */
 export function agenda(notes: [string, string][], config: TaskConfig): AgendaItem[] {
@@ -31,7 +43,11 @@ export function agenda(notes: [string, string][], config: TaskConfig): AgendaIte
       if (inFence) return;
       const task = /^[ \t]*(?:>[ \t]?)*[-*+] \[ \][ \t]+(.*)$/.exec(line);
       const due = task ? DUE_DATE.exec(task[1]) : null;
-      if (task && due) items.push({ kind: "checkbox", path, text: task[1].replace(DUE_DATE, "").trim(), due: due[1], line: index + 1 });
+      if (!task || !due) return;
+      let label = task[1].replace(DUE_DATE, "");
+      const priority = PRIORITY_SIGNS.find(([sign]) => label.includes(sign))?.[1];
+      for (const [sign] of PRIORITY_SIGNS) label = label.replaceAll(`${sign}\uFE0F`, "").replaceAll(sign, "");
+      items.push({ kind: "checkbox", path, text: label.replace(/\s{2,}/g, " ").trim(), due: due[1], line: index + 1, ...(priority ? { priority } : {}) });
     });
     if (isTaskMarkdown(text, config)) {
       const info = taskInfo(path, text, config);

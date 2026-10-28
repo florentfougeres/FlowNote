@@ -219,7 +219,7 @@
   background: var(--bg);
   box-shadow: none;
   color: var(--text);
-  font: 12.5px var(--font-ui);
+  font: 13px var(--font-ui);
 }
 
 .canvas-open:hover {

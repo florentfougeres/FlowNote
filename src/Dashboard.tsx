@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { reportError } from "./errors";
-import { keys } from "./keys";
 import { Icon } from "./Icon";
 import { PAGE_KINDS, kindIconClass, type PageKind } from "./pageKinds";
 import { readAllNotes, type Vault } from "./vault/vault";
@@ -15,7 +14,7 @@ import { basename, IMAGE_EXTENSIONS, extension, noteTitle } from "./vault/links"
 import { readPages, unusedAttachments } from "./vault/attachments";
 import { recentPages } from "./dashboard/recents";
 import { bookmarkedFiles, computeStats, type VaultStats } from "./dashboard/stats";
-import { agenda, dueLabel, urgency, type AgendaItem } from "./tasks/agenda";
+import { agenda, dueLabel, urgency, type AgendaItem, type TasksPriority } from "./tasks/agenda";
 import { statusOf, type TaskConfig } from "./tasks/config";
 import { tasksOf, type TaskInfo } from "./tasks/task";
 
@@ -29,6 +28,8 @@ export type CreateKind = PageKind;
 const folderOf = (path: string) => (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
 const relative = new Intl.RelativeTimeFormat("fr", { numeric: "auto" });
+const PRIORITY_LABELS: Record<TasksPriority, string> = { highest: "maximale", high: "haute", medium: "moyenne", low: "basse", lowest: "minimale" };
+
 function timeAgo(at: number, now = Date.now()): string {
   const seconds = Math.round((at - now) / 1000);
   const steps: [Intl.RelativeTimeFormatUnit, number][] = [
@@ -91,7 +92,6 @@ export function Dashboard({
   onOpen,
   onCreate,
   onOpenGit,
-  onSearch,
   onOpenTasks,
   onOpenGraph,
   readingList,
@@ -107,7 +107,6 @@ export function Dashboard({
   onOpen: (path: string, newTab: boolean) => void;
   onCreate: (kind: CreateKind) => void;
   onOpenGit: () => void;
-  onSearch: () => void;
   onOpenTasks: (newTab: boolean) => void;
   onOpenGraph: (newTab: boolean) => void;
   /** The tasks' settings (TaskNotes). */
@@ -185,39 +184,32 @@ export function Dashboard({
             {vault.name} · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
           </p>
         </div>
-        <button className="dash-search" onClick={onSearch}>
-          <Icon name="search" size={14} /> Rechercher une page <kbd>{keys("⌘P")}</kbd>
-        </button>
       </header>
 
       <section className="dash-create" aria-label="Créer">
         {PAGE_KINDS.map((k) => (
-          <button key={k.kind} onClick={() => onCreate(k.kind)}>
+          <button key={k.kind} onClick={() => onCreate(k.kind)} title={`${k.create} : ${k.description}`}>
             <span className={kindIconClass(k.kind)}>
-              <Icon name={k.icon} size={20} />
+              <Icon name={k.icon} size={16} />
             </span>
-            <span>
-              <strong>{k.create}</strong>
-              <small>{k.description}</small>
-            </span>
+            {k.label}
           </button>
         ))}
         {/* « Nouveau notebook » arrivera avec la fusion de la branche feature/notebooks. */}
       </section>
 
       <div className="dash-grid">
-        <section className="dash-card">
-          <h2>Récents</h2>
-          {recents.length === 0 ? (
-            <p className="dash-muted">Les pages que vous ouvrez apparaîtront ici.</p>
-          ) : (
+        {/* Nothing opened yet: no empty frame, the next cards move up. */}
+        {recents.length > 0 && (
+          <section className="dash-card">
+            <h2>Récents</h2>
             <div className="dash-list">
               {recents.map((p) => (
                 <PageLink iconOf={iconOf} key={p.path} path={p.path} onOpen={onOpen} detail={timeAgo(p.at)} />
               ))}
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
         <section className="dash-card">
           <h2>À faire</h2>
@@ -231,6 +223,7 @@ export function Dashboard({
                 <button key={`${item.path}-${item.line ?? "t"}-${i}`} className="dash-page dash-todo" onClick={(e) => onOpen(item.path, e.metaKey || e.ctrlKey)} title={item.path}>
                   <Icon name={item.kind === "task" ? "task" : "checkbox"} size={14} />
                   <span className="dash-page-title">{item.text || noteTitle(item.path)}</span>
+                  {item.priority && <span className={`task-priority-dot tasks-${item.priority}`} title={`Priorité ${PRIORITY_LABELS[item.priority]}`} />}
                   <span className={`due-chip ${urgency(item.due)}`}>{dueLabel(item.due)}</span>
                 </button>
               ))}

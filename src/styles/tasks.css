@@ -644,6 +644,21 @@ button.task-tag.selected {
 }
 
 /* Priority, projects and contexts on cards and rows. */
+/* Obsidian Tasks' priority signs (🔺 ⏫ 🔼 🔽 ⏬) as dots, in the home page's "À faire". */
+.task-priority-dot.tasks-highest,
+.task-priority-dot.tasks-high {
+  background: var(--danger);
+}
+
+.task-priority-dot.tasks-medium {
+  background: var(--warning);
+}
+
+.task-priority-dot.tasks-low,
+.task-priority-dot.tasks-lowest {
+  background: var(--accent);
+}
+
 .task-priority-dot {
   display: inline-block;
   flex: none;

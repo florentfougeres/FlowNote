@@ -33,13 +33,6 @@
   overflow: hidden;
 }
 
-.toolbar-location {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .toolbar-folder {
   color: var(--muted);
   font-weight: 400;
@@ -205,7 +198,8 @@
 
 .vault-switcher,
 .sidebar-compose,
-.sidebar-row,
+.sidebar-search,
+.sidebar-icon,
 .sidebar-menu button,
 .page-heading-actions button,
 .page-heading-icon {
@@ -258,7 +252,7 @@
 
 .vault-switcher:hover,
 .sidebar-compose:hover,
-.sidebar-row:hover {
+.sidebar-icon:hover {
   background: var(--hover);
 }
 
@@ -266,50 +260,78 @@
   color: var(--text);
 }
 
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding-bottom: 8px;
-}
-
-.sidebar-row {
+/* One search field (⌘P): titles, and the text of the notes from its "Titres | Contenu" switch. */
+.sidebar-search {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   width: 100%;
-  min-height: 28px;
+  height: 28px;
+  margin: 2px 0 8px;
   padding: 0 8px;
-  border-radius: 6px;
-  color: var(--muted);
+  border-radius: 8px;
+  background: var(--hover) !important;
+  color: var(--muted) !important;
   text-align: left;
 }
 
-.sidebar-row:hover,
-.sidebar-row.active {
-  color: var(--text);
+.sidebar-search:hover {
+  background: var(--selected) !important;
 }
 
-.sidebar-row.active {
-  background: var(--selected);
-  font-weight: 500;
-}
-
-.sidebar-row-label {
+.sidebar-search span {
   flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.sidebar-row kbd {
-  opacity: 0;
-  transition: opacity 120ms ease-out;
+.sidebar-search kbd {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--faint);
 }
 
-.sidebar-row:hover kbd {
-  opacity: 1;
+/* The views (and, at the bottom, Git, settings, help): a row of icons, names in their tooltips. */
+.sidebar-views,
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sidebar-views {
+  padding-bottom: 6px;
+}
+
+.sidebar-icon {
+  position: relative;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0;
+  border-radius: 6px;
+  color: var(--muted) !important;
+}
+
+.sidebar-icon:hover {
+  color: var(--text) !important;
+}
+
+.sidebar-icon.active {
+  background: var(--selected);
+  color: var(--text) !important;
+}
+
+/* The views share the width evenly; Git, settings and help stay compact on the left. */
+.sidebar-footer .sidebar-icon {
+  flex: none;
+  width: 36px;
+}
+
+.sidebar-icon .sidebar-badge {
+  position: absolute;
+  top: 2px;
+  right: 4px;
 }
 
 .sidebar-badge {
@@ -422,10 +444,51 @@
   background: var(--hover);
 }
 
+.sidebar-menu .menu-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.sidebar-menu kbd {
+  margin-left: 16px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Room for a check on the right, even when nothing is checked: the shortcuts stay lined up. */
 .sidebar-menu .menu-check {
   display: flex;
-  margin-left: auto;
+  justify-content: flex-end;
+  width: 14px;
+  margin-left: 4px;
   color: var(--accent);
+}
+
+.sidebar-menu .menu-check:empty {
+  width: 0;
+  margin-left: 0;
+}
+
+.sidebar-menu:has([role="menuitemcheckbox"]) .menu-check:empty {
+  width: 14px;
+  margin-left: 4px;
+}
+
+.sidebar-menu .menu-section {
+  margin: 6px 0 0;
+  padding: 6px 8px 2px;
+  border-top: 0.5px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sidebar-menu .menu-section.first {
+  margin-top: 0;
+  padding-top: 2px;
+  border-top: none;
 }
 
 .sidebar-menu button.danger {

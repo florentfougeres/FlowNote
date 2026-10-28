@@ -20,7 +20,8 @@ import type { Editor } from "@tiptap/core";
 import { RawEditor } from "./RawEditor";
 import { OutlinePanel } from "./OutlinePanel";
 import { HistoryPanel } from "./HistoryPanel";
-import { PageIcon, PopoverMenu, type MenuItem } from "./Sidebar";
+import { PageIcon, PopoverMenu } from "./Sidebar";
+import { pageBarMenu, rawLabel } from "./menus";
 import { ToolButton, ToolGroup } from "./Toolbar";
 import type { FrontmatterControl } from "./editor/NoteEditor";
 import { exportNoteHtml } from "./editor/copyHtml";
@@ -358,6 +359,20 @@ export const SplitPane = memo(function SplitPane({
     );
   }
 
+  /** The page bar's "…" menu (menus.ts); no button when the page offers none of its items. */
+  const menuItems = pageBarMenu({
+    spelling: note && !reading && spellingOn !== null ? { on: spellingOn, toggle: onToggleSpelling } : undefined,
+    history: git ? { on: history, toggle: () => setHistory(!history) } : undefined,
+    toPresentation: note && !task && !presentation && !openOnLeft && !reading && editable && !raw ? () => frontmatter.current?.set(setProperty(frontmatter.current.get(), "marp", true)) : undefined,
+    exports:
+      raw || !page || base || task || canvas || openOnLeft
+        ? []
+        : [
+            { label: "Exporter en PDF…", run: () => void exportPagePdf().catch(report("Export PDF")) },
+            ...(note && !presentation ? [{ label: "Exporter en HTML…", run: () => void exportHtml().catch(report("Export")) }] : []),
+          ],
+  });
+
   return (
     <section className="split-pane" aria-label={`Panneau de droite : ${noteTitle(path)}`}>
       <header className="split-pane-bar toolbar">
@@ -385,9 +400,6 @@ export const SplitPane = memo(function SplitPane({
           )}
           {note && !openOnLeft && <ToolButton icon="outline" label="Plan de la note" onClick={() => setOutline(!outline)} active={outline && !raw} disabled={raw} />}
           {note && <ToolButton icon="eye" label={reading ? "Quitter le mode lecture" : "Mode lecture"} onClick={onToggleReading} active={reading} disabled={raw || openOnLeft} />}
-          {note && !reading && spellingOn !== null && (
-            <ToolButton icon="spelling" label={spellingOn ? "Désactiver la correction orthographique" : "Activer la correction orthographique"} onClick={onToggleSpelling} active={spellingOn} />
-          )}
           {presentation && !openOnLeft && (
             <>
               <ToolButton icon="slides" label="Miniatures des diapos" onClick={() => setShowSlides(!showSlides)} active={showSlides} />
@@ -395,16 +407,11 @@ export const SplitPane = memo(function SplitPane({
               <ToolButton icon="export" label="Exporter en HTML" onClick={() => void exportSlides().catch(report("Export"))} />
             </>
           )}
-          {note && !task && !presentation && !openOnLeft && !reading && (
-            <ToolButton icon="slides" label="Transformer en présentation" onClick={() => frontmatter.current?.set(setProperty(frontmatter.current.get(), "marp", true))} disabled={!editable || raw} />
-          )}
-          {git && <ToolButton icon="clock" label="Historique de la note" onClick={() => setHistory(!history)} active={history} />}
+          {history && git && <ToolButton icon="clock" label="Fermer l'historique de la note" onClick={() => setHistory(false)} active />}
           {note && !presentation && <ToolButton icon="width" label={wide ? "Largeur normale" : "Pleine largeur"} onClick={onToggleWide} active={wide} />}
           <ToolButton icon="focus" label={focusOn ? "Quitter le mode focus (⌘⇧M)" : "Mode focus (⌘⇧M)"} onClick={onToggleFocus} active={focusOn} />
-          {!base && !task && !canvas && !openOnLeft && (
-            <ToolButton icon="more" label="Exporter, copier…" onClick={(event) => setMenu(event.currentTarget.getBoundingClientRect())} active={menu !== null} disabled={raw || !page} />
-          )}
-          {!openOnLeft && <ToolButton icon="raw" label={drawing ? "Voir le fichier brut, JSON du dessin" : mindmap ? "Voir le fichier brut de la mind map" : base ? "Voir le fichier .base" : canvas ? "Voir le fichier .canvas" : "Mode Markdown brut"} onClick={toggleRaw} active={raw} disabled={!page} />}
+          {!openOnLeft && <ToolButton icon="raw" label={rawLabel({ drawing, mindmap, base, canvas })} onClick={toggleRaw} active={raw} disabled={!page} />}
+          {menuItems.length > 0 && <ToolButton icon="more" label="Correction, historique, export…" onClick={(event) => setMenu(event.currentTarget.getBoundingClientRect())} active={menu !== null} />}
           <span className="split-pane-divider" />
           <ToolButton icon="open" label="Ouvrir dans son propre onglet" onClick={onSeparate} />
           <ToolButton icon="replace" label="Échanger les côtés" onClick={onSwap} />
@@ -425,10 +432,7 @@ export const SplitPane = memo(function SplitPane({
         <PopoverMenu
           anchor={menu}
           onClose={() => setMenu(null)}
-          items={[
-            { label: "Exporter en PDF…", icon: "export", run: () => void exportPagePdf().catch(report("Export PDF")) },
-            ...(note && !presentation ? [{ label: "Exporter en HTML…", icon: "export", run: () => void exportHtml().catch(report("Export")) } satisfies MenuItem] : []),
-          ]}
+          items={menuItems}
         />
       )}
       {presenting !== null && slides && presentation && <Presenter rendered={slides} start={presenting} onClose={() => setPresenting(null)} />}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-28T10:33:21.649382+00:00",
+  "generatedAt": "2026-10-28T12:07:49.245023+00:00",
   "title": "Design System: FlowNote",
   "extensions": {
     "colorMeta": {
@@ -135,7 +135,7 @@
       },
       "body": {
         "displayName": "Texte",
-        "purpose": "Le texte des notes, colonne de 720 px."
+        "purpose": "Le texte des notes, colonne de 720 px, dans la police des notes (--font-note)."
       },
       "ui": {
         "displayName": "Interface",
@@ -231,12 +231,12 @@
       "css": ".ds-input{font:inherit;font-size:13px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 8px;outline:none}.ds-input::placeholder{color:color-mix(in srgb,var(--text) 50%,transparent)}.ds-input:focus{border-color:color-mix(in srgb,var(--accent) 70%,transparent);box-shadow:0 0 0 3px var(--accent-soft)}"
     },
     {
-      "name": "Ligne de barre latérale",
+      "name": "Barre latérale : recherche et vues",
       "kind": "nav",
-      "refersTo": "sidebar-row",
-      "description": "Navigation de la barre latérale, 28 px.",
-      "html": "<nav class=\"ds-nav\"><a class=\"on\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14.25 8a6.25 6.25 0 1 1-12.5 0 6.25 6.25 0 0 1 12.5 0z M8 4.75V8l2.25 1.5\"/></svg>Tâches</a><a><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"><path d=\"M11.75 7.25a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0z M10.5 10.5 14 14\"/></svg>Rechercher</a></nav>",
-      "css": ".ds-nav{display:flex;flex-direction:column;width:240px;padding:6px 8px;background:var(--chrome);font-size:13px}.ds-nav a{display:flex;align-items:center;gap:9px;min-height:28px;padding:0 8px;border-radius:6px;color:var(--muted)}.ds-nav a:hover{background:var(--hover);color:var(--text)}.ds-nav a.on{background:var(--selected);color:var(--text)}"
+      "refersTo": "sidebar-icon",
+      "description": "Le champ Rechercher, puis les vues en une rangée d'icônes réparties sur la largeur.",
+      "html": "<nav class=\"ds-side\"><button class=\"ds-side-search\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M11.75 7.25a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0z M10.5 10.5 14 14\"/></svg><span>Rechercher</span><kbd>⌘P</kbd></button><div class=\"ds-side-views\"><button class=\"on\" aria-label=\"Accueil\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2.5 7.25 8 2.75l5.5 4.5v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z M6.25 14.25v-4h3.5v4\"/></svg></button><button aria-label=\"Tâches\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14.25 8a6.25 6.25 0 1 1-12.5 0 6.25 6.25 0 0 1 12.5 0z M8 4.75V8l2.25 1.5\"/></svg></button><button aria-label=\"Rechercher\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M11.75 7.25a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0z M10.5 10.5 14 14\"/></svg></button></div></nav>",
+      "css": ".ds-side{display:flex;flex-direction:column;gap:8px;width:240px;padding:6px 8px;background:var(--chrome);font-size:13px}.ds-side-search{display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;border:0;border-radius:8px;background:var(--hover);color:var(--muted);font:inherit}.ds-side-search span{flex:1;text-align:left}.ds-side-search kbd{font:inherit;font-size:12px;color:var(--faint)}.ds-side-search:hover{background:var(--selected)}.ds-side-views{display:flex;gap:2px}.ds-side-views button{flex:1;display:inline-flex;align-items:center;justify-content:center;height:30px;border:0;border-radius:6px;background:none;color:var(--muted)}.ds-side-views button:hover{background:var(--hover);color:var(--text)}.ds-side-views button.on{background:var(--selected);color:var(--text)}"
     },
     {
       "name": "Tag",
@@ -250,9 +250,9 @@
       "name": "Menu",
       "kind": "custom",
       "refersTo": "menu",
-      "description": "Menu contextuel en verre.",
-      "html": "<div class=\"ds-menu\"><button>Renommer</button><button>Dupliquer</button><hr><button class=\"danger\">Supprimer</button></div>",
-      "css": ".ds-menu{display:flex;flex-direction:column;min-width:200px;padding:5px;border-radius:10px;background:var(--menu-material);-webkit-backdrop-filter:var(--material-blur);backdrop-filter:var(--material-blur);box-shadow:var(--shadow-menu);font-size:13px}.ds-menu button{text-align:left;font:inherit;color:var(--text);border:0;background:none;padding:4px 8px;border-radius:6px}.ds-menu button:hover{background:var(--hover)}.ds-menu .danger{color:var(--danger)}.ds-menu hr{border:0;height:1px;margin:4px 6px;background:var(--border)}"
+      "description": "Menu en verre : groupes titrés, raccourcis à droite, coche bleue pour une option active.",
+      "html": "<div class=\"ds-menu\"><div class=\"ds-menu-section\">Affichage</div><button>Correction orthographique<span class=\"ds-check\">✓</span></button><div class=\"ds-menu-section sep\">Exporter</div><button>Exporter en PDF…<kbd>⌘P</kbd></button></div>",
+      "css": ".ds-menu{display:flex;flex-direction:column;min-width:240px;padding:5px;border-radius:10px;background:var(--menu-material);-webkit-backdrop-filter:var(--material-blur);backdrop-filter:var(--material-blur);box-shadow:var(--shadow-menu);font-size:13px}.ds-menu-section{padding:2px 8px;color:var(--muted);font-size:11px;font-weight:600}.ds-menu-section.sep{margin-top:6px;padding-top:6px;border-top:.5px solid var(--border)}.ds-menu button{display:flex;align-items:center;height:28px;text-align:left;font:inherit;color:var(--text);border:0;background:none;padding:0 8px;border-radius:6px}.ds-menu button:hover{background:var(--hover)}.ds-menu kbd{margin-left:auto;font:inherit;font-size:12px;color:var(--muted)}.ds-check{margin-left:auto;color:var(--accent)}"
     },
     {
       "name": "Callout",
@@ -261,6 +261,14 @@
       "description": "Le bloc signature des notes.",
       "html": "<div class=\"ds-callout\"><strong>Objectif</strong><p>Un site rapide, lisible sur un téléphone.</p></div>",
       "css": ".ds-callout{--c:var(--callout-tip);padding:12px 16px;border-radius:8px;background:color-mix(in srgb,var(--c) 7%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--c) 24%,transparent);font-size:16px;color:var(--text)}.ds-callout strong{color:var(--c);font-weight:600}.ds-callout p{margin:4px 0 0}"
+    },
+    {
+      "name": "Tuiles de police",
+      "kind": "custom",
+      "refersTo": "tile",
+      "description": "Un choix visuel parmi quelques options, chaque police écrite en elle-même.",
+      "html": "<div class=\"ds-tiles\"><button class=\"on\"><span style=\"font-family:-apple-system,system-ui\">Ag</span>Système</button><button><span style=\"font-family:ui-serif,Georgia,serif\">Ag</span>Serif</button><button><span style=\"font-family:Inter,system-ui\">Ag</span>Inter</button></div>",
+      "css": ".ds-tiles{display:grid;grid-template-columns:repeat(3,84px);gap:8px}.ds-tiles button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px 8px;border:.5px solid var(--border);border-radius:10px;background:var(--bg-elevated);color:var(--muted);font-size:12px}.ds-tiles button:hover{background:var(--hover);color:var(--text)}.ds-tiles button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--text)}.ds-tiles span{font-size:24px;line-height:1.2;color:var(--text)}"
     }
   ],
   "narrative": {
@@ -284,6 +292,11 @@
         "name": "La règle des deux thèmes",
         "body": "Aucune couleur n'est écrite en dur dans un composant : elle passe par un jeton de base.css, défini en clair et en sombre.",
         "section": "colors"
+      },
+      {
+        "name": "La règle des deux voix",
+        "body": "L'interface parle avec --font-ui, les notes avec --font-note. Un élément qui fait partie du texte d'une note (titre de page, titres, corps) prend la police des notes ; tout le reste (menus, barres, propriétés, vues) garde celle de l'interface.",
+        "section": "typography"
       },
       {
         "name": "La règle des pixels entiers",
@@ -311,6 +324,8 @@
       "Do utiliser les icônes de src/Icon.tsx (grille de 16, trait de 1,4, couleur du texte) ; dessiner celle qui manque dans le même style.",
       "Do garder les arrondis sur l'échelle 4, 6, 8, 10, 12 px et les tailles de texte entières.",
       "Do caler le titre, les propriétés et la note sur la même colonne de 720 px.",
+      "Do donner au texte des notes --font-note (et --font-note-heading aux titres), jamais --font-ui.",
+      "Do ranger une nouvelle vue de l'app dans la rangée d'icônes, et une action secondaire de page dans le menu ⋯ (pageBarMenu) ; une option que l'on bascule souvent reste un bouton visible.",
       "Do donner à chaque contrôle ses états : survol, pression, focus visible, désactivé.",
       "Do respecter prefers-reduced-motion pour toute animation d'entrée."
     ],
@@ -320,6 +335,7 @@
       "Don't mettre du flou ou du verre sur une surface posée, ni un halo coloré sous un bouton.",
       "Don't introduire une deuxième couleur d'action à côté du bleu système.",
       "Don't laisser un <select>, un <input type=\"date\"> ou une fenêtre qui déborde de l'écran.",
+      "Don't répéter dans la barre de page le nom qu'affiche déjà l'onglet, ni afficher un menu ⋯ vide.",
       "Don't écrire une couleur en dur dans un composant sans son équivalent sombre."
     ]
   }

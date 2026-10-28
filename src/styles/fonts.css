@@ -90,3 +90,29 @@
 :root[data-font="inter"] {
   --font-ui: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
+
+/* The notes' own font, chosen apart from the app's (title, text and headings of the notes). */
+:root[data-note-font="system"] {
+  --font-note: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-note-heading: var(--font-note);
+}
+
+:root[data-note-font="serif"] {
+  --font-note: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --font-note-heading: var(--font-note);
+}
+
+:root[data-note-font="clarika"] {
+  --font-note: "Clarika", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-note-heading: "Clarika Heading", "Clarika", -apple-system, system-ui, sans-serif;
+}
+
+:root[data-note-font="open-sans"] {
+  --font-note: "Open Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-note-heading: var(--font-note);
+}
+
+:root[data-note-font="inter"] {
+  --font-note: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-note-heading: var(--font-note);
+}

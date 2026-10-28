@@ -200,7 +200,7 @@
 .note h5,
 .note h6 {
   margin: 1.2em 0 0.2em;
-  font-family: var(--font-heading);
+  font-family: var(--font-note-heading);
   line-height: 1.3;
 }
 
