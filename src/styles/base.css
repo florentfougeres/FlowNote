@@ -13,6 +13,13 @@
   --table-line: color-mix(in srgb, var(--text) 11%, transparent);
   --table-header: color-mix(in srgb, var(--text) 3.5%, transparent);
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  /* Tracking by size, as the system font wants it: tighter as text grows,
+     a little open for small capitals. */
+  --tracking-display: -0.024em; /* page titles, 26px and up */
+  --tracking-title: -0.017em; /* section headings, 17 to 24px */
+  --tracking-reading: -0.011em; /* note text, 15 to 16px */
+  --tracking-text: -0.006em; /* interface text, 13 to 14px */
+  --tracking-caps: 0.04em; /* small uppercase labels */
 
   --bg: #ffffff;
   --bg-elevated: #ffffff;
@@ -190,7 +197,7 @@ body,
 body {
   margin: 0;
   font-size: 14px;
-  letter-spacing: -0.006em;
+  letter-spacing: var(--tracking-text);
   caret-color: var(--accent);
 }
 
@@ -298,19 +305,38 @@ button:disabled {
     0 0 0 0.5px var(--chrome-edge),
     0 8px 28px rgba(0, 0, 0, 0.14),
     0 2px 6px rgba(0, 0, 0, 0.06);
-  animation: sidebar-peek 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  /* Enters from the left edge and leaves the same way; the invisible state
+     waits for the end of the slide before hiding. */
+  transform: translateX(-24px);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 160ms ease-out,
+    visibility 0s linear 220ms;
 }
 
-@keyframes sidebar-peek {
-  from {
-    transform: translateX(-24px);
-    opacity: 0;
-  }
+.sidebar-dock.floating.open {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 120ms ease-out,
+    visibility 0s;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sidebar-dock.floating {
-    animation: none;
+  .sidebar-dock.floating,
+  .sidebar-dock.floating.open {
+    transform: none;
+    transition:
+      opacity 150ms ease-out,
+      visibility 0s linear 150ms;
+  }
+
+  .sidebar-dock.floating.open {
+    transition: opacity 150ms ease-out;
   }
 }
 
@@ -342,7 +368,7 @@ body.sidebar-resizing {
   overflow: hidden;
   padding: 6px 8px 8px;
   font-size: 13px;
-  letter-spacing: -0.003em;
+  letter-spacing: var(--tracking-text);
 }
 
 .vault-name {
@@ -525,4 +551,31 @@ body.sidebar-resizing {
 
 .note-editor {
   position: relative;
+}
+
+/* Scroll edge: once a list has scrolled, its top fades out under whatever sits
+   above it, in place of a hard divider (the toolbar's edge is in typography.css). */
+@property --scroll-edge {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scroll-edge {
+  to {
+    --scroll-edge: 16px;
+  }
+}
+
+.sidebar-tree,
+.sidebar-tags,
+.switcher-list,
+.search-menu-list,
+.outline-panel,
+.icon-picker-body {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--scroll-edge));
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--scroll-edge));
+  animation: scroll-edge linear both;
+  animation-timeline: scroll(self);
+  animation-range: 0 32px;
 }

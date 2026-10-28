@@ -87,7 +87,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  letter-spacing: -0.003em;
+  letter-spacing: var(--tracking-text);
 }
 
 .tab-dirty {

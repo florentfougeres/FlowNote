@@ -39,7 +39,7 @@
 .graph-header h1 {
   margin: 0 0 2px;
   font-size: 1.6em;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-display);
 }
 
 .graph-header p {

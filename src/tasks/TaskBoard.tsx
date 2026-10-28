@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Icon } from "../Icon";
+import { cardInPlace, landGhost, VelocityTracker } from "../motion";
 import type { TaskStatus } from "./config";
 import type { TaskInfo } from "./task";
 import { TaskSummary } from "./TaskSummary";
@@ -44,6 +45,8 @@ export function TaskBoard({
   const [drag, setDrag] = useState<Drag | null>(null);
   const [target, setTarget] = useState<{ column: number; index: number } | null>(null);
   const pressed = useRef<{ task: TaskInfo; x: number; y: number; rect: DOMRect } | null>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
+  const tracker = useRef(new VelocityTracker());
 
   /** Column and position under the pointer, from the cards' positions on screen. */
   const targetAt = (x: number, y: number) => {
@@ -67,12 +70,14 @@ export function TaskBoard({
     window.getSelection()?.removeAllRanges();
     (event.currentTarget as HTMLElement).focus({ preventScroll: true });
     pressed.current = { task, x: event.clientX, y: event.clientY, rect: event.currentTarget.getBoundingClientRect() };
+    tracker.current.reset();
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const onPointerMove = (event: React.PointerEvent) => {
     const press = pressed.current;
     if (!press) return;
     if (!drag && Math.hypot(event.clientX - press.x, event.clientY - press.y) < 5) return;
+    tracker.current.push(event.clientX, event.clientY);
     setDrag({ task: press.task, x: event.clientX, y: event.clientY, dx: press.x - press.rect.left, dy: press.y - press.rect.top, width: press.rect.width });
     setTarget(targetAt(event.clientX, event.clientY));
   };
@@ -85,13 +90,20 @@ export function TaskBoard({
       return;
     }
     const to = targetAt(event.clientX, event.clientY);
+    // `index` counts the other cards of the column (the dragged one is left out).
+    const from = to ? cards[to.column].findIndex((t) => t.path === task.path) : -1;
+    const moves = to !== null && !(from >= 0 && from === to.index);
+    // The card flies into its new place once the board shows it there, or back to where it was.
+    const home = moves ? to : { column: cards.findIndex((list) => list.some((t) => t.path === task.path)), index: -1 };
+    const card = () => {
+      const column = document.querySelector(`.board-column[data-column="${home.column}"]`);
+      if (home.index >= 0) return cardInPlace(column, ".board-card:not(.board-ghost)", home.index, task.path);
+      return column?.querySelector<HTMLElement>(`.board-card[data-path="${CSS.escape(task.path)}"]`) ?? null;
+    };
+    landGhost(ghostRef.current, tracker.current.velocity(), card);
     setDrag(null);
     setTarget(null);
-    if (!to) return;
-    // `index` counts the other cards of the column (the dragged one is left out).
-    const from = cards[to.column].findIndex((t) => t.path === task.path);
-    if (from >= 0 && from === to.index) return;
-    onMove(task, columns[to.column].value, to.index);
+    if (moves) onMove(task, columns[to.column].value, to.index);
   };
   const cancel = () => {
     pressed.current = null;
@@ -147,7 +159,7 @@ export function TaskBoard({
         );
       })}
       {drag && (
-        <div className="board-card board-ghost" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: drag.width }} aria-hidden>
+        <div ref={ghostRef} className="board-card board-ghost" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: drag.width }} aria-hidden>
           <TaskSummary task={drag.task} />
         </div>
       )}

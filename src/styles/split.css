@@ -123,7 +123,7 @@ body.split-resizing {
   margin: 0;
   font-size: 32px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-display);
   line-height: 1.2;
 }
 

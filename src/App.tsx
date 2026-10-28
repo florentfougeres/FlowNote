@@ -1407,11 +1407,10 @@ export function App() {
         ) : (
           <>
             <div className="sidebar-hotzone" onMouseEnter={openPeek} onMouseLeave={closePeekSoon} />
-            {peek && (
-              <div className="sidebar-dock floating" onMouseEnter={openPeek} onMouseLeave={closePeekSoon}>
-                {sidebar}
-              </div>
-            )}
+            {/* Kept mounted so it leaves the way it came (a transition, which a quick return reverses mid-way). */}
+            <div className={peek ? "sidebar-dock floating open" : "sidebar-dock floating"} inert={!peek} onMouseEnter={openPeek} onMouseLeave={closePeekSoon}>
+              {sidebar}
+            </div>
           </>
         )}
         <div className="main-area">
