@@ -102,7 +102,7 @@ export function loadSettings(): Settings {
       autosave: localStorage.getItem(AUTOSAVE_KEY) !== "false",
       theme: theme === "light" || theme === "dark" ? theme : "system",
       spellChecker: readSpellChecker(),
-      readingList: localStorage.getItem(READING_KEY) || "Lectures.md",
+      readingList: localStorage.getItem(READING_KEY) ?? "",
       fetchTitles: localStorage.getItem(TITLES_KEY) !== "false",
       uiScale: readScale(),
       showTitles: localStorage.getItem(SHOW_TITLES_KEY) !== "false",
@@ -113,7 +113,7 @@ export function loadSettings(): Settings {
       blockMenu: localStorage.getItem(BLOCK_MENU_KEY) === "grid" ? "grid" : "list",
     };
   } catch {
-    return { autosave: true, theme: "system", spellChecker: "grammalecte", readingList: "Lectures.md", fetchTitles: true, uiScale: 1, showTitles: true, pageSort: "name-asc", gitGutter: false, font: "system", noteFont: "app", blockMenu: "list" };
+    return { autosave: true, theme: "system", spellChecker: "grammalecte", readingList: "", fetchTitles: true, uiScale: 1, showTitles: true, pageSort: "name-asc", gitGutter: false, font: "system", noteFont: "app", blockMenu: "list" };
   }
 }
 
@@ -222,7 +222,7 @@ const CATEGORIES: { id: Category; label: string; icon: IconName }[] = [
   { id: "general", label: "Général", icon: "sliders" },
   { id: "editor", label: "Éditeur", icon: "spelling" },
   { id: "tasks", label: "Tâches", icon: "task" },
-  { id: "reading", label: "Lectures", icon: "bookmark" },
+  { id: "reading", label: "Liens", icon: "bookmark" },
   { id: "vault", label: "Vault", icon: "folder" },
   { id: "about", label: "À propos", icon: "info" },
 ];
@@ -409,11 +409,11 @@ export function SettingsPage({
         )}
         {category === "reading" && (
           <section className="settings-card">
-            <Row label="Liste de lectures" help="La note où sont rangés les liens à lire, par thème (une section par thème).">
+            <Row label="Note des liens" help="La note où sont rangés les liens (articles, vidéos, outils…), par thème : une section par thème. Vide : Liens.md, ou Lectures.md si le vault en a déjà une.">
               <input
                 className="setting-text"
                 value={settings.readingList}
-                placeholder="Lectures.md"
+                placeholder="Liens.md"
                 aria-label="Liste de lectures"
                 onChange={(e) => onChange({ ...settings, readingList: e.target.value.trim().replace(/^\/+/, "") })}
                 onBlur={() => !settings.readingList.endsWith(".md") && settings.readingList && onChange({ ...settings, readingList: `${settings.readingList}.md` })}

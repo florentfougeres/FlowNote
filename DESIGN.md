@@ -302,7 +302,7 @@ Le choix exclusif entre quelques options (thème, taille, vues des tâches, mode
 
 ### Navigation
 Faite pour les pages : tout ce qui n'est pas l'arbre se range en rangées compactes.
-- **Barre latérale, de haut en bas :** le vault et Nouvelle page ; un **champ Rechercher** (remplissage de survol, 8 px, raccourci ⌘P à droite) ; les **vues en rangée d'icônes** (Accueil, Tâches, Lectures, Graphe), réparties sur toute la largeur, leur nom dans l'infobulle et l'état actif sur le remplissage de sélection ; Favoris et Pages en sections repliables (titres en encre tertiaire, 12 px) ; l'arbre prend toute la hauteur restante ; en bas, une **rangée d'icônes compacte** (36 px) : Git avec sa pastille, Réglages, Aide (menu : Documentation, Raccourcis clavier).
+- **Barre latérale, de haut en bas :** le vault et Nouvelle page ; un **champ Rechercher** (remplissage de survol, 8 px, raccourci ⌘P à droite) ; les **vues en rangée d'icônes** (Accueil, Tâches, Liens, Graphe), réparties sur toute la largeur, leur nom dans l'infobulle et l'état actif sur le remplissage de sélection ; Favoris et Pages en sections repliables (titres en encre tertiaire, 12 px) ; l'arbre prend toute la hauteur restante ; en bas, une **rangée d'icônes compacte** (36 px) : Git avec sa pastille, Réglages, Aide (menu : Documentation, Raccourcis clavier).
 - **Lignes de l'arbre :** 28 px, icône du type ou emoji de la page, libellé en encre pleine ; sélection sur le remplissage de survol.
 - **Onglets :** des pilules de même largeur, les inactives sur un remplissage à 3,5 % de l'encre, l'active en carte surélevée ; la croix au survol et sur l'onglet actif.
 - **Barre de page :** le fil d'Ariane (encre secondaire, le dernier élément en encre pleine et en gras), puis les boutons fantômes de la page, toujours visibles (Plan, Mode lecture, Pleine largeur, Mode focus, Markdown brut), puis **⋯** pour le reste. Sur une vue de l'app (Accueil, Tâches, Réglages…), pas de fil d'Ariane : l'onglet la nomme déjà.
@@ -313,6 +313,10 @@ Verre des menus, flou, 10 px d'arrondi (12 px pour une fenêtre), ombre de menu,
 
 ### Tuiles
 Un choix visuel parmi quelques options (types de page à créer sur l'Accueil, polices dans les Réglages) : des tuiles en grille, papier surélevé, filet de 0,5 px, 10 px d'arrondi, le contenu centré (une icône de type dans sa pastille teintée, ou « Ag » écrit dans la police proposée), le nom en 12 px dessous. Au survol, le remplissage de survol ; sélectionnée, un bord bleu de 1 px. Sans ombre.
+
+### Accueil et listes de travail
+- **Accueil :** deux colonnes, la principale (environ 2/3) pour reprendre (les trois dernières pages en grandes lignes avec deux lignes d'extrait, puis une liste) et ce qui est dû, par jour ; la secondaire, sans cartes, séparée par des filets (création, favoris, lectures, Git, à ranger). Les statistiques se replient en bas. Pas de grille de cartes égales.
+- **Listes de tâches :** une ligne par élément (32 à 36 px), le titre à gauche, les métadonnées en encre secondaire à droite, la date dans une colonne alignée ; ce qui ne tient pas disparaît, la date reste. Les vues d'une base qui filtrent les mêmes éléments sont des pastilles, pas des onglets.
 
 ### Callouts
 Le bloc signature des notes : un fond teinté à 7 % de la couleur du type, un filet teinté à 24 % tout autour, 8 px d'arrondi, l'icône et le titre dans la couleur du type.

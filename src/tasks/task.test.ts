@@ -82,6 +82,11 @@ describe("tasks in the TaskNotes format", () => {
     const [item] = agenda([["A.md", "- [ ] Mot de passe ⏫ #compta 📅 2026-10-18\n"]], C);
     expect([item.text, item.priority]).toEqual(["Mot de passe #compta", "high"]);
   });
+
+  it("leaves the other Tasks signs out of a checkbox's text", () => {
+    const [item] = agenda([["A.md", "- [ ] Rédiger ⏳ 2026-10-31 🛫 2026-10-28 🔁 every week 📅 2026-11-04 #site\n"]], C);
+    expect(item.text).toBe("Rédiger #site");
+  });
 });
 
 describe("TaskNotes settings", () => {

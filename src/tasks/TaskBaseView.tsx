@@ -45,7 +45,8 @@ export function TaskBaseView({
   config,
   vault,
   editable,
-  onOpen,
+  onOpen: openPage,
+  onOpenBeside,
   onChanged,
   onNew,
   onDelete,
@@ -59,6 +60,8 @@ export function TaskBaseView({
   vault: Vault;
   editable: boolean;
   onOpen: (path: string, newTab: boolean) => void;
+  /** Opens a task on the right of the split view, the tasks staying in sight. */
+  onOpenBeside?: (path: string) => void;
   /** Tasks were written: the base reads them again. */
   onChanged: () => void;
   onNew: (status?: string) => void;
@@ -66,6 +69,8 @@ export function TaskBaseView({
   onDelete: (path: string) => void;
 }) {
   const f = config.fields;
+  /** A click opens the task beside the tasks (⌘-click: in a tab of its own). */
+  const onOpen = (path: string, newTab: boolean) => (newTab || !onOpenBeside ? openPage(path, newTab) : onOpenBeside(path));
   /** Changes shown at once, until the rows are read again. */
   const [shown, setShown] = useState<Map<string, Partial<TaskInfo>>>(new Map());
   const [error, setError] = useState("");
@@ -108,8 +113,9 @@ export function TaskBaseView({
     setMenu({ path, anchor: new DOMRect(event.clientX, event.clientY - 4, 0, 0) });
   };
   const menuItems = (path: string): MenuItem[] => [
-    { label: "Ouvrir dans un nouvel onglet", icon: "open", run: () => onOpen(path, true) },
-    { label: "Ouvrir ici", icon: "doc", run: () => onOpen(path, false) },
+    { label: "Ouvrir dans un nouvel onglet", icon: "open", run: () => openPage(path, true) },
+    ...(onOpenBeside ? [{ label: "Ouvrir à droite", icon: "split", run: () => onOpenBeside(path) } satisfies MenuItem] : []),
+    { label: "Ouvrir ici", icon: "doc", run: () => openPage(path, false) },
     ...(editable ? [{ label: "Supprimer", icon: "trash", danger: true, run: () => onDelete(path) } satisfies MenuItem] : []),
   ];
 

@@ -270,7 +270,7 @@ export interface BaseViewProps {
   /** Embedded in a note: no page title, a smaller frame. */
   embedded?: boolean;
   /** The tasks' settings and their creation, for TaskNotes' views; `openView` opens another of its views (created when missing). */
-  tasks?: { config: TaskConfig; onNew: (status?: string) => void; openView?: (view: keyof TaskConfig["views"]) => void };
+  tasks?: { config: TaskConfig; onNew: (status?: string) => void; openView?: (view: keyof TaskConfig["views"]) => void; openBeside?: (path: string) => void };
 }
 
 /**
@@ -491,7 +491,8 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
 
   return (
     <BaseLinks.Provider value={openLink}>
-      <div className={embedded ? "db-page embedded" : "db-page"}>
+      {/* The tasks' views: one header (title and modes), the base's views as quick filters beside the tools. */}
+      <div className={embedded ? "db-page embedded" : taskViewKey && tasks?.openView ? "db-page task-page" : "db-page"}>
         {!embedded && (
           <header className="db-header">
             {taskViewKey && tasks?.openView ? (
@@ -512,7 +513,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
                 <Icon name="database" size={26} /> <BaseTitle name={noteTitle(path)} editable={editable} onRename={(name) => onRenameRow(path, name)} />
               </h1>
             )}
-            <p className="dash-muted">{tasks && model.views.some((v) => isTaskView(v.type)) ? "Les tâches du vault, au format du plugin TaskNotes" : model.folder !== null ? `Les pages du dossier « ${model.folder || "racine"} »` : "Toutes les pages du vault"}</p>
+            {!(taskViewKey && tasks?.openView) && <p className="dash-muted">{tasks && model.views.some((v) => isTaskView(v.type)) ? "Les tâches du vault, au format du plugin TaskNotes" : model.folder !== null ? `Les pages du dossier « ${model.folder || "racine"} »` : "Toutes les pages du vault"}</p>}
           </header>
         )}
         <div className="db-toolbar">
@@ -522,7 +523,8 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
                 <Icon name="database" size={15} /> <span className="db-embed-name">{noteTitle(path)}</span>
               </button>
             )}
-            {model.views.map((v, i) => (
+            {/* A single view of the tasks needs no tab: its mode above names it. */}
+            {!(taskViewKey && tasks?.openView && model.views.length === 1) && model.views.map((v, i) => (
               <button key={i} role="tab" aria-selected={i === index} className={i === index ? "db-tab active" : "db-tab"} onClick={() => setViewIndex(i)} onDoubleClick={() => editable && setRenaming(i)}>
                 <Icon name={isTaskView(v.type) ? (v.type === "tasknotesKanban" ? "board" : "task") : viewIcon(v.type)} size={14} /> {tasks && isTaskView(v.type) ? taskViewName(v.name) : v.name}
                 {i === index && model.views.length > 1 && editable && (
@@ -599,7 +601,7 @@ export function BaseView({ vault, files, path, source, editable, onSource, onOpe
         {rows === null ? (
           <p className="dash-muted">Lecture des pages…</p>
         ) : tasks && isTaskView(view.type) ? (
-          <TaskBaseView view={view} rows={shown} texts={texts} config={tasks.config} vault={vault} editable={editable} onOpen={onOpen} onChanged={() => void load()} onNew={tasks.onNew} onDelete={(row) => void onDeleteRow(row).then(() => void load())} />
+          <TaskBaseView view={view} rows={shown} texts={texts} config={tasks.config} vault={vault} editable={editable} onOpen={onOpen} onOpenBeside={tasks.openBeside} onChanged={() => void load()} onNew={tasks.onNew} onDelete={(row) => void onDeleteRow(row).then(() => void load())} />
         ) : view.type === "board" ? (
           <BoardView
             rows={shown}

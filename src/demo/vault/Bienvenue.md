@@ -37,7 +37,7 @@ Voici le carnet de Camille Roux, qui conçoit des sites et des identités visuel
 - [[Réunions]] : des comptes rendus, créés depuis le modèle [[Réunion]]
 - [[Voyages.base|Voyages]] : une seconde base, côté perso
 
-Et dans la barre latérale : **Tâches** (les demandes des clients et les tâches du studio, au format du plugin TaskNotes : en liste groupée par statut, ou en tableau dans [[TaskNotes/Views/kanban-default.base|le tableau des tâches]] ; [[TaskNotes/Views/agenda-default.base|l'agenda]] et [[TaskNotes/Views/calendar-default.base|le calendrier]] montrent les tâches récurrentes, comme « Arroser les plantes du studio »), **Lectures** (la veille à lire), **Graphe** (les liens entre toutes ces notes) et, sous les pages, les **Tags** en arbre.
+Et dans la barre latérale : **Tâches** (les demandes des clients et les tâches du studio, au format du plugin TaskNotes : en liste groupée par statut, ou en tableau dans [[TaskNotes/Views/kanban-default.base|le tableau des tâches]] ; [[TaskNotes/Views/agenda-default.base|l'agenda]] et [[TaskNotes/Views/calendar-default.base|le calendrier]] montrent les tâches récurrentes, comme « Arroser les plantes du studio »), **Liens** (les articles et vidéos gardés pour plus tard), **Graphe** (les liens entre toutes ces notes) et, sous les pages, les **Tags** en arbre.
 
 ## À essayer
 
@@ -51,6 +51,7 @@ Et dans la barre latérale : **Tâches** (les demandes des clients et les tâche
 - [ ] Taper « fournil » dans **Rechercher** (`⌘P`), puis passer sur **Contenu** : le même mot cherché dans le texte des notes
 - [ ] Ouvrir le menu **« … »** de la barre de page : correction, historique et exports y sont rangés
 - [ ] Dans les **Réglages** (`⌘,`), choisir une police des notes à part de celle de l'app, par exemple **Serif**
+- [ ] Dans **Tâches**, cliquer une tâche : elle s'ouvre à droite, la liste reste visible
 - [ ] Taper `[[Tarifs#` pour lier un titre de [[Tarifs]], ou `[[Tarifs#^` pour un de ses paragraphes
 - [ ] Replier une section par la flèche à gauche d'un titre, ici « Ce qu'il y a dans ce vault »
 - [ ] Survoler un lien, comme [[Site Maison Pain]] : un aperçu de la note s'ouvre

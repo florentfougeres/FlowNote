@@ -22,7 +22,7 @@ async function openDemo(page) {
   await page.locator(".sidebar-icon[aria-label=\"Accueil\"]").waitFor();
   await wait(page, 1200);
 }
-/** A view of the sidebar's rows of icons (Accueil, Tâches, Lectures, Graphe, Réglages…), by its name. */
+/** A view of the sidebar's rows of icons (Accueil, Tâches, Liens, Graphe, Réglages…), by its name. */
 const nav = (page, label) => page.locator(`.sidebar-icon[aria-label="${label}"]`).first().click();
 const pageRow = (page, label) => page.locator(".page-name", { has: page.locator(".page-label", { hasText: new RegExp(`^${label}$`) }) }).first();
 async function expand(page, label) {
@@ -142,9 +142,9 @@ const SHOTS = {
     await nav(page, "Graphe");
     await wait(page, 5000);
   },
-  lectures: async (page) => {
+  liens: async (page) => {
     await expand(page, "Projets");
-    await nav(page, "Lectures");
+    await nav(page, "Liens");
     await wait(page, 1200);
   },
   mindmap: async (page) => {

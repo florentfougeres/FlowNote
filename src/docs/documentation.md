@@ -23,9 +23,9 @@ FlowNote édite votre vault Obsidian par blocs, avec un menu `/`, des bases, des
 5. **Tout s'enregistre seul** : la pastille en bas à droite indique « Enregistré ». Le fichier est lisible tel quel dans Obsidian.
 6. **Une commande dont vous ne connaissez pas le raccourci** : `⌘⇧P` ouvre la palette de commandes.
 
-Le vault de démonstration est le carnet de Camille, qui crée des sites et des identités visuelles à son compte : des clients, des projets, des réunions, un journal, des voyages. Il montre tout ce que FlowNote sait faire, en situation. Sa note **« Bienvenue »** (dans les favoris) dit où voir chaque fonctionnalité : le projet « Site Maison Pain » et ses sous-pages (cahier des charges, moodboard, croquis, présentation), la base « Clients » et ses quatre vues, le dashboard, le canevas, les tarifs (maths, admonitions), la comptabilité (graphiques, Dataview, Tasks), les tâches et les lectures.
+Le vault de démonstration est le carnet de Camille, qui crée des sites et des identités visuelles à son compte : des clients, des projets, des réunions, un journal, des voyages. Il montre tout ce que FlowNote sait faire, en situation. Sa note **« Bienvenue »** (dans les favoris) dit où voir chaque fonctionnalité : le projet « Site Maison Pain » et ses sous-pages (cahier des charges, moodboard, croquis, présentation), la base « Clients » et ses quatre vues, le dashboard, le canevas, les tarifs (maths, admonitions), la comptabilité (graphiques, Dataview, Tasks), les tâches et les liens.
 
-L'**Accueil** rassemble une rangée compacte pour créer une page de chaque type (le nom et la description au survol), les pages récentes (la carte n'apparaît qu'une fois une page ouverte), les échéances à venir (des tâches et des cases à cocher datées des notes ; la priorité du plugin Tasks, 🔺 ⏫ 🔼 🔽 ⏬, devient un point coloré), les tâches à faire, les liens à lire et l'état de Git. La carte **Santé** compte les liens cassés, les pages orphelines et les pièces jointes que plus aucune page n'utilise (un clic les liste ; dans l'app de bureau, un clic sur une pièce jointe la montre dans le Finder). Un clic sur un tag de la carte Vault liste les pages qui le portent (dans le texte ou dans la propriété `tags`).
+L'**Accueil** est fait pour reprendre. **Reprendre** montre en grand les trois dernières pages ouvertes, avec le début de leur texte, puis les suivantes (au premier lancement, les favoris). Les tâches et les vues de TaskNotes n'y figurent pas : elles ont leur vue, et leurs échéances sont dans À faire. **À faire** range les échéances par jour : en retard, aujourd'hui, les jours de la semaine, puis plus tard (des tâches et des cases à cocher datées des notes ; la priorité du plugin Tasks, 🔺 ⏫ 🔼 🔽 ⏬, devient un point coloré). Sur le côté : une rangée pour créer une page de chaque type (le nom et la description au survol), **Modifiées récemment** (les pages changées dans le vault, par FlowNote, Obsidian ou un `git pull`, d'après la date des fichiers, hors de celles déjà montrées en grand), les favoris, les liens à voir, l'état de Git et **À ranger** (liens cassés, pages orphelines, pièces jointes que plus aucune page n'utilise, seulement s'il y en a ; un clic les liste, et dans l'app de bureau un clic sur une pièce jointe la montre dans le Finder). En bas, **Le vault** se déplie (retenu) : l'activité Git de l'année, les nombres de notes, de dessins et de tags, et les tags (un clic liste les pages qui le portent, dans le texte ou dans la propriété `tags`).
 
 ![[accueil.webp]]
 
@@ -35,9 +35,9 @@ L'**Accueil** rassemble une rangée compacte pour créer une page de chaque type
 
 - **Le vault** en haut : son menu permet de passer en un clic à un vault ouvert récemment, d'en ouvrir un autre ou d'ouvrir les réglages. Le bouton à droite crée une page (`⌘N`).
 - **Rechercher** (`⌘P`) : un seul champ pour retrouver une page par son nom ou son titre. Le contrôle **Titres | Contenu** de la fenêtre passe à la recherche dans le texte des notes (et revient), en gardant ce qui est tapé ; `⌘⇧F` l'ouvre directement sur Contenu.
-- **Les vues**, en une rangée d'icônes sous la recherche (leur nom au survol) : **Accueil**, **Tâches**, **Lectures** et **Graphe**. Quand une page est ouverte, elles s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
+- **Les vues**, en une rangée d'icônes sous la recherche (leur nom au survol) : **Accueil**, **Tâches**, **Liens** et **Graphe**. Quand une page est ouverte, elles s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
 - **Favoris** : les fichiers mis en favoris dans Obsidian. Un clic sur le titre « Favoris » replie la section (retenu).
-- **Pages** : l'arbre du vault. Une note et le dossier du même nom (`Projets.md` + `Projets/`) forment une page avec ses sous-pages. La note des lectures n'y figure pas : elle a sa propre vue. Les tâches y sont, dans leur dossier (`TaskNotes/Tasks` par défaut), comme dans Obsidian.
+- **Pages** : l'arbre du vault. Une note et le dossier du même nom (`Projets.md` + `Projets/`) forment une page avec ses sous-pages. La note des liens n'y figure pas : elle a sa propre vue. Les tâches y sont, dans leur dossier (`TaskNotes/Tasks` par défaut), comme dans Obsidian.
   - Menu « … » ou clic droit : ouvrir dans un nouvel onglet, ouvrir à droite, sous-page, copier le lien, dupliquer, fusionner dans une autre note, afficher dans le Finder, renommer, supprimer.
   - Glisser-déposer des pages et des dossiers : les liens qui pointent vers eux sont mis à jour à chaque déplacement. Une note déplacée emporte ses pièces jointes (voir « Les liens »).
   - **Trier** : le bouton à flèches du titre « Pages » range les pages par nom (A à Z, Z à A), par date de modification ou par date de création (récentes ou anciennes d'abord). Les dossiers restent en tête, par nom. Le tri choisi est retenu.
@@ -94,7 +94,7 @@ Ouverts dans un onglet (`⌘,`) et rangés par catégorie :
 - **Général** : apparence (système, clair, sombre), taille de l'interface (petite, normale, grande, très grande), **police de l'app** (menus, barre latérale, onglets, vues : celle du système, **Clarika**, douce et arrondie, **Open Sans** ou **Inter**) et **police des notes** (titre et texte des notes : comme l'app, ou l'une des mêmes, ou un **serif** pour les longs textes), chacune montrée dans sa propre police ; enregistrement automatique.
 - **Éditeur** : correcteur (Grammalecte, celui de macOS, ou aucun) ; menu des blocs en **liste** (avec les descriptions) ou en **grille** d'icônes, plus compacte (le nom de chaque bloc au survol, les flèches dans les deux sens) ; modifications depuis le dernier commit dans la marge (désactivé par défaut, voir Git).
 - **Tâches** : les réglages du plugin TaskNotes lus dans le vault (dossier, tag, statuts, priorités), en lecture seule.
-- **Lectures** : note des lectures et lecture automatique du titre des liens.
+- **Liens** : la note des liens et la lecture automatique du titre des liens ajoutés.
 - **Vault** : changer de vault.
 - **À propos** : la version de FlowNote, le journal des versions et le code source.
 
@@ -454,7 +454,7 @@ Une tâche est une note au format du plugin Obsidian **TaskNotes** : la même no
 
 « Nouvelle tâche » (l'accueil, la palette `⌘⇧P` ou un tableau de tâches) l'ouvre aussitôt dans le dossier des tâches (`TaskNotes/Tasks` par défaut), son titre « Sans titre » sélectionné : tapez son nom, `↵` pour valider. Le titre se change à tout moment d'un clic (il renomme le fichier, ou la propriété `title` quand TaskNotes nomme les fichiers par un identifiant). En haut de la page, chaque champ se change d'un clic. Un **projet** est une note du vault, choisie dans la liste qui s'ouvre en tapant son nom (comme dans TaskNotes) ; un clic sur le projet ouvre la note. « Terminer la tâche » la passe au statut terminé et note la date.
 
-**Tâches** dans la barre latérale ouvre la liste (`TaskNotes/Views/tasks-default.base`). En haut, **Liste**, **Tableau**, **Agenda** et **Calendrier** passent d'une vue de TaskNotes à l'autre. La liste est groupée par statut, avec les vues de TaskNotes (aujourd'hui, en retard, cette semaine, sans date…). Le rond devant une tâche la termine. Un clic droit sur une tâche, dans la liste, le tableau ou le calendrier, l'ouvre dans un nouvel onglet ou ici, ou la supprime (après confirmation, vers la corbeille dans l'app de bureau).
+**Tâches** dans la barre latérale ouvre la liste (`TaskNotes/Views/tasks-default.base`). En haut, **Liste**, **Tableau**, **Agenda** et **Calendrier** passent d'une vue de TaskNotes à l'autre. Les vues de la base (ordre manuel, toutes, aujourd'hui, en retard, cette semaine, sans date…) sont des filtres rapides en pastilles, à côté de la recherche, du filtre et du tri. La liste est groupée par statut, une tâche par ligne : la priorité et le titre (ses tags à la suite), puis à droite ses projets et contextes, ses cases cochées, son estimation, sa récurrence et sa date ; dans une fenêtre étroite, il ne reste que le titre et la date. Le rond devant une tâche la termine. **Un clic ouvre la tâche à droite**, la liste restant visible (`⌘`-clic : dans un nouvel onglet). Un clic droit sur une tâche, dans la liste, le tableau ou le calendrier, l'ouvre à droite, dans un nouvel onglet ou ici, ou la supprime (après confirmation, vers la corbeille dans l'app de bureau).
 
 ![[taches-liste.webp]]
 
@@ -652,11 +652,11 @@ Les liens entre les notes : les couleurs distinguent les types de page, les poin
 
 ![[graphe.webp]]
 
-### Lectures
+### Liens
 
-Une liste de lectures dans une seule note (`Lectures.md`) : une section par thème, une case par lien, des tags. `⌘⇧L` ajoute un lien de n'importe où ; son titre est lu automatiquement. « Au hasard » ouvre un lien encore à lire.
+Les liens à garder, quels qu'ils soient (articles, vidéos, outils…), dans une seule note (`Liens.md` ; un vault qui a déjà `Lectures.md` la garde) : une section par thème, une case par lien, cochée une fois vu, des tags. `⌘⇧L` ajoute un lien de n'importe où ; son titre est lu automatiquement. « Au hasard » ouvre un lien pas encore vu.
 
-![[lectures.webp]]
+![[liens.webp]]
 
 ```markdown
 ## Outils
@@ -708,7 +708,7 @@ Menu « … » de la page :
 | `⌘⇧R` | Mode lecture |
 | `⌘⇧M` | Mode focus |
 | `⌘⇧G` | Panneau Git |
-| `⌘⇧L` | Ajouter un lien à lire |
+| `⌘⇧L` | Ajouter un lien |
 | `⌘⇧P` | Palette de commandes (aussi `>` dans `⌘P`) |
 | `⌘⌥P` | Présenter |
 | `⌘S` | Enregistrer maintenant |

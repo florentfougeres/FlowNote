@@ -56,7 +56,7 @@ describe("reading list", () => {
     expect(addLink(LIST, "Cuisine", "Pâtes", "https://p.fr")).toBe(`${LIST}\n## Cuisine\n\n- [ ] [Pâtes](https://p.fr)\n`);
     expect(addLink(LIST, null, "Vrac", "https://x.fr")).toBe(LIST.replace("sans-theme\n", "sans-theme\n- [ ] [Vrac](https://x.fr)\n"));
     expect(addLink("# Lectures\n\nIntro.\n\n## Dev\n", null, "A", "https://a.fr")).toBe("# Lectures\n\nIntro.\n\n- [ ] [A](https://a.fr)\n\n## Dev\n");
-    expect(newReadingList("IA", "Un titre", "https://a.fr")).toBe("# Lectures\n\n## IA\n\n- [ ] [Un titre](https://a.fr)\n");
+    expect(newReadingList("IA", "Un titre", "https://a.fr")).toBe("# Liens\n\n## IA\n\n- [ ] [Un titre](https://a.fr)\n");
   });
 
   it("writes links Obsidian reads", () => {
@@ -91,7 +91,7 @@ describe("reading list", () => {
 
   it("adds a link with its tags", () => {
     expect(addLink("# Lectures\n", "IA", "T", "https://t.fr", ["llm", "video"])).toBe("# Lectures\n\n## IA\n\n- [ ] [T](https://t.fr) #llm #video\n");
-    expect(newReadingList(null, "", "https://t.fr", ["a"])).toBe("# Lectures\n\n- [ ] https://t.fr #a\n");
+    expect(newReadingList(null, "", "https://t.fr", ["a"])).toBe("# Liens\n\n- [ ] https://t.fr #a\n");
   });
 
   it("normalizes typed tags", () => {

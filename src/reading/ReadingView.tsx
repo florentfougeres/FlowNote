@@ -99,8 +99,8 @@ export function ReadingView({
     <div className="reading-view">
       <header className="tasks-header">
         <div>
-          <h1>Lectures</h1>
-          <p className="dash-muted">{text === null ? "Lecture de la liste…" : `${unread.length} à lire · ${all.length - unread.length} lu${all.length - unread.length > 1 ? "s" : ""}`}</p>
+          <h1>Liens</h1>
+          <p className="dash-muted">{text === null ? "Lecture de la liste…" : `${unread.length} à voir · ${all.length - unread.length} vu${all.length - unread.length > 1 ? "s" : ""}`}</p>
         </div>
         <button onClick={(e) => onOpenNote(path, e.metaKey || e.ctrlKey)} title={path}>
           <Icon name="doc" size={13} /> Ouvrir la note
@@ -115,7 +115,7 @@ export function ReadingView({
           <input placeholder="Rechercher un lien" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setQuery("")} />
         </label>
         <label className="reading-toggle">
-          <input type="checkbox" checked={hideRead} onChange={(e) => setHideRead(e.target.checked)} /> Masquer les lus
+          <input type="checkbox" checked={hideRead} onChange={(e) => setHideRead(e.target.checked)} /> Masquer les vus
         </label>
         <div className="db-popover-anchor" ref={filterBox}>
           <button className={filtering ? "reading-tags-button active" : "reading-tags-button"} aria-expanded={filterOpen} onClick={() => setFilterOpen(!filterOpen)}>
@@ -148,7 +148,7 @@ export function ReadingView({
             </div>
           )}
         </div>
-        <button onClick={random} disabled={unread.length === 0} title="Ouvrir un lien non lu au hasard">
+        <button onClick={random} disabled={unread.length === 0} title="Ouvrir au hasard un lien pas encore vu">
           Au hasard
         </button>
       </div>
@@ -206,13 +206,13 @@ export function ReadingView({
                   <span style={{ width: `${section.items.length ? (read / section.items.length) * 100 : 0}%` }} />
                 </span>
                 <span className="dash-muted">
-                  {read}/{section.items.length} lu{read > 1 ? "s" : ""}
+                  {read}/{section.items.length} vu{read > 1 ? "s" : ""}
                 </span>
               </button>
               {open &&
                 items.map((item) => (
                   <div key={item.line} className={item.checked ? "reading-item read" : "reading-item"}>
-                    <input type="checkbox" checked={item.checked} onChange={() => void toggle(item)} aria-label={item.checked ? "Marquer comme non lu" : "Marquer comme lu"} />
+                    <input type="checkbox" checked={item.checked} onChange={() => void toggle(item)} aria-label={item.checked ? "Marquer comme pas encore vu" : "Marquer comme vu"} />
                     <button className="reading-link" onClick={() => openUrl(item.url)} title={item.url}>
                       <span className="reading-title">{item.title}</span>
                       <span className="reading-site">{siteOf(item.url)}</span>

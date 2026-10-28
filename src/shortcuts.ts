@@ -62,7 +62,7 @@ export const SHORTCUTS: Shortcut[] = [
   { keys: "⌥-clic", label: "Ouvrir à droite (deux pages côte à côte)" },
   { keys: "⌘⌥\\", label: "Ouvrir ou fermer le panneau de droite", run: [[{ code: "Backslash", alt: true, shift: "any" }, "split"]] },
   { keys: "⌘⇧G", label: "Panneau Git", run: [[{ key: "g", shift: true }, "git"]] },
-  { keys: "⌘⇧L", label: "Ajouter un lien à lire", run: [[{ key: "l", shift: true }, "addLink"]] },
+  { keys: "⌘⇧L", label: "Ajouter un lien", run: [[{ key: "l", shift: true }, "addLink"]] },
   { keys: "⌘⌥P", label: "Présenter (présentation ouverte)", run: [[{ code: "KeyP", alt: true }, "present"]] },
   { keys: "⌘F / ⌘⌥F", label: "Rechercher / remplacer dans la note", run: [[{ code: "KeyF" }, "find"], [{ code: "KeyF", alt: true }, "replace"]] },
   { keys: "⌘⇧F", label: "Rechercher dans tout le vault", run: [[{ code: "KeyF", shift: true }, "vaultSearch"]] },

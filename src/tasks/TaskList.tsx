@@ -1,7 +1,8 @@
 import { useContext } from "react";
 import { Icon } from "../Icon";
 import type { TaskInfo } from "./task";
-import { TaskConfigContext, TaskSummary } from "./TaskSummary";
+import { priorityOf } from "./config";
+import { DateChip, durationLabel, linkText, TaskConfigContext } from "./TaskSummary";
 
 export interface TaskGroup {
   key: string;
@@ -11,9 +12,9 @@ export interface TaskGroup {
 }
 
 /**
- * TaskNotes' task list view: a row per task, in groups when the view groups
- * them (by status, priority…). The round box completes the task or opens it
- * again.
+ * TaskNotes' task list view: a line per task (TaskLine), in groups when the
+ * view groups them (by status, priority…). The round box completes the task
+ * or opens it again.
  */
 export function TaskList({
   groups,
@@ -66,8 +67,8 @@ export function TaskList({
                   >
                     {task.done && <Icon name="check" size={11} />}
                   </button>
-                  <button className="task-row-main" onClick={(e) => onOpen(task.path, e.metaKey || e.ctrlKey)} onAuxClick={(e) => e.button === 1 && onOpen(task.path, true)}>
-                    <TaskSummary task={task} />
+                  <button className="task-row-main task-line" onClick={(e) => onOpen(task.path, e.metaKey || e.ctrlKey)} onAuxClick={(e) => e.button === 1 && onOpen(task.path, true)} title={task.title}>
+                    <TaskLine task={task} />
                   </button>
                 </div>
               );
@@ -76,5 +77,40 @@ export function TaskList({
         ),
       )}
     </div>
+  );
+}
+
+/**
+ * A task on one line: priority and title, then in muted columns on the right
+ * its projects and contexts, its estimate and recurrence, and its date (the
+ * due date, else the scheduled one). Tags show after the title, quietly.
+ */
+function TaskLine({ task }: { task: TaskInfo }) {
+  const config = useContext(TaskConfigContext);
+  const priority = priorityOf(config, task.priority);
+  const date = task.due ? { day: task.due, icon: "calendar" as const, title: "Échéance" } : task.scheduled ? { day: task.scheduled, icon: "hourglass" as const, title: "Prévue le" } : null;
+  return (
+    <>
+      <span className="task-line-title">
+        {priority && priority.weight > 0 && <span className="task-priority-dot" style={{ background: priority.color }} title={`Priorité ${priority.label.toLowerCase()}`} />}
+        <span className="task-line-name">{task.title}</span>
+        {task.tags.length > 0 && <span className="task-line-tags">{task.tags.map((t) => `#${t}`).join(" ")}</span>}
+      </span>
+      <span className="task-line-meta">
+        {[...task.projects.map(linkText), ...task.contexts.map((c) => `@${c}`)].join(" · ")}
+        {task.checklist.total > 0 && (
+          <span title="Cases cochées">
+            <Icon name="checkbox" size={11} /> {task.checklist.done}/{task.checklist.total}
+          </span>
+        )}
+        {task.timeEstimate && <span title="Estimation">{durationLabel(task.timeEstimate)}</span>}
+        {task.recurrence && (
+          <span title="Tâche récurrente">
+            <Icon name="repeat" size={11} />
+          </span>
+        )}
+      </span>
+      <span className="task-line-date">{date && <DateChip date={date.day} done={task.done} icon={date.icon} title={date.title} />}</span>
+    </>
   );
 }

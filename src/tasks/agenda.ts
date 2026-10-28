@@ -44,7 +44,8 @@ export function agenda(notes: [string, string][], config: TaskConfig): AgendaIte
       const task = /^[ \t]*(?:>[ \t]?)*[-*+] \[ \][ \t]+(.*)$/.exec(line);
       const due = task ? DUE_DATE.exec(task[1]) : null;
       if (!task || !due) return;
-      let label = task[1].replace(DUE_DATE, "");
+      // The other signs of the Tasks plugin (scheduled, start, done, created dates, recurrence) are not part of the text.
+      let label = task[1].replace(DUE_DATE, "").replace(/[⏳⌛🛫✅➕]\uFE0F?\s*\d{4}-\d{2}-\d{2}/gu, "").replace(/🔁\uFE0F?[^📅📆🗓⏳⌛🛫✅➕🔺⏫🔼🔽⏬#]*/gu, "");
       const priority = PRIORITY_SIGNS.find(([sign]) => label.includes(sign))?.[1];
       for (const [sign] of PRIORITY_SIGNS) label = label.replaceAll(`${sign}\uFE0F`, "").replaceAll(sign, "");
       items.push({ kind: "checkbox", path, text: label.replace(/\s{2,}/g, " ").trim(), due: due[1], line: index + 1, ...(priority ? { priority } : {}) });
