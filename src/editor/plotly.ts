@@ -32,6 +32,9 @@ function withTextTitles(layout: Record<string, unknown>): Record<string, unknown
   return next;
 }
 
+/** The series after the first, in the system palette, readable in light and dark. */
+const SERIES = ["#ff9f0a", "#30b0c7", "#af52de", "#34c759", "#ff453a", "#a2845e", "#8e8e93"];
+
 /** The app's colours and font under the note's own layout (which wins). */
 function themedLayout(own: Record<string, unknown> = {}): Record<string, unknown> {
   const layout = withTextTitles(own);
@@ -45,6 +48,8 @@ function themedLayout(own: Record<string, unknown> = {}): Record<string, unknown
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
     font: { family: getComputedStyle(document.body).fontFamily, color: text, size: 12 },
+    // The app's palette (system blue first) instead of Plotly's; a note's own colours still win.
+    colorway: [css.getPropertyValue("--accent").trim() || "#007aff", ...SERIES],
     // Plotly's toolbar (zoom, export…) on the page, not on a grey band.
     modebar: { bgcolor: "rgba(0,0,0,0)", color: css.getPropertyValue("--muted").trim() || "#888", activecolor: text },
     ...layout,

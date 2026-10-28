@@ -13,7 +13,7 @@
   color: var(--muted);
   background: var(--bg-elevated);
   border: 0.5px solid color-mix(in srgb, var(--text) 18%, transparent);
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
   animation: handle-in 120ms ease-out;
 }
@@ -419,8 +419,8 @@
   gap: 5px;
   height: 26px;
   padding: 0 10px;
-  border-radius: 7px;
-  font-size: 12.5px;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .plot-editor-footer .plot-editor-text {
@@ -654,7 +654,7 @@
   display: block;
   margin: 6px 0;
   padding: 4px 0 4px 14px;
-  border-left: 3px solid var(--accent-soft);
+  border-left: 2px solid var(--accent-soft);
 }
 
 .embed-note-title {
@@ -664,7 +664,7 @@
   margin-bottom: 2px;
   padding: 1px 6px;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   background: none;
   box-shadow: none;
   color: var(--muted);
@@ -708,7 +708,7 @@
 .note .footnote-ref {
   margin: 0;
   padding: 0 1px;
-  border-radius: 3px;
+  border-radius: 4px;
   color: var(--accent);
   font-size: 0.72em;
   font-weight: 600;
@@ -1029,7 +1029,7 @@
   height: 28px;
   padding: 0 4px;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   background: none;
   color: var(--text);
   font: 15px var(--font-ui);
@@ -1202,7 +1202,7 @@
   height: 18px;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: 4px;
   background: var(--bg-elevated);
 }
 
@@ -1234,7 +1234,7 @@
   width: 36px;
   padding: 4px 0;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--hover);
   color: var(--text);
   font: 13px var(--font-ui);
@@ -1249,7 +1249,7 @@
 .block-menu .table-size-fields .table-size-ok {
   width: auto;
   padding: 4px 12px;
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--accent);
   color: #fff;
   font-weight: 600;

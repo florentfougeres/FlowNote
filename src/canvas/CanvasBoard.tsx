@@ -367,6 +367,9 @@ function useStable(bridge: VaultBridge, readFile: (path: string) => Promise<stri
   }, []);
 }
 
+/** The library's credit in the corner, hidden: a personal tool, not a commercial product (React Flow's MIT licence allows it). */
+const PRO_OPTIONS = { hideAttribution: true };
+
 function BoardView({ initial, onChange, editable, theme, ...live }: Omit<CanvasBoardProps, "source"> & { initial: CanvasData }) {
   const { bridge, readFile } = useStable(live.bridge, live.readFile);
   const flow = useReactFlow();
@@ -597,6 +600,7 @@ function BoardView({ initial, onChange, editable, theme, ...live }: Omit<CanvasB
         onPointerLeave={() => (pointer.current = null)}
       >
         <ReactFlow
+          proOptions={PRO_OPTIONS}
           nodes={nodes}
           edges={edges}
           nodeTypes={kinds}

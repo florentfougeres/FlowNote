@@ -1,5 +1,5 @@
 import { useContext, useRef, useState } from "react";
-import { Icon } from "../Icon";
+import { Icon, type IconName } from "../Icon";
 import { monthGrid } from "../base/CalendarView";
 import { priorityOf } from "./config";
 import { isOccurrenceDone, occurrences } from "./recurrence";
@@ -83,11 +83,11 @@ export function calendarEntries(tasks: TaskInfo[], from: string, to: string, opt
   return byDay;
 }
 
-const KIND: Record<EntryKind, { icon: string; label: string }> = {
-  due: { icon: "📅", label: "Échéance" },
-  scheduled: { icon: "⏳", label: "Prévue" },
-  occurrence: { icon: "🔁", label: "Occurrence" },
-  date: { icon: "", label: "" },
+const KIND: Record<EntryKind, { icon: IconName | null; label: string }> = {
+  due: { icon: "calendar", label: "Échéance" },
+  scheduled: { icon: "hourglass", label: "Prévue" },
+  occurrence: { icon: "repeat", label: "Occurrence" },
+  date: { icon: null, label: "" },
 };
 
 const dayLabel = (day: string, format: Intl.DateTimeFormatOptions) => new Date(`${day}T12:00:00`).toLocaleDateString("fr-FR", format);
@@ -147,6 +147,7 @@ export function TaskCalendar({
   const item = (entry: CalendarEntry, day: string) => {
     const priority = priorityOf(config, entry.task.priority);
     const dragged = drag?.entry === entry;
+    const kind = KIND[entry.kind];
     return (
       <div
         key={`${entry.task.path}-${entry.kind}-${entry.late ? "late" : day}`}
@@ -187,9 +188,9 @@ export function TaskCalendar({
         )}
         {priority && priority.weight > 0 && <span className="task-priority-dot" style={{ background: priority.color }} />}
         <span className="task-cal-title">{entry.task.title}</span>
-        {KIND[entry.kind].icon && (
-          <span className="task-cal-kind" title={KIND[entry.kind].label}>
-            {KIND[entry.kind].icon}
+        {kind.icon && (
+          <span className="task-cal-kind" title={kind.label}>
+            <Icon name={kind.icon} size={12} />
           </span>
         )}
       </div>

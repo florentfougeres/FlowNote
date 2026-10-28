@@ -3,7 +3,7 @@ import { keys } from "../keys";
 import { NoteEditor, type FrontmatterControl } from "../editor/NoteEditor";
 import type { VaultBridge } from "../editor/bridge";
 import type { Editor } from "@tiptap/core";
-import { Icon } from "../Icon";
+import { Icon, type IconName } from "../Icon";
 import type { PropertyValue } from "../markdown/frontmatter";
 import { linkTextFor, resolveLink } from "../vault/links";
 import { linkItems } from "../editor/wikilinks";
@@ -85,7 +85,7 @@ function Composer({ placeholder, initial = "", submitLabel, bridge, onSubmit, on
 }
 
 /** The due date as a chip (like the tags); a click opens the date picker. */
-function DateField({ value, urgent, editable, onChange, icon = "📅", add }: { value: string | null; urgent: string | null; editable: boolean; onChange: (due: string | null) => void; icon?: string; add: string }) {
+function DateField({ value, urgent, editable, onChange, icon = "calendar", add }: { value: string | null; urgent: string | null; editable: boolean; onChange: (due: string | null) => void; icon?: IconName; add: string }) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const pick = (event: React.MouseEvent) => editable && setAnchor(event.currentTarget.getBoundingClientRect());
   return (
@@ -93,7 +93,7 @@ function DateField({ value, urgent, editable, onChange, icon = "📅", add }: { 
       {value ? (
         <span className={`task-tag due-chip-field${urgent ? ` ${urgent}` : ""}`}>
           <button className="due-field-open" onClick={pick} disabled={!editable} title="Changer la date">
-            {icon} {new Date(`${value}T12:00:00`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+            <Icon name={icon} size={12} /> {new Date(`${value}T12:00:00`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
             {urgent && /^(aujourd|demain|hier|en retard)/.test(dueLabel(value)) ? ` · ${dueLabel(value)}` : ""}
           </button>
           {editable && (
@@ -341,7 +341,7 @@ function EstimateField({ value, editable, onChange }: { value: number | null; ed
   return value ? (
     <span className="task-tag">
       <button className="task-chip-open" disabled={!editable} onClick={() => setDraft(durationLabel(value))}>
-        ⏱ {durationLabel(value)}
+        <Icon name="clock" size={12} /> {durationLabel(value)}
       </button>
       {editable && (
         <button aria-label="Retirer l'estimation" onClick={() => onChange(null)}>
@@ -539,7 +539,7 @@ export function TaskView({
           </div>
           <div className="task-field">
             <span className="task-field-label">Prévue le</span>
-            <DateField value={day(info.scheduled)} urgent={null} icon="⏳" editable={editable} add="date prévue" onChange={(date) => setField(f.scheduled, date ?? undefined)} />
+            <DateField value={day(info.scheduled)} urgent={null} icon="hourglass" editable={editable} add="date prévue" onChange={(date) => setField(f.scheduled, date ?? undefined)} />
           </div>
           <div className="task-field">
             <span className="task-field-label">Estimation</span>

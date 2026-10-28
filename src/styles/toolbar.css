@@ -332,7 +332,7 @@
   justify-content: space-between;
   padding: 6px 4px 4px 8px;
   color: var(--faint, var(--muted));
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -345,7 +345,7 @@
   height: 20px;
   padding: 0;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   background: none;
   box-shadow: none;
   color: var(--muted);
@@ -460,7 +460,7 @@
   background: none;
   box-shadow: none;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--muted);
   text-align: left;
   overflow: hidden;
@@ -556,7 +556,7 @@
 
 .icon-picker-header button {
   flex: none;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .icon-picker-body {
@@ -567,7 +567,7 @@
 .icon-picker-body h4 {
   margin: 8px 0 4px;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -640,7 +640,7 @@ body.tree-dragging * {
   gap: 6px;
   max-width: 220px;
   padding: 4px 10px;
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--menu-material);
   -webkit-backdrop-filter: var(--material-blur);
   backdrop-filter: var(--material-blur);
@@ -700,7 +700,7 @@ body.tree-dragging * {
   backdrop-filter: var(--material-blur);
   box-shadow: 0 0 0 0.5px var(--border), 0 2px 8px rgba(0, 0, 0, 0.06);
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   white-space: nowrap;
   pointer-events: auto;
   user-select: none;

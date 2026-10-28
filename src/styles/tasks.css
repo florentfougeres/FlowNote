@@ -1,7 +1,9 @@
-/* ---- Due dates (📅) ---- */
+/* ---- Due dates ---- */
 
 .due-chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 0 6px;
   border-radius: 6px;
   font-size: 0.88em;
@@ -286,7 +288,7 @@ button.task-tag.selected {
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--muted);
   background: color-mix(in srgb, var(--text) 3%, transparent);
   border-bottom: 0.5px solid color-mix(in srgb, var(--text) 10%, transparent);
@@ -459,7 +461,7 @@ button.task-tag.selected {
 .comment-composer-actions small {
   flex: 1;
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 /* ---- Tickets list ---- */
@@ -482,7 +484,7 @@ button.task-tag.selected {
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  border-radius: 9px;
+  border-radius: 10px;
 }
 
 .tasks-toolbar {
@@ -531,7 +533,7 @@ button.task-tag.selected {
   background: transparent;
   box-shadow: none;
   padding: 0;
-  font-size: 13.5px;
+  font-size: 14px;
 }
 
 .tasks-search button {
@@ -675,6 +677,9 @@ button.task-tag.selected {
 
 .task-chip button,
 .task-tag button.task-chip-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: none;
   background: none;
   box-shadow: none;
@@ -834,7 +839,7 @@ body:has(.board.dragging) {
 
 .board-card-title {
   overflow-wrap: anywhere;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.35;
 }
@@ -907,12 +912,12 @@ body:has(.board.dragging) {
   gap: 5px;
   min-width: 0;
   padding: 3px 6px;
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--bg-elevated);
   box-shadow:
     0 0 0 1px var(--db-line, var(--border)),
     0 1px 2px rgba(0, 0, 0, 0.04);
-  font-size: 12.5px;
+  font-size: 13px;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -952,7 +957,8 @@ body:has(.board.dragging) {
 
 .task-cal-kind {
   flex: none;
-  font-size: 10px;
+  display: inline-flex;
+  color: var(--faint);
 }
 
 .task-check.small {
@@ -1014,12 +1020,12 @@ body:has(.board.dragging) {
 
 .task-agenda .task-cal-item {
   padding: 6px 10px;
-  font-size: 13.5px;
+  font-size: 14px;
 }
 
 .task-agenda-empty {
   margin: 2px 2px 0;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--faint);
 }
 

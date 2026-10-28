@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { DiffView } from "./DiffView";
+import { Icon } from "./Icon";
 import { unifiedDiff, type GitApi, type GitCommit } from "./vault/git";
 
 const relative = new Intl.RelativeTimeFormat("fr", { numeric: "auto" });
@@ -67,7 +68,7 @@ export function HistoryPanel({ git, path, current, onRestore, onClose }: Props) 
       <header>
         <strong>Historique</strong>
         <button onClick={onClose} aria-label="Fermer l'historique">
-          ✕
+          <Icon name="close" size={14} />
         </button>
       </header>
       {error && <p className="git-feedback error">{error}</p>}

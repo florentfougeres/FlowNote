@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { Icon } from "../Icon";
+import { Icon, type IconName } from "../Icon";
 import { dueLabel, urgency } from "./agenda";
 import { DEFAULT_TASK_CONFIG, priorityOf, type TaskConfig } from "./config";
 import type { TaskInfo } from "./task";
@@ -11,12 +11,12 @@ export const TaskConfigContext = createContext<TaskConfig>(DEFAULT_TASK_CONFIG);
 export const linkText = (value: string) => value.replace(/^\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]$/, (_, target: string, alias?: string) => alias ?? target);
 
 /** A date as a chip, colored by urgency while the task is not done. */
-export function DateChip({ date, done, icon = "📅", title }: { date: string; done: boolean; icon?: string; title?: string }) {
+export function DateChip({ date, done, icon = "calendar", title }: { date: string; done: boolean; icon?: IconName; title?: string }) {
   const day = date.slice(0, 10);
   const level = done ? null : urgency(day);
   return (
     <span className={`due-chip${level ? ` ${level}` : ""}`} title={title}>
-      {icon} {level ? dueLabel(day) : day}
+      <Icon name={icon} size={12} /> {level ? dueLabel(day) : day}
     </span>
   );
 }
@@ -60,7 +60,7 @@ export function TaskSummary({ task }: { task: TaskInfo }) {
       {(task.due || task.scheduled || task.recurrence || task.checklist.total > 0 || task.comments > 0 || task.timeEstimate) && (
         <span className="board-card-meta">
           {task.due && <DateChip date={task.due} done={task.done} title="Échéance" />}
-          {task.scheduled && <DateChip date={task.scheduled} done={task.done} icon="⏳" title="Prévue le" />}
+          {task.scheduled && <DateChip date={task.scheduled} done={task.done} icon="hourglass" title="Prévue le" />}
           {task.recurrence && (
             <span title="Tâche récurrente">
               <Icon name="repeat" size={11} />

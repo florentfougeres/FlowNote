@@ -165,7 +165,7 @@
   box-shadow: none;
   color: var(--muted);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
 }
 
 .db-tab:hover {
@@ -249,7 +249,7 @@
   gap: 5px;
   margin-left: 6px;
   padding: 4px 12px;
-  border-radius: 7px;
+  border-radius: 8px;
 }
 
 .db-rename-view {
@@ -333,7 +333,7 @@
   box-shadow: none;
   color: var(--muted);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 400;
   text-align: left;
   overflow: hidden;
@@ -644,7 +644,7 @@ button.db-cell-check {
 .db-select-list small {
   padding: 6px 8px 2px;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -731,7 +731,7 @@ button.db-cell-check {
 
 .db-rules p {
   margin: 6px 8px;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 /* Select editor, under the cell. */
@@ -895,7 +895,7 @@ body:has(.db-board.dragging) {
   max-width: 100%;
   overflow: hidden;
   overflow-wrap: anywhere;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -1013,7 +1013,7 @@ body:has(.db-board.dragging) {
 
 .db-formula-error {
   color: var(--danger);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .db-group-row td {
@@ -1116,14 +1116,14 @@ body:has(.db-board.dragging) {
   padding: 7px 8px;
   border-radius: 6px;
   font-family: var(--font-mono, ui-monospace, "SF Mono", Menlo, monospace);
-  font-size: 12.5px;
+  font-size: 13px;
   resize: vertical;
 }
 
 .db-menu-hint {
   margin: 0 6px 6px;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -1218,7 +1218,11 @@ body:has(.db-board.dragging) {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  text-transform: capitalize;
+}
+
+/* "octobre 2026" → "Octobre 2026", but "28 oct. – 3 nov." stays in lower case. */
+.db-calendar-bar h2::first-letter {
+  text-transform: uppercase;
 }
 
 .db-calendar-nav {
@@ -1280,7 +1284,7 @@ body:has(.db-board.dragging) {
 .db-calendar-date {
   padding: 0 4px;
   border-radius: 999px;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 20px;
 }
 
@@ -1306,12 +1310,12 @@ body:has(.db-board.dragging) {
   gap: 5px;
   min-width: 0;
   padding: 3px 6px;
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--bg-elevated);
   box-shadow:
     0 0 0 1px var(--db-line),
     0 1px 2px rgba(0, 0, 0, 0.04);
-  font-size: 12.5px;
+  font-size: 13px;
   cursor: default;
   touch-action: none;
   user-select: none;
@@ -1373,7 +1377,7 @@ body:has(.db-calendar.dragging) {
   box-shadow: none;
   color: var(--muted);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .db-row-base:hover {
@@ -1473,7 +1477,7 @@ body:has(.db-calendar.dragging) {
 .db-suggest small {
   padding: 4px 8px 2px;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
 }
 

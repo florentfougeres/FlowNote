@@ -14,7 +14,7 @@
   --bg: #ffffff;
   --bg-elevated: #ffffff;
   --text: rgba(0, 0, 0, 0.85);
-  --muted: rgba(0, 0, 0, 0.5);
+  --muted: rgba(0, 0, 0, 0.55);
   --faint: rgba(0, 0, 0, 0.26);
   --border: rgba(0, 0, 0, 0.1);
   --hover: rgba(0, 0, 0, 0.05);
@@ -188,6 +188,17 @@ body {
   margin: 0;
   font-size: 14px;
   letter-spacing: -0.006em;
+  caret-color: var(--accent);
+}
+
+/* The surfaces the browser draws itself, in the app's palette. */
+::selection {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text) 22%, transparent) transparent;
 }
 
 button {

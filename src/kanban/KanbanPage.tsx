@@ -33,7 +33,7 @@ function CardText({ text, bridge }: { text: string; bridge: VaultBridge }): Reac
       const iso = part.slice(2, -1);
       return (
         <span key={i} className="kanban-date">
-          📅 {iso.slice(8, 10)}/{iso.slice(5, 7)}/{iso.slice(0, 4)}
+          <Icon name="calendar" size={12} /> {iso.slice(8, 10)}/{iso.slice(5, 7)}/{iso.slice(0, 4)}
         </span>
       );
     }

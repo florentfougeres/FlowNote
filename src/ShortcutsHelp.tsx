@@ -1,3 +1,4 @@
+import { Icon } from "./Icon";
 import { keys } from "./keys";
 import { SHORTCUTS } from "./shortcuts";
 
@@ -8,21 +9,23 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
         <header className="modal-header">
           <strong>Raccourcis clavier</strong>
           <button autoFocus onClick={onClose} aria-label="Fermer">
-            ✕
+            <Icon name="close" size={14} />
           </button>
         </header>
-        <table>
-          <tbody>
-            {SHORTCUTS.map(({ keys: shortcut, label }) => (
-              <tr key={shortcut}>
-                <td>
-                  <kbd>{keys(shortcut)}</kbd>
-                </td>
-                <td>{label}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="shortcuts-body">
+          <table>
+            <tbody>
+              {SHORTCUTS.map(({ keys: shortcut, label }) => (
+                <tr key={shortcut}>
+                  <td>{label}</td>
+                  <td>
+                    <kbd>{keys(shortcut)}</kbd>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

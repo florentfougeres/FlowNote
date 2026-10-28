@@ -68,7 +68,7 @@ button.crumb:hover {
 .crumb-menu-title {
   padding: 4px 8px 4px;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   overflow: hidden;
   white-space: nowrap;
@@ -121,7 +121,7 @@ button.crumb:hover {
 .crumb-menu-empty {
   padding: 6px 8px;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 /* ---- Outline (and history, in the same column) ---- */
@@ -277,7 +277,7 @@ button.crumb:hover {
 .docs-search {
   margin: 0 12px 0 4px;
   padding: 0 4px 0 8px;
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--hover);
   color: var(--muted);
 }

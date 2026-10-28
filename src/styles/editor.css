@@ -354,7 +354,7 @@ li.drag-ghost {
   height: 16px;
   box-sizing: border-box;
   border: 1.5px solid var(--muted);
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
 }
 
@@ -384,7 +384,7 @@ li.drag-ghost {
 .note blockquote {
   margin: 4px 0;
   padding-left: 14px;
-  border-left: 3px solid var(--text);
+  border-left: 2px solid color-mix(in srgb, var(--text) 22%, transparent);
   color: color-mix(in srgb, var(--text) 72%, transparent);
 }
 
@@ -393,8 +393,8 @@ li.drag-ghost {
   margin: 4px 0;
   padding: 12px 16px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--callout) 9%, transparent);
-  border-left: 3px solid var(--callout);
+  background: color-mix(in srgb, var(--callout) 7%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--callout) 24%, transparent);
 }
 
 /* The color of each type is set by the node view (Obsidian's palette). */
@@ -412,7 +412,7 @@ li.drag-ghost {
   border: none;
   background: none;
   box-shadow: none;
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--callout);
   display: flex;
   align-items: center;
@@ -525,7 +525,7 @@ li.drag-ghost {
   height: 20px;
   padding: 0;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--bg);
   box-shadow: none;
   color: var(--muted);
@@ -641,7 +641,7 @@ li.drag-ghost {
 .note :not(pre) > code {
   background: var(--code-bg);
   color: var(--code-text);
-  border-radius: 3px;
+  border-radius: 4px;
   padding: 0.1em 0.3em;
   font-size: 0.85em;
 }
@@ -1027,14 +1027,14 @@ li.drag-ghost {
 }
 
 .git-change-diff del {
-  border-radius: 3px;
+  border-radius: 4px;
   background: var(--danger-mark);
   color: var(--text);
   text-decoration: line-through;
 }
 
 .git-change-diff ins {
-  border-radius: 3px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--git-added) 24%, transparent);
   color: var(--text);
   text-decoration: none;

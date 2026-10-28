@@ -19,7 +19,7 @@
 }
 
 :where(input, select, textarea)::placeholder {
-  color: var(--faint);
+  color: color-mix(in srgb, var(--text) 50%, transparent);
 }
 
 :where(select) {
@@ -51,6 +51,9 @@
 }
 
 .due-field-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: none;
   background: none;
   box-shadow: none;

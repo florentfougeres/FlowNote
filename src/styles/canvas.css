@@ -81,7 +81,7 @@
   width: 9px;
   height: 9px;
   border: 2px solid var(--accent);
-  border-radius: 3px;
+  border-radius: 4px;
   background: var(--bg);
 }
 
@@ -229,7 +229,7 @@
 /* Groups: a tinted area with its name above. */
 .canvas-group {
   border-style: solid;
-  border-radius: 14px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--card-color) 5%, transparent);
   box-shadow: none;
 }
@@ -422,12 +422,6 @@ input.canvas-group-label {
 .canvas-board .react-flow__node-group.selected,
 .canvas-board .react-flow__node-group:focus {
   box-shadow: none;
-}
-
-.canvas-board .react-flow__attribution {
-  background: none;
-  opacity: 0.5;
-  font-size: 9px;
 }
 
 /* A YouTube card: the thumbnail with a play button, then the player in place. */

@@ -123,7 +123,7 @@
 .mindmap-page .map-container .mind-elixir-toolbar span {
   display: inline-flex;
   padding: 4px;
-  border-radius: 7px;
+  border-radius: 8px;
   cursor: pointer;
 }
 

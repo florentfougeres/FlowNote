@@ -77,7 +77,10 @@
 }
 
 .kanban-date {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: 1px;
   padding: 0 6px;
   border-radius: 999px;
   background: var(--code-bg);
@@ -95,7 +98,7 @@
   background: var(--bg-elevated);
   color: var(--text);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
   outline: none;
   resize: none;
 }
