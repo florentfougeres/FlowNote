@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-28T10:33:21.649382+00:00",
+  "title": "Design System: FlowNote",
+  "extensions": {
+    "colorMeta": {
+      "system-blue": {
+        "role": "primary",
+        "displayName": "Bleu système",
+        "tonalRamp": [
+          "oklch(15% 0.076 250)",
+          "oklch(25% 0.076 250)",
+          "oklch(38% 0.19 250)",
+          "oklch(50% 0.19 250)",
+          "oklch(62% 0.19 250)",
+          "oklch(74% 0.19 250)",
+          "oklch(86% 0.19 250)",
+          "oklch(95% 0.076 250)"
+        ],
+        "dark": "#0a84ff"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Papier",
+        "tonalRamp": [
+          "oklch(15% 0.001 90)",
+          "oklch(25% 0.001 90)",
+          "oklch(38% 0.003 90)",
+          "oklch(50% 0.003 90)",
+          "oklch(62% 0.003 90)",
+          "oklch(74% 0.003 90)",
+          "oklch(86% 0.003 90)",
+          "oklch(95% 0.001 90)"
+        ],
+        "dark": "#1e1e1e"
+      },
+      "window-chrome": {
+        "role": "neutral",
+        "displayName": "Cadre de fenêtre",
+        "tonalRamp": [
+          "oklch(15% 0.002 90)",
+          "oklch(25% 0.002 90)",
+          "oklch(38% 0.004 90)",
+          "oklch(50% 0.004 90)",
+          "oklch(62% 0.004 90)",
+          "oklch(74% 0.004 90)",
+          "oklch(86% 0.004 90)",
+          "oklch(95% 0.002 90)"
+        ],
+        "dark": "#202020"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Encre",
+        "tonalRamp": [
+          "oklch(15% 0.002 260)",
+          "oklch(25% 0.002 260)",
+          "oklch(38% 0.005 260)",
+          "oklch(50% 0.005 260)",
+          "oklch(62% 0.005 260)",
+          "oklch(74% 0.005 260)",
+          "oklch(86% 0.005 260)",
+          "oklch(95% 0.002 260)"
+        ],
+        "dark": "rgba(255, 255, 255, 0.88)"
+      },
+      "success": {
+        "role": "status",
+        "displayName": "Succès",
+        "tonalRamp": [
+          "oklch(15% 0.06 150)",
+          "oklch(25% 0.06 150)",
+          "oklch(38% 0.15 150)",
+          "oklch(50% 0.15 150)",
+          "oklch(62% 0.15 150)",
+          "oklch(74% 0.15 150)",
+          "oklch(86% 0.15 150)",
+          "oklch(95% 0.06 150)"
+        ],
+        "dark": "#30d158"
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Attention",
+        "tonalRamp": [
+          "oklch(15% 0.06 60)",
+          "oklch(25% 0.06 60)",
+          "oklch(38% 0.15 60)",
+          "oklch(50% 0.15 60)",
+          "oklch(62% 0.15 60)",
+          "oklch(74% 0.15 60)",
+          "oklch(86% 0.15 60)",
+          "oklch(95% 0.06 60)"
+        ],
+        "dark": "#ff9f0a"
+      },
+      "danger": {
+        "role": "status",
+        "displayName": "Danger",
+        "tonalRamp": [
+          "oklch(15% 0.08 25)",
+          "oklch(25% 0.08 25)",
+          "oklch(38% 0.2 25)",
+          "oklch(50% 0.2 25)",
+          "oklch(62% 0.2 25)",
+          "oklch(74% 0.2 25)",
+          "oklch(86% 0.2 25)",
+          "oklch(95% 0.08 25)"
+        ],
+        "dark": "#ff453a"
+      },
+      "paper-elevated": {
+        "role": "neutral",
+        "displayName": "Papier surélevé",
+        "dark": "#2a2a2c"
+      },
+      "ink-secondary": {
+        "role": "neutral",
+        "displayName": "Encre secondaire",
+        "dark": "rgba(255, 255, 255, 0.55)"
+      }
+    },
+    "typographyMeta": {
+      "page-title": {
+        "displayName": "Titre de page",
+        "purpose": "Le titre d'une note, au-dessus de ses propriétés."
+      },
+      "headline": {
+        "displayName": "Titre 1",
+        "purpose": "Titres de premier niveau dans les notes (1,875 em)."
+      },
+      "title": {
+        "displayName": "Titre 2",
+        "purpose": "Titres de second niveau dans les notes (1,5 em)."
+      },
+      "body": {
+        "displayName": "Texte",
+        "purpose": "Le texte des notes, colonne de 720 px."
+      },
+      "ui": {
+        "displayName": "Interface",
+        "purpose": "Barre latérale, menus, barre de page, propriétés."
+      },
+      "label": {
+        "displayName": "Libellé",
+        "purpose": "Métadonnées, puces, légendes."
+      },
+      "mono": {
+        "displayName": "Code",
+        "purpose": "Code en ligne, blocs de code, diffs."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-menu",
+        "value": "0 0 0 0.5px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.14)",
+        "purpose": "Menus, popovers, fenêtres, palette de commandes."
+      },
+      {
+        "name": "shadow-lift",
+        "value": "0 1px 2px rgba(0,0,0,0.08), 0 12px 28px rgba(0,0,0,0.16)",
+        "purpose": "Bloc ou carte pendant le glisser."
+      },
+      {
+        "name": "shadow-button",
+        "value": "0 0.5px 1px rgba(0,0,0,0.06)",
+        "purpose": "Relief d'un bouton par défaut."
+      },
+      {
+        "name": "shadow-segment",
+        "value": "0 0.5px 2px rgba(0,0,0,0.15)",
+        "purpose": "Segment sélectionné."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-settle",
+        "value": "cubic-bezier(0.2, 0.9, 0.3, 1)",
+        "purpose": "Apparition des menus, fenêtres et de la barre latérale au survol (140 à 200 ms)."
+      },
+      {
+        "name": "state",
+        "value": "120ms ease-out",
+        "purpose": "Survol et changement d'état des contrôles."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.97) 100ms ease-out",
+        "purpose": "Pression d'un bouton, instantanée."
+      }
+    ],
+    "materials": [
+      {
+        "name": "material-blur",
+        "value": "blur(24px) saturate(180%)",
+        "purpose": "Verre de la barre de page, des menus et des fenêtres."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bouton",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Le bouton par défaut, à la macOS.",
+      "html": "<button class=\"ds-btn\">Annuler</button>",
+      "css": ".ds-btn{font:inherit;font-size:13px;color:var(--text);background:var(--bg-elevated);border:0.5px solid var(--border);border-radius:6px;padding:4px 10px;box-shadow:0 0.5px 1px rgba(0,0,0,.06);transition:background-color 120ms ease-out,transform 100ms ease-out}.ds-btn:hover{background:color-mix(in srgb,var(--bg-elevated) 92%,var(--text))}.ds-btn:active{transform:scale(.97)}.ds-btn:focus-visible{outline:3px solid var(--accent-soft);outline-offset:1px}"
+    },
+    {
+      "name": "Bouton principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Une seule action principale par zone.",
+      "html": "<button class=\"ds-btn-primary\">Créer</button>",
+      "css": ".ds-btn-primary{font:inherit;font-size:13px;color:var(--on-accent);background:var(--accent);border:0.5px solid var(--accent);border-radius:6px;padding:4px 10px;transition:background-color 120ms ease-out,transform 100ms ease-out}.ds-btn-primary:hover{background:color-mix(in srgb,var(--accent) 88%,black)}.ds-btn-primary:active{transform:scale(.97)}.ds-btn-primary:focus-visible{outline:3px solid var(--accent-soft);outline-offset:1px}"
+    },
+    {
+      "name": "Contrôle segmenté",
+      "kind": "custom",
+      "refersTo": "segmented",
+      "description": "Choix exclusif entre quelques options.",
+      "html": "<div class=\"ds-seg\"><button class=\"on\">Système</button><button>Clair</button><button>Sombre</button></div>",
+      "css": ".ds-seg{display:inline-flex;padding:2px;border-radius:8px;background:var(--hover)}.ds-seg button{font:inherit;font-size:13px;color:var(--text);border:0;background:transparent;padding:3px 12px;border-radius:6px}.ds-seg button:hover{background:var(--hover)}.ds-seg button.on{background:var(--bg-elevated);box-shadow:0 0.5px 2px rgba(0,0,0,.15)}"
+    },
+    {
+      "name": "Champ",
+      "kind": "input",
+      "refersTo": "",
+      "description": "Champ de texte avec anneau de focus bleu voilé.",
+      "html": "<input class=\"ds-input\" placeholder=\"Rechercher\">",
+      "css": ".ds-input{font:inherit;font-size:13px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 8px;outline:none}.ds-input::placeholder{color:color-mix(in srgb,var(--text) 50%,transparent)}.ds-input:focus{border-color:color-mix(in srgb,var(--accent) 70%,transparent);box-shadow:0 0 0 3px var(--accent-soft)}"
+    },
+    {
+      "name": "Ligne de barre latérale",
+      "kind": "nav",
+      "refersTo": "sidebar-row",
+      "description": "Navigation de la barre latérale, 28 px.",
+      "html": "<nav class=\"ds-nav\"><a class=\"on\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14.25 8a6.25 6.25 0 1 1-12.5 0 6.25 6.25 0 0 1 12.5 0z M8 4.75V8l2.25 1.5\"/></svg>Tâches</a><a><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"><path d=\"M11.75 7.25a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0z M10.5 10.5 14 14\"/></svg>Rechercher</a></nav>",
+      "css": ".ds-nav{display:flex;flex-direction:column;width:240px;padding:6px 8px;background:var(--chrome);font-size:13px}.ds-nav a{display:flex;align-items:center;gap:9px;min-height:28px;padding:0 8px;border-radius:6px;color:var(--muted)}.ds-nav a:hover{background:var(--hover);color:var(--text)}.ds-nav a.on{background:var(--selected);color:var(--text)}"
+    },
+    {
+      "name": "Tag",
+      "kind": "chip",
+      "refersTo": "chip-tag",
+      "description": "Tag d'une note, en pilule bleu voilé.",
+      "html": "<span class=\"ds-chip\">#projet<button aria-label=\"Retirer\">×</button></span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;gap:2px;padding:1px 4px 1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:13px}.ds-chip button{border:0;background:none;color:inherit;opacity:.6;padding:2px}.ds-chip button:hover{opacity:1}"
+    },
+    {
+      "name": "Menu",
+      "kind": "custom",
+      "refersTo": "menu",
+      "description": "Menu contextuel en verre.",
+      "html": "<div class=\"ds-menu\"><button>Renommer</button><button>Dupliquer</button><hr><button class=\"danger\">Supprimer</button></div>",
+      "css": ".ds-menu{display:flex;flex-direction:column;min-width:200px;padding:5px;border-radius:10px;background:var(--menu-material);-webkit-backdrop-filter:var(--material-blur);backdrop-filter:var(--material-blur);box-shadow:var(--shadow-menu);font-size:13px}.ds-menu button{text-align:left;font:inherit;color:var(--text);border:0;background:none;padding:4px 8px;border-radius:6px}.ds-menu button:hover{background:var(--hover)}.ds-menu .danger{color:var(--danger)}.ds-menu hr{border:0;height:1px;margin:4px 6px;background:var(--border)}"
+    },
+    {
+      "name": "Callout",
+      "kind": "card",
+      "refersTo": "",
+      "description": "Le bloc signature des notes.",
+      "html": "<div class=\"ds-callout\"><strong>Objectif</strong><p>Un site rapide, lisible sur un téléphone.</p></div>",
+      "css": ".ds-callout{--c:var(--callout-tip);padding:12px 16px;border-radius:8px;background:color-mix(in srgb,var(--c) 7%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--c) 24%,transparent);font-size:16px;color:var(--text)}.ds-callout strong{color:var(--c);font-weight:600}.ds-callout p{margin:4px 0 0}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Le carnet natif",
+    "overview": "FlowNote doit sembler sortir de chez Apple : une app de bureau macOS qui parle le langage du système plutôt qu'un site web posé dans une fenêtre. Palette système (labels, remplissages, séparateurs, bleu système), police du système avec un interlettrage ajusté à chaque taille, matériaux translucides pour ce qui flotte au-dessus du texte. Les gestes sont ceux qu'un utilisateur de Mac connaît déjà : contrôles segmentés, menus contextuels, barre latérale, onglets, palette de commandes.\n\nLe caractère est précis et retenu. Filets de 0,5 px, contrastes doux, une seule couleur d'accent, aucun élément qui crie. La page de texte est blanche et calme. Le cadre autour d'elle (barre d'onglets, barre latérale) est une surface plate légèrement grisée. Ce qui flotte (menus, fenêtres, barre de page) est en verre. La densité est celle d'un outil qu'on utilise toute la journée : lignes de 28 à 30 px, texte d'interface à 13 px, texte des notes à 16 px.\n\nL'app vit en clair et en sombre, en suivant le système ou au choix dans les réglages. Chaque couleur existe dans les deux thèmes, et les deux listes du thème sombre (base.css) restent identiques.",
+    "keyCharacteristics": [
+      "Palette système Apple, un seul accent : le bleu système.",
+      "Police du système, interlettrage négatif ajusté à la taille.",
+      "Plat au repos ; le verre et les ombres sont réservés à ce qui flotte.",
+      "Filets fins (0,5 px) plutôt que des bordures épaisses ou des barres de couleur.",
+      "Arrondis sur une seule échelle : 4, 6, 8, 10, 12 px.",
+      "Icônes au trait maison (grille de 16, trait de 1,4), jamais d'emoji en guise d'icône."
+    ],
+    "rules": [
+      {
+        "name": "La règle de l'accent unique",
+        "body": "Le bleu système est la seule couleur d'action. Une autre teinte n'apparaît que pour signaler un état (succès, attention, danger) ou distinguer un type (callouts, types de page).",
+        "section": "colors"
+      },
+      {
+        "name": "La règle des deux thèmes",
+        "body": "Aucune couleur n'est écrite en dur dans un composant : elle passe par un jeton de base.css, défini en clair et en sombre.",
+        "section": "colors"
+      },
+      {
+        "name": "La règle des pixels entiers",
+        "body": "Les tailles de texte sont entières (11, 12, 13, 14, 15, 16 px…), jamais 12,5 px.",
+        "section": "typography"
+      },
+      {
+        "name": "La règle des chiffres alignés",
+        "body": "Compteurs, dates de calendrier, numéros et colonnes de chiffres utilisent font-variant-numeric: tabular-nums.",
+        "section": "typography"
+      },
+      {
+        "name": "La règle du verre utile",
+        "body": "Le flou et la transparence sont réservés à ce qui passe au-dessus du contenu (barre de page, menus, fenêtres). Jamais sur une surface posée pour faire joli.",
+        "section": "elevation"
+      },
+      {
+        "name": "La règle de l'ombre décalée",
+        "body": "Une ombre a toujours un décalage vertical et un flou doux. Pas de halo coloré centré.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do prendre chaque couleur dans un jeton de base.css et vérifier le rendu en clair et en sombre.",
+      "Do utiliser les icônes de src/Icon.tsx (grille de 16, trait de 1,4, couleur du texte) ; dessiner celle qui manque dans le même style.",
+      "Do garder les arrondis sur l'échelle 4, 6, 8, 10, 12 px et les tailles de texte entières.",
+      "Do caler le titre, les propriétés et la note sur la même colonne de 720 px.",
+      "Do donner à chaque contrôle ses états : survol, pression, focus visible, désactivé.",
+      "Do respecter prefers-reduced-motion pour toute animation d'entrée."
+    ],
+    "donts": [
+      "Don't utiliser un emoji ou un caractère Unicode (✕, 📅, ⏳) comme icône d'interface ; les emoji des notes, eux, restent du contenu.",
+      "Don't poser une barre de couleur épaisse à gauche d'une carte, d'un callout ou d'une alerte.",
+      "Don't mettre du flou ou du verre sur une surface posée, ni un halo coloré sous un bouton.",
+      "Don't introduire une deuxième couleur d'action à côté du bleu système.",
+      "Don't laisser un <select>, un <input type=\"date\"> ou une fenêtre qui déborde de l'écran.",
+      "Don't écrire une couleur en dur dans un composant sans son équivalent sombre."
+    ]
+  }
+}
