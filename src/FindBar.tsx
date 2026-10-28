@@ -87,19 +87,21 @@ export function FindBar({ editor, request, onClose }: { editor: Editor | null; r
             }}
             spellCheck={false}
           />
-          <span className="find-count">{query ? (total ? `${(state?.current ?? 0) + 1}/${total}` : "0") : ""}</span>
-          <button className={caseSensitive ? "find-option active" : "find-option"} onClick={() => setCaseSensitive(!caseSensitive)} title="Respecter la casse" aria-pressed={caseSensitive}>
-            Aa
-          </button>
-          <button onClick={() => step(-1)} disabled={!total} aria-label="Précédent (⇧↵)">
-            <Icon name="chevronUp" size={12} />
-          </button>
-          <button onClick={() => step(1)} disabled={!total} aria-label="Suivant (↵)">
-            <Icon name="chevronDown" size={12} />
-          </button>
-          <button onClick={() => close(false)} aria-label="Fermer (Échap)">
-            ×
-          </button>
+          <div className="find-actions">
+            <span className="find-count">{query ? (total ? `${(state?.current ?? 0) + 1}/${total}` : "0") : ""}</span>
+            <button className={caseSensitive ? "find-option active" : "find-option"} onClick={() => setCaseSensitive(!caseSensitive)} title="Respecter la casse" aria-pressed={caseSensitive}>
+              Aa
+            </button>
+            <button onClick={() => step(-1)} disabled={!total} aria-label="Précédent (⇧↵)">
+              <Icon name="chevronUp" size={12} />
+            </button>
+            <button onClick={() => step(1)} disabled={!total} aria-label="Suivant (↵)">
+              <Icon name="chevronDown" size={12} />
+            </button>
+            <button onClick={() => close(false)} aria-label="Fermer (Échap)">
+              <Icon name="close" size={12} />
+            </button>
+          </div>
         </div>
         {showReplace && (
           <div className="find-row">
@@ -117,12 +119,14 @@ export function FindBar({ editor, request, onClose }: { editor: Editor | null; r
               readOnly={live ? !live.isEditable : true}
               spellCheck={false}
             />
-            <button className="find-text" onClick={() => live && replaceCurrent(live.view, replacement)} disabled={!total || !live?.isEditable} title="Remplacer (↵)">
-              Remplacer
-            </button>
-            <button className="find-text" onClick={() => live && replaceAll(live.view, replacement)} disabled={!total || !live?.isEditable} title={keys("Tout remplacer (⌘↵)")}>
-              Tout
-            </button>
+            <div className="find-actions">
+              <button className="find-text" onClick={() => live && replaceCurrent(live.view, replacement)} disabled={!total || !live?.isEditable} title="Remplacer (↵)">
+                Remplacer
+              </button>
+              <button className="find-text" onClick={() => live && replaceAll(live.view, replacement)} disabled={!total || !live?.isEditable} title={keys("Tout remplacer (⌘↵)")}>
+                Tout
+              </button>
+            </div>
           </div>
         )}
       </div>
