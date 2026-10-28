@@ -83,6 +83,9 @@ export interface TabMenuContext {
   join: () => void;
   toggleSplit: () => void;
   close: () => void;
+  /** The other tabs, and those on the right of this one; absent when there are none. */
+  closeOthers?: () => void;
+  closeRight?: () => void;
 }
 
 /** A tab: the split view's actions, then closing it. */
@@ -98,7 +101,11 @@ export function tabMenu(c: TabMenuContext): MenuItem[] {
   } else if (c.isActive && c.otherPage) {
     items.push({ label: "Diviser avec l'onglet suivant", icon: "split", run: c.toggleSplit });
   }
-  items.push({ label: "Fermer l'onglet", icon: "close", run: c.close });
+  // Below the split view's actions, the closings form their own group.
+  const section = items.length > 0 ? "Fermer" : undefined;
+  items.push({ section, label: "Fermer l'onglet", icon: "close", shortcut: "⌘W", run: c.close });
+  if (c.closeOthers) items.push({ section, label: "Fermer les autres onglets", icon: "close", run: c.closeOthers });
+  if (c.closeRight) items.push({ section, label: "Fermer les onglets à droite", icon: "close", run: c.closeRight });
   return items;
 }
 

@@ -43,12 +43,25 @@
   --island-bg-color: var(--bg-elevated);
   --border-radius-lg: 10px;
   --shadow-island: var(--shadow-menu);
+  /* Its buttons and panels on the app's neutral fills, not Excalidraw's lavender. */
+  --color-surface-lowest: var(--bg-elevated);
+  --color-surface-low: var(--bg-elevated);
+  --color-surface-mid: var(--hover);
+  --color-surface-high: var(--selected);
+  --button-hover-bg: var(--hover);
+  --button-active-bg: var(--selected);
 }
 
 .drawing-pane .excalidraw.theme--dark {
   --color-primary: var(--accent);
   --color-primary-light: var(--accent-soft);
   --island-bg-color: var(--bg-elevated);
+  --color-surface-lowest: var(--bg-elevated);
+  --color-surface-low: var(--bg-elevated);
+  --color-surface-mid: var(--hover);
+  --color-surface-high: var(--selected);
+  --button-hover-bg: var(--hover);
+  --button-active-bg: var(--selected);
 }
 
 /* The library (and its "browse libraries" site) is not offered: it has no place in the vault. */

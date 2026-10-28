@@ -311,6 +311,7 @@ export function App() {
     switchTab,
     newTab,
     closeTab,
+    closeTabs,
     forgetTab,
     reorderTab,
     goBack,
@@ -1332,6 +1333,8 @@ export function App() {
       join: () => joinTab(id),
       toggleSplit,
       close: () => void closeTab(id),
+      closeOthers: tabs.length > 1 ? () => void closeTabs(tabs.filter((t) => t.id !== id).map((t) => t.id)) : undefined,
+      closeRight: tabs.findIndex((t) => t.id === id) < tabs.length - 1 ? () => void closeTabs(tabs.slice(tabs.findIndex((t) => t.id === id) + 1).map((t) => t.id)) : undefined,
     });
   };
 

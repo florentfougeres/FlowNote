@@ -30,6 +30,9 @@ export function GraphView({ graph, onOpen, compact = false }: { graph: VaultGrap
     const container = box.current!;
     const ctx = canvas.getContext("2d")!;
     const nodes: SimNode[] = graph.nodes.map((node) => ({ node, r: Math.min(16, 3.5 + Math.sqrt(node.degree) * 1.8) }));
+    /** The most linked notes (the top fifth, at least 3 links): their titles show from a farther zoom. */
+    const radii = nodes.map((n) => n.r).sort((a, b) => b - a);
+    const hubRadius = Math.max(3.5 + Math.sqrt(3) * 1.8, radii[Math.floor(radii.length / 5)] ?? Infinity);
     const byId = new Map(nodes.map((n) => [n.node.id, n]));
     const links: SimLink[] = graph.edges.map((e) => ({ source: byId.get(e.source)!, target: byId.get(e.target)! }));
     const neighbours = new Map<SimNode, Set<SimNode>>(nodes.map((n) => [n, new Set([n])]));
@@ -107,13 +110,17 @@ export function GraphView({ graph, onOpen, compact = false }: { graph: VaultGrap
         ctx.fill();
       }
 
-      // Titles fade in with the zoom; the hovered note and its neighbours always have theirs.
-      const zoomAlpha = Math.max(0, Math.min(1, (view.k - (compact ? 1.4 : 0.9)) / 0.5));
+      // Titles fade in with the zoom: the most linked notes first, the others closer in (no wall of overlapping titles);
+      // the hovered note and its neighbours always have theirs.
+      const base = compact ? 1.4 : 0.9;
+      const fade = (from: number) => Math.max(0, Math.min(1, (view.k - from) / 0.5));
+      const hubAlpha = fade(base - 0.3);
+      const zoomAlpha = fade(base + 0.6);
       ctx.font = `${12 / view.k}px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       for (const n of nodes) {
-        const alpha = lit ? (lit.has(n) ? 1 : 0) : zoomAlpha;
+        const alpha = lit ? (lit.has(n) ? 1 : 0) : n.r >= hubRadius ? hubAlpha : zoomAlpha;
         if (alpha <= 0) continue;
         ctx.globalAlpha = alpha;
         ctx.fillStyle = n === hover ? c.text : c.muted;
