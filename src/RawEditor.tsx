@@ -1,16 +1,12 @@
 import { useEffect, useRef } from "react";
+import { useAutoHeight } from "./hooks/useAutoHeight";
 
 /** Plain-text editing of the note's Markdown, with no rendering at all. */
 export function RawEditor({ value, onChange, readOnly }: { value: string; onChange: (markdown: string) => void; readOnly?: boolean }) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
   // Grows with its content so the page scrolls, not the textarea.
-  useEffect(() => {
-    const area = ref.current;
-    if (!area) return;
-    area.style.height = "auto";
-    area.style.height = `${area.scrollHeight}px`;
-  }, [value]);
+  useAutoHeight(ref, value);
 
   useEffect(() => ref.current?.focus({ preventScroll: true }), []);
 

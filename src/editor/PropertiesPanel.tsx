@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon, type IconName } from "../Icon";
 import { DateField } from "../DatePicker";
+import { useAutoHeight } from "../hooks/useAutoHeight";
 import { usePersistentFlag } from "../hooks/usePersistentFlag";
 import { readProperties, renameProperty, setProperty, type Property, type PropertySuggestion, type PropertyType, type PropertyValue } from "../markdown/frontmatter";
 
@@ -125,12 +126,7 @@ function TextValue({ value, onCommit }: { value: string; onCommit: (v: string) =
   const [draft, setDraft] = useState(value);
   const area = useRef<HTMLTextAreaElement>(null);
   useEffect(() => setDraft(value), [value]);
-  useLayoutEffect(() => {
-    const el = area.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [draft]);
+  useAutoHeight(area, draft);
   return (
     <textarea
       ref={area}

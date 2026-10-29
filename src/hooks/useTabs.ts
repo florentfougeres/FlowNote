@@ -233,9 +233,9 @@ export function useTabs(context: TabsContext) {
   };
 
   /**
-   * Opens the dashboard or a view from the sidebar: in the tab already showing
-   * it, else in place when the active tab shows a view, else in a new tab (the
-   * open page stays where it is).
+   * Opens the dashboard, a view from the sidebar or a page from ⌘P: in the tab
+   * already showing it, else in place when the active tab shows a view, else in
+   * a new tab (the open page stays where it is).
    */
   const openView = (path: string | null, newTabRequested: boolean) => {
     const existing = tabsRef.current.find((t) => t.path === path);

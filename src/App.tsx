@@ -1748,7 +1748,7 @@ export function App() {
           titles={switcherTitles}
           iconOf={pageIconFor}
           initialQuery={scopeQuery}
-          onOpen={(path) => void select(path)}
+          onOpen={(path) => void openView(path, false)}
           onCreate={(name) => void newPage(null, name)}
           onCommands={() => setModal("palette")}
           onContent={(query) => {

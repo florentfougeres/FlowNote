@@ -549,6 +549,13 @@ body.sidebar-resizing {
   line-height: 1.2;
 }
 
+/* The title field is a textarea (PageTitle.tsx): it wraps, as tall as its text. */
+textarea.page-title {
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  resize: none;
+}
+
 .note-editor {
   position: relative;
 }

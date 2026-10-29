@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAutoHeight } from "./hooks/useAutoHeight";
 import { Icon } from "./Icon";
 import { IconPicker } from "./IconPicker";
 
@@ -29,7 +30,9 @@ export function PageTitle({
   onIcon?: (icon: string | null) => void;
 }) {
   const [value, setValue] = useState(title);
+  const area = useRef<HTMLTextAreaElement>(null);
   useEffect(() => setValue(title), [title]);
+  useAutoHeight(area, value);
 
   const commit = async () => {
     const next = value.trim();
@@ -40,19 +43,25 @@ export function PageTitle({
   return (
     <div className={icon ? "page-heading has-icon" : "page-heading"}>
       <PageHeadingIcon icon={icon} onIcon={readOnly ? undefined : onIcon} />
-      <input
+      {/* A textarea so a long title wraps; still one line: Enter commits, pasted line breaks become spaces. */}
+      <textarea
+        ref={area}
         className="page-title"
+        rows={1}
         value={value}
         readOnly={readOnly}
         spellCheck={false}
         aria-label="Titre de la page"
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => setValue(e.target.value.replace(/\s*\n\s*/g, " "))}
         onBlur={() => void commit()}
         onKeyDown={(e) => {
-          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
           if (e.key === "Escape") {
             setValue(title);
-            requestAnimationFrame(() => (e.target as HTMLInputElement).blur());
+            requestAnimationFrame(() => (e.target as HTMLTextAreaElement).blur());
           }
         }}
       />

@@ -34,7 +34,7 @@ L'**Accueil** est fait pour reprendre. **Reprendre** montre en grand les trois d
 ### La barre latérale
 
 - **Le vault** en haut : son menu permet de passer en un clic à un vault ouvert récemment, d'en ouvrir un autre ou d'ouvrir les réglages. Le bouton à droite crée une page (`⌘N`).
-- **Rechercher** (`⌘P`) : un seul champ pour retrouver une page par son nom ou son titre. Le contrôle **Titres | Contenu** de la fenêtre passe à la recherche dans le texte des notes (et revient), en gardant ce qui est tapé ; `⌘⇧F` l'ouvre directement sur Contenu.
+- **Rechercher** (`⌘P`) : un seul champ pour retrouver une page par son nom ou son titre. Depuis une page, celle choisie s'ouvre dans un nouvel onglet (ou dans celui qui la montre déjà) ; depuis l'accueil ou une vue, à sa place. Le contrôle **Titres | Contenu** de la fenêtre passe à la recherche dans le texte des notes (et revient), en gardant ce qui est tapé ; `⌘⇧F` l'ouvre directement sur Contenu.
 - **Les vues**, en une rangée d'icônes sous la recherche (leur nom au survol) : **Accueil**, **Tâches**, **Liens** et **Graphe**. Quand une page est ouverte, elles s'ouvrent dans un nouvel onglet pour ne pas la remplacer.
 - **Favoris** : les fichiers mis en favoris dans Obsidian. Un clic sur le titre « Favoris » replie la section (retenu).
 - **Pages** : l'arbre du vault. Une note et le dossier du même nom (`Projets.md` + `Projets/`) forment une page avec ses sous-pages. La note des liens n'y figure pas : elle a sa propre vue. Les tâches y sont, dans leur dossier (`TaskNotes/Tasks` par défaut), comme dans Obsidian.

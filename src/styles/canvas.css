@@ -64,6 +64,23 @@
   outline-offset: 2px;
 }
 
+/* A selected arrow gets the cards' accent as a halo: its own color is set inline and stays. */
+.react-flow__edge.selected .react-flow__edge-interaction {
+  stroke: var(--accent);
+  stroke-opacity: 0.28;
+  stroke-width: 10px;
+  stroke-linecap: round;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 2.5px !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-textbg {
+  stroke: var(--accent);
+  stroke-width: 1.5px;
+}
+
 .canvas-handle.react-flow__handle {
   width: 10px;
   height: 10px;
