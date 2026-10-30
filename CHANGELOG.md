@@ -2,6 +2,13 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.29.1] - 2026-10-30
+
+### Corrigé
+- Canevas : halo accent sur la flèche sélectionnée et son étiquette.
+- ⌘P ouvre la page dans un nouvel onglet depuis une note (openView).
+- Titre de page en textarea qui passe à la ligne ; hauteur automatique partagée dans useAutoHeight (éditeur brut, propriétés, titre).
+
 ## [0.29.0] - 2026-10-28
 
 ### Ajouté
