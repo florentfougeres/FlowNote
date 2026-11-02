@@ -12,5 +12,5 @@
     "react/incompatible-library": "off",
     "unicorn/no-new-array": "off"
   },
-  "ignorePatterns": ["dist", "src-tauri", "node_modules"]
+  "ignorePatterns": ["dist", "src-tauri", "node_modules", ".claude"]
 }

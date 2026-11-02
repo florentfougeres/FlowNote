@@ -5,3 +5,6 @@ src-tauri/target/
 .remember/
 grammar/.vendor/
 src-tauri/binaries/
+# Skill de design « impeccable » installée en local (binaire de 17 Mo), pas versionnée
+.claude/skills/impeccable/
+.claude/agents/impeccable-*
