@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TextSelection } from "@tiptap/pm/state";
 import { cursorAtStartOf, destroyEditors, openEditor as open, press, type } from "./testUtils";
 import { linkTarget } from "./LinkPrompt";
-import { insertMarkdownBlocks, pasteInline, pasteMarkdown } from "./pasteMarkdown";
+import { allInlineCode, insertMarkdownBlocks, pasteInline, pasteMarkdown } from "./pasteMarkdown";
 import { pastedTable } from "../markdown/csv";
 import { DOMParser as PMDOMParser } from "@tiptap/pm/model";
 import { codeFromPreceding } from "./backticks";
@@ -404,5 +404,13 @@ describe("Plain text pasted is read as Markdown", () => {
     expect(save()).toBe("AvantGrand *titre*\n");
     const two = PMDOMParser.fromSchema(editor.schema).parseSlice(new DOMParser().parseFromString("<ul><li>a</li><li>b</li></ul>", "text/html").body);
     expect(pasteInline(editor.view, two.content)).toBe(false);
+  });
+
+  it("lines that all came as inline code are source text", () => {
+    const { editor } = open("");
+    const parse = (html: string) => PMDOMParser.fromSchema(editor.schema).parseSlice(new DOMParser().parseFromString(html, "text/html").body).content;
+    expect(allInlineCode(parse("<div><code>## Titre</code></div><div><code>- un</code></div>"))).toBe(true);
+    expect(allInlineCode(parse("<p>Lancer <code>npm test</code></p><p><code>vite</code></p>"))).toBe(false);
+    expect(allInlineCode(parse("<pre><code>## Titre</code></pre>"))).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import { insertMarkdownBlocks, pasteInline, pasteMarkdown } from "./pasteMarkdown";
+import { allInlineCode, insertMarkdownBlocks, pasteInline, pasteMarkdown } from "./pasteMarkdown";
 import { pastedTable } from "../markdown/csv";
 import { vaultPropertyKeys } from "../markdown/frontmatter";
 import { useEffect, useRef, useState } from "react";
@@ -252,10 +252,13 @@ export function NoteEditor({ source, onMarkdown, bridge, editable = true, onEdit
         const table = fromNote || inCell || selection.$from.parent.type.spec.code ? null : pastedTable(text);
         if (table && insertMarkdownBlocks(view, table)) return true;
         // Plain text (no HTML: a text file, a terminal, Obsidian's source) is read as Markdown.
-        // HTML from elsewhere (a web page, Word): one block pasted gives its text only, the line keeps its kind.
         // Copied from a note (ProseMirror marks its HTML with data-pm-slice), blocks stay as they were.
+        // HTML from elsewhere (a web page, Word): one block pasted gives its text only, the line keeps its kind.
+        // Several lines that all came as inline code are source text: read as Markdown too.
         if (event.clipboardData?.types.includes("text/html")) {
-          return !event.clipboardData.getData("text/html").includes("data-pm-slice") && pasteInline(view, slice.content);
+          if (fromNote) return false;
+          if (text.includes("\n") && allInlineCode(slice.content)) return pasteMarkdown(view, text);
+          return pasteInline(view, slice.content);
         }
         return pasteMarkdown(view, text);
       },

@@ -22,7 +22,9 @@ export function pasteUrlWithTitle(view: EditorView, url: string, fetchTitle: (ur
   if (!selection.empty || !$from.parent.isTextblock || $from.parent.type.spec.code || $from.marks().some((m) => m.type.spec.code || m.type === schema.marks.link)) return false;
   const start = selection.from;
   const literal = schema.marks.link.create({ href: url, title: null, kind: "literal" });
-  view.dispatch(view.state.tr.insert(start, schema.text(url, [...$from.marks(), literal])).scrollIntoView());
+  const paste = view.state.tr.insert(start, schema.text(url, [...$from.marks(), literal])).scrollIntoView();
+  view.dispatch(paste);
+  const pasted = view.state.doc;
   void fetchTitle(url).then((title) => {
     const clean = title?.replace(/\s+/g, " ").trim();
     if (!clean || view.isDestroyed) return;
@@ -31,7 +33,10 @@ export function pasteUrlWithTitle(view: EditorView, url: string, fetchTitle: (ur
     const { state } = view;
     const marks = state.doc.resolve(range.from + 1).marks().filter((m) => m.type !== schema.marks.link);
     const link = schema.marks.link.create({ href: url, title: null, kind: "inline" });
-    view.dispatch(state.tr.replaceWith(range.from, range.to, schema.text(clean, [...marks, link])));
+    const tr = state.tr.replaceWith(range.from, range.to, schema.text(clean, [...marks, link]));
+    // Nothing changed since the paste: the title joins it in the history, so one undo removes the whole paste.
+    if (state.doc === pasted) tr.setMeta("appendedTransaction", paste);
+    view.dispatch(tr);
   });
   return true;
 }

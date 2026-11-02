@@ -310,7 +310,7 @@ layout:
 ### Copier, rechercher, notes liées
 
 - **Copier** : le texte copié depuis une note se colle en Markdown dans un éditeur de texte, et mis en forme dans un traitement de texte, avec ses images (pas seulement leur nom).
-- **Rechercher** : `⌘F` dans la note, `⌘⌥F` pour remplacer, `⌘⇧F` dans tout le vault.
+- **Rechercher** : `⌘F` dans la note, `⌘⌥F` pour remplacer, `⌘⇧F` dans tout le vault. En Markdown brut, `⌘F` et `⌘⌥F` cherchent et remplacent dans le texte du fichier, syntaxe comprise ; `⌘Z` annule un remplacement, même « Tout ».
 - **Filtres de la recherche** (`⌘⇧F`) : « + Filtre » restreint la recherche par tag (les tags imbriqués compris), dossier, propriété (une valeur, ou « est renseignée ») ou date de modification (aujourd'hui, 7 ou 30 derniers jours, cette année, ou une période). La syntaxe d'Obsidian marche aussi et devient des pastilles à l'espace ou à `↵`. Sans texte, la recherche liste les notes filtrées, les plus récemment modifiées d'abord. `⌫` dans le champ vide retire la dernière pastille. Par exemple :
   - `réunion tag:#projet` : « réunion » dans les notes qui portent le tag `#projet` (ou `#projet/site`) ;
   - `path:Projets budget` : « budget » dans le dossier `Projets` ;

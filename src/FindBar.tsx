@@ -13,15 +13,67 @@ export interface FindRequest {
   nonce: number;
 }
 
-/** ⌘F: find (and replace with ⌘⌥F) in the open note. */
-export function FindBar({ editor, request, onClose }: { editor: Editor | null; request: FindRequest; onClose: () => void }) {
+/** What the find bar searches: the note's editor, or the raw Markdown. */
+export interface FindTarget {
+  /** Shows the matches of `query` (none when empty); `occurrence` makes that one current and goes to it. */
+  search(query: string, caseSensitive: boolean, occurrence?: number): void;
+  counts(): { total: number; current: number };
+  step(direction: 1 | -1): void;
+  replaceCurrent(text: string): void;
+  replaceAll(text: string): void;
+  /** Hides the matches and gives the focus back to the text; with `select`, the current match is selected. */
+  close(select: boolean): void;
+  editable(): boolean;
+  /** Calls `listener` after every change (edits, steps); returns what stops it and hides the matches. */
+  subscribe(listener: () => void): () => void;
+}
+
+/** The find bar on the note's editor (matches drawn as decorations). */
+export function editorFindTarget(editor: Editor): FindTarget {
+  const { view } = editor;
+  return {
+    search(query, caseSensitive, occurrence) {
+      setFindQuery(view, query, caseSensitive);
+      if (occurrence === undefined) return;
+      const { matches } = findState(view.state);
+      const target = Math.min(occurrence, matches.length - 1);
+      if (target >= 0) view.dispatch(view.state.tr.setMeta(findKey, { current: target }).setMeta("addToHistory", false));
+      // Opening the note sets its scroll position on the next frames (top, or where its tab was): go to the match after
+      // that, at once (a smooth scroll is cut short while the page is still being laid out).
+      requestAnimationFrame(() => requestAnimationFrame(() => !editor.isDestroyed && reveal(view, true)));
+    },
+    counts() {
+      const { matches, current } = findState(view.state);
+      return { total: matches.length, current };
+    },
+    step: (direction) => findStep(view, direction),
+    replaceCurrent: (text) => replaceCurrent(view, text),
+    replaceAll: (text) => void replaceAll(view, text),
+    close(select) {
+      if (editor.isDestroyed) return;
+      if (select) selectCurrent(view);
+      clearFind(view);
+      view.focus();
+    },
+    editable: () => editor.isEditable,
+    subscribe(listener) {
+      editor.on("transaction", listener);
+      return () => {
+        editor.off("transaction", listener);
+        if (!editor.isDestroyed) clearFind(view);
+      };
+    },
+  };
+}
+
+/** ⌘F: find (and replace with ⌘⌥F) in the open note, rendered or raw. */
+export function FindBar({ target, request, onClose }: { target: FindTarget | null; request: FindRequest; onClose: () => void }) {
   const [query, setQuery] = useState(request.query);
   const [replacement, setReplacement] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [showReplace, setShowReplace] = useState(Boolean(request.replace));
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const input = useRef<HTMLInputElement>(null);
-  const live = editor && !editor.isDestroyed ? editor : null;
 
   // A new request (⌘F again, or a vault search result) refocuses the field.
   useEffect(() => {
@@ -32,41 +84,23 @@ export function FindBar({ editor, request, onClose }: { editor: Editor | null; r
   }, [request.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!live) return;
-    setFindQuery(live.view, query, caseSensitive);
-    if (request.occurrence !== undefined && query === request.query) {
-      const { matches } = findState(live.state);
-      const target = Math.min(request.occurrence, matches.length - 1);
-      if (target >= 0) live.view.dispatch(live.state.tr.setMeta(findKey, { current: target }).setMeta("addToHistory", false));
-      // Opening the note sets its scroll position on the next frames (top, or where its tab was): go to the match after
-      // that, at once (a smooth scroll is cut short while the page is still being laid out).
-      requestAnimationFrame(() => requestAnimationFrame(() => !live.isDestroyed && reveal(live.view, true)));
-    }
+    if (!target) return;
+    target.search(query, caseSensitive, request.occurrence !== undefined && query === request.query ? request.occurrence : undefined);
     rerender();
-  }, [live, query, caseSensitive, request.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target, query, caseSensitive, request.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Counter follows edits made while the bar is open.
-  useEffect(() => {
-    if (!live) return;
-    live.on("transaction", rerender);
-    return () => {
-      live.off("transaction", rerender);
-      if (!live.isDestroyed) clearFind(live.view);
-    };
-  }, [live]);
+  useEffect(() => target?.subscribe(rerender), [target]);
 
   const close = (select: boolean) => {
-    if (live) {
-      if (select) selectCurrent(live.view);
-      clearFind(live.view);
-      live.view.focus();
-    }
+    target?.close(select);
     onClose();
   };
 
-  const state = live ? findState(live.state) : null;
-  const total = state?.matches.length ?? 0;
-  const step = (direction: 1 | -1) => live && findStep(live.view, direction);
+  const counts = target?.counts();
+  const total = counts?.total ?? 0;
+  const editable = target?.editable() ?? false;
+  const step = (direction: 1 | -1) => target?.step(direction);
 
   return (
     <div className="find-bar-anchor">
@@ -88,7 +122,7 @@ export function FindBar({ editor, request, onClose }: { editor: Editor | null; r
             spellCheck={false}
           />
           <div className="find-actions">
-            <span className="find-count">{query ? (total ? `${(state?.current ?? 0) + 1}/${total}` : "0") : ""}</span>
+            <span className="find-count">{query ? (total ? `${(counts?.current ?? 0) + 1}/${total}` : "0") : ""}</span>
             <button className={caseSensitive ? "find-option active" : "find-option"} onClick={() => setCaseSensitive(!caseSensitive)} title="Respecter la casse" aria-pressed={caseSensitive}>
               Aa
             </button>
@@ -111,19 +145,19 @@ export function FindBar({ editor, request, onClose }: { editor: Editor | null; r
               placeholder="Remplacer par"
               onChange={(e) => setReplacement(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key !== "Enter" || !live) return;
+                if (e.key !== "Enter" || !target) return;
                 e.preventDefault();
-                if (e.metaKey || e.ctrlKey) replaceAll(live.view, replacement);
-                else replaceCurrent(live.view, replacement);
+                if (e.metaKey || e.ctrlKey) target.replaceAll(replacement);
+                else target.replaceCurrent(replacement);
               }}
-              readOnly={live ? !live.isEditable : true}
+              readOnly={!editable}
               spellCheck={false}
             />
             <div className="find-actions">
-              <button className="find-text" onClick={() => live && replaceCurrent(live.view, replacement)} disabled={!total || !live?.isEditable} title="Remplacer (↵)">
+              <button className="find-text" onClick={() => target?.replaceCurrent(replacement)} disabled={!total || !editable} title="Remplacer (↵)">
                 Remplacer
               </button>
-              <button className="find-text" onClick={() => live && replaceAll(live.view, replacement)} disabled={!total || !live?.isEditable} title={keys("Tout remplacer (⌘↵)")}>
+              <button className="find-text" onClick={() => target?.replaceAll(replacement)} disabled={!total || !editable} title={keys("Tout remplacer (⌘↵)")}>
                 Tout
               </button>
             </div>

@@ -53,7 +53,7 @@ import { exportNoteHtml } from "./editor/copyHtml";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { OutlinePanel } from "./OutlinePanel";
 import { RawEditor } from "./RawEditor";
-import { FindBar, type FindRequest } from "./FindBar";
+import { editorFindTarget, FindBar, type FindRequest, type FindTarget } from "./FindBar";
 import { VaultSearch } from "./VaultSearch";
 import { useSpellChecking } from "./editor/useSpellChecking";
 import type { Editor } from "@tiptap/core";
@@ -164,8 +164,6 @@ export function App() {
   const [config, setConfig] = useState<ObsidianConfig>(DEFAULT_CONFIG);
   const [note, setNote] = useState<OpenNote | null>(null);
   const [rawMode, setRawMode] = useState(false);
-  const rawModeRef = useRef(rawMode);
-  rawModeRef.current = rawMode;
   /** Leaving raw mode: the rich editor reloads from the edited text. */
   const toggleRaw = () => {
     if (rawMode) setNote((n) => (n ? { ...n, loaded: n.markdown } : n));
@@ -204,9 +202,13 @@ export function App() {
   /** Selected text (one line) used to prefill the find fields. */
   const selectedText = () => {
     const current = editorRef.current;
-    if (!current || current.isDestroyed) return "";
-    const { from, to } = current.state.selection;
-    const text = current.state.doc.textBetween(from, to, "\n");
+    const area = document.activeElement;
+    const text =
+      area instanceof HTMLTextAreaElement && area.closest(".raw-editor")
+        ? area.value.slice(area.selectionStart, area.selectionEnd)
+        : current && !current.isDestroyed
+          ? current.state.doc.textBetween(current.state.selection.from, current.state.selection.to, "\n")
+          : "";
     return text.includes("\n") ? "" : text;
   };
   const openFind = (replace = false) =>
@@ -240,6 +242,9 @@ export function App() {
   const dark = settings.theme === "dark" || (settings.theme === "system" && systemDark);
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
+  /** What ⌘F searches: the raw Markdown (given by RawEditor) or the note's editor. */
+  const [rawFind, setRawFind] = useState<FindTarget | null>(null);
+  const findTarget = useMemo(() => (rawMode ? rawFind : editor && !editor.isDestroyed ? editorFindTarget(editor) : null), [rawMode, rawFind, editor]);
   const [showOutline, setShowOutline] = usePersistentFlag("flownote:outline", false, ["shown", "hidden"]);
   const [showSlides, setShowSlides] = usePersistentFlag("flownote:slides", true, ["shown", "hidden"]);
   /** Presenting mode, from this slide. */
@@ -493,7 +498,7 @@ export function App() {
     const action = globalAction(event);
     // Without a vault, only ⌘S does something.
     if (!action || (!vault && action !== "save")) return;
-    const findable = noteRef.current !== null && !rawModeRef.current;
+    const findable = noteRef.current !== null;
     /** What each shortcut runs (shortcuts.ts); false: nothing to do here, the key goes on. */
     const actions: Record<GlobalAction, () => boolean | void> = {
       switcher: () => setModal("switcher"),
@@ -1477,7 +1482,7 @@ export function App() {
           )}
           {note ? (
             <>
-              {findRequest && !rawMode && !drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage && <FindBar editor={editor} request={findRequest} onClose={() => setFindRequest(null)} />}
+              {findRequest && (rawMode || (!drawing && !mindmap && !canvasPage && !dashboardPage && !kanbanPage && !basePage)) && <FindBar target={findTarget} request={findRequest} onClose={() => setFindRequest(null)} />}
               <div className="panes">
                 {drawing && !rawMode ? (
                   <div className="drawing-pane">
@@ -1572,7 +1577,7 @@ export function App() {
                       config={taskConfig}
                     />
                   ) : rawMode ? (
-                    <RawEditor key={`${note.path}#${note.reloads ?? 0}`} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} />
+                    <RawEditor key={`${note.path}#${note.reloads ?? 0}`} value={note.markdown} onChange={onMarkdown} readOnly={hasConflictMarkers(note.disk)} onFindTarget={setRawFind} />
                   ) : (
                     <NoteEditor
                       key={`${note.path}#${note.reloads ?? 0}`}

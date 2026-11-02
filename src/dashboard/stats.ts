@@ -1,6 +1,6 @@
 import { isDrawingPath } from "../drawing/format";
 import { resolveLink } from "../vault/links";
-import { splitFrontmatter } from "../markdown/frontmatter";
+import { noteProperties, splitFrontmatter } from "../markdown/frontmatter";
 
 /**
  * Vault statistics for the dashboard, computed from the notes' text: pages by
@@ -27,29 +27,27 @@ function withoutCode(text: string): string {
 }
 
 /**
- * A list property of the frontmatter (`key` a pattern for its names), written
+ * A list property of the front matter (any of `keys`), read as YAML: written
  * `[a, b]`, as `- a` lines, or `a, b` on one line (split on `separator`).
  */
-function listProperty(yaml: string, key: string, separator: RegExp): string[] {
-  const unquote = (s: string) => s.trim().replace(/^["']|["']$/g, "");
-  const inline = new RegExp(`^${key}:[ \\t]*\\[([^\\]]*)\\]`, "m").exec(yaml);
-  if (inline) return inline[1].split(",").map(unquote).filter(Boolean);
-  const block = new RegExp(`^${key}:[ \\t]*\\r?\\n((?:[ \\t]*-[^\\n]*\\r?\\n?)+)`, "m").exec(yaml);
-  if (block) return block[1].split("\n").map((l) => unquote(l.replace(/^[ \t]*-[ \t]*/, ""))).filter(Boolean);
-  const single = new RegExp(`^${key}:[ \\t]*([^\\s[][^\\n]*)$`, "m").exec(yaml);
-  return single ? single[1].split(separator).map(unquote).filter(Boolean) : [];
+function listProperty(text: string, keys: string[], separator: RegExp): string[] {
+  return noteProperties(text)
+    .filter((p) => keys.includes(p.key))
+    .flatMap(({ value }): unknown[] => (Array.isArray(value) ? value : typeof value === "string" ? value.split(separator) : value === null ? [] : [value]))
+    .map((v) => String(v).trim())
+    .filter(Boolean);
 }
 
 function frontmatter(text: string): { body: string; tags: string[] } {
   const front = splitFrontmatter(text);
   if (!front) return { body: text, tags: [] };
-  return { body: front.body, tags: listProperty(front.yaml, "tags?", /[,\s]+/).map((t) => t.replace(/^#/, "")) };
+  return { body: front.body, tags: listProperty(text, ["tags", "tag"], /[,\s]+/).map((t) => t.replace(/^#/, "")) };
 }
 
 /** The other names of a note (`aliases` property), which links can use. */
 export function noteAliases(text: string): string[] {
   const front = splitFrontmatter(text);
-  return front ? listProperty(front.yaml, "alias(?:es)?", /,/) : [];
+  return front ? listProperty(text, ["aliases", "alias"], /,/) : [];
 }
 
 const TAG = /(?:^|[\s(])#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)/gu;
@@ -69,7 +67,7 @@ export function noteTags(text: string): string[] {
 
 /** Link targets written in a note's prose (wikilinks and Markdown links to notes), outside code. */
 export function noteLinkTargets(text: string): string[] {
-  const prose = withoutCode(frontmatter(text).body);
+  const prose = withoutCode(splitFrontmatter(text)?.body ?? text);
   return [...[...prose.matchAll(WIKILINK)].map((m) => m[2].trim()), ...[...prose.matchAll(MDLINK)].map((m) => decodeURIComponent(m[1]))];
 }
 

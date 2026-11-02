@@ -475,3 +475,9 @@
   color: var(--faint);
   font-variant-numeric: tabular-nums;
 }
+
+/* In the raw Markdown, matches are drawn under the text, never over it. */
+.raw-lines .find-match,
+.raw-lines .find-match.current {
+  color: transparent;
+}

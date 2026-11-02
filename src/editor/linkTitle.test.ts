@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
 import { destroyEditors, openEditor as open, type } from "./testUtils";
+import { undo } from "@tiptap/pm/history";
 import { pastedUrl, pasteUrlWithTitle } from "./linkTitle";
 
 afterEach(destroyEditors);
@@ -22,6 +23,18 @@ describe("A web address pasted alone takes the page's title", () => {
     expect(save()).toBe(`Lire : ${url}\n`);
     await settle();
     expect(save()).toBe(`Lire : [Un [bon] article](${url})\n`);
+  });
+
+  it("is undone at once with its title", async () => {
+    const { editor, save } = open("");
+    type(editor, "Lire : ");
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    // The title comes later than the history's grouping delay.
+    pasteUrlWithTitle(editor.view, url, () => new Promise((resolve) => setTimeout(() => resolve("Titre"), 600)));
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(save()).toBe(`Lire : [Titre](${url})\n`);
+    undo(editor.state, editor.view.dispatch);
+    expect(save()).toBe("Lire : \n");
   });
 
   it("stays bare without a title", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookmarkedFiles, computeStats, noteAliases, tagTree } from "./stats";
+import { bookmarkedFiles, computeStats, noteAliases, noteTags, tagTree } from "./stats";
 
 const notes: [string, string][] = [
   ["Accueil.md", "---\ntags: [projet, perso]\n---\nVoir [[Projets]] et [[Absente]] et [lien](Dossier/Note.md). #idee\n\n```\n[[Pas un lien]] #pasuntag\n```\n"],
@@ -38,6 +38,18 @@ describe("aliases", () => {
     expect(noteAliases("---\naliases:\n  - Chantiers\n  - Mes projets\n---\n")).toEqual(["Chantiers", "Mes projets"]);
     expect(noteAliases("---\nalias: Mes projets, Chantiers\n---\n")).toEqual(["Mes projets", "Chantiers"]);
     expect(noteAliases("Pas de propriétés")).toEqual([]);
+  });
+});
+
+describe("tags of the front matter", () => {
+  it("reads them in brackets, as a list or on one line", () => {
+    expect(noteTags("---\ntags: [projet, \"#perso\"]\n---\n")).toEqual(["projet", "perso"]);
+    expect(noteTags("---\ntags:\n  - projet\n  - perso # commentaire\n---\n")).toEqual(["projet", "perso"]);
+    expect(noteTags("---\ntags:\n- projet\n- perso\n---\n")).toEqual(["projet", "perso"]);
+    expect(noteTags("---\ntags: [projet,\n  perso]\n---\n")).toEqual(["projet", "perso"]);
+    expect(noteTags("---\ntags: projet perso\n---\n")).toEqual(["projet", "perso"]);
+    expect(noteTags("---\ntag: projet, perso\n---\n")).toEqual(["projet", "perso"]);
+    expect(noteTags("---\ntags: [2026]\n---\n")).toEqual(["2026"]);
   });
 });
 

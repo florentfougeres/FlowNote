@@ -24,6 +24,23 @@ export function pasteInline(view: EditorView, content: Fragment): boolean {
 }
 
 /**
+ * Pasted lines that all came as inline code: source text shown in a code font
+ * (an editor, a terminal, a chat), not code the user wants line by line.
+ */
+export function allInlineCode(content: Fragment): boolean {
+  let text = 0;
+  let plain = false;
+  content.descendants((node) => {
+    if (node.type.spec.code) plain = true;
+    if (!node.isText) return !plain;
+    text++;
+    if (!node.marks.some((m) => m.type.name === "code")) plain = true;
+    return false;
+  });
+  return text > 0 && !plain;
+}
+
+/**
  * Plain text pasted in a note is read as Markdown, as Obsidian does: a link,
  * an image, a list or a heading copied from a text file becomes one, and the
  * file gets the pasted text. Without this, the text would be inserted as is
