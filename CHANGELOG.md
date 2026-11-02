@@ -2,6 +2,13 @@
 
 Les changements notables de FlowNote, version par version. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et la numérotation suit [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.29.2] - 2026-11-02
+
+### Corrigé
+- Rechercher-remplacer en Markdown brut
+- Options de collages collagess
+- Tags en yaml dans les entêtes
+
 ## [0.29.1] - 2026-10-30
 
 ### Corrigé
