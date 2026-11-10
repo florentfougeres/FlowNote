@@ -9,8 +9,11 @@ updates:
       day: monday
     open-pull-requests-limit: 5
     # TanStack Table stays on v8: v9 changes its API.
+    # Mind Elixir stays on 5.x: 6.0 changes its API (MindElixirInstance, draggable, exportPng).
     ignore:
       - dependency-name: "@tanstack/react-table"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mind-elixir"
         update-types: ["version-update:semver-major"]
     groups:
       tiptap:
