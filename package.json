@@ -41,7 +41,7 @@
     "lowlight": "^3.3.0",
     "lz-string": "^1.5.0",
     "mermaid": "^12.3.0",
-    "mind-elixir": "^5.15.1",
+    "mind-elixir": "^6.0.0",
     "motion": "^14.10.1",
     "plotly.js-dist-min": "^4.2.0",
     "react": "^19.3.1",
