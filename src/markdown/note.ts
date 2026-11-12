@@ -189,12 +189,47 @@ export interface SerializeReport {
 export function serializeTopLevelBlockWithReport(edited: PMJSON, context: ParseContext = NO_CONTEXT): SerializeReport {
   const json = withoutEdgeBreaks(edited);
   if (isEmptyParagraph(json)) return { markdown: "", exact: true };
-  let markdown = "";
-  for (const variant of VARIANTS) {
-    markdown = serializeBlock(json, variant);
-    if (equivalent(parseFragment(markdown, context), [json])) return { markdown, exact: true };
-  }
+  const reads = (markdown: string) => equivalent(parseFragment(markdown, context), [json]);
+  const outputs = VARIANTS.map((variant) => serializeBlock(json, variant));
+  if (reads(outputs[0])) return { markdown: serializeBlock(withNeededEscapes(json, reads), VARIANTS[0]), exact: true };
+  const exact = outputs.find(reads);
+  if (exact !== undefined) return { markdown: exact, exact: true };
+  // Markdown cannot say it exactly (a space inside bold, say): the most escaped variant
+  // reads closest. Keep the least escaped one that reads the same, not backslashes everywhere.
+  const target = parseFragment(outputs[outputs.length - 1], context);
+  const markdown = outputs.find((m) => equivalent(parseFragment(m, context), target)) ?? outputs[outputs.length - 1];
   return { markdown, exact: false };
+}
+
+/**
+ * The block with only the author's escapes it still needs (`\#` before a word that is not a tag).
+ * An escaped character is escaped again everywhere in the block, so a needless `\.` would put a
+ * backslash before every new dot.
+ */
+function withNeededEscapes(json: PMJSON, reads: (markdown: string) => boolean): PMJSON {
+  const chars = new Set<string>();
+  const collect = (n: PMJSON) => {
+    for (const c of String(n.attrs?.escapes ?? "")) chars.add(c);
+    n.content?.forEach(collect);
+  };
+  collect(json);
+  // Tags are Obsidian's, unseen by the parser: dropping `\#` could turn text into a tag.
+  chars.delete("#");
+  let kept = json;
+  for (const c of chars) {
+    const without = dropEscape(kept, c);
+    if (reads(serializeBlock(without, VARIANTS[0]))) kept = without;
+  }
+  return kept;
+}
+
+function dropEscape(n: PMJSON, c: string): PMJSON {
+  const escapes = n.attrs?.escapes;
+  return {
+    ...n,
+    ...(typeof escapes === "string" && escapes.includes(c) ? { attrs: { ...n.attrs, escapes: escapes.replace(c, "") } } : {}),
+    ...(n.content ? { content: n.content.map((child) => dropEscape(child, c)) } : {}),
+  };
 }
 
 export function serializeTopLevelBlock(json: PMJSON, context: ParseContext = NO_CONTEXT): string {

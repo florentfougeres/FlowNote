@@ -59,6 +59,32 @@ describe("nested identical marks", () => {
   });
 });
 
+describe("blocks Markdown cannot say exactly", () => {
+  it("are not escaped everywhere (a space at the end of bold, pasted from a web page)", () => {
+    const paragraph = {
+      type: "paragraph",
+      content: [
+        { type: "text", text: "#30DayMapChallenge : ", marks: [{ type: "bold", attrs: { marker: "**" } }] },
+        { type: "text", text: "Day 3 - Polygons" },
+      ],
+    };
+    expect(serializeTopLevelBlockWithReport(paragraph)).toEqual({ markdown: "**#30DayMapChallenge :** Day 3 - Polygons", exact: false });
+  });
+});
+
+describe("author escapes (issue 37)", () => {
+  function typed(src: string, text: string) {
+    const [block] = parseFragment(src);
+    return serializeTopLevelBlockWithReport({ ...block, content: [...(block.content ?? []), { type: "text", text }] }).markdown;
+  }
+  it("a needless escape does not spread to new dots", () => {
+    expect(typed("Fin\\. Suite", " Nouvelle phrase. Fin.")).toBe("Fin. Suite Nouvelle phrase. Fin.");
+  });
+  it("an escape that keeps a word from being a tag stays", () => {
+    expect(typed("Pas un \\#tag", " ici.")).toBe("Pas un \\#tag ici.");
+  });
+});
+
 describe("line endings", () => {
   it("CRLF files stay CRLF, including edited blocks", () => {
     const src = "# Titre\r\n\r\nPremier\r\n- a\r\n- b\r\n";
